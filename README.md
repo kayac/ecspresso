@@ -39,7 +39,7 @@ $ ecspresso -cluster default -service myService -task-definition app.json
 2017/11/07 09:07:15 myService/default Task definition is registered myService:2
 2017/11/07 09:07:15 myService/default Updating service...
 2017/11/07 09:07:16 myService/default Waiting for service stable...(it will takea few minutes)
-2017/11/07 09:10:02 preview/bench-server Service is stable now. Completed!
+2017/11/07 09:10:02 myService/default Service is stable now. Completed!
 ```
 
 # Requirements
