@@ -18,7 +18,7 @@ func main() {
 	flag.StringVar(&service, "service", "", "ECS service name(required)")
 	flag.StringVar(&cluster, "cluster", "", "ECS cluster name(required)")
 	flag.StringVar(&path, "task-definition", "", "task definition path(required)")
-	flag.IntVar(&timeout, "timeout", 180, "timeout (sec)")
+	flag.IntVar(&timeout, "timeout", 300, "timeout (sec)")
 	flag.Parse()
 
 	if service == "" || cluster == "" || path == "" {
