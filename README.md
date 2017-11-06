@@ -1,6 +1,8 @@
 # ecspresso
 
-ecspresso is a deployment tool for Amazon ECS
+ecspresso is a deployment tool for Amazon ECS.
+
+(pronounced same as "espresso")
 
 # Usage
 
