@@ -48,7 +48,7 @@ func Run(service, cluster, path string, timeout time.Duration) error {
 		Service: service,
 		Cluster: cluster,
 	}
-	d.Log("Starting ECS deploy service")
+	d.Log("Starting ecspresso")
 	if err := d.LoadTaskDefinition(path); err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (d *Deployment) RegisterTaskDefinition(ctx context.Context) error {
 	if err := json.Unmarshal(b, &res); err != nil {
 		return errors.Wrap(err, "register-task-definition parse response failed")
 	}
-	d.Log("Task definition was registered", res.TaskDefinition.Name())
+	d.Log("Task definition is registered", res.TaskDefinition.Name())
 	d.Registered = &res.TaskDefinition
 	return nil
 }
