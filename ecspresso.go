@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/kayac/go-config"
 	"github.com/pkg/errors"
@@ -32,11 +33,32 @@ func (t *TaskDefinition) Name() string {
 	return fmt.Sprintf("%s:%d", t.Family, t.Revision)
 }
 
-type Deployment struct {
+type App struct {
 	Service        string
 	Cluster        string
 	TaskDefinition *TaskDefinition
 	Registered     *TaskDefinition
+}
+
+func (d *App) DescribeServiceDeployments(ctx context.Context) error {
+	b, err := awsECS(ctx, "describe-services",
+		"--service", d.Service,
+		"--cluster", d.Cluster,
+	)
+	if err != nil {
+		d.Log(string(b))
+		return err
+	}
+	var sc ServiceContainer
+	if err := json.Unmarshal(b, &sc); err != nil {
+		return err
+	}
+	if len(sc.Services) > 0 {
+		for _, dep := range sc.Services[0].Deployments {
+			d.Log(dep.String())
+		}
+	}
+	return nil
 }
 
 func Run(conf *Config) error {
@@ -47,11 +69,15 @@ func Run(conf *Config) error {
 		defer cancel()
 	}
 
-	d := &Deployment{
+	d := &App{
 		Service: conf.Service,
 		Cluster: conf.Cluster,
 	}
 	d.Log("Starting ecspresso")
+
+	if err := d.DescribeServiceDeployments(ctx); err != nil {
+		return err
+	}
 	if err := d.LoadTaskDefinition(conf.TaskDefinitionPath); err != nil {
 		return err
 	}
@@ -69,18 +95,34 @@ func Run(conf *Config) error {
 	return nil
 }
 
-func (d *Deployment) Name() string {
+func (d *App) Name() string {
 	return fmt.Sprintf("%s/%s", d.Service, d.Cluster)
 }
 
-func (d *Deployment) Log(v ...interface{}) {
+func (d *App) Log(v ...interface{}) {
 	args := []interface{}{d.Name()}
 	args = append(args, v...)
 	log.Println(args...)
 }
 
-func (d *Deployment) WaitServiceStable(ctx context.Context) error {
+func (d *App) WaitServiceStable(ctx context.Context) error {
 	d.Log("Waiting for service stable...(it will take a few minutes)")
+
+	waitCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	go func() {
+		tick := time.Tick(10 * time.Second)
+		for {
+			select {
+			case <-waitCtx.Done():
+				return
+			case <-tick:
+				d.DescribeServiceDeployments(waitCtx)
+			}
+		}
+	}()
+
 	_, err := awsECS(ctx, "wait", "services-stable",
 		"--service", d.Service,
 		"--cluster", d.Cluster,
@@ -88,7 +130,7 @@ func (d *Deployment) WaitServiceStable(ctx context.Context) error {
 	return err
 }
 
-func (d *Deployment) UpdateService(ctx context.Context) error {
+func (d *App) UpdateService(ctx context.Context) error {
 	d.Log("Updating service...")
 	_, err := awsECS(ctx, "update-service",
 		"--service", d.Service,
@@ -98,7 +140,7 @@ func (d *Deployment) UpdateService(ctx context.Context) error {
 	return err
 }
 
-func (d *Deployment) RegisterTaskDefinition(ctx context.Context) error {
+func (d *App) RegisterTaskDefinition(ctx context.Context) error {
 	d.Log("Registering a new task definition...")
 
 	b, err := awsECS(ctx, "register-task-definition",
@@ -122,7 +164,7 @@ func (d *Deployment) RegisterTaskDefinition(ctx context.Context) error {
 	return nil
 }
 
-func (d *Deployment) LoadTaskDefinition(path string) error {
+func (d *App) LoadTaskDefinition(path string) error {
 	d.Log("Creating a new task definition by", path)
 	var c TaskDefinitionContainer
 	if err := config.LoadWithEnvJSON(&c, path); err != nil {
