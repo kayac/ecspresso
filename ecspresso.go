@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"time"
 
 	"github.com/kayac/go-config"
 	"github.com/pkg/errors"
@@ -40,16 +39,20 @@ type Deployment struct {
 	Registered     *TaskDefinition
 }
 
-func Run(service, cluster, path string, timeout time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
+func Run(conf *Config) error {
+	var cancel context.CancelFunc
+	ctx := context.Background()
+	if conf.Timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, conf.Timeout)
+		defer cancel()
+	}
 
 	d := &Deployment{
-		Service: service,
-		Cluster: cluster,
+		Service: conf.Service,
+		Cluster: conf.Cluster,
 	}
 	d.Log("Starting ecspresso")
-	if err := d.LoadTaskDefinition(path); err != nil {
+	if err := d.LoadTaskDefinition(conf.TaskDefinitionPath); err != nil {
 		return err
 	}
 	if err := d.RegisterTaskDefinition(ctx); err != nil {
