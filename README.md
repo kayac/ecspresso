@@ -7,9 +7,14 @@ ecspresso is a deployment tool for Amazon ECS.
 # Usage
 
 ```
-$ ecspresso
+$ ecspresso -h
+Usage of ecspresso:
   -cluster string
     	ECS cluster name(required)
+  -config string
+    	Config file
+  -region string
+    	aws region
   -service string
     	ECS service name(required)
   -task-definition string
@@ -29,10 +34,24 @@ ecspresso works as below.
 - Update a service definition.
 - Wait a service stable.
 
+### Configuration file
+
+YAML format.
+
+```yaml
+region: ap-northeast-1
+cluster: default
+service: myService
+task_definition: myTask.json
+timeout: 5m
+```
+
+Keys are equal to comand line options.
+
 ## Example
 
 ```
-$ ecspresso -cluster default -service myService -task-definition app.json
+$ ecspresso -region ap-northeast-1 -cluster default -service myService -task-definition myTask.json
 2017/11/07 09:07:12 myService/default Starting ecspresso
 2017/11/07 09:07:12 myService/default Creating a new task definition by app.json
 2017/11/07 09:07:12 myService/default Registering a new task definition...
@@ -41,10 +60,6 @@ $ ecspresso -cluster default -service myService -task-definition app.json
 2017/11/07 09:07:16 myService/default Waiting for service stable...(it will takea few minutes)
 2017/11/07 09:10:02 myService/default Service is stable now. Completed!
 ```
-
-# Requirements
-
-- aws-cli
 
 # LICENCE
 

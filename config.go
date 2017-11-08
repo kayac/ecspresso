@@ -6,6 +6,7 @@ import (
 )
 
 type Config struct {
+	Region             string        `yaml:"region"`
 	Service            string        `yaml:"service"`
 	Cluster            string        `yaml:"cluster"`
 	TaskDefinitionPath string        `yaml:"task_definition"`

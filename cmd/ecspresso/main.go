@@ -16,10 +16,11 @@ func main() {
 
 func _main() int {
 	var (
-		conf, service, cluster, path string
-		timeout                      int
+		region, conf, service, cluster, path string
+		timeout                              int
 	)
 
+	flag.StringVar(&region, "region", os.Getenv("AWS_REGION"), "aws region")
 	flag.StringVar(&conf, "config", "", "Config file")
 	flag.StringVar(&service, "service", "", "ECS service name(required)")
 	flag.StringVar(&cluster, "cluster", "", "ECS cluster name(required)")
@@ -28,6 +29,7 @@ func _main() int {
 	flag.Parse()
 
 	c := ecspresso.Config{
+		Region:             region,
 		Service:            service,
 		Cluster:            cluster,
 		TaskDefinitionPath: path,
