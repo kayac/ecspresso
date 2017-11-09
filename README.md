@@ -53,7 +53,7 @@ ecspresso works as below.
 ## Example
 
 ```
-$ ecspresso deploy --config preview.yaml
+$ ecspresso deploy --config config.yaml
 2017/11/09 23:20:13 myService/default Starting deploy
 Service: myService
 Cluster: default
@@ -61,7 +61,7 @@ TaskDefinition: myService:3
 Deployments:
     PRIMARY myService:3 desired:1 pending:0 running:1
 Events:
-2017/11/09 23:20:13 myService/default Creating a new task definition by task-definition/myService.json
+2017/11/09 23:20:13 myService/default Creating a new task definition by myTask.json
 2017/11/09 23:20:13 myService/default Registering a new task definition...
 2017/11/09 23:20:13 myService/default Task definition is registered myService:4
 2017/11/09 23:20:13 myService/default Updating service...
