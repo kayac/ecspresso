@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"errors"
+	"os"
 	"time"
 )
 
@@ -24,4 +25,11 @@ func (c *Config) Validate() error {
 		return errors.New("task_definition is not defined")
 	}
 	return nil
+}
+
+func NewDefaultConfig() *Config {
+	return &Config{
+		Region:  os.Getenv("AWS_REGION"),
+		Timeout: 300 * time.Second,
+	}
 }

@@ -4,13 +4,20 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/kayac/go-config"
+	"github.com/mattn/go-isatty"
+	"github.com/morikuni/aec"
+	"github.com/pkg/errors"
 )
+
+var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
 
 func taskDefinitionName(t *ecs.TaskDefinition) string {
 	return fmt.Sprintf("%s:%d", *t.Family, *t.Revision)
@@ -22,6 +29,7 @@ type App struct {
 	Cluster        string
 	TaskDefinition *ecs.TaskDefinition
 	Registered     *ecs.TaskDefinition
+	config         *Config
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
@@ -31,27 +39,51 @@ func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
 	}
 }
 
-func (d *App) DescribeServiceDeployments(ctx context.Context) error {
+func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Service, error) {
 	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
 	if err != nil {
-		return err
+		return nil, errors.Wrap(err, "describe services failed")
 	}
-	if len(out.Services) > 0 {
-		for _, dep := range out.Services[0].Deployments {
-			d.Log(formatDeployment(dep))
+	if len(out.Services) == 0 {
+		return nil, errors.New("no services found")
+	}
+	s := out.Services[0]
+	fmt.Println("Service:", *s.ServiceName)
+	fmt.Println("Cluster:", arnToName(*s.ClusterArn))
+	fmt.Println("TaskDefinition:", arnToName(*s.TaskDefinition))
+	fmt.Println("Deployments:")
+	for _, dep := range s.Deployments {
+		fmt.Println("  ", formatDeployment(dep))
+	}
+	fmt.Println("Events:")
+	for i, event := range s.Events {
+		if i >= events {
+			break
 		}
+		fmt.Println("  ", formatEvent(event))
 	}
-	return nil
+	return s, nil
 }
 
-func Run(conf *Config) error {
-	var cancel context.CancelFunc
-	ctx := context.Background()
-	if conf.Timeout > 0 {
-		ctx, cancel = context.WithTimeout(ctx, conf.Timeout)
-		defer cancel()
+func (d *App) DescribeServiceDeployments(ctx context.Context) (int, error) {
+	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
+	if err != nil {
+		return 0, err
 	}
+	if len(out.Services) == 0 {
+		return 0, nil
+	}
+	s := out.Services[0]
+	for _, dep := range s.Deployments {
+		d.Log(formatDeployment(dep))
+	}
+	return len(s.Deployments), nil
+}
 
+func NewApp(conf *Config) (*App, error) {
+	if err := conf.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid configuration")
+	}
 	sess := session.Must(session.NewSession(
 		&aws.Config{Region: aws.String(conf.Region)},
 	))
@@ -59,27 +91,117 @@ func Run(conf *Config) error {
 		Service: conf.Service,
 		Cluster: conf.Cluster,
 		ecs:     ecs.New(sess),
+		config:  conf,
 	}
-	d.Log("Starting ecspresso")
+	return d, nil
+}
 
-	if err := d.DescribeServiceDeployments(ctx); err != nil {
-		return err
+func (d *App) Start() (context.Context, context.CancelFunc) {
+	log.SetOutput(os.Stdout)
+
+	if d.config.Timeout > 0 {
+		return context.WithTimeout(context.Background(), d.config.Timeout)
+	} else {
+		return context.Background(), func() {}
 	}
-	if err := d.LoadTaskDefinition(conf.TaskDefinitionPath); err != nil {
-		return err
+}
+
+func (d *App) Status(events int) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+	_, err := d.DescribeServiceStatus(ctx, events)
+	return err
+}
+
+func (d *App) Deploy(dryRun bool) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	d.Log("Starting deploy")
+	if _, err := d.DescribeServiceStatus(ctx, 0); err != nil {
+		return errors.Wrap(err, "deploy failed")
 	}
+	if err := d.LoadTaskDefinition(d.config.TaskDefinitionPath); err != nil {
+		return errors.Wrap(err, "deploy failed")
+	}
+	if dryRun {
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
 	if err := d.RegisterTaskDefinition(ctx); err != nil {
-		return err
+		return errors.Wrap(err, "deploy failed")
 	}
-	if err := d.UpdateService(ctx); err != nil {
-		return err
+	if err := d.UpdateService(ctx, *d.Registered.TaskDefinitionArn); err != nil {
+		return errors.Wrap(err, "deploy failed")
 	}
 	if err := d.WaitServiceStable(ctx); err != nil {
-		return err
+		return errors.Wrap(err, "deploy failed")
 	}
 
 	d.Log("Service is stable now. Completed!")
 	return nil
+}
+
+func (d *App) Rollback(dryRun bool) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	d.Log("Starting rollback")
+	service, err := d.DescribeServiceStatus(ctx, 0)
+	if err != nil {
+		return errors.Wrap(err, "rollback failed")
+	}
+	targetArn, err := d.FindRollbackTarget(ctx, *service.TaskDefinition)
+	if err != nil {
+		return errors.Wrap(err, "rollback failed")
+	}
+	d.Log("Rollbacking to", arnToName(targetArn))
+	if dryRun {
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
+	if err := d.UpdateService(ctx, targetArn); err != nil {
+		return errors.Wrap(err, "rollback failed")
+	}
+	if err := d.WaitServiceStable(ctx); err != nil {
+		return errors.Wrap(err, "rollback failed")
+	}
+
+	d.Log("Service is stable now. Completed!")
+	return nil
+}
+
+func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) (string, error) {
+	var found bool
+	var nextToken *string
+	family := strings.Split(arnToName(taskDefinitionArn), ":")[0]
+	for {
+		out, err := d.ecs.ListTaskDefinitionsWithContext(ctx,
+			&ecs.ListTaskDefinitionsInput{
+				NextToken:    nextToken,
+				FamilyPrefix: aws.String(family),
+				MaxResults:   aws.Int64(100),
+				Sort:         aws.String("DESC"),
+			},
+		)
+		if err != nil {
+			return "", errors.Wrap(err, "list taskdefinitions failed")
+		}
+		if len(out.TaskDefinitionArns) == 0 {
+			return "", errors.New("rollback target is not found")
+		}
+		nextToken = out.NextToken
+		for _, tdArn := range out.TaskDefinitionArns {
+			if found {
+				return *tdArn, nil
+			}
+			if *tdArn == taskDefinitionArn {
+				found = true
+			}
+		}
+	}
 }
 
 func (d *App) Name() string {
@@ -100,12 +222,16 @@ func (d *App) WaitServiceStable(ctx context.Context) error {
 
 	go func() {
 		tick := time.Tick(10 * time.Second)
+		var lines int
 		for {
 			select {
 			case <-waitCtx.Done():
 				return
 			case <-tick:
-				d.DescribeServiceDeployments(waitCtx)
+				if isTerminal && lines > 0 {
+					fmt.Print(aec.Up(uint(lines)))
+				}
+				lines, _ = d.DescribeServiceDeployments(waitCtx)
 			}
 		}
 	}()
@@ -113,7 +239,7 @@ func (d *App) WaitServiceStable(ctx context.Context) error {
 	return d.ecs.WaitUntilServicesStableWithContext(ctx, d.DescribeServicesInput())
 }
 
-func (d *App) UpdateService(ctx context.Context) error {
+func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string) error {
 	d.Log("Updating service...")
 
 	_, err := d.ecs.UpdateServiceWithContext(
@@ -121,7 +247,7 @@ func (d *App) UpdateService(ctx context.Context) error {
 		&ecs.UpdateServiceInput{
 			Service:        aws.String(d.Service),
 			Cluster:        aws.String(d.Cluster),
-			TaskDefinition: d.Registered.TaskDefinitionArn,
+			TaskDefinition: aws.String(taskDefinitionArn),
 		},
 	)
 	return err

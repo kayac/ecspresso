@@ -1,13 +1,12 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
-	"time"
 
 	"github.com/kayac/ecspresso"
 	config "github.com/kayac/go-config"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 func main() {
@@ -15,40 +14,41 @@ func main() {
 }
 
 func _main() int {
-	var (
-		region, conf, service, cluster, path string
-		timeout                              int
-	)
+	conf := kingpin.Flag("config", "config file").Required().String()
 
-	flag.StringVar(&region, "region", os.Getenv("AWS_REGION"), "aws region")
-	flag.StringVar(&conf, "config", "", "Config file")
-	flag.StringVar(&service, "service", "", "ECS service name(required)")
-	flag.StringVar(&cluster, "cluster", "", "ECS cluster name(required)")
-	flag.StringVar(&path, "task-definition", "", "task definition path(required)")
-	flag.IntVar(&timeout, "timeout", 300, "timeout (sec)")
-	flag.Parse()
+	deploy := kingpin.Command("deploy", "deploy service")
+	deployDryRun := deploy.Flag("dry-run", "dry-run").Bool()
 
-	c := ecspresso.Config{
-		Region:             region,
-		Service:            service,
-		Cluster:            cluster,
-		TaskDefinitionPath: path,
-		Timeout:            time.Duration(timeout) * time.Second,
+	status := kingpin.Command("status", "show status of service")
+	statusEvents := status.Flag("events", "show events num").Default("2").Int()
+
+	rollback := kingpin.Command("rollback", "rollback service")
+	rollbackDryRun := rollback.Flag("dry-run", "dry-run").Bool()
+
+	sub := kingpin.Parse()
+
+	c := ecspresso.NewDefaultConfig()
+	if err := config.Load(c, *conf); err != nil {
+		log.Println("Cloud not load config file", conf, err)
+		kingpin.Usage()
+		return 1
 	}
-	if conf != "" {
-		if err := config.Load(&c, conf); err != nil {
-			log.Println("Cloud not load config file", conf, err)
-			return 1
-		}
-	}
-	if err := (&c).Validate(); err != nil {
+	app, err := ecspresso.NewApp(c)
+	if err != nil {
 		log.Println(err)
-		flag.PrintDefaults()
 		return 1
 	}
 
-	if err := ecspresso.Run(&c); err != nil {
-		log.Println("FAILED:", err)
+	switch sub {
+	case "deploy":
+		err = app.Deploy(*deployDryRun)
+	case "status":
+		err = app.Status(*statusEvents)
+	case "rollback":
+		err = app.Rollback(*rollbackDryRun)
+	}
+	if err != nil {
+		log.Printf("%s FAILED. %s", sub, err)
 		return 1
 	}
 
