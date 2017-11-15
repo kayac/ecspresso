@@ -106,14 +106,14 @@ func (d *App) Start() (context.Context, context.CancelFunc) {
 	}
 }
 
-func (d *App) Status(events int) error {
+func (d *App) Status(opt StatusOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
-	_, err := d.DescribeServiceStatus(ctx, events)
+	_, err := d.DescribeServiceStatus(ctx, *opt.Events)
 	return err
 }
 
-func (d *App) Deploy(dryRun bool) error {
+func (d *App) Deploy(opt DeployOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
@@ -124,7 +124,7 @@ func (d *App) Deploy(dryRun bool) error {
 	if err := d.LoadTaskDefinition(d.config.TaskDefinitionPath); err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
-	if dryRun {
+	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
 	}
@@ -143,7 +143,7 @@ func (d *App) Deploy(dryRun bool) error {
 	return nil
 }
 
-func (d *App) Rollback(dryRun bool) error {
+func (d *App) Rollback(opt RollbackOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
@@ -157,7 +157,7 @@ func (d *App) Rollback(dryRun bool) error {
 		return errors.Wrap(err, "rollback failed")
 	}
 	d.Log("Rollbacking to", arnToName(targetArn))
-	if dryRun {
+	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
 	}

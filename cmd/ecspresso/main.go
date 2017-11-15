@@ -17,13 +17,19 @@ func _main() int {
 	conf := kingpin.Flag("config", "config file").Required().String()
 
 	deploy := kingpin.Command("deploy", "deploy service")
-	deployDryRun := deploy.Flag("dry-run", "dry-run").Bool()
+	deployOption := ecspresso.DeployOption{
+		DryRun: deploy.Flag("dry-run", "dry-run").Bool(),
+	}
 
 	status := kingpin.Command("status", "show status of service")
-	statusEvents := status.Flag("events", "show events num").Default("2").Int()
+	statusOption := ecspresso.StatusOption{
+		Events: status.Flag("events", "show events num").Default("2").Int(),
+	}
 
 	rollback := kingpin.Command("rollback", "rollback service")
-	rollbackDryRun := rollback.Flag("dry-run", "dry-run").Bool()
+	rollbackOption := ecspresso.RollbackOption{
+		DryRun: rollback.Flag("dry-run", "dry-run").Bool(),
+	}
 
 	sub := kingpin.Parse()
 
@@ -41,11 +47,11 @@ func _main() int {
 
 	switch sub {
 	case "deploy":
-		err = app.Deploy(*deployDryRun)
+		err = app.Deploy(deployOption)
 	case "status":
-		err = app.Status(*statusEvents)
+		err = app.Status(statusOption)
 	case "rollback":
-		err = app.Rollback(*rollbackDryRun)
+		err = app.Rollback(rollbackOption)
 	}
 	if err != nil {
 		log.Printf("%s FAILED. %s", sub, err)
