@@ -4,14 +4,24 @@ import (
 	"errors"
 	"os"
 	"time"
+
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 type Config struct {
-	Region             string        `yaml:"region"`
-	Service            string        `yaml:"service"`
-	Cluster            string        `yaml:"cluster"`
-	TaskDefinitionPath string        `yaml:"task_definition"`
-	Timeout            time.Duration `yaml:"timeout"`
+	Region                string        `yaml:"region"`
+	Service               string        `yaml:"service"`
+	Cluster               string        `yaml:"cluster"`
+	TaskDefinitionPath    string        `yaml:"task_definition"`
+	ServiceDefinitionPath string        `yaml:"service_definition"`
+	Timeout               time.Duration `yaml:"timeout"`
+}
+
+type ServiceDefinition struct {
+	DeploymentConfiguration *ecs.DeploymentConfiguration `json:deployment_configuration"`
+	Role                    *string                      `json:"role"`
+	LoadBalancers           []*ecs.LoadBalancer          `json:"load_balancers"`
+	PlacementConstraints    []*ecs.PlacementConstraint   `json:"placement_constraints"`
 }
 
 func (c *Config) Validate() error {

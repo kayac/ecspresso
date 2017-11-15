@@ -113,6 +113,43 @@ func (d *App) Status(opt StatusOption) error {
 	return err
 }
 
+func (d *App) Create(opt CreateOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	d.Log("Starting create service")
+	if err := d.LoadTaskDefinition(d.config.TaskDefinitionPath); err != nil {
+		return errors.Wrap(err, "create failed")
+	}
+	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "create failed")
+	}
+	if *opt.DryRun {
+		d.Log("task definition:", d.TaskDefinition.String())
+		d.Log("service definition:", svd.String())
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
+	if err := d.RegisterTaskDefinition(ctx); err != nil {
+		return errors.Wrap(err, "create failed")
+	}
+	svd.TaskDefinition = d.Registered.TaskDefinitionArn
+
+	if _, err := d.ecs.CreateServiceWithContext(ctx, svd); err != nil {
+		return errors.Wrap(err, "create failed")
+	}
+	d.Log("Service is created")
+
+	if err := d.WaitServiceStable(ctx); err != nil {
+		return errors.Wrap(err, "create failed")
+	}
+
+	d.Log("Service is stable now. Completed!")
+	return nil
+}
+
 func (d *App) Deploy(opt DeployOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
@@ -285,4 +322,20 @@ func (d *App) LoadTaskDefinition(path string) error {
 	}
 	d.TaskDefinition = c.TaskDefinition
 	return nil
+}
+
+func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error) {
+	c := ServiceDefinition{}
+	if err := config.LoadWithEnvJSON(&c, path); err != nil {
+		return nil, err
+	}
+	return &ecs.CreateServiceInput{
+		Cluster:                 aws.String(d.config.Cluster),
+		DesiredCount:            aws.Int64(1),
+		ServiceName:             aws.String(d.config.Service),
+		DeploymentConfiguration: c.DeploymentConfiguration,
+		LoadBalancers:           c.LoadBalancers,
+		PlacementConstraints:    c.PlacementConstraints,
+		Role:                    c.Role,
+	}, nil
 }
