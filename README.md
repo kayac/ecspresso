@@ -20,6 +20,9 @@ Commands:
   deploy [<flags>]
     deploy service
 
+  create [<flags>]
+    create service
+
   status [<flags>]
     show status of service
 
@@ -50,7 +53,7 @@ ecspresso works as below.
 - Update a service definition.
 - Wait a service stable.
 
-## Example
+## Example of deploy
 
 ```
 $ ecspresso deploy --config config.yaml
@@ -69,6 +72,37 @@ Events:
 2017/11/09 23:23:23 myService/default  PRIMARY myService:4 desired:1 pending:0 running:1
 2017/11/09 23:23:29 myService/default Service is stable now. Completed!
 ```
+
+## Example of create
+
+escpresso can create service by `service_definition` JSON file and `task_definition`.
+
+```yaml
+service_definition: service.json
+```
+
+example of service.json below.
+
+```json
+{
+  "role": "ecsServiceRole",
+  "loadBalancers": [
+    {
+      "containerName": "myLoadbalancer",
+      "containerPort": 80,
+      "targetGroupArn": "arn:aws:elasticloadbalancing:[region]:[account-id]:targetgroup/{target-name}/201ae83c14de522d"
+    }
+  ]
+}
+```
+
+Keys are same format as `aws ecs describe-services` output.
+
+- deploymentConfiguration
+- role
+- loadBalancers
+- placementConstraint
+
 
 # LICENCE
 
