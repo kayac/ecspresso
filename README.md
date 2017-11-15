@@ -55,7 +55,7 @@ ecspresso works as below.
 
 ## Example of deploy
 
-```
+```console
 $ ecspresso deploy --config config.yaml
 2017/11/09 23:20:13 myService/default Starting deploy
 Service: myService
@@ -77,7 +77,13 @@ Events:
 
 escpresso can create service by `service_definition` JSON file and `task_definition`.
 
+```console
+$ ecspresso create --config config.yaml
+...
+```
+
 ```yaml
+# config.yaml
 service_definition: service.json
 ```
 
