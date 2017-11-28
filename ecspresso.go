@@ -265,8 +265,10 @@ func (d *App) WaitServiceStable(ctx context.Context) error {
 			case <-waitCtx.Done():
 				return
 			case <-tick:
-				if isTerminal && lines > 0 {
-					fmt.Print(aec.Up(uint(lines)))
+				if isTerminal {
+					for i := 0; i < lines; i++ {
+						fmt.Print(aec.EraseLine(aec.EraseModes.All), aec.PreviousLine(1))
+					}
 				}
 				lines, _ = d.DescribeServiceDeployments(waitCtx)
 			}
