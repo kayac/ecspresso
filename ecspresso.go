@@ -162,6 +162,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		return errors.Wrap(err, "deploy failed")
 	}
 	if *opt.DryRun {
+		d.Log("task definition:", d.TaskDefinition.String())
 		d.Log("DRY RUN OK")
 		return nil
 	}
