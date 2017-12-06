@@ -7,4 +7,6 @@ go:
 
 install:
   - make clean
+  - make get-dep-amd64
+  - make get-deps
   - make test
