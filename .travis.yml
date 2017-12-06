@@ -1,0 +1,12 @@
+sudo: false
+language: go
+
+go:
+  - 1.9
+  - tip
+
+install:
+  - make clean
+  - make get-dep-amd64
+  - make get-deps
+  - make test

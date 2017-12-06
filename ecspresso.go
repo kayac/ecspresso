@@ -337,8 +337,11 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 		DesiredCount:            aws.Int64(1),
 		ServiceName:             aws.String(d.config.Service),
 		DeploymentConfiguration: c.DeploymentConfiguration,
+		LaunchType:              c.LaunchType,
 		LoadBalancers:           c.LoadBalancers,
+		NetworkConfiguration:    c.NetworkConfiguration,
 		PlacementConstraints:    c.PlacementConstraints,
+		PlacementStrategy:       c.PlacementStrategy,
 		Role:                    c.Role,
 	}, nil
 }

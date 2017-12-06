@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  revision = "b26d9c308763d68093482582cea63d69be07a0f0"
+  version = "v0.3.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/alecthomas/template"
   packages = [".","parse"]
@@ -16,14 +22,14 @@
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
   packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/json/jsonutil","private/protocol/jsonrpc","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/ecs","service/sts"]
-  revision = "a201bf33b18ad4ab54344e4bc26b87eb6ad37b8e"
-  version = "v1.12.25"
+  revision = "a9c63ac6fd79402f91191c2e0a1348d0b8968e6c"
+  version = "v1.12.41"
 
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "f280b3ba517bf5fc98922624f21fb0e7a92adaec"
-  version = "v1.30.3"
+  revision = "32e4c1e6bc4e7d0d8451aa6b75200d19e37a536a"
+  version = "v1.32.0"
 
 [[projects]]
   name = "github.com/jmespath/go-jmespath"
@@ -31,10 +37,10 @@
   revision = "0b12d6b5"
 
 [[projects]]
-  branch = "json"
   name = "github.com/kayac/go-config"
   packages = ["."]
-  revision = "350764ec60ee2f9f7262587e7525e858ce53fd71"
+  revision = "762bc25448755c6ccfe0265ed3013c9d507569c5"
+  version = "v0.0.1"
 
 [[projects]]
   name = "github.com/mattn/go-isatty"
@@ -58,7 +64,7 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "4b45465282a4624cf39876842a017334f13b8aff"
+  revision = "8b4580aae2a0dd0c231a45d3ccb8434ff533b840"
 
 [[projects]]
   name = "gopkg.in/alecthomas/kingpin.v2"
@@ -70,11 +76,11 @@
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "eb3733d160e74a9c7e442f435eb3bea458e1d19f"
+  revision = "287cf08546ab5e7e37d55a84f7ed3fd1db036de5"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8076855fce7f91325f92d016c1c26588c5911592d33eee78170008e32b357374"
+  inputs-digest = "646c6db077a6bd93545ed24cb074d8ff5f75147d308618deb6195673af5cf21e"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -105,10 +105,12 @@ example of service.json below.
 Keys are same format as `aws ecs describe-services` output.
 
 - deploymentConfiguration
-- role
+- launchType
 - loadBalancers
+- networkConfiguration
 - placementConstraint
-
+- placementStrategy
+- role
 
 # LICENCE
 
