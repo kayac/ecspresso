@@ -112,6 +112,57 @@ Keys are same format as `aws ecs describe-services` output.
 - placementStrategy
 - role
 
+# Notes
+
+## Deploy to Fargate
+
+If you want to deploy services to Fargate, task-definition and service-definition requires some keys.
+
+for task definition.
+
+- requiresCompatibilities
+- networkMode
+- cpu
+- memory
+
+```json
+{
+  "taskDefinition": {
+    // ...
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+      "FARGATE"
+    ]
+    "cpu": "1024",
+    "memory": "2048",
+    // ...
+}
+```
+
+for service-definition.
+
+- launchType
+- networkConfiguration
+
+```json
+{
+  // ...
+  "launchType": "FARGATE",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "subnet-aaaaaaaa",
+        "subnet-bbbbbbbb"
+      ],
+      "securityGroups": [
+        "sg-11111111"
+      ],
+      "assignPublicIp": "ENABLED"
+    }
+  }
+}
+```
+
 # LICENCE
 
 MIT
