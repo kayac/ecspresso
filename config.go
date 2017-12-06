@@ -18,7 +18,7 @@ type Config struct {
 }
 
 type ServiceDefinition struct {
-	DeploymentConfiguration *ecs.DeploymentConfiguration `json:deploymentConfiguration"`
+	DeploymentConfiguration *ecs.DeploymentConfiguration `json:"deploymentConfiguration"`
 	LaunchType              *string                      `json:"launchType"`
 	LoadBalancers           []*ecs.LoadBalancer          `json:"loadBalancers"`
 	NetworkConfiguration    *ecs.NetworkConfiguration    `json:"networkConfiguration"`
