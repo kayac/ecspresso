@@ -299,12 +299,16 @@ func (d *App) RegisterTaskDefinition(ctx context.Context) error {
 	out, err := d.ecs.RegisterTaskDefinitionWithContext(
 		ctx,
 		&ecs.RegisterTaskDefinitionInput{
-			Family:               d.TaskDefinition.Family,
-			TaskRoleArn:          d.TaskDefinition.TaskRoleArn,
-			NetworkMode:          d.TaskDefinition.NetworkMode,
-			Volumes:              d.TaskDefinition.Volumes,
-			PlacementConstraints: d.TaskDefinition.PlacementConstraints,
-			ContainerDefinitions: d.TaskDefinition.ContainerDefinitions,
+			ContainerDefinitions:    d.TaskDefinition.ContainerDefinitions,
+			Cpu:                     d.TaskDefinition.Cpu,
+			ExecutionRoleArn:        d.TaskDefinition.ExecutionRoleArn,
+			Family:                  d.TaskDefinition.Family,
+			Memory:                  d.TaskDefinition.Memory,
+			NetworkMode:             d.TaskDefinition.NetworkMode,
+			PlacementConstraints:    d.TaskDefinition.PlacementConstraints,
+			RequiresCompatibilities: d.TaskDefinition.RequiresCompatibilities,
+			TaskRoleArn:             d.TaskDefinition.TaskRoleArn,
+			Volumes:                 d.TaskDefinition.Volumes,
 		},
 	)
 	if err != nil {
