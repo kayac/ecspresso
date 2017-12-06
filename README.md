@@ -46,9 +46,9 @@ ecspresso works as below.
 
 - Register a new task definition from JSON file.
   - JSON file is same format as `aws ecs describe-task-definition` output.
-  - Replace `{{ env "FOO" "bar" }}` syntax in the JSON file to environment variable "FOO".
+  - Replace ```{{ env `FOO` `bar` }}``` syntax in the JSON file to environment variable "FOO".
     - If "FOO" is not defined, replaced by "bar"
-  - Replace `{{ must_env "FOO" }}` syntax in the JSON file to environment variable "FOO".
+  - Replace ```{{ must_env `FOO` }}``` syntax in the JSON file to environment variable "FOO".
     - If "FOO" is not defined, abort immediately.
 - Update a service definition.
 - Wait a service stable.
@@ -105,10 +105,12 @@ example of service.json below.
 Keys are same format as `aws ecs describe-services` output.
 
 - deploymentConfiguration
-- role
+- launchType
 - loadBalancers
+- networkConfiguration
 - placementConstraint
-
+- placementStrategy
+- role
 
 # LICENCE
 

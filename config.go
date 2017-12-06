@@ -19,9 +19,12 @@ type Config struct {
 
 type ServiceDefinition struct {
 	DeploymentConfiguration *ecs.DeploymentConfiguration `json:"deploymentConfiguration"`
-	Role                    *string                      `json:"role"`
+	LaunchType              *string                      `json:"launchType"`
 	LoadBalancers           []*ecs.LoadBalancer          `json:"loadBalancers"`
+	NetworkConfiguration    *ecs.NetworkConfiguration    `json:"networkConfiguration"`
 	PlacementConstraints    []*ecs.PlacementConstraint   `json:"placementConstraints"`
+	PlacementStrategy       []*ecs.PlacementStrategy     `json:"placementStrategy"`
+	Role                    *string                      `json:"role"`
 }
 
 func (c *Config) Validate() error {

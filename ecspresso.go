@@ -162,6 +162,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		return errors.Wrap(err, "deploy failed")
 	}
 	if *opt.DryRun {
+		d.Log("task definition:", d.TaskDefinition.String())
 		d.Log("DRY RUN OK")
 		return nil
 	}
@@ -265,8 +266,10 @@ func (d *App) WaitServiceStable(ctx context.Context) error {
 			case <-waitCtx.Done():
 				return
 			case <-tick:
-				if isTerminal && lines > 0 {
-					fmt.Print(aec.Up(uint(lines)))
+				if isTerminal {
+					for i := 0; i < lines; i++ {
+						fmt.Print(aec.EraseLine(aec.EraseModes.All), aec.PreviousLine(1))
+					}
 				}
 				lines, _ = d.DescribeServiceDeployments(waitCtx)
 			}
@@ -296,12 +299,16 @@ func (d *App) RegisterTaskDefinition(ctx context.Context) error {
 	out, err := d.ecs.RegisterTaskDefinitionWithContext(
 		ctx,
 		&ecs.RegisterTaskDefinitionInput{
-			Family:               d.TaskDefinition.Family,
-			TaskRoleArn:          d.TaskDefinition.TaskRoleArn,
-			NetworkMode:          d.TaskDefinition.NetworkMode,
-			Volumes:              d.TaskDefinition.Volumes,
-			PlacementConstraints: d.TaskDefinition.PlacementConstraints,
-			ContainerDefinitions: d.TaskDefinition.ContainerDefinitions,
+			ContainerDefinitions:    d.TaskDefinition.ContainerDefinitions,
+			Cpu:                     d.TaskDefinition.Cpu,
+			ExecutionRoleArn:        d.TaskDefinition.ExecutionRoleArn,
+			Family:                  d.TaskDefinition.Family,
+			Memory:                  d.TaskDefinition.Memory,
+			NetworkMode:             d.TaskDefinition.NetworkMode,
+			PlacementConstraints:    d.TaskDefinition.PlacementConstraints,
+			RequiresCompatibilities: d.TaskDefinition.RequiresCompatibilities,
+			TaskRoleArn:             d.TaskDefinition.TaskRoleArn,
+			Volumes:                 d.TaskDefinition.Volumes,
 		},
 	)
 	if err != nil {
@@ -334,8 +341,11 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 		DesiredCount:            aws.Int64(1),
 		ServiceName:             aws.String(d.config.Service),
 		DeploymentConfiguration: c.DeploymentConfiguration,
+		LaunchType:              c.LaunchType,
 		LoadBalancers:           c.LoadBalancers,
+		NetworkConfiguration:    c.NetworkConfiguration,
 		PlacementConstraints:    c.PlacementConstraints,
+		PlacementStrategy:       c.PlacementStrategy,
 		Role:                    c.Role,
 	}, nil
 }
