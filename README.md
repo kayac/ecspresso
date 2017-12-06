@@ -125,14 +125,13 @@ for task definition.
 - cpu
 - memory
 
-```json
+```json5
 {
   "taskDefinition": {
-    // ...
     "networkMode": "awsvpc",
     "requiresCompatibilities": [
       "FARGATE"
-    ]
+    ],
     "cpu": "1024",
     "memory": "2048",
     // ...
@@ -144,9 +143,8 @@ for service-definition.
 - launchType
 - networkConfiguration
 
-```json
+```json5
 {
-  // ...
   "launchType": "FARGATE",
   "networkConfiguration": {
     "awsvpcConfiguration": {
@@ -159,7 +157,8 @@ for service-definition.
       ],
       "assignPublicIp": "ENABLED"
     }
-  }
+  },
+  // ...
 }
 ```
 
