@@ -141,7 +141,7 @@ For task definition,
 
 For service-definition,
 
-- launchType (required "FAGATE")
+- launchType (required "FARGATE")
 - networkConfiguration (required "awsvpcConfiguration")
 
 ```json5
