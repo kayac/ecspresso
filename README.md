@@ -116,14 +116,15 @@ Keys are same format as `aws ecs describe-services` output.
 
 ## Deploy to Fargate
 
-If you want to deploy services to Fargate, task-definition and service-definition requires some keys.
+If you want to deploy services to Fargate, task-definition and service-definition requires some settings.
 
-for task definition.
+For task definition,
 
-- requiresCompatibilities
-- networkMode
-- cpu
-- memory
+- requiresCompatibilities (required "FARGATE")
+- networkMode (required "awsvpc")
+- cpu (required)
+- memory (required)
+- executionRoleArn (optional)
 
 ```json5
 {
@@ -138,10 +139,10 @@ for task definition.
 }
 ```
 
-for service-definition.
+For service-definition,
 
-- launchType
-- networkConfiguration
+- launchType (required "FAGATE")
+- networkConfiguration (required "awsvpcConfiguration")
 
 ```json5
 {
