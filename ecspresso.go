@@ -19,17 +19,17 @@ import (
 
 var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
 
+const KeepDesiredCount = -1
+
 func taskDefinitionName(t *ecs.TaskDefinition) string {
 	return fmt.Sprintf("%s:%d", *t.Family, *t.Revision)
 }
 
 type App struct {
-	ecs            *ecs.ECS
-	Service        string
-	Cluster        string
-	TaskDefinition *ecs.TaskDefinition
-	Registered     *ecs.TaskDefinition
-	config         *Config
+	ecs     *ecs.ECS
+	Service string
+	Cluster string
+	config  *Config
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
@@ -118,30 +118,35 @@ func (d *App) Create(opt CreateOption) error {
 	defer cancel()
 
 	d.Log("Starting create service")
-	if err := d.LoadTaskDefinition(d.config.TaskDefinitionPath); err != nil {
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
 		return errors.Wrap(err, "create failed")
 	}
 	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 	if err != nil {
 		return errors.Wrap(err, "create failed")
 	}
+	svd.DesiredCount = opt.DesiredCount
+
 	if *opt.DryRun {
-		d.Log("task definition:", d.TaskDefinition.String())
+		d.Log("task definition:", td.String())
 		d.Log("service definition:", svd.String())
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	if err := d.RegisterTaskDefinition(ctx); err != nil {
+	newTd, err := d.RegisterTaskDefinition(ctx, td)
+	if err != nil {
 		return errors.Wrap(err, "create failed")
 	}
-	svd.TaskDefinition = d.Registered.TaskDefinitionArn
+	svd.TaskDefinition = newTd.TaskDefinitionArn
 
 	if _, err := d.ecs.CreateServiceWithContext(ctx, svd); err != nil {
 		return errors.Wrap(err, "create failed")
 	}
 	d.Log("Service is created")
 
+	time.Sleep(3 * time.Second) // wait for service created
 	if err := d.WaitServiceStable(ctx); err != nil {
 		return errors.Wrap(err, "create failed")
 	}
@@ -155,22 +160,43 @@ func (d *App) Deploy(opt DeployOption) error {
 	defer cancel()
 
 	d.Log("Starting deploy")
-	if _, err := d.DescribeServiceStatus(ctx, 0); err != nil {
+	svd, err := d.DescribeServiceStatus(ctx, 0)
+	if err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
-	if err := d.LoadTaskDefinition(d.config.TaskDefinitionPath); err != nil {
-		return errors.Wrap(err, "deploy failed")
+
+	var count *int64
+	if *opt.DesiredCount == KeepDesiredCount {
+		count = svd.DesiredCount
+	} else {
+		count = opt.DesiredCount
 	}
+
+	var tdArn string
+	if *opt.SkipTaskDefinition {
+		tdArn = *svd.TaskDefinition
+	} else {
+		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+		if err != nil {
+			return errors.Wrap(err, "deploy failed")
+		}
+		if *opt.DryRun {
+			d.Log("task definition:", td.String())
+		} else {
+			newTd, err := d.RegisterTaskDefinition(ctx, td)
+			if err != nil {
+				return errors.Wrap(err, "deploy failed")
+			}
+			tdArn = *newTd.TaskDefinitionArn
+		}
+	}
+	d.Log("desired count:", *count)
 	if *opt.DryRun {
-		d.Log("task definition:", d.TaskDefinition.String())
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	if err := d.RegisterTaskDefinition(ctx); err != nil {
-		return errors.Wrap(err, "deploy failed")
-	}
-	if err := d.UpdateService(ctx, *d.Registered.TaskDefinitionArn); err != nil {
+	if err := d.UpdateService(ctx, tdArn, count); err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
 	if err := d.WaitServiceStable(ctx); err != nil {
@@ -200,7 +226,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return nil
 	}
 
-	if err := d.UpdateService(ctx, targetArn); err != nil {
+	if err := d.UpdateService(ctx, targetArn, service.DesiredCount); err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
 	if err := d.WaitServiceStable(ctx); err != nil {
@@ -279,7 +305,7 @@ func (d *App) WaitServiceStable(ctx context.Context) error {
 	return d.ecs.WaitUntilServicesStableWithContext(ctx, d.DescribeServicesInput())
 }
 
-func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string) error {
+func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64) error {
 	d.Log("Updating service...")
 
 	_, err := d.ecs.UpdateServiceWithContext(
@@ -288,47 +314,46 @@ func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string) error
 			Service:        aws.String(d.Service),
 			Cluster:        aws.String(d.Cluster),
 			TaskDefinition: aws.String(taskDefinitionArn),
+			DesiredCount:   count,
 		},
 	)
 	return err
 }
 
-func (d *App) RegisterTaskDefinition(ctx context.Context) error {
+func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition) (*ecs.TaskDefinition, error) {
 	d.Log("Registering a new task definition...")
 
 	out, err := d.ecs.RegisterTaskDefinitionWithContext(
 		ctx,
 		&ecs.RegisterTaskDefinitionInput{
-			ContainerDefinitions:    d.TaskDefinition.ContainerDefinitions,
-			Cpu:                     d.TaskDefinition.Cpu,
-			ExecutionRoleArn:        d.TaskDefinition.ExecutionRoleArn,
-			Family:                  d.TaskDefinition.Family,
-			Memory:                  d.TaskDefinition.Memory,
-			NetworkMode:             d.TaskDefinition.NetworkMode,
-			PlacementConstraints:    d.TaskDefinition.PlacementConstraints,
-			RequiresCompatibilities: d.TaskDefinition.RequiresCompatibilities,
-			TaskRoleArn:             d.TaskDefinition.TaskRoleArn,
-			Volumes:                 d.TaskDefinition.Volumes,
+			ContainerDefinitions:    td.ContainerDefinitions,
+			Cpu:                     td.Cpu,
+			ExecutionRoleArn:        td.ExecutionRoleArn,
+			Family:                  td.Family,
+			Memory:                  td.Memory,
+			NetworkMode:             td.NetworkMode,
+			PlacementConstraints:    td.PlacementConstraints,
+			RequiresCompatibilities: td.RequiresCompatibilities,
+			TaskRoleArn:             td.TaskRoleArn,
+			Volumes:                 td.Volumes,
 		},
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	d.Log("Task definition is registered", taskDefinitionName(out.TaskDefinition))
-	d.Registered = out.TaskDefinition
-	return nil
+	return out.TaskDefinition, nil
 }
 
-func (d *App) LoadTaskDefinition(path string) error {
+func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
 	d.Log("Creating a new task definition by", path)
 	c := struct {
 		TaskDefinition *ecs.TaskDefinition
 	}{}
 	if err := config.LoadWithEnvJSON(&c, path); err != nil {
-		return err
+		return nil, err
 	}
-	d.TaskDefinition = c.TaskDefinition
-	return nil
+	return c.TaskDefinition, nil
 }
 
 func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error) {
