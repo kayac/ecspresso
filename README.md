@@ -30,6 +30,8 @@ Commands:
     rollback service
 ```
 
+For more options for sub-commands, See `ecspresso sub-command --help`.
+
 ### Configuration file
 
 YAML format.
@@ -71,6 +73,16 @@ Events:
 2017/11/09 23:20:13 myService/default Waiting for service stable...(it will take a few minutes)
 2017/11/09 23:23:23 myService/default  PRIMARY myService:4 desired:1 pending:0 running:1
 2017/11/09 23:23:29 myService/default Service is stable now. Completed!
+```
+
+## Scale out/in
+
+To change desired count of the service, specify `--tasks` option.
+
+If `--skip-task-definition` is set, task definition will not be registered.
+
+```console
+$ ecspresso deploy --config config.yaml --tasks 10 --skip-task-definition
 ```
 
 ## Example of create
