@@ -10,7 +10,8 @@ install: cmd/ecspresso/ecspresso
 	install cmd/ecspresso/ecspresso ${GOPATH}/bin
 
 test:
-	go test -race
+	go test -race .
+	go test -race ./cmd/ecspresso
 
 get-dep-amd64:
 	wget -O ${GOPATH}/bin/dep https://github.com/golang/dep/releases/download/v0.3.2/dep-linux-amd64

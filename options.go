@@ -1,11 +1,14 @@
 package ecspresso
 
 type CreateOption struct {
-	DryRun *bool
+	DryRun       *bool
+	DesiredCount *int64
 }
 
 type DeployOption struct {
-	DryRun *bool
+	DryRun             *bool
+	DesiredCount       *int64
+	SkipTaskDefinition *bool
 }
 
 type StatusOption struct {

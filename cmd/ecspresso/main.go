@@ -18,12 +18,15 @@ func _main() int {
 
 	deploy := kingpin.Command("deploy", "deploy service")
 	deployOption := ecspresso.DeployOption{
-		DryRun: deploy.Flag("dry-run", "dry-run").Bool(),
+		DryRun:             deploy.Flag("dry-run", "dry-run").Bool(),
+		DesiredCount:       deploy.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
+		SkipTaskDefinition: deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
 	}
 
 	create := kingpin.Command("create", "create service")
 	createOption := ecspresso.CreateOption{
-		DryRun: create.Flag("dry-run", "dry-run").Bool(),
+		DryRun:       create.Flag("dry-run", "dry-run").Bool(),
+		DesiredCount: create.Flag("tasks", "desired count of tasks").Default("1").Int64(),
 	}
 
 	status := kingpin.Command("status", "show status of service")
