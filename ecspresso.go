@@ -18,6 +18,7 @@ import (
 )
 
 var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
+var TerminalWidth = 90
 
 const KeepDesiredCount = -1
 
@@ -60,12 +61,14 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 		if i >= events {
 			break
 		}
-		fmt.Println("  ", formatEvent(event))
+		for _, line := range formatEvent(event, TerminalWidth) {
+			fmt.Println(line)
+		}
 	}
 	return s, nil
 }
 
-func (d *App) DescribeServiceDeployments(ctx context.Context) (int, error) {
+func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Time) (int, error) {
 	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return 0, err
@@ -74,10 +77,20 @@ func (d *App) DescribeServiceDeployments(ctx context.Context) (int, error) {
 		return 0, nil
 	}
 	s := out.Services[0]
+	lines := 0
 	for _, dep := range s.Deployments {
+		lines++
 		d.Log(formatDeployment(dep))
 	}
-	return len(s.Deployments), nil
+	for _, event := range s.Events {
+		if (*event.CreatedAt).After(startedAt) {
+			for _, line := range formatEvent(event, TerminalWidth) {
+				fmt.Println(line)
+				lines++
+			}
+		}
+	}
+	return lines, nil
 }
 
 func NewApp(conf *Config) (*App, error) {
@@ -146,8 +159,9 @@ func (d *App) Create(opt CreateOption) error {
 	}
 	d.Log("Service is created")
 
+	start := time.Now()
 	time.Sleep(3 * time.Second) // wait for service created
-	if err := d.WaitServiceStable(ctx); err != nil {
+	if err := d.WaitServiceStable(ctx, start); err != nil {
 		return errors.Wrap(err, "create failed")
 	}
 
@@ -199,7 +213,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	if err := d.UpdateService(ctx, tdArn, count); err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
-	if err := d.WaitServiceStable(ctx); err != nil {
+	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
 
@@ -229,7 +243,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 	if err := d.UpdateService(ctx, targetArn, service.DesiredCount); err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
-	if err := d.WaitServiceStable(ctx); err != nil {
+	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
 
@@ -278,9 +292,8 @@ func (d *App) Log(v ...interface{}) {
 	log.Println(args...)
 }
 
-func (d *App) WaitServiceStable(ctx context.Context) error {
+func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error {
 	d.Log("Waiting for service stable...(it will take a few minutes)")
-
 	waitCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -297,7 +310,7 @@ func (d *App) WaitServiceStable(ctx context.Context) error {
 						fmt.Print(aec.EraseLine(aec.EraseModes.All), aec.PreviousLine(1))
 					}
 				}
-				lines, _ = d.DescribeServiceDeployments(waitCtx)
+				lines, _ = d.DescribeServiceDeployments(waitCtx, startedAt)
 			}
 		}
 	}()
