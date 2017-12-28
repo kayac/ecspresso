@@ -30,3 +30,6 @@
   name = "github.com/pkg/errors"
   version = "0.8.0"
 
+[[constraint]]
+  name = "github.com/aws/aws-sdk-go"
+  version = "v1.12.53"
