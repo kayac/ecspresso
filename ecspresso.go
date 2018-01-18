@@ -366,7 +366,14 @@ func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
 	if err := config.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
 	}
-	return c.TaskDefinition, nil
+	if c.TaskDefinition != nil {
+		return c.TaskDefinition, nil
+	}
+	var td ecs.TaskDefinition
+	if err := config.LoadWithEnvJSON(&td, path); err != nil {
+		return nil, err
+	}
+	return &td, nil
 }
 
 func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error) {
