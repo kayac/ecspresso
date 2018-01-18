@@ -47,7 +47,9 @@ timeout: 5m
 ecspresso works as below.
 
 - Register a new task definition from JSON file.
-  - JSON file is same format as `aws ecs describe-task-definition` output.
+  - JSON file is allowed both of formats as below.
+    - `aws ecs describe-task-definition` output.
+    - `aws ecs register-task-definition --cli-input-json` input.
   - Replace ```{{ env `FOO` `bar` }}``` syntax in the JSON file to environment variable "FOO".
     - If "FOO" is not defined, replaced by "bar"
   - Replace ```{{ must_env `FOO` }}``` syntax in the JSON file to environment variable "FOO".
