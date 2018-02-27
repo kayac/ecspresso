@@ -319,7 +319,12 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 }
 
 func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64, force *bool) error {
-	d.Log("Updating service...")
+	msg := "Updating service"
+	if *force {
+		msg = msg + " with force new deployment"
+	}
+	msg = msg + "..."
+	d.Log(msg)
 
 	_, err := d.ecs.UpdateServiceWithContext(
 		ctx,
