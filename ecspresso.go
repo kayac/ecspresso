@@ -210,7 +210,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		return nil
 	}
 
-	if err := d.UpdateService(ctx, tdArn, count); err != nil {
+	if err := d.UpdateService(ctx, tdArn, count, opt.ForceNewDeployment); err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
@@ -240,7 +240,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return nil
 	}
 
-	if err := d.UpdateService(ctx, targetArn, service.DesiredCount); err != nil {
+	if err := d.UpdateService(ctx, targetArn, service.DesiredCount, nil); err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
@@ -318,16 +318,22 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	return d.ecs.WaitUntilServicesStableWithContext(ctx, d.DescribeServicesInput())
 }
 
-func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64) error {
-	d.Log("Updating service...")
+func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64, force *bool) error {
+	msg := "Updating service"
+	if *force {
+		msg = msg + " with force new deployment"
+	}
+	msg = msg + "..."
+	d.Log(msg)
 
 	_, err := d.ecs.UpdateServiceWithContext(
 		ctx,
 		&ecs.UpdateServiceInput{
-			Service:        aws.String(d.Service),
-			Cluster:        aws.String(d.Cluster),
-			TaskDefinition: aws.String(taskDefinitionArn),
-			DesiredCount:   count,
+			Service:            aws.String(d.Service),
+			Cluster:            aws.String(d.Cluster),
+			TaskDefinition:     aws.String(taskDefinitionArn),
+			DesiredCount:       count,
+			ForceNewDeployment: force,
 		},
 	)
 	return err

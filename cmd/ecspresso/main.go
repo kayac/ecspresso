@@ -21,6 +21,7 @@ func _main() int {
 		DryRun:             deploy.Flag("dry-run", "dry-run").Bool(),
 		DesiredCount:       deploy.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
 		SkipTaskDefinition: deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
+		ForceNewDeployment: deploy.Flag("force-new-deployment", "force a new deployment of the service").Bool(),
 	}
 
 	create := kingpin.Command("create", "create service")
