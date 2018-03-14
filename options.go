@@ -17,5 +17,6 @@ type StatusOption struct {
 }
 
 type RollbackOption struct {
-	DryRun *bool
+	DryRun                   *bool
+	DeregisterTaskDefinition *bool
 }
