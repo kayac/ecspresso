@@ -210,7 +210,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		return nil
 	}
 
-	if err := d.UpdateService(ctx, tdArn, count, opt.ForceNewDeployment); err != nil {
+	if err := d.UpdateService(ctx, tdArn, *count, *opt.ForceNewDeployment); err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
@@ -230,7 +230,8 @@ func (d *App) Rollback(opt RollbackOption) error {
 	if err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
-	targetArn, err := d.FindRollbackTarget(ctx, *service.TaskDefinition)
+	currentArn := *service.TaskDefinition
+	targetArn, err := d.FindRollbackTarget(ctx, currentArn)
 	if err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
@@ -240,7 +241,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return nil
 	}
 
-	if err := d.UpdateService(ctx, targetArn, service.DesiredCount, nil); err != nil {
+	if err := d.UpdateService(ctx, targetArn, *service.DesiredCount, false); err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
@@ -248,6 +249,21 @@ func (d *App) Rollback(opt RollbackOption) error {
 	}
 
 	d.Log("Service is stable now. Completed!")
+
+	if *opt.DeregisterTaskDefinition {
+		d.Log("Deregistering rolled back task definition", arnToName(currentArn))
+		_, err := d.ecs.DeregisterTaskDefinitionWithContext(
+			ctx,
+			&ecs.DeregisterTaskDefinitionInput{
+				TaskDefinition: &currentArn,
+			},
+		)
+		if err != nil {
+			return errors.Wrap(err, "deregister task definition failed")
+		}
+		d.Log(arnToName(currentArn), "was deregistered successfully")
+	}
+
 	return nil
 }
 
@@ -318,9 +334,9 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	return d.ecs.WaitUntilServicesStableWithContext(ctx, d.DescribeServicesInput())
 }
 
-func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64, force *bool) error {
+func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count int64, force bool) error {
 	msg := "Updating service"
-	if *force {
+	if force {
 		msg = msg + " with force new deployment"
 	}
 	msg = msg + "..."
@@ -332,8 +348,8 @@ func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count
 			Service:            aws.String(d.Service),
 			Cluster:            aws.String(d.Cluster),
 			TaskDefinition:     aws.String(taskDefinitionArn),
-			DesiredCount:       count,
-			ForceNewDeployment: force,
+			DesiredCount:       &count,
+			ForceNewDeployment: &force,
 		},
 	)
 	return err
