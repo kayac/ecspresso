@@ -139,7 +139,10 @@ func (d *App) Create(opt CreateOption) error {
 	if err != nil {
 		return errors.Wrap(err, "create failed")
 	}
-	svd.DesiredCount = opt.DesiredCount
+
+	if *opt.DesiredCount != 1 {
+                svd.DesiredCount= opt.DesiredCount
+        }
 
 	if *opt.DryRun {
 		d.Log("task definition:", td.String())
@@ -403,9 +406,17 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 	if err := config.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
 	}
+
+	var count *int64
+	if c.DesiredCount == nil {
+		count = aws.Int64(1)
+	} else {
+		count = c.DesiredCount
+	}
+
 	return &ecs.CreateServiceInput{
 		Cluster:                 aws.String(d.config.Cluster),
-		DesiredCount:            aws.Int64(1),
+		DesiredCount:            count,
 		ServiceName:             aws.String(d.config.Service),
 		DeploymentConfiguration: c.DeploymentConfiguration,
 		LaunchType:              c.LaunchType,
