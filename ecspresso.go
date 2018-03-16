@@ -141,8 +141,8 @@ func (d *App) Create(opt CreateOption) error {
 	}
 
 	if *opt.DesiredCount != 1 {
-                svd.DesiredCount= opt.DesiredCount
-        }
+		svd.DesiredCount = opt.DesiredCount
+	}
 
 	if *opt.DryRun {
 		d.Log("task definition:", td.String())
