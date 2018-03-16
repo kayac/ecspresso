@@ -25,6 +25,7 @@ type ServiceDefinition struct {
 	PlacementConstraints    []*ecs.PlacementConstraint   `json:"placementConstraints"`
 	PlacementStrategy       []*ecs.PlacementStrategy     `json:"placementStrategy"`
 	Role                    *string                      `json:"role"`
+	DesiredCount            *int64                       `json:"desiredCount"`
 }
 
 func (c *Config) Validate() error {

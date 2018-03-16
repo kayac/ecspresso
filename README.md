@@ -106,6 +106,7 @@ example of service.json below.
 ```json
 {
   "role": "ecsServiceRole",
+  "desiredCount": 2,
   "loadBalancers": [
     {
       "containerName": "myLoadbalancer",
