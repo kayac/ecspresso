@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -169,6 +170,41 @@ func (d *App) Create(opt CreateOption) error {
 	}
 
 	d.Log("Service is stable now. Completed!")
+	return nil
+}
+
+func (d *App) Delete(opt DeleteOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	d.Log("Deleting service")
+	sv, err := d.DescribeServiceStatus(ctx, 3)
+	if err != nil {
+		return err
+	}
+
+	if *opt.DryRun {
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
+	if !*opt.Force {
+		service := prompter.Prompt(`Enter the service name to DELETE`, "")
+		if service != *sv.ServiceName {
+			d.Log("Aborted")
+			return errors.New("confirmation failed")
+		}
+	}
+
+	dsi := &ecs.DeleteServiceInput{
+		Cluster: sv.ClusterArn,
+		Service: sv.ServiceName,
+	}
+	if _, err := d.ecs.DeleteServiceWithContext(ctx, dsi); err != nil {
+		return errors.Wrap(err, "delete failed")
+	}
+	d.Log("Service is deleted")
+
 	return nil
 }
 

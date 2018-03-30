@@ -41,6 +41,12 @@ func _main() int {
 		DeregisterTaskDefinition: rollback.Flag("dereginster-task-definition", "deregister rolled back task definition").Bool(),
 	}
 
+	delete := kingpin.Command("delete", "delete service")
+	deleteOption := ecspresso.DeleteOption{
+		DryRun: delete.Flag("dry-run", "dry-run").Bool(),
+		Force:  delete.Flag("force", "force delete. not confirm").Bool(),
+	}
+
 	sub := kingpin.Parse()
 
 	c := ecspresso.NewDefaultConfig()
@@ -64,6 +70,8 @@ func _main() int {
 		err = app.Rollback(rollbackOption)
 	case "create":
 		err = app.Create(createOption)
+	case "delete":
+		err = app.Delete(deleteOption)
 	default:
 		kingpin.Usage()
 		return 1
