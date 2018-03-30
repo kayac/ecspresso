@@ -20,3 +20,8 @@ type RollbackOption struct {
 	DryRun                   *bool
 	DeregisterTaskDefinition *bool
 }
+
+type DeleteOption struct {
+	DryRun *bool
+	Force  *bool
+}

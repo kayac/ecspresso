@@ -28,6 +28,9 @@ Commands:
 
   rollback [<flags>]
     rollback service
+
+  delete [<flags>]
+    delete service
 ```
 
 For more options for sub-commands, See `ecspresso sub-command --help`.
