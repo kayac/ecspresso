@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,6 +39,13 @@ func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
 	return &ecs.DescribeServicesInput{
 		Cluster:  aws.String(d.Cluster),
 		Services: []*string{aws.String(d.Service)},
+	}
+}
+
+func (d *App) DescribeTasksInput(task *ecs.Task) *ecs.DescribeTasksInput {
+	return &ecs.DescribeTasksInput{
+		Cluster: aws.String(d.Cluster),
+		Tasks:   []*string{task.TaskArn},
 	}
 }
 
@@ -92,6 +100,32 @@ func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Tim
 		}
 	}
 	return lines, nil
+}
+
+func (d *App) DescribeTask(ctx context.Context, task *ecs.Task) error {
+	d.Log("Describing task")
+	out, err := d.ecs.DescribeTasksWithContext(ctx, d.DescribeTasksInput(task))
+	if err != nil {
+		return err
+	}
+	if len(out.Failures) > 0 {
+		f := out.Failures[0]
+		d.Log("Task ARN: " + *f.Arn)
+		return errors.New(*f.Reason)
+	}
+
+	c := out.Tasks[0].Containers[0]
+	if c.Reason != nil {
+		return errors.New(*c.Reason)
+	}
+	if c.ExitCode != nil && *c.ExitCode != 0 {
+		msg := "Exit Code: " + strconv.FormatInt(*c.ExitCode, 10)
+		if c.Reason != nil {
+			msg += ", Reason: " + *c.Reason
+		}
+		return errors.New(msg)
+	}
+	return nil
 }
 
 func NewApp(conf *Config) (*App, error) {
@@ -204,6 +238,58 @@ func (d *App) Delete(opt DeleteOption) error {
 		return errors.Wrap(err, "delete failed")
 	}
 	d.Log("Service is deleted")
+
+	return nil
+}
+
+func (d *App) Run(opt RunOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "run failed")
+	}
+
+	var tdArn string
+	_ = tdArn
+
+	if len(*opt.TaskDefinition) > 0 {
+		d.Log("Loading task definition")
+		runTd, err := d.LoadTaskDefinition(*opt.TaskDefinition)
+		if err != nil {
+			return errors.Wrap(err, "run failed")
+		}
+		td = runTd
+	}
+
+	if *opt.DryRun {
+		d.Log("task definition:", td.String())
+	} else {
+		newTd, err := d.RegisterTaskDefinition(ctx, td)
+		if err != nil {
+			return errors.Wrap(err, "run failed")
+		}
+		tdArn = *newTd.TaskDefinitionArn
+
+	}
+
+	if *opt.DryRun {
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
+	task, err := d.RunTask(ctx, tdArn)
+	if err != nil {
+		return errors.Wrap(err, "run failed")
+	}
+	if err := d.WaitRunTask(ctx, task, time.Now()); err != nil {
+		return errors.Wrap(err, "run failed")
+	}
+	if err := d.DescribeTask(ctx, task); err != nil {
+		return errors.Wrap(err, "run failed")
+	}
+	d.Log("Run task completed!")
 
 	return nil
 }
@@ -462,4 +548,33 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 		PlacementStrategy:       c.PlacementStrategy,
 		Role:                    c.Role,
 	}, nil
+}
+
+func (d *App) RunTask(ctx context.Context, tdArn string) (*ecs.Task, error) {
+	d.Log("Running task")
+
+	out, err := d.ecs.RunTaskWithContext(
+		ctx,
+		&ecs.RunTaskInput{
+			Cluster:        aws.String(d.Cluster),
+			TaskDefinition: aws.String(tdArn),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(out.Failures) > 0 {
+		f := out.Failures[0]
+		d.Log("Task ARN: " + *f.Arn)
+		return nil, errors.New(*f.Reason)
+	}
+
+	task := out.Tasks[0]
+	d.Log("Task ARN:", *task.TaskArn)
+	return task, nil
+}
+
+func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, startedAt time.Time) error {
+	d.Log("Waiting for run task...(it will take a few minutes)")
+	return d.ecs.WaitUntilTasksStoppedWithContext(ctx, d.DescribeTasksInput(task))
 }
