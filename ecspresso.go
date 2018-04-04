@@ -12,6 +12,7 @@ import (
 	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
@@ -30,6 +31,7 @@ func taskDefinitionName(t *ecs.TaskDefinition) string {
 
 type App struct {
 	ecs     *ecs.ECS
+	cwl     *cloudwatchlogs.CloudWatchLogs
 	Service string
 	Cluster string
 	config  *Config
@@ -46,6 +48,14 @@ func (d *App) DescribeTasksInput(task *ecs.Task) *ecs.DescribeTasksInput {
 	return &ecs.DescribeTasksInput{
 		Cluster: aws.String(d.Cluster),
 		Tasks:   []*string{task.TaskArn},
+	}
+}
+
+func (d *App) GetLogEventsInput(logGroup string, logStream string, startAt int64) *cloudwatchlogs.GetLogEventsInput {
+	return &cloudwatchlogs.GetLogEventsInput{
+		LogGroupName:  aws.String(logGroup),
+		LogStreamName: aws.String(logStream),
+		StartTime:     aws.Int64(startAt),
 	}
 }
 
@@ -103,7 +113,7 @@ func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Tim
 }
 
 func (d *App) DescribeTask(ctx context.Context, task *ecs.Task) error {
-	d.Log("Describing task")
+	d.Log("Checking if task ran successfully")
 	out, err := d.ecs.DescribeTasksWithContext(ctx, d.DescribeTasksInput(task))
 	if err != nil {
 		return err
@@ -128,6 +138,25 @@ func (d *App) DescribeTask(ctx context.Context, task *ecs.Task) error {
 	return nil
 }
 
+func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream string, startedAt time.Time) (int, error) {
+	ms := startedAt.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
+	out, err := d.cwl.GetLogEventsWithContext(ctx, d.GetLogEventsInput(logGroup, logStream, ms))
+	if err != nil {
+		return 0, err
+	}
+	if len(out.Events) == 0 {
+		return 0, nil
+	}
+	lines := 0
+	for _, event := range out.Events {
+		for _, line := range formatLogEvent(event, TerminalWidth) {
+			fmt.Println(line)
+			lines++
+		}
+	}
+	return lines, nil
+}
+
 func NewApp(conf *Config) (*App, error) {
 	if err := conf.Validate(); err != nil {
 		return nil, errors.Wrap(err, "invalid configuration")
@@ -139,6 +168,7 @@ func NewApp(conf *Config) (*App, error) {
 		Service: conf.Service,
 		Cluster: conf.Cluster,
 		ecs:     ecs.New(sess),
+		cwl:     cloudwatchlogs.New(sess),
 		config:  conf,
 	}
 	return d, nil
@@ -251,9 +281,6 @@ func (d *App) Run(opt RunOption) error {
 		return errors.Wrap(err, "run failed")
 	}
 
-	var tdArn string
-	_ = tdArn
-
 	if len(*opt.TaskDefinition) > 0 {
 		d.Log("Loading task definition")
 		runTd, err := d.LoadTaskDefinition(*opt.TaskDefinition)
@@ -263,15 +290,16 @@ func (d *App) Run(opt RunOption) error {
 		td = runTd
 	}
 
+	var newTd *ecs.TaskDefinition
+	_ = newTd
+
 	if *opt.DryRun {
 		d.Log("task definition:", td.String())
 	} else {
-		newTd, err := d.RegisterTaskDefinition(ctx, td)
+		newTd, err = d.RegisterTaskDefinition(ctx, td)
 		if err != nil {
 			return errors.Wrap(err, "run failed")
 		}
-		tdArn = *newTd.TaskDefinitionArn
-
 	}
 
 	if *opt.DryRun {
@@ -279,11 +307,14 @@ func (d *App) Run(opt RunOption) error {
 		return nil
 	}
 
+	tdArn := *newTd.TaskDefinitionArn
+	lc := newTd.ContainerDefinitions[0].LogConfiguration
+
 	task, err := d.RunTask(ctx, tdArn)
 	if err != nil {
 		return errors.Wrap(err, "run failed")
 	}
-	if err := d.WaitRunTask(ctx, task, time.Now()); err != nil {
+	if err := d.WaitRunTask(ctx, task, lc, time.Now()); err != nil {
 		return errors.Wrap(err, "run failed")
 	}
 	if err := d.DescribeTask(ctx, task); err != nil {
@@ -550,6 +581,20 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 	}, nil
 }
 
+func (d *App) GetLogInfo(task *ecs.Task, lc *ecs.LogConfiguration) (string, string) {
+	taskId := strings.Split(*task.TaskArn, "/")[1]
+	logStreamPrefix := *lc.Options["awslogs-stream-prefix"]
+	containerName := *task.Containers[0].Name
+
+	logStream := strings.Join([]string{logStreamPrefix, containerName, taskId}, "/")
+	logGroup := *lc.Options["awslogs-group"]
+
+	d.Log("logGroup:", logGroup)
+	d.Log("logStream:", logStream)
+
+	return logGroup, logStream
+}
+
 func (d *App) RunTask(ctx context.Context, tdArn string) (*ecs.Task, error) {
 	d.Log("Running task")
 
@@ -574,7 +619,35 @@ func (d *App) RunTask(ctx context.Context, tdArn string) (*ecs.Task, error) {
 	return task, nil
 }
 
-func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, startedAt time.Time) error {
-	d.Log("Waiting for run task...(it will take a few minutes)")
+func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, lc *ecs.LogConfiguration, startedAt time.Time) error {
+	d.Log("Waiting for run task...(it may take a while)")
+	waitCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	if lc == nil || *lc.LogDriver != "awslogs" || lc.Options["awslogs-stream-prefix"] == nil {
+		d.Log("awslogs not configured")
+		return d.ecs.WaitUntilTasksStoppedWithContext(ctx, d.DescribeTasksInput(task))
+	}
+
+	logGroup, logStream := d.GetLogInfo(task, lc)
+	time.Sleep(3 * time.Second) // wait for log stream
+
+	go func() {
+		tick := time.Tick(5 * time.Second)
+		var lines int
+		for {
+			select {
+			case <-waitCtx.Done():
+				return
+			case <-tick:
+				if isTerminal {
+					for i := 0; i < lines; i++ {
+						fmt.Print(aec.EraseLine(aec.EraseModes.All), aec.PreviousLine(1))
+					}
+				}
+				lines, _ = d.GetLogEvents(waitCtx, logGroup, logStream, startedAt)
+			}
+		}
+	}()
 	return d.ecs.WaitUntilTasksStoppedWithContext(ctx, d.DescribeTasksInput(task))
 }
