@@ -31,6 +31,9 @@ Commands:
 
   delete [<flags>]
     delete service
+
+  run [<flags>]
+    run task
 ```
 
 For more options for sub-commands, See `ecspresso sub-command --help`.
@@ -59,6 +62,7 @@ ecspresso works as below.
     - If "FOO" is not defined, abort immediately.
 - Update a service definition.
 - Wait a service stable.
+- Run a new task.
 
 ## Example of deploy
 
@@ -130,6 +134,11 @@ Keys are same format as `aws ecs describe-services` output.
 - placementStrategy
 - role
 
+## Example of run task
+
+```console
+$ ecspresso run --config config.yaml --task-def=db-migrate.json
+```
 # Notes
 
 ## Deploy to Fargate
