@@ -47,6 +47,12 @@ func _main() int {
 		Force:  delete.Flag("force", "force delete. not confirm").Bool(),
 	}
 
+	run := kingpin.Command("run", "run task")
+	runOption := ecspresso.RunOption{
+		DryRun:         run.Flag("dry-run", "dry-run").Bool(),
+		TaskDefinition: run.Flag("task-def", "task definition json for run task").String(),
+	}
+
 	sub := kingpin.Parse()
 
 	c := ecspresso.NewDefaultConfig()
@@ -72,6 +78,8 @@ func _main() int {
 		err = app.Create(createOption)
 	case "delete":
 		err = app.Delete(deleteOption)
+	case "run":
+		err = app.Run(runOption)
 	default:
 		kingpin.Usage()
 		return 1

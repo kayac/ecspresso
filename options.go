@@ -25,3 +25,8 @@ type DeleteOption struct {
 	DryRun *bool
 	Force  *bool
 }
+
+type RunOption struct {
+	DryRun         *bool
+	TaskDefinition *string
+}
