@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -9,12 +10,16 @@ import (
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
+var Version = "current"
+
 func main() {
 	os.Exit(_main())
 }
 
 func _main() int {
-	conf := kingpin.Flag("config", "config file").Required().String()
+	kingpin.Command("version", "show version")
+
+	conf := kingpin.Flag("config", "config file").String()
 
 	deploy := kingpin.Command("deploy", "deploy service")
 	deployOption := ecspresso.DeployOption{
@@ -47,7 +52,17 @@ func _main() int {
 		Force:  delete.Flag("force", "force delete. not confirm").Bool(),
 	}
 
+	run := kingpin.Command("run", "run task")
+	runOption := ecspresso.RunOption{
+		DryRun:         run.Flag("dry-run", "dry-run").Bool(),
+		TaskDefinition: run.Flag("task-def", "task definition json for run task").String(),
+	}
+
 	sub := kingpin.Parse()
+	if sub == "version" {
+		fmt.Println("ecspresso", Version)
+		return 0
+	}
 
 	c := ecspresso.NewDefaultConfig()
 	if err := config.Load(c, *conf); err != nil {
@@ -72,6 +87,8 @@ func _main() int {
 		err = app.Create(createOption)
 	case "delete":
 		err = app.Delete(deleteOption)
+	case "run":
+		err = app.Run(runOption)
 	default:
 		kingpin.Usage()
 		return 1
