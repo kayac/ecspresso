@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -9,12 +10,16 @@ import (
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
+var Version = "current"
+
 func main() {
 	os.Exit(_main())
 }
 
 func _main() int {
-	conf := kingpin.Flag("config", "config file").Required().String()
+	kingpin.Command("version", "show version")
+
+	conf := kingpin.Flag("config", "config file").String()
 
 	deploy := kingpin.Command("deploy", "deploy service")
 	deployOption := ecspresso.DeployOption{
@@ -54,6 +59,10 @@ func _main() int {
 	}
 
 	sub := kingpin.Parse()
+	if sub == "version" {
+		fmt.Println("ecspresso", Version)
+		return 0
+	}
 
 	c := ecspresso.NewDefaultConfig()
 	if err := config.Load(c, *conf); err != nil {

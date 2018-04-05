@@ -4,7 +4,7 @@ DATE := $(shell date +%Y-%m-%dT%H:%M:%S%z)
 .PHONY: test get-deps get-deps-amd64 binary install clean
 
 cmd/ecspresso/ecspresso: *.go cmd/ecspresso/*.go
-	cd cmd/ecspresso && go build -ldflags "-s -w -X main.version=${GIT_VER} -X main.buildDate=${DATE}" -gcflags="-trimpath=${PWD}"
+	cd cmd/ecspresso && go build -ldflags "-s -w -X main.Version=${GIT_VER} -X main.buildDate=${DATE}" -gcflags="-trimpath=${PWD}"
 
 install: cmd/ecspresso/ecspresso
 	install cmd/ecspresso/ecspresso ${GOPATH}/bin
