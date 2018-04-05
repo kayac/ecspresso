@@ -276,6 +276,11 @@ func (d *App) Run(opt RunOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
+	sv, err := d.DescribeServiceStatus(ctx, 0)
+	if err != nil {
+		return errors.Wrap(err, "run failed")
+	}
+
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
 		return errors.Wrap(err, "run failed")
@@ -310,7 +315,7 @@ func (d *App) Run(opt RunOption) error {
 	tdArn := *newTd.TaskDefinitionArn
 	lc := newTd.ContainerDefinitions[0].LogConfiguration
 
-	task, err := d.RunTask(ctx, tdArn)
+	task, err := d.RunTask(ctx, tdArn, sv)
 	if err != nil {
 		return errors.Wrap(err, "run failed")
 	}
@@ -330,21 +335,21 @@ func (d *App) Deploy(opt DeployOption) error {
 	defer cancel()
 
 	d.Log("Starting deploy")
-	svd, err := d.DescribeServiceStatus(ctx, 0)
+	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
 
 	var count *int64
 	if *opt.DesiredCount == KeepDesiredCount {
-		count = svd.DesiredCount
+		count = sv.DesiredCount
 	} else {
 		count = opt.DesiredCount
 	}
 
 	var tdArn string
 	if *opt.SkipTaskDefinition {
-		tdArn = *svd.TaskDefinition
+		tdArn = *sv.TaskDefinition
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
@@ -366,7 +371,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		return nil
 	}
 
-	if err := d.UpdateService(ctx, tdArn, *count, *opt.ForceNewDeployment, svd.NetworkConfiguration); err != nil {
+	if err := d.UpdateService(ctx, tdArn, *count, *opt.ForceNewDeployment, sv); err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
@@ -382,11 +387,11 @@ func (d *App) Rollback(opt RollbackOption) error {
 	defer cancel()
 
 	d.Log("Starting rollback")
-	service, err := d.DescribeServiceStatus(ctx, 0)
+	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
-	currentArn := *service.TaskDefinition
+	currentArn := *sv.TaskDefinition
 	targetArn, err := d.FindRollbackTarget(ctx, currentArn)
 	if err != nil {
 		return errors.Wrap(err, "rollback failed")
@@ -397,7 +402,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return nil
 	}
 
-	if err := d.UpdateService(ctx, targetArn, *service.DesiredCount, false, service.NetworkConfiguration); err != nil {
+	if err := d.UpdateService(ctx, targetArn, *sv.DesiredCount, false, sv); err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
@@ -490,7 +495,7 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	return d.ecs.WaitUntilServicesStableWithContext(ctx, d.DescribeServicesInput())
 }
 
-func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count int64, force bool, nc *ecs.NetworkConfiguration) error {
+func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count int64, force bool, sv *ecs.Service) error {
 	msg := "Updating service"
 	if force {
 		msg = msg + " with force new deployment"
@@ -506,7 +511,7 @@ func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count
 			TaskDefinition:       aws.String(taskDefinitionArn),
 			DesiredCount:         &count,
 			ForceNewDeployment:   &force,
-			NetworkConfiguration: nc,
+			NetworkConfiguration: sv.NetworkConfiguration,
 		},
 	)
 	return err
@@ -596,14 +601,16 @@ func (d *App) GetLogInfo(task *ecs.Task, lc *ecs.LogConfiguration) (string, stri
 	return logGroup, logStream
 }
 
-func (d *App) RunTask(ctx context.Context, tdArn string) (*ecs.Task, error) {
+func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service) (*ecs.Task, error) {
 	d.Log("Running task")
 
 	out, err := d.ecs.RunTaskWithContext(
 		ctx,
 		&ecs.RunTaskInput{
-			Cluster:        aws.String(d.Cluster),
-			TaskDefinition: aws.String(tdArn),
+			Cluster:              aws.String(d.Cluster),
+			TaskDefinition:       aws.String(tdArn),
+			NetworkConfiguration: sv.NetworkConfiguration,
+			LaunchType:           sv.LaunchType,
 		},
 	)
 	if err != nil {
