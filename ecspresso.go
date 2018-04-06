@@ -659,3 +659,47 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, lc *ecs.LogConfig
 	}()
 	return d.ecs.WaitUntilTasksStoppedWithContext(ctx, d.DescribeTasksInput(task))
 }
+
+func (d *App) SchedulerPut(opt SchedulerPutOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	// TODO
+	d.Log("Starting put task scheduler")
+	_ = ctx
+
+	return nil
+}
+
+func (d *App) SchedulerDelete(opt SchedulerDeleteOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	// TODO
+	d.Log("Starting delete task scheduler")
+	_ = ctx
+
+	return nil
+}
+
+func (d *App) SchedulerEnable(opt SchedulerEnableOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	// TODO
+	d.Log("Starting enable task scheduler")
+	_ = ctx
+
+	return nil
+}
+
+func (d *App) SchedulerDisable(opt SchedulerDisableOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	// TODO
+	d.Log("Starting disable task scheduler")
+	_ = ctx
+
+	return nil
+}
