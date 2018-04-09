@@ -771,9 +771,44 @@ func (d *App) SchedulerDelete(opt SchedulerDeleteOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	// TODO
 	d.Log("Starting delete task scheduler")
-	_ = ctx
+
+	rd, err := d.LoadRuleDefinition(d.config.RuleDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "delete task scheduler failed")
+	}
+
+	ttd, err := d.LoadTargetDefinition(d.config.TargetDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "delete task scheduler failed")
+	}
+
+	if *opt.DryRun {
+		d.Log("rule definition", rd.String())
+		d.Log("target definition", ttd.String())
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
+	if !*opt.Force {
+		service := prompter.Prompt(`Enter the rule name to DELETE`, "")
+		if service != *rd.Name {
+			d.Log("Aborted")
+			return errors.New("confirmation failed")
+		}
+	}
+
+	_, err = d.cwe.RemoveTargetsWithContext(ctx, &cloudwatchevents.RemoveTargetsInput{Rule: rd.Name, Ids: []*string{ttd.Id}})
+	if err != nil {
+		return errors.Wrap(err, "delete task scheduler failed")
+	}
+
+	_, err = d.cwe.DeleteRuleWithContext(ctx, &cloudwatchevents.DeleteRuleInput{Name: rd.Name})
+	if err != nil {
+		return errors.Wrap(err, "delete task scheduler failed")
+	}
+
+	d.Log("task scheduler is deleted")
 
 	return nil
 }
