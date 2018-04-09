@@ -12,6 +12,7 @@ import (
 	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatchevents"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/kayac/go-config"
@@ -32,6 +33,7 @@ func taskDefinitionName(t *ecs.TaskDefinition) string {
 type App struct {
 	ecs     *ecs.ECS
 	cwl     *cloudwatchlogs.CloudWatchLogs
+	cwe     *cloudwatchevents.CloudWatchEvents
 	Service string
 	Cluster string
 	config  *Config
@@ -169,6 +171,7 @@ func NewApp(conf *Config) (*App, error) {
 		Cluster: conf.Cluster,
 		ecs:     ecs.New(sess),
 		cwl:     cloudwatchlogs.New(sess),
+		cwe:     cloudwatchevents.New(sess),
 		config:  conf,
 	}
 	return d, nil
@@ -660,13 +663,106 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, lc *ecs.LogConfig
 	return d.ecs.WaitUntilTasksStoppedWithContext(ctx, d.DescribeTasksInput(task))
 }
 
+func (d *App) LoadRuleDefinition(path string) (*cloudwatchevents.PutRuleInput, error) {
+	c := cloudwatchevents.PutRuleInput{}
+	if err := config.LoadWithEnvJSON(&c, path); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+func (d *App) LoadTargetDefinition(path string) (*cloudwatchevents.Target, error) {
+	c := cloudwatchevents.Target{}
+	if err := config.LoadWithEnvJSON(&c, path); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+func (d *App) DescribeTaskDefinition(ctx context.Context, td *ecs.TaskDefinition) (*ecs.TaskDefinition, error) {
+	out, err := d.ecs.DescribeTaskDefinitionWithContext(ctx, &ecs.DescribeTaskDefinitionInput{TaskDefinition: td.Family})
+	if err != nil {
+		return nil, errors.New("no task-definition found")
+	}
+	return out.TaskDefinition, nil
+}
+
+func (d *App) DescribeCluster(ctx context.Context, name string) (*ecs.Cluster, error) {
+	out, err := d.ecs.DescribeClustersWithContext(ctx, &ecs.DescribeClustersInput{Clusters: []*string{aws.String(name)}})
+	if err != nil {
+		return nil, errors.New("no cluster found")
+	}
+	if len(out.Failures) > 0 {
+		f := out.Failures[0]
+		d.Log("Cluster ARN: " + *f.Arn)
+		return nil, errors.New(*f.Reason)
+	}
+	return out.Clusters[0], nil
+}
+
 func (d *App) SchedulerPut(opt SchedulerPutOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	// TODO
 	d.Log("Starting put task scheduler")
-	_ = ctx
+
+	c, err := d.DescribeCluster(ctx, d.config.Cluster)
+	if err != nil {
+		return errors.Wrap(err, "put task scheduler failed")
+	}
+
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "put task scheduler failed")
+	}
+
+	if *opt.SkipTaskDefinition || *opt.DryRun {
+		td, err = d.DescribeTaskDefinition(ctx, td)
+		if err != nil {
+			return errors.Wrap(err, "put task scheduler failed")
+		}
+	} else {
+		newTd, err := d.RegisterTaskDefinition(ctx, td)
+		if err != nil {
+			return errors.Wrap(err, "put task scheduler failed")
+		}
+		td = newTd
+	}
+
+	rd, err := d.LoadRuleDefinition(d.config.RuleDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "put task scheduler failed")
+	}
+
+	ttd, err := d.LoadTargetDefinition(d.config.TargetDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "put task scheduler failed")
+	}
+
+	ttd.EcsParameters.TaskDefinitionArn = td.TaskDefinitionArn
+	ttd.Arn = c.ClusterArn
+	tsd := &cloudwatchevents.PutTargetsInput{
+		Rule:    rd.Name,
+		Targets: []*cloudwatchevents.Target{ttd},
+	}
+
+	if *opt.DryRun {
+		d.Log("task definition:", td.String())
+		d.Log("rule definition", rd.String())
+		d.Log("target definition", tsd.String())
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
+	if _, err := d.cwe.PutRuleWithContext(ctx, rd); err != nil {
+		return errors.Wrap(err, "put task scheduler failed")
+	}
+
+	if _, err := d.cwe.PutTargetsWithContext(ctx, tsd); err != nil {
+		return errors.Wrap(err, "put task scheduler failed")
+	}
+
+	d.Log("task scheduler is put")
 
 	return nil
 }
