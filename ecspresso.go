@@ -817,9 +817,25 @@ func (d *App) SchedulerEnable(opt SchedulerEnableOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	// TODO
 	d.Log("Starting enable task scheduler")
-	_ = ctx
+
+	rd, err := d.LoadRuleDefinition(d.config.RuleDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "enable task scheduler failed")
+	}
+
+	if *opt.DryRun {
+		d.Log("rule definition", rd.String())
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
+	_, err = d.cwe.EnableRuleWithContext(ctx, &cloudwatchevents.EnableRuleInput{Name: rd.Name})
+	if err != nil {
+		return errors.Wrap(err, "enable task scheduler failed")
+	}
+
+	d.Log("task scheduler is enabled")
 
 	return nil
 }
@@ -828,9 +844,25 @@ func (d *App) SchedulerDisable(opt SchedulerDisableOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	// TODO
 	d.Log("Starting disable task scheduler")
-	_ = ctx
+
+	rd, err := d.LoadRuleDefinition(d.config.RuleDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "disable task scheduler failed")
+	}
+
+	if *opt.DryRun {
+		d.Log("rule definition", rd.String())
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
+	_, err = d.cwe.DisableRuleWithContext(ctx, &cloudwatchevents.DisableRuleInput{Name: rd.Name})
+	if err != nil {
+		return errors.Wrap(err, "disable task scheduler failed")
+	}
+
+	d.Log("task scheduler is disabled")
 
 	return nil
 }
