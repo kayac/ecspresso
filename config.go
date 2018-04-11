@@ -14,6 +14,8 @@ type Config struct {
 	Cluster               string        `yaml:"cluster"`
 	TaskDefinitionPath    string        `yaml:"task_definition"`
 	ServiceDefinitionPath string        `yaml:"service_definition"`
+	RuleDefinitionPath    string        `yaml:"rule_definition"`
+	TargetDefinitionPath  string        `yaml:"target_definition"`
 	Timeout               time.Duration `yaml:"timeout"`
 }
 

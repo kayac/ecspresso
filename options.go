@@ -30,3 +30,29 @@ type RunOption struct {
 	DryRun         *bool
 	TaskDefinition *string
 }
+
+type SchedulerOption struct {
+	SchedulerDefinition *string
+}
+
+type SchedulerPutOption struct {
+	SchedulerOption
+	DryRun             *bool
+	SkipTaskDefinition *bool
+}
+
+type SchedulerDeleteOption struct {
+	SchedulerOption
+	DryRun *bool
+	Force  *bool
+}
+
+type SchedulerEnableOption struct {
+	SchedulerOption
+	DryRun *bool
+}
+
+type SchedulerDisableOption struct {
+	SchedulerOption
+	DryRun *bool
+}

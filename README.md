@@ -34,6 +34,18 @@ Commands:
 
   run [<flags>]
     run task
+
+  scheduler put [<flags>]
+    put task scheduler
+
+  scheduler delete [<flags>]
+    delete task scheduler
+
+  scheduler enable [<flags>]
+    enable task scheduler
+
+  scheduler disable [<flags>]
+    disable task scheduler
 ```
 
 For more options for sub-commands, See `ecspresso sub-command --help`.
@@ -63,6 +75,7 @@ ecspresso works as below.
 - Update a service definition.
 - Wait a service stable.
 - Run a new task.
+- Put a new cloudwatch rule with set target task-definition.
 
 ## Example of deploy
 
@@ -139,6 +152,41 @@ Keys are same format as `aws ecs describe-services` output.
 ```console
 $ ecspresso run --config config.yaml --task-def=db-migrate.json
 ```
+
+## Example of scheduler
+
+escpresso can put cloudwatch rule with set target task-definition by `rule_definition`, `target_definition` JSON file.
+
+```console
+$ ecspresso run --config config.yaml scheduler put
+...
+```
+
+```yaml
+# config.yaml
+rule_definition: rule.json
+target_definition: target.json
+```
+
+example of rule_definition, and target_definition below.
+
+```json5
+{
+  "Name": "[rule-name]",
+  "ScheduleExpression": "rate(1 minute)",
+  "RoleArn": "arn:aws:iam::[account-id]:role/[role-name]"
+}
+```
+```json5
+{
+  "Id": "[target-id]",
+  "RoleArn": "arn:aws:iam::[acount-id]:role/[role-name]",
+  "EcsParameters": {
+    "TaskCount": 1
+  }
+}
+```
+
 # Notes
 
 ## Deploy to Fargate

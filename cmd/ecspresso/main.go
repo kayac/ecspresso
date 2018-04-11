@@ -58,6 +58,37 @@ func _main() int {
 		TaskDefinition: run.Flag("task-def", "task definition json for run task").String(),
 	}
 
+	scheduler := kingpin.Command("scheduler", "task scheduler")
+	schedulerOption := ecspresso.SchedulerOption{
+		SchedulerDefinition: scheduler.Flag("scheduler-def", "scheduler definition json").String(),
+	}
+
+	schedulerPut := scheduler.Command("put", "put task scheduler")
+	schedulerPutOption := ecspresso.SchedulerPutOption{
+		SchedulerOption:    schedulerOption,
+		DryRun:             schedulerPut.Flag("dry-run", "dry-run").Bool(),
+		SkipTaskDefinition: schedulerPut.Flag("skip-task-definition", "skip register a new task definition").Bool(),
+	}
+
+	schedulerDelete := scheduler.Command("delete", "delete task scheduler")
+	schedulerDeleteOption := ecspresso.SchedulerDeleteOption{
+		SchedulerOption: schedulerOption,
+		DryRun:          schedulerDelete.Flag("dry-run", "dry-run").Bool(),
+		Force:           schedulerDelete.Flag("force", "force delete. not confirm").Bool(),
+	}
+
+	schedulerEnable := scheduler.Command("enable", "enable task scheduler")
+	schedulerEnableOption := ecspresso.SchedulerEnableOption{
+		SchedulerOption: schedulerOption,
+		DryRun:          schedulerEnable.Flag("dry-run", "dry-run").Bool(),
+	}
+
+	schedulerDisable := scheduler.Command("disable", "disable task scheduler")
+	schedulerDisableOption := ecspresso.SchedulerDisableOption{
+		SchedulerOption: schedulerOption,
+		DryRun:          schedulerDisable.Flag("dry-run", "dry-run").Bool(),
+	}
+
 	sub := kingpin.Parse()
 	if sub == "version" {
 		fmt.Println("ecspresso", Version)
@@ -89,6 +120,14 @@ func _main() int {
 		err = app.Delete(deleteOption)
 	case "run":
 		err = app.Run(runOption)
+	case "scheduler put":
+		err = app.SchedulerPut(schedulerPutOption)
+	case "scheduler delete":
+		err = app.SchedulerDelete(schedulerDeleteOption)
+	case "scheduler enable":
+		err = app.SchedulerEnable(schedulerEnableOption)
+	case "scheduler disable":
+		err = app.SchedulerDisable(schedulerDisableOption)
 	default:
 		kingpin.Usage()
 		return 1
