@@ -32,4 +32,4 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "v1.12.53"
+  version = "v1.14.5"

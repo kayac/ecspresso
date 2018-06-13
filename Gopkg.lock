@@ -41,12 +41,15 @@
     "aws/credentials/ec2rolecreds",
     "aws/credentials/endpointcreds",
     "aws/credentials/stscreds",
+    "aws/csm",
     "aws/defaults",
     "aws/ec2metadata",
     "aws/endpoints",
     "aws/request",
     "aws/session",
     "aws/signer/v4",
+    "internal/sdkio",
+    "internal/sdkrand",
     "internal/shareddefaults",
     "private/protocol",
     "private/protocol/json/jsonutil",
@@ -55,11 +58,12 @@
     "private/protocol/query/queryutil",
     "private/protocol/rest",
     "private/protocol/xml/xmlutil",
+    "service/cloudwatchlogs",
     "service/ecs",
     "service/sts"
   ]
-  revision = "82ad808f2307df0776c038bfd7ea85440a35c02e"
-  version = "v1.12.53"
+  revision = "4bdf3e6f6926903b8ca6b0d2b93bbdddcf6af219"
+  version = "v1.14.5"
 
 [[projects]]
   name = "github.com/go-ini/ini"
@@ -126,6 +130,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "90f5256a7f8c45c8e24bb4fc0d16de7eb3bb3284269cf0cbd667f5b35bf7734b"
+  inputs-digest = "5dc70bcc0dc4a10bad0475a0333d17e4e201cc5bc150d73a8dc93071572d5d20"
   solver-name = "gps-cdcl"
   solver-version = 1
