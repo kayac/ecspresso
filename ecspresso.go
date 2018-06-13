@@ -506,12 +506,14 @@ func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count
 	_, err := d.ecs.UpdateServiceWithContext(
 		ctx,
 		&ecs.UpdateServiceInput{
-			Service:              aws.String(d.Service),
-			Cluster:              aws.String(d.Cluster),
-			TaskDefinition:       aws.String(taskDefinitionArn),
-			DesiredCount:         &count,
-			ForceNewDeployment:   &force,
-			NetworkConfiguration: sv.NetworkConfiguration,
+			Service:                       aws.String(d.Service),
+			Cluster:                       aws.String(d.Cluster),
+			TaskDefinition:                aws.String(taskDefinitionArn),
+			DesiredCount:                  &count,
+			ForceNewDeployment:            &force,
+			NetworkConfiguration:          sv.NetworkConfiguration,
+			HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
+			PlatformVersion:               sv.PlatformVersion,
 		},
 	)
 	return err
@@ -574,16 +576,19 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 	}
 
 	return &ecs.CreateServiceInput{
-		Cluster:                 aws.String(d.config.Cluster),
-		DesiredCount:            count,
-		ServiceName:             aws.String(d.config.Service),
-		DeploymentConfiguration: c.DeploymentConfiguration,
-		LaunchType:              c.LaunchType,
-		LoadBalancers:           c.LoadBalancers,
-		NetworkConfiguration:    c.NetworkConfiguration,
-		PlacementConstraints:    c.PlacementConstraints,
-		PlacementStrategy:       c.PlacementStrategy,
-		Role:                    c.Role,
+		Cluster:                       aws.String(d.config.Cluster),
+		DesiredCount:                  count,
+		ServiceName:                   aws.String(d.config.Service),
+		DeploymentConfiguration:       c.DeploymentConfiguration,
+		HealthCheckGracePeriodSeconds: c.HealthCheckGracePeriodSeconds,
+		LaunchType:                    c.LaunchType,
+		LoadBalancers:                 c.LoadBalancers,
+		NetworkConfiguration:          c.NetworkConfiguration,
+		PlatformVersion:               c.PlatformVersion,
+		PlacementConstraints:          c.PlacementConstraints,
+		PlacementStrategy:             c.PlacementStrategy,
+		Role:                          c.Role,
+		SchedulingStrategy:            c.SchedulingStrategy,
 	}, nil
 }
 
