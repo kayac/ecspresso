@@ -18,17 +18,17 @@ type Config struct {
 }
 
 type ServiceDefinition struct {
-	DeploymentConfiguration       *ecs.DeploymentConfiguration `json:"deployment_configuration"`
-	DesiredCount                  *int64                       `json:"desired_count"`
-	HealthCheckGracePeriodSeconds *int64                       `json:"health_check_grace_period_seconds"`
-	LaunchType                    *string                      `json:"launch_type"`
-	LoadBalancers                 []*ecs.LoadBalancer          `json:"load_balancers"`
-	NetworkConfiguration          *ecs.NetworkConfiguration    `json:"network_configuration"`
-	PlacementConstraints          []*ecs.PlacementConstraint   `json:"placement_constraints"`
-	PlacementStrategy             []*ecs.PlacementStrategy     `json:"placement_strategy"`
-	PlatformVersion               *string                      `json:"platform_version"`
+	DeploymentConfiguration       *ecs.DeploymentConfiguration `json:"deploymentConfiguration"`
+	DesiredCount                  *int64                       `json:"desiredCount"`
+	HealthCheckGracePeriodSeconds *int64                       `json:"healthCheckGracePeriod_seconds"`
+	LaunchType                    *string                      `json:"launchType"`
+	LoadBalancers                 []*ecs.LoadBalancer          `json:"loadBalancers"`
+	NetworkConfiguration          *ecs.NetworkConfiguration    `json:"networkConfiguration"`
+	PlacementConstraints          []*ecs.PlacementConstraint   `json:"placementConstraints"`
+	PlacementStrategy             []*ecs.PlacementStrategy     `json:"placementStrategy"`
+	PlatformVersion               *string                      `json:"platformVersion"`
 	Role                          *string                      `json:"role"`
-	SchedulingStrategy            *string                      `json:"scheduling_strategy"`
+	SchedulingStrategy            *string                      `json:"schedulingStrategy"`
 }
 
 func (c *Config) Validate() error {
