@@ -569,7 +569,8 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 	}
 
 	var count *int64
-	if c.DesiredCount == nil {
+	if c.SchedulingStrategy == nil || *c.SchedulingStrategy == "REPLICA" && c.DesiredCount == nil {
+		// set default desired count to 1 only when SchedulingStrategy is REPLICA(default)
 		count = aws.Int64(1)
 	} else {
 		count = c.DesiredCount
