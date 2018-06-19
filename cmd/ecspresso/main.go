@@ -65,7 +65,7 @@ func _main() int {
 	}
 
 	c := ecspresso.NewDefaultConfig()
-	if err := config.Load(c, *conf); err != nil {
+	if err := config.LoadWithEnv(c, *conf); err != nil {
 		log.Println("Cloud not load config file", conf, err)
 		kingpin.Usage()
 		return 1
