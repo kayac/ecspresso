@@ -43,7 +43,7 @@ func _main() int {
 	rollback := kingpin.Command("rollback", "rollback service")
 	rollbackOption := ecspresso.RollbackOption{
 		DryRun: rollback.Flag("dry-run", "dry-run").Bool(),
-		DeregisterTaskDefinition: rollback.Flag("dereginster-task-definition", "deregister rolled back task definition").Bool(),
+		DeregisterTaskDefinition: rollback.Flag("deregister-task-definition", "deregister rolled back task definition").Bool(),
 	}
 
 	delete := kingpin.Command("delete", "delete service")
