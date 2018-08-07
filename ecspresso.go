@@ -367,13 +367,15 @@ func (d *App) Deploy(opt DeployOption) error {
 			tdArn = *newTd.TaskDefinitionArn
 		}
 	}
-	d.Log("desired count:", *count)
+	if count != nil {
+		d.Log("desired count:", *count)
+	}
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	if err := d.UpdateService(ctx, tdArn, *count, *opt.ForceNewDeployment, sv); err != nil {
+	if err := d.UpdateService(ctx, tdArn, count, *opt.ForceNewDeployment, sv); err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
@@ -404,7 +406,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return nil
 	}
 
-	if err := d.UpdateService(ctx, targetArn, *sv.DesiredCount, false, sv); err != nil {
+	if err := d.UpdateService(ctx, targetArn, sv.DesiredCount, false, sv); err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
@@ -497,7 +499,7 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	return d.ecs.WaitUntilServicesStableWithContext(ctx, d.DescribeServicesInput())
 }
 
-func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count int64, force bool, sv *ecs.Service) error {
+func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64, force bool, sv *ecs.Service) error {
 	msg := "Updating service"
 	if force {
 		msg = msg + " with force new deployment"
@@ -511,7 +513,7 @@ func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count
 			Service:                       aws.String(d.Service),
 			Cluster:                       aws.String(d.Cluster),
 			TaskDefinition:                aws.String(taskDefinitionArn),
-			DesiredCount:                  &count,
+			DesiredCount:                  count,
 			ForceNewDeployment:            &force,
 			NetworkConfiguration:          sv.NetworkConfiguration,
 			HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
