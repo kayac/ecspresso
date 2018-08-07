@@ -341,7 +341,9 @@ func (d *App) Deploy(opt DeployOption) error {
 	}
 
 	var count *int64
-	if *opt.DesiredCount == KeepDesiredCount {
+	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
+		count = nil
+	} else if *opt.DesiredCount == KeepDesiredCount {
 		count = sv.DesiredCount
 	} else {
 		count = opt.DesiredCount
@@ -572,6 +574,8 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 	if c.SchedulingStrategy == nil || *c.SchedulingStrategy == "REPLICA" && c.DesiredCount == nil {
 		// set default desired count to 1 only when SchedulingStrategy is REPLICA(default)
 		count = aws.Int64(1)
+	} else if *c.SchedulingStrategy == "DAEMON" {
+		count = nil
 	} else {
 		count = c.DesiredCount
 	}
