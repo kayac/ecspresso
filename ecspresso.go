@@ -596,6 +596,7 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 		PlacementStrategy:             c.PlacementStrategy,
 		Role:                          c.Role,
 		SchedulingStrategy:            c.SchedulingStrategy,
+		ServiceRegistries:             c.ServiceRegistries,
 	}, nil
 }
 
