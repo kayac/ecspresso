@@ -29,6 +29,7 @@ type ServiceDefinition struct {
 	PlatformVersion               *string                      `json:"platformVersion"`
 	Role                          *string                      `json:"role"`
 	SchedulingStrategy            *string                      `json:"schedulingStrategy"`
+	ServiceRegistries             []*ecs.ServiceRegistry       `json:"serviceRegistries"`
 }
 
 func (c *Config) Validate() error {
