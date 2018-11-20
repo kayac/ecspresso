@@ -2,33 +2,42 @@
 
 
 [[projects]]
+  digest = "1:289dd4d7abfb3ad2b5f728fbe9b1d5c1bf7d265a3eb9ef92869af1f7baba4c7a"
   name = "github.com/BurntSushi/toml"
   packages = ["."]
+  pruneopts = ""
   revision = "b26d9c308763d68093482582cea63d69be07a0f0"
   version = "v0.3.0"
 
 [[projects]]
+  digest = "1:5ac398bd5c111c4224da5271c85c34ff50ead94288b8e4e8b977daf30a76fd07"
   name = "github.com/Songmu/prompter"
   packages = ["."]
+  pruneopts = ""
   revision = "b5721e8d556682bcef33262731d98a39dee14dc4"
   version = "0.1.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:a74730e052a45a3fab1d310fdef2ec17ae3d6af16228421e238320846f2aaec8"
   name = "github.com/alecthomas/template"
   packages = [
     ".",
-    "parse"
+    "parse",
   ]
+  pruneopts = ""
   revision = "a0175ee3bccc567396460bf5acd36800cb10c49c"
 
 [[projects]]
   branch = "master"
+  digest = "1:8483994d21404c8a1d489f6be756e25bfccd3b45d65821f25695577791a08e68"
   name = "github.com/alecthomas/units"
   packages = ["."]
+  pruneopts = ""
   revision = "2efee857e7cfd4f3d0138cc3cbb1b4966962b93a"
 
 [[projects]]
+  digest = "1:1f0aef9cfd2629fb47d9852c05357e0a0a59ddcf479f4c1028c2819743fe73e9"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -48,8 +57,10 @@
     "aws/request",
     "aws/session",
     "aws/signer/v4",
+    "internal/ini",
     "internal/sdkio",
     "internal/sdkrand",
+    "internal/sdkuri",
     "internal/shareddefaults",
     "private/protocol",
     "private/protocol/json/jsonutil",
@@ -60,76 +71,100 @@
     "private/protocol/xml/xmlutil",
     "service/cloudwatchlogs",
     "service/ecs",
-    "service/sts"
+    "service/sts",
   ]
-  revision = "4bdf3e6f6926903b8ca6b0d2b93bbdddcf6af219"
-  version = "v1.14.5"
+  pruneopts = ""
+  revision = "5ebc7a404e942062fd3aa7ff50975498716eb990"
+  version = "v1.15.78"
 
 [[projects]]
-  name = "github.com/go-ini/ini"
-  packages = ["."]
-  revision = "32e4c1e6bc4e7d0d8451aa6b75200d19e37a536a"
-  version = "v1.32.0"
-
-[[projects]]
+  digest = "1:6f49eae0c1e5dab1dafafee34b207aeb7a42303105960944828c2079b92fc88e"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
+  pruneopts = ""
   revision = "0b12d6b5"
 
 [[projects]]
+  digest = "1:a110ac92b719a0bc6b554bd9301ca0080bc73fe441aa7483b8715d5e9c0acbbd"
   name = "github.com/kayac/go-config"
   packages = ["."]
+  pruneopts = ""
   revision = "762bc25448755c6ccfe0265ed3013c9d507569c5"
   version = "v0.0.1"
 
 [[projects]]
+  digest = "1:78229b46ddb7434f881390029bd1af7661294af31f6802e0e1bedaad4ab0af3c"
   name = "github.com/mattn/go-isatty"
   packages = ["."]
+  pruneopts = ""
   revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
   version = "v0.0.3"
 
 [[projects]]
   branch = "master"
+  digest = "1:aa3fad6856cba7b9cd0e3ebdac9ca4cf2292207a344c197df896667cd10d5995"
   name = "github.com/morikuni/aec"
   packages = ["."]
+  pruneopts = ""
   revision = "39771216ff4c63d11f5e604076f9c45e8be1067b"
 
 [[projects]]
+  digest = "1:7365acd48986e205ccb8652cc746f09c8b7876030d53710ea6ef7d0bd0dcd7ca"
   name = "github.com/pkg/errors"
   packages = ["."]
+  pruneopts = ""
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:5de4dd09c6356b1bb6785caeef425147708c21cfbe4afb23324a7cd30d24942b"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
+  pruneopts = ""
   revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
 
 [[projects]]
   branch = "master"
+  digest = "1:a52cd7f8c2bbc247318084baffb4ea34754945c4f85fbf42c0bfcebf27704c52"
   name = "golang.org/x/sys"
   packages = [
     "unix",
-    "windows"
+    "windows",
   ]
+  pruneopts = ""
   revision = "8b4580aae2a0dd0c231a45d3ccb8434ff533b840"
 
 [[projects]]
+  digest = "1:7dc69d1597e4773ec5f64e5c078d55f0f011bb05ec0435346d0649ad978a23fd"
   name = "gopkg.in/alecthomas/kingpin.v2"
   packages = ["."]
+  pruneopts = ""
   revision = "1087e65c9441605df944fb12c33f0fe7072d18ca"
   version = "v2.2.5"
 
 [[projects]]
   branch = "v2"
+  digest = "1:f769ed60e075e4221612c2f4162fccc9d3795ef358fa463425e3b3d7a5debb27"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
+  pruneopts = ""
   revision = "287cf08546ab5e7e37d55a84f7ed3fd1db036de5"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5dc70bcc0dc4a10bad0475a0333d17e4e201cc5bc150d73a8dc93071572d5d20"
+  input-imports = [
+    "github.com/Songmu/prompter",
+    "github.com/aws/aws-sdk-go/aws",
+    "github.com/aws/aws-sdk-go/aws/session",
+    "github.com/aws/aws-sdk-go/service/cloudwatchlogs",
+    "github.com/aws/aws-sdk-go/service/ecs",
+    "github.com/kayac/go-config",
+    "github.com/mattn/go-isatty",
+    "github.com/morikuni/aec",
+    "github.com/pkg/errors",
+    "gopkg.in/alecthomas/kingpin.v2",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
