@@ -4,6 +4,19 @@ ecspresso is a deployment tool for Amazon ECS.
 
 (pronounced same as "espresso")
 
+## Install
+
+### Homebrew (macos only)
+
+```console
+$ brew install kayac/tap/ecspresso
+```
+
+### Binary packages
+
+[Releases](https://github.com/kayac/ecspresso/releases)
+
+
 ## Usage
 
 ```
