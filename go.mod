@@ -7,7 +7,7 @@ require (
 	github.com/Songmu/prompter v0.0.0-20150725163906-b5721e8d5566
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
-	github.com/aws/aws-sdk-go v1.17.13
+	github.com/aws/aws-sdk-go v1.19.26
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af
 	github.com/kayac/go-config v0.0.1
 	github.com/mattn/go-isatty v0.0.3
