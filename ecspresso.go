@@ -22,6 +22,7 @@ import (
 
 var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
 var TerminalWidth = 90
+var delayForServiceChanged = 3 * time.Second
 
 const KeepDesiredCount = -1
 
@@ -228,7 +229,7 @@ func (d *App) Create(opt CreateOption) error {
 	d.Log("Service is created")
 
 	start := time.Now()
-	time.Sleep(3 * time.Second) // wait for service created
+	time.Sleep(delayForServiceChanged) // wait for service created
 	if err := d.WaitServiceStable(ctx, start); err != nil {
 		return errors.Wrap(err, "create failed")
 	}
@@ -378,6 +379,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	if err := d.UpdateService(ctx, tdArn, count, *opt.ForceNewDeployment, sv); err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
+	time.Sleep(delayForServiceChanged) // wait for service updated
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
@@ -409,6 +411,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 	if err := d.UpdateService(ctx, targetArn, sv.DesiredCount, false, sv); err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
+	time.Sleep(delayForServiceChanged) // wait for service updated
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
