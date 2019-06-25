@@ -320,6 +320,10 @@ func (d *App) Run(opt RunOption) error {
 	if err != nil {
 		return errors.Wrap(err, "run failed")
 	}
+	if *opt.NoWait {
+		d.Log("Run task invoked")
+		return nil
+	}
 	if err := d.WaitRunTask(ctx, task, lc, time.Now()); err != nil {
 		return errors.Wrap(err, "run failed")
 	}

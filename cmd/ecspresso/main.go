@@ -56,6 +56,7 @@ func _main() int {
 	runOption := ecspresso.RunOption{
 		DryRun:         run.Flag("dry-run", "dry-run").Bool(),
 		TaskDefinition: run.Flag("task-def", "task definition json for run task").String(),
+		NoWait:         run.Flag("no-wait", "exit ecspresso after task run").Bool(),
 	}
 
 	sub := kingpin.Parse()
