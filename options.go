@@ -27,7 +27,9 @@ type DeleteOption struct {
 }
 
 type RunOption struct {
-	DryRun         *bool
-	TaskDefinition *string
-	NoWait         *bool
+	DryRun             *bool
+	TaskDefinition     *string
+	NoWait             *bool
+	TaskOverrideStr    *string
+	SkipTaskDefinition *bool
 }

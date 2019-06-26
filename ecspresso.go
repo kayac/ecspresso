@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -137,6 +138,17 @@ func (d *App) DescribeTask(ctx context.Context, task *ecs.Task) error {
 		return errors.New(msg)
 	}
 	return nil
+}
+
+func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*ecs.TaskDefinition, error) {
+	d.Log("Checking if task ran successfully")
+	out, err := d.ecs.DescribeTaskDefinitionWithContext(ctx, &ecs.DescribeTaskDefinitionInput{
+		TaskDefinition: &tdArn,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out.TaskDefinition, nil
 }
 
 func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream string, startedAt time.Time) (int, error) {
@@ -277,46 +289,66 @@ func (d *App) Run(opt RunOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
+	var ov ecs.TaskOverride
+	if ovStr := *opt.TaskOverrideStr; ovStr != "" {
+		if err := json.Unmarshal([]byte(ovStr), &ov); err != nil {
+			return errors.Wrap(err, "invalid overrides")
+		}
+	}
+
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
 		return errors.Wrap(err, "run failed")
 	}
 
-	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-	if err != nil {
-		return errors.Wrap(err, "run failed")
-	}
+	var tdArn string
+	var logConfiguration *ecs.LogConfiguration
 
-	if len(*opt.TaskDefinition) > 0 {
-		d.Log("Loading task definition")
-		runTd, err := d.LoadTaskDefinition(*opt.TaskDefinition)
+	if *opt.SkipTaskDefinition {
+		td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
 		if err != nil {
-			return errors.Wrap(err, "run failed")
+			return errors.Wrap(err, "describeTaskDefinition failed")
 		}
-		td = runTd
-	}
-
-	var newTd *ecs.TaskDefinition
-	_ = newTd
-
-	if *opt.DryRun {
-		d.Log("task definition:", td.String())
+		tdArn = *(td.TaskDefinitionArn)
+		logConfiguration = td.ContainerDefinitions[0].LogConfiguration
+		if *opt.DryRun {
+			d.Log("task definition:", td.String())
+		}
 	} else {
-		newTd, err = d.RegisterTaskDefinition(ctx, td)
+		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
 			return errors.Wrap(err, "run failed")
 		}
-	}
 
+		if len(*opt.TaskDefinition) > 0 {
+			d.Log("Loading task definition")
+			runTd, err := d.LoadTaskDefinition(*opt.TaskDefinition)
+			if err != nil {
+				return errors.Wrap(err, "run failed")
+			}
+			td = runTd
+		}
+
+		var newTd *ecs.TaskDefinition
+		_ = newTd
+
+		if *opt.DryRun {
+			d.Log("task definition:", td.String())
+		} else {
+			newTd, err = d.RegisterTaskDefinition(ctx, td)
+			if err != nil {
+				return errors.Wrap(err, "run failed")
+			}
+		}
+		tdArn = *newTd.TaskDefinitionArn
+		logConfiguration = newTd.ContainerDefinitions[0].LogConfiguration
+	}
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	tdArn := *newTd.TaskDefinitionArn
-	lc := newTd.ContainerDefinitions[0].LogConfiguration
-
-	task, err := d.RunTask(ctx, tdArn, sv)
+	task, err := d.RunTask(ctx, tdArn, sv, &ov)
 	if err != nil {
 		return errors.Wrap(err, "run failed")
 	}
@@ -324,7 +356,7 @@ func (d *App) Run(opt RunOption) error {
 		d.Log("Run task invoked")
 		return nil
 	}
-	if err := d.WaitRunTask(ctx, task, lc, time.Now()); err != nil {
+	if err := d.WaitRunTask(ctx, task, logConfiguration, time.Now()); err != nil {
 		return errors.Wrap(err, "run failed")
 	}
 	if err := d.DescribeTask(ctx, task); err != nil {
@@ -621,7 +653,7 @@ func (d *App) GetLogInfo(task *ecs.Task, lc *ecs.LogConfiguration) (string, stri
 	return logGroup, logStream
 }
 
-func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service) (*ecs.Task, error) {
+func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ecs.TaskOverride) (*ecs.Task, error) {
 	d.Log("Running task")
 
 	out, err := d.ecs.RunTaskWithContext(
@@ -631,6 +663,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service) (*ecs.
 			TaskDefinition:       aws.String(tdArn),
 			NetworkConfiguration: sv.NetworkConfiguration,
 			LaunchType:           sv.LaunchType,
+			Overrides:            ov,
 		},
 	)
 	if err != nil {

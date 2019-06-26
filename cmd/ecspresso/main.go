@@ -54,9 +54,11 @@ func _main() int {
 
 	run := kingpin.Command("run", "run task")
 	runOption := ecspresso.RunOption{
-		DryRun:         run.Flag("dry-run", "dry-run").Bool(),
-		TaskDefinition: run.Flag("task-def", "task definition json for run task").String(),
-		NoWait:         run.Flag("no-wait", "exit ecspresso after task run").Bool(),
+		DryRun:             run.Flag("dry-run", "dry-run").Bool(),
+		TaskDefinition:     run.Flag("task-def", "task definition json for run task").String(),
+		NoWait:             run.Flag("no-wait", "exit ecspresso after task run").Bool(),
+		TaskOverrideStr:    run.Flag("overrides", "task overrides JSON string").Default("").String(),
+		SkipTaskDefinition: run.Flag("skip-task-definition", "skip register a new task definition").Bool(),
 	}
 
 	sub := kingpin.Parse()
