@@ -21,3 +21,6 @@ packages:
 clean:
 	rm -f cmd/ecspresso/ecspresso
 	rm -f pkg/*
+
+release:
+	ghr -u kayac -r ecspresso -n "$(GIT_VER)" $(GIT_VER) pkg/
