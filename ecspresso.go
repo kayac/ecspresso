@@ -348,7 +348,7 @@ func (d *App) Run(opt RunOption) error {
 		return nil
 	}
 
-	task, err := d.RunTask(ctx, tdArn, sv, &ov)
+	task, err := d.RunTask(ctx, tdArn, sv, &ov, *opt.Count)
 	if err != nil {
 		return errors.Wrap(err, "run failed")
 	}
@@ -653,7 +653,7 @@ func (d *App) GetLogInfo(task *ecs.Task, lc *ecs.LogConfiguration) (string, stri
 	return logGroup, logStream
 }
 
-func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ecs.TaskOverride) (*ecs.Task, error) {
+func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ecs.TaskOverride, count int64) (*ecs.Task, error) {
 	d.Log("Running task")
 
 	out, err := d.ecs.RunTaskWithContext(
@@ -664,6 +664,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ec
 			NetworkConfiguration: sv.NetworkConfiguration,
 			LaunchType:           sv.LaunchType,
 			Overrides:            ov,
+			Count:                aws.Int64(count),
 		},
 	)
 	if err != nil {

@@ -59,6 +59,7 @@ func _main() int {
 		NoWait:             run.Flag("no-wait", "exit ecspresso after task run").Bool(),
 		TaskOverrideStr:    run.Flag("overrides", "task overrides JSON string").Default("").String(),
 		SkipTaskDefinition: run.Flag("skip-task-definition", "skip register a new task definition").Bool(),
+		Count:              run.Flag("count", "the number of tasks (max 10)").Default("1").Int64(),
 	}
 
 	sub := kingpin.Parse()

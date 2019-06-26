@@ -32,4 +32,5 @@ type RunOption struct {
 	NoWait             *bool
 	TaskOverrideStr    *string
 	SkipTaskDefinition *bool
+	Count              *int64
 }
