@@ -152,6 +152,9 @@ Keys are same format as `aws ecs describe-services` output.
 ```console
 $ ecspresso run --config config.yaml --task-def=db-migrate.json
 ```
+
+When `--task-def` is not set, use a task definition included in a service.
+
 # Notes
 
 ## Deploy to Fargate
