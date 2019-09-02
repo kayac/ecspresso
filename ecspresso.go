@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
@@ -535,7 +536,7 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 		}
 	}()
 
-	return d.ecs.WaitUntilServicesStableWithContext(ctx, d.DescribeServicesInput())
+	return d.ecs.WaitUntilServicesStableWithContext(ctx, d.DescribeServicesInput(), request.WithWaiterMaxAttempts(int(d.config.Timeout.Seconds() / 15)))
 }
 
 func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64, force bool, sv *ecs.Service) error {
