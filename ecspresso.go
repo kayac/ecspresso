@@ -12,10 +12,10 @@ import (
 
 	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
@@ -536,7 +536,10 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 		}
 	}()
 
-	return d.ecs.WaitUntilServicesStableWithContext(ctx, d.DescribeServicesInput(), request.WithWaiterMaxAttempts(int(d.config.Timeout.Seconds() / 15)))
+	// Add an option request.WithWaiterMaxAttempts for a long timeout.
+	// SDK Default is 10 min (MaxAttempts=40 * Delay=15sec).
+	// https://github.com/aws/aws-sdk-go/blob/d57c8d96f72d9475194ccf18d2ba70ac294b0cb3/service/ecs/waiters.go#L82-L83
+	return d.ecs.WaitUntilServicesStableWithContext(ctx, d.DescribeServicesInput(), request.WithWaiterMaxAttempts(int(d.config.Timeout.Seconds()/15)))
 }
 
 func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64, force bool, sv *ecs.Service) error {
