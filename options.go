@@ -3,6 +3,7 @@ package ecspresso
 type CreateOption struct {
 	DryRun       *bool
 	DesiredCount *int64
+	NoWait       *bool
 }
 
 type DeployOption struct {
@@ -10,6 +11,7 @@ type DeployOption struct {
 	DesiredCount       *int64
 	SkipTaskDefinition *bool
 	ForceNewDeployment *bool
+	NoWait             *bool
 }
 
 type StatusOption struct {
@@ -19,6 +21,7 @@ type StatusOption struct {
 type RollbackOption struct {
 	DryRun                   *bool
 	DeregisterTaskDefinition *bool
+	NoWait                   *bool
 }
 
 type DeleteOption struct {

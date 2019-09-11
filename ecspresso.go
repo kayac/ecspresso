@@ -241,6 +241,10 @@ func (d *App) Create(opt CreateOption) error {
 	}
 	d.Log("Service is created")
 
+	if *opt.NoWait {
+		return nil
+	}
+
 	start := time.Now()
 	time.Sleep(delayForServiceChanged) // wait for service created
 	if err := d.WaitServiceStable(ctx, start); err != nil {
@@ -416,6 +420,12 @@ func (d *App) Deploy(opt DeployOption) error {
 	if err := d.UpdateService(ctx, tdArn, count, *opt.ForceNewDeployment, sv); err != nil {
 		return errors.Wrap(err, "deploy failed")
 	}
+
+	if *opt.NoWait {
+		d.Log("Service is deployed.")
+		return nil
+	}
+
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
 		return errors.Wrap(err, "deploy failed")
@@ -448,6 +458,12 @@ func (d *App) Rollback(opt RollbackOption) error {
 	if err := d.UpdateService(ctx, targetArn, sv.DesiredCount, false, sv); err != nil {
 		return errors.Wrap(err, "rollback failed")
 	}
+
+	if *opt.NoWait {
+		d.Log("Service is rollbacked.")
+		return nil
+	}
+
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
 		return errors.Wrap(err, "rollback failed")
