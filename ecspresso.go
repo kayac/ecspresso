@@ -536,10 +536,20 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 		}
 	}()
 
-	// Add an option request.WithWaiterMaxAttempts for a long timeout.
-	// SDK Default is 10 min (MaxAttempts=40 * Delay=15sec).
-	// https://github.com/aws/aws-sdk-go/blob/d57c8d96f72d9475194ccf18d2ba70ac294b0cb3/service/ecs/waiters.go#L82-L83
-	return d.ecs.WaitUntilServicesStableWithContext(ctx, d.DescribeServicesInput(), request.WithWaiterMaxAttempts(int(d.config.Timeout.Seconds()/15)))
+	// Add an option WithWaiterDelay and request.WithWaiterMaxAttempts for a long timeout.
+	// SDK Default is 10 min (MaxAttempts=40 * Delay=15sec) at now.
+	// ref. https://github.com/aws/aws-sdk-go/blob/d57c8d96f72d9475194ccf18d2ba70ac294b0cb3/service/ecs/waiters.go#L82-L83
+	// Explicitly set these options so not being affected by the default setting.
+	const delay = 15 * time.Second
+	attempts := int((d.config.Timeout / delay)) + 1
+	if (d.config.Timeout % delay) > 0 {
+		attempts++
+	}
+	return d.ecs.WaitUntilServicesStableWithContext(
+		ctx, d.DescribeServicesInput(),
+		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
+		request.WithWaiterMaxAttempts(attempts),
+	)
 }
 
 func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64, force bool, sv *ecs.Service) error {
