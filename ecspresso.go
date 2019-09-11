@@ -493,22 +493,7 @@ func (d *App) Wait(opt WaitOption) error {
 	defer cancel()
 
 	d.Log("Waiting for the service stable")
-	sv, err := d.DescribeServiceStatus(ctx, 0)
-	if err != nil {
-		return errors.Wrap(err, "wait failed")
-	}
 
-	var count *int64
-	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
-		count = nil
-	} else if *opt.DesiredCount == KeepDesiredCount {
-		count = sv.DesiredCount
-	} else {
-		count = opt.DesiredCount
-	}
-	if count != nil {
-		d.Log("desired count:", *count)
-	}
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
 		return errors.Wrap(err, "the service still unstable")
 	}

@@ -39,5 +39,4 @@ type RunOption struct {
 }
 
 type WaitOption struct {
-	DesiredCount *int64
 }

@@ -44,9 +44,9 @@ func _main() int {
 
 	rollback := kingpin.Command("rollback", "rollback service")
 	rollbackOption := ecspresso.RollbackOption{
-		DryRun:                   rollback.Flag("dry-run", "dry-run").Bool(),
+		DryRun: rollback.Flag("dry-run", "dry-run").Bool(),
 		DeregisterTaskDefinition: rollback.Flag("deregister-task-definition", "deregister rolled back task definition").Bool(),
-		NoWait:                   rollback.Flag("no-wait", "exit ecspresso immediately after just rollbacked without waiting for service stable").Bool(),
+		NoWait: rollback.Flag("no-wait", "exit ecspresso immediately after just rollbacked without waiting for service stable").Bool(),
 	}
 
 	delete := kingpin.Command("delete", "delete service")
@@ -65,10 +65,8 @@ func _main() int {
 		Count:              run.Flag("count", "the number of tasks (max 10)").Default("1").Int64(),
 	}
 
-	wait := kingpin.Command("wait", "wait until service stable")
-	waitOption := ecspresso.WaitOption{
-		DesiredCount: wait.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
-	}
+	_ = kingpin.Command("wait", "wait until service stable")
+	waitOption := ecspresso.WaitOption{}
 
 	sub := kingpin.Parse()
 	if sub == "version" {
