@@ -27,12 +27,14 @@ func _main() int {
 		DesiredCount:       deploy.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
 		SkipTaskDefinition: deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
 		ForceNewDeployment: deploy.Flag("force-new-deployment", "force a new deployment of the service").Bool(),
+		NoWait:             deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
 	}
 
 	create := kingpin.Command("create", "create service")
 	createOption := ecspresso.CreateOption{
 		DryRun:       create.Flag("dry-run", "dry-run").Bool(),
 		DesiredCount: create.Flag("tasks", "desired count of tasks").Default("1").Int64(),
+		NoWait:       create.Flag("no-wait", "exit ecspresso immediately after just created without waiting for service stable").Bool(),
 	}
 
 	status := kingpin.Command("status", "show status of service")
@@ -44,6 +46,7 @@ func _main() int {
 	rollbackOption := ecspresso.RollbackOption{
 		DryRun: rollback.Flag("dry-run", "dry-run").Bool(),
 		DeregisterTaskDefinition: rollback.Flag("deregister-task-definition", "deregister rolled back task definition").Bool(),
+		NoWait: rollback.Flag("no-wait", "exit ecspresso immediately after just rollbacked without waiting for service stable").Bool(),
 	}
 
 	delete := kingpin.Command("delete", "delete service")
@@ -61,6 +64,9 @@ func _main() int {
 		SkipTaskDefinition: run.Flag("skip-task-definition", "skip register a new task definition").Bool(),
 		Count:              run.Flag("count", "the number of tasks (max 10)").Default("1").Int64(),
 	}
+
+	_ = kingpin.Command("wait", "wait until service stable")
+	waitOption := ecspresso.WaitOption{}
 
 	sub := kingpin.Parse()
 	if sub == "version" {
@@ -93,6 +99,8 @@ func _main() int {
 		err = app.Delete(deleteOption)
 	case "run":
 		err = app.Run(runOption)
+	case "wait":
+		err = app.Wait(waitOption)
 	default:
 		kingpin.Usage()
 		return 1
