@@ -472,6 +472,14 @@ func (d *App) Rollback(opt RollbackOption) error {
 	return nil
 }
 
+func (d *App) Wait(opt WaitOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+	_ = ctx
+
+	return nil
+}
+
 func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) (string, error) {
 	var found bool
 	var nextToken *string

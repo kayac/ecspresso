@@ -34,3 +34,7 @@ type RunOption struct {
 	SkipTaskDefinition *bool
 	Count              *int64
 }
+
+type WaitOption struct {
+	DesiredCount *int64
+}
