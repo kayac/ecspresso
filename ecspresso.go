@@ -340,9 +340,9 @@ func (d *App) Run(opt RunOption) error {
 			if err != nil {
 				return errors.Wrap(err, "run failed")
 			}
+			tdArn = *newTd.TaskDefinitionArn
+			logConfiguration = newTd.ContainerDefinitions[0].LogConfiguration
 		}
-		tdArn = *newTd.TaskDefinitionArn
-		logConfiguration = newTd.ContainerDefinitions[0].LogConfiguration
 	}
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
