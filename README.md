@@ -20,7 +20,7 @@ $ brew install kayac/tap/ecspresso
 ## Usage
 
 ```
-usage: ecspresso --config=CONFIG [<flags>] <command> [<args> ...]
+usage: ecspresso [<flags>] <command> [<args> ...]
 
 Flags:
   --help           Show context-sensitive help (also try --help-long and --help-man).
@@ -29,6 +29,9 @@ Flags:
 Commands:
   help [<command>...]
     Show help.
+
+  version
+    show version
 
   deploy [<flags>]
     deploy service
@@ -47,6 +50,9 @@ Commands:
 
   run [<flags>]
     run task
+
+  wait
+    wait until service stable
 ```
 
 For more options for sub-commands, See `ecspresso sub-command --help`.
