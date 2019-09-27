@@ -463,7 +463,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		return nil
 	}
 
-	if err := d.manageAutoScaling(*opt.SuspendAutoScaling); err != nil {
+	if err := d.suspendAutoScaling(*opt.SuspendAutoScaling); err != nil {
 		return err
 	}
 
@@ -845,7 +845,7 @@ func (d *App) Register(opt RegisterOption) error {
 	return nil
 }
 
-func (d *App) manageAutoScaling(suspend bool) error {
+func (d *App) suspendAutoScaling(suspend bool) error {
 	resouceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
 
 	out, err := d.autoScaling.DescribeScalableTargets(
