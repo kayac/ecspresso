@@ -65,6 +65,12 @@ func _main() int {
 		Count:              run.Flag("count", "the number of tasks (max 10)").Default("1").Int64(),
 	}
 
+	register := kingpin.Command("register", "register task definition")
+	registerOption := ecspresso.RegisterOption{
+		DryRun: register.Flag("dry-run", "dry-run").Bool(),
+		Output: register.Flag("output", "output registered task definition").Bool(),
+	}
+
 	_ = kingpin.Command("wait", "wait until service stable")
 	waitOption := ecspresso.WaitOption{}
 
@@ -101,6 +107,8 @@ func _main() int {
 		err = app.Run(runOption)
 	case "wait":
 		err = app.Wait(waitOption)
+	case "register":
+		err = app.Register(registerOption)
 	default:
 		kingpin.Usage()
 		return 1

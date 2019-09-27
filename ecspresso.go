@@ -650,6 +650,10 @@ func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
 }
 
 func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error) {
+	if path == "" {
+		return nil, errors.New("service_definition is not defined")
+	}
+
 	c := ServiceDefinition{}
 	if err := config.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
@@ -756,4 +760,30 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, lc *ecs.LogConfig
 		}
 	}()
 	return d.ecs.WaitUntilTasksStoppedWithContext(ctx, d.DescribeTasksInput(task))
+}
+
+func (d *App) Register(opt RegisterOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	d.Log("Starting register task definition")
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load task definition")
+	}
+	if *opt.DryRun {
+		d.Log("task definition:", td.String())
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
+	newTd, err := d.RegisterTaskDefinition(ctx, td)
+	if err != nil {
+		return errors.Wrap(err, "failed to register task definition")
+	}
+
+	if *opt.Output {
+		fmt.Println(newTd.String())
+	}
+	return nil
 }

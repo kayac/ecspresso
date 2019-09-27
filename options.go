@@ -40,3 +40,8 @@ type RunOption struct {
 
 type WaitOption struct {
 }
+
+type RegisterOption struct {
+	DryRun *bool
+	Output *bool
+}
