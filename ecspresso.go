@@ -877,7 +877,7 @@ func (d *App) suspendAutoScaling(suspend bool) error {
 			},
 		)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to register scalable target %s set suspend to %s", *target.ResourceId, suspend))
+			return errors.Wrap(err, fmt.Sprintf("failed to register scalable target %s set suspend to %t", *target.ResourceId, suspend))
 		}
 	}
 	return nil
