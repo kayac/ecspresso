@@ -61,18 +61,22 @@ func formatLogEvent(e *cloudwatchlogs.OutputLogEvent, chars int) []string {
 	return lines
 }
 
-func formatScalableTargets(t *applicationautoscaling.ScalableTarget) string {
+func formatScalableTarget(t *applicationautoscaling.ScalableTarget) string {
 	return strings.Join([]string{
 		fmt.Sprintf(
-			"    capacity min:%d, max:%d",
+			spcIndent+"Capacity min:%d max:%d",
 			*t.MinCapacity,
 			*t.MaxCapacity,
 		),
 		fmt.Sprintf(
-			"    suspended DynamicScalingIn:%t DynamicScalingOut:%t  ScheduledScaling:%t",
+			spcIndent+"Suspended in:%t out:%t scheduled:%t",
 			*t.SuspendedState.DynamicScalingInSuspended,
 			*t.SuspendedState.DynamicScalingOutSuspended,
 			*t.SuspendedState.ScheduledScalingSuspended,
 		),
 	}, "\n")
+}
+
+func formatScalingPolicy(p *applicationautoscaling.ScalingPolicy) string {
+	return fmt.Sprintf("  Policy name:%s type:%s", *p.PolicyName, *p.PolicyType)
 }

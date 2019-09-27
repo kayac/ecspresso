@@ -26,6 +26,7 @@ import (
 var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
 var TerminalWidth = 90
 var delayForServiceChanged = 3 * time.Second
+var spcIndent = "  "
 
 const KeepDesiredCount = -1
 
@@ -79,27 +80,10 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 	fmt.Println("TaskDefinition:", arnToName(*s.TaskDefinition))
 	fmt.Println("Deployments:")
 	for _, dep := range s.Deployments {
-		fmt.Println(formatDeployment(dep))
+		fmt.Println(spcIndent + formatDeployment(dep))
 	}
-
-	{
-		resouceId := fmt.Sprintf("service/%s/%s", arnToName(*s.ClusterArn), *s.ServiceName)
-		out, err := d.autoScaling.DescribeScalableTargets(
-			&applicationautoscaling.DescribeScalableTargetsInput{
-				ResourceIds:       []*string{&resouceId},
-				ServiceNamespace:  aws.String("ecs"),
-				ScalableDimension: aws.String("ecs:service:DesiredCount"),
-			},
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to describe scalable targets")
-		}
-		if len(out.ScalableTargets) > 0 {
-			fmt.Println("AutoScaling:")
-			for _, target := range out.ScalableTargets {
-				fmt.Println(formatScalableTargets(target))
-			}
-		}
+	if err := d.describeAutoScaling(s); err != nil {
+		return nil, errors.Wrap(err, "failed to describe autoscaling")
 	}
 
 	fmt.Println("Events:")
@@ -112,6 +96,43 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 		}
 	}
 	return s, nil
+}
+
+func (d *App) describeAutoScaling(s *ecs.Service) error {
+	resouceId := fmt.Sprintf("service/%s/%s", arnToName(*s.ClusterArn), *s.ServiceName)
+	tout, err := d.autoScaling.DescribeScalableTargets(
+		&applicationautoscaling.DescribeScalableTargetsInput{
+			ResourceIds:       []*string{&resouceId},
+			ServiceNamespace:  aws.String("ecs"),
+			ScalableDimension: aws.String("ecs:service:DesiredCount"),
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to describe scalable targets")
+	}
+	if len(tout.ScalableTargets) == 0 {
+		return nil
+	}
+
+	fmt.Println("AutoScaling:")
+	for _, target := range tout.ScalableTargets {
+		fmt.Println(formatScalableTarget(target))
+	}
+
+	pout, err := d.autoScaling.DescribeScalingPolicies(
+		&applicationautoscaling.DescribeScalingPoliciesInput{
+			ResourceId:        &resouceId,
+			ServiceNamespace:  aws.String("ecs"),
+			ScalableDimension: aws.String("ecs:service:DesiredCount"),
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to describe scaling policies")
+	}
+	for _, policy := range pout.ScalingPolicies {
+		fmt.Println(formatScalingPolicy(policy))
+	}
+	return nil
 }
 
 func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Time) (int, error) {
