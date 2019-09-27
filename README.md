@@ -51,6 +51,9 @@ Commands:
   run [<flags>]
     run task
 
+  register [<flags>]
+    register task definition
+
   wait
     wait until service stable
 ```
