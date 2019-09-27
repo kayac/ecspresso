@@ -29,7 +29,7 @@ func _main() int {
 		SkipTaskDefinition: deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
 		ForceNewDeployment: deploy.Flag("force-new-deployment", "force a new deployment of the service").Bool(),
 		NoWait:             deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		SuspendAutoScaling: deploy.Flag("suspend-auto-scaling", "suspend auto-scaling").Bool(),
+		SuspendAutoScaling: deploy.Flag("suspend-auto-scaling", "set suspend to auto-scaling attached to the ECS service").Bool(),
 	}
 
 	create := kingpin.Command("create", "create service")
