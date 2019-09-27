@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/kayac/go-config"
@@ -25,6 +26,7 @@ import (
 var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
 var TerminalWidth = 90
 var delayForServiceChanged = 3 * time.Second
+var spcIndent = "  "
 
 const KeepDesiredCount = -1
 
@@ -33,11 +35,13 @@ func taskDefinitionName(t *ecs.TaskDefinition) string {
 }
 
 type App struct {
-	ecs     *ecs.ECS
-	cwl     *cloudwatchlogs.CloudWatchLogs
-	Service string
-	Cluster string
-	config  *Config
+	ecs         *ecs.ECS
+	autoScaling *applicationautoscaling.ApplicationAutoScaling
+	cwl         *cloudwatchlogs.CloudWatchLogs
+	Service     string
+	Cluster     string
+	config      *Config
+	Debug       bool
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
@@ -76,8 +80,12 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 	fmt.Println("TaskDefinition:", arnToName(*s.TaskDefinition))
 	fmt.Println("Deployments:")
 	for _, dep := range s.Deployments {
-		fmt.Println("  ", formatDeployment(dep))
+		fmt.Println(spcIndent + formatDeployment(dep))
 	}
+	if err := d.describeAutoScaling(s); err != nil {
+		return nil, errors.Wrap(err, "failed to describe autoscaling")
+	}
+
 	fmt.Println("Events:")
 	for i, event := range s.Events {
 		if i >= events {
@@ -88,6 +96,43 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 		}
 	}
 	return s, nil
+}
+
+func (d *App) describeAutoScaling(s *ecs.Service) error {
+	resouceId := fmt.Sprintf("service/%s/%s", arnToName(*s.ClusterArn), *s.ServiceName)
+	tout, err := d.autoScaling.DescribeScalableTargets(
+		&applicationautoscaling.DescribeScalableTargetsInput{
+			ResourceIds:       []*string{&resouceId},
+			ServiceNamespace:  aws.String("ecs"),
+			ScalableDimension: aws.String("ecs:service:DesiredCount"),
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to describe scalable targets")
+	}
+	if len(tout.ScalableTargets) == 0 {
+		return nil
+	}
+
+	fmt.Println("AutoScaling:")
+	for _, target := range tout.ScalableTargets {
+		fmt.Println(formatScalableTarget(target))
+	}
+
+	pout, err := d.autoScaling.DescribeScalingPolicies(
+		&applicationautoscaling.DescribeScalingPoliciesInput{
+			ResourceId:        &resouceId,
+			ServiceNamespace:  aws.String("ecs"),
+			ScalableDimension: aws.String("ecs:service:DesiredCount"),
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to describe scaling policies")
+	}
+	for _, policy := range pout.ScalingPolicies {
+		fmt.Println(formatScalingPolicy(policy))
+	}
+	return nil
 }
 
 func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Time) (int, error) {
@@ -179,11 +224,12 @@ func NewApp(conf *Config) (*App, error) {
 		&aws.Config{Region: aws.String(conf.Region)},
 	))
 	d := &App{
-		Service: conf.Service,
-		Cluster: conf.Cluster,
-		ecs:     ecs.New(sess),
-		cwl:     cloudwatchlogs.New(sess),
-		config:  conf,
+		Service:     conf.Service,
+		Cluster:     conf.Cluster,
+		ecs:         ecs.New(sess),
+		autoScaling: applicationautoscaling.New(sess),
+		cwl:         cloudwatchlogs.New(sess),
+		config:      conf,
 	}
 	return d, nil
 }
@@ -417,6 +463,10 @@ func (d *App) Deploy(opt DeployOption) error {
 		return nil
 	}
 
+	if err := d.suspendAutoScaling(*opt.SuspendAutoScaling); err != nil {
+		return err
+	}
+
 	if err := d.UpdateService(ctx, tdArn, count, *opt.ForceNewDeployment, sv); err != nil {
 		return errors.Wrap(err, "failed to update service")
 	}
@@ -541,6 +591,13 @@ func (d *App) Log(v ...interface{}) {
 	args := []interface{}{d.Name()}
 	args = append(args, v...)
 	log.Println(args...)
+}
+
+func (d *App) DebugLog(v ...interface{}) {
+	if !d.Debug {
+		return
+	}
+	d.Log(v...)
 }
 
 func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error {
@@ -784,6 +841,44 @@ func (d *App) Register(opt RegisterOption) error {
 
 	if *opt.Output {
 		fmt.Println(newTd.String())
+	}
+	return nil
+}
+
+func (d *App) suspendAutoScaling(suspend bool) error {
+	resouceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
+
+	out, err := d.autoScaling.DescribeScalableTargets(
+		&applicationautoscaling.DescribeScalableTargetsInput{
+			ResourceIds:       []*string{&resouceId},
+			ServiceNamespace:  aws.String("ecs"),
+			ScalableDimension: aws.String("ecs:service:DesiredCount"),
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to describe scalable targets")
+	}
+	if len(out.ScalableTargets) == 0 {
+		d.DebugLog(fmt.Sprintf("no scalable target for %s", resouceId))
+		return nil
+	}
+	for _, target := range out.ScalableTargets {
+		d.DebugLog(fmt.Sprintf("register scalable target %s set suspend to %t", *target.ResourceId, suspend))
+		_, err := d.autoScaling.RegisterScalableTarget(
+			&applicationautoscaling.RegisterScalableTargetInput{
+				ServiceNamespace:  target.ServiceNamespace,
+				ScalableDimension: target.ScalableDimension,
+				ResourceId:        target.ResourceId,
+				SuspendedState: &applicationautoscaling.SuspendedState{
+					DynamicScalingInSuspended:  &suspend,
+					DynamicScalingOutSuspended: &suspend,
+					ScheduledScalingSuspended:  &suspend,
+				},
+			},
+		)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed to register scalable target %s set suspend to %t", *target.ResourceId, suspend))
+		}
 	}
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
@@ -58,4 +59,24 @@ func formatLogEvent(e *cloudwatchlogs.OutputLogEvent, chars int) []string {
 		}
 	}
 	return lines
+}
+
+func formatScalableTarget(t *applicationautoscaling.ScalableTarget) string {
+	return strings.Join([]string{
+		fmt.Sprintf(
+			spcIndent+"Capacity min:%d max:%d",
+			*t.MinCapacity,
+			*t.MaxCapacity,
+		),
+		fmt.Sprintf(
+			spcIndent+"Suspended in:%t out:%t scheduled:%t",
+			*t.SuspendedState.DynamicScalingInSuspended,
+			*t.SuspendedState.DynamicScalingOutSuspended,
+			*t.SuspendedState.ScheduledScalingSuspended,
+		),
+	}, "\n")
+}
+
+func formatScalingPolicy(p *applicationautoscaling.ScalingPolicy) string {
+	return fmt.Sprintf("  Policy name:%s type:%s", *p.PolicyName, *p.PolicyType)
 }

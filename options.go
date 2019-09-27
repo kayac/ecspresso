@@ -12,6 +12,7 @@ type DeployOption struct {
 	SkipTaskDefinition *bool
 	ForceNewDeployment *bool
 	NoWait             *bool
+	SuspendAutoScaling *bool
 }
 
 type StatusOption struct {
