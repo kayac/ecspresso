@@ -20,6 +20,7 @@ func _main() int {
 	kingpin.Command("version", "show version")
 
 	conf := kingpin.Flag("config", "config file").String()
+	debug := kingpin.Flag("debug", "enable debug log").Bool()
 
 	deploy := kingpin.Command("deploy", "deploy service")
 	deployOption := ecspresso.DeployOption{
@@ -28,6 +29,7 @@ func _main() int {
 		SkipTaskDefinition: deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
 		ForceNewDeployment: deploy.Flag("force-new-deployment", "force a new deployment of the service").Bool(),
 		NoWait:             deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
+		SuspendAutoScaling: deploy.Flag("suspend-auto-scaling", "suspend auto-scaling").Bool(),
 	}
 
 	create := kingpin.Command("create", "create service")
@@ -86,11 +88,13 @@ func _main() int {
 		kingpin.Usage()
 		return 1
 	}
+
 	app, err := ecspresso.NewApp(c)
 	if err != nil {
 		log.Println(err)
 		return 1
 	}
+	app.Debug = *debug
 
 	switch sub {
 	case "deploy":
