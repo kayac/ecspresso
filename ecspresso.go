@@ -65,10 +65,10 @@ func (d *App) GetLogEventsInput(logGroup string, logStream string, startAt int64
 func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Service, error) {
 	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
 	if err != nil {
-		return nil, errors.Wrap(err, "describe services failed")
+		return nil, errors.Wrap(err, "failed to describe service")
 	}
 	if len(out.Services) == 0 {
-		return nil, errors.New("no services found")
+		return nil, errors.New("service is not found")
 	}
 	s := out.Services[0]
 	fmt.Println("Service:", *s.ServiceName)
@@ -210,13 +210,13 @@ func (d *App) Create(opt CreateOption) error {
 	defer cancel()
 
 	d.Log("Starting create service")
-	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-	if err != nil {
-		return errors.Wrap(err, "create failed")
-	}
 	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 	if err != nil {
-		return errors.Wrap(err, "create failed")
+		return errors.Wrap(err, "failed to load service definition")
+	}
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load task definition")
 	}
 
 	if *opt.DesiredCount != 1 {
@@ -232,12 +232,12 @@ func (d *App) Create(opt CreateOption) error {
 
 	newTd, err := d.RegisterTaskDefinition(ctx, td)
 	if err != nil {
-		return errors.Wrap(err, "create failed")
+		return errors.Wrap(err, "failed to register task definition")
 	}
 	svd.TaskDefinition = newTd.TaskDefinitionArn
 
 	if _, err := d.ecs.CreateServiceWithContext(ctx, svd); err != nil {
-		return errors.Wrap(err, "create failed")
+		return errors.Wrap(err, "failed to create service")
 	}
 	d.Log("Service is created")
 
@@ -248,7 +248,7 @@ func (d *App) Create(opt CreateOption) error {
 	start := time.Now()
 	time.Sleep(delayForServiceChanged) // wait for service created
 	if err := d.WaitServiceStable(ctx, start); err != nil {
-		return errors.Wrap(err, "create failed")
+		return errors.Wrap(err, "failed to wait service stable")
 	}
 
 	d.Log("Service is stable now. Completed!")
@@ -283,7 +283,7 @@ func (d *App) Delete(opt DeleteOption) error {
 		Service: sv.ServiceName,
 	}
 	if _, err := d.ecs.DeleteServiceWithContext(ctx, dsi); err != nil {
-		return errors.Wrap(err, "delete failed")
+		return errors.Wrap(err, "failed to delete service")
 	}
 	d.Log("Service is deleted")
 
@@ -303,7 +303,7 @@ func (d *App) Run(opt RunOption) error {
 
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
-		return errors.Wrap(err, "run failed")
+		return errors.Wrap(err, "failed to describe service status")
 	}
 
 	var tdArn string
@@ -312,7 +312,7 @@ func (d *App) Run(opt RunOption) error {
 	if *opt.SkipTaskDefinition {
 		td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
 		if err != nil {
-			return errors.Wrap(err, "describeTaskDefinition failed")
+			return errors.Wrap(err, "failed to describe task definition")
 		}
 		tdArn = *(td.TaskDefinitionArn)
 		logConfiguration = td.ContainerDefinitions[0].LogConfiguration
@@ -322,14 +322,14 @@ func (d *App) Run(opt RunOption) error {
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
-			return errors.Wrap(err, "run failed")
+			return errors.Wrap(err, "failed to load task definition")
 		}
 
 		if len(*opt.TaskDefinition) > 0 {
 			d.Log("Loading task definition")
 			runTd, err := d.LoadTaskDefinition(*opt.TaskDefinition)
 			if err != nil {
-				return errors.Wrap(err, "run failed")
+				return errors.Wrap(err, "failed to load task definition")
 			}
 			td = runTd
 		}
@@ -342,7 +342,7 @@ func (d *App) Run(opt RunOption) error {
 		} else {
 			newTd, err = d.RegisterTaskDefinition(ctx, td)
 			if err != nil {
-				return errors.Wrap(err, "run failed")
+				return errors.Wrap(err, "failed to register task definition")
 			}
 			tdArn = *newTd.TaskDefinitionArn
 			logConfiguration = newTd.ContainerDefinitions[0].LogConfiguration
@@ -355,17 +355,17 @@ func (d *App) Run(opt RunOption) error {
 
 	task, err := d.RunTask(ctx, tdArn, sv, &ov, *opt.Count)
 	if err != nil {
-		return errors.Wrap(err, "run failed")
+		return errors.Wrap(err, "failed to run task")
 	}
 	if *opt.NoWait {
 		d.Log("Run task invoked")
 		return nil
 	}
 	if err := d.WaitRunTask(ctx, task, logConfiguration, time.Now()); err != nil {
-		return errors.Wrap(err, "run failed")
+		return errors.Wrap(err, "failed to run task")
 	}
 	if err := d.DescribeTask(ctx, task); err != nil {
-		return errors.Wrap(err, "run failed")
+		return errors.Wrap(err, "failed to describe task")
 	}
 	d.Log("Run task completed!")
 
@@ -379,7 +379,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	d.Log("Starting deploy")
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
-		return errors.Wrap(err, "deploy failed")
+		return errors.Wrap(err, "failed to describe service status")
 	}
 
 	var count *int64
@@ -397,14 +397,14 @@ func (d *App) Deploy(opt DeployOption) error {
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
-			return errors.Wrap(err, "deploy failed")
+			return errors.Wrap(err, "failed to load task definition")
 		}
 		if *opt.DryRun {
 			d.Log("task definition:", td.String())
 		} else {
 			newTd, err := d.RegisterTaskDefinition(ctx, td)
 			if err != nil {
-				return errors.Wrap(err, "deploy failed")
+				return errors.Wrap(err, "failed to register task definition")
 			}
 			tdArn = *newTd.TaskDefinitionArn
 		}
@@ -418,7 +418,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	}
 
 	if err := d.UpdateService(ctx, tdArn, count, *opt.ForceNewDeployment, sv); err != nil {
-		return errors.Wrap(err, "deploy failed")
+		return errors.Wrap(err, "failed to update service")
 	}
 
 	if *opt.NoWait {
@@ -428,7 +428,7 @@ func (d *App) Deploy(opt DeployOption) error {
 
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
-		return errors.Wrap(err, "deploy failed")
+		return errors.Wrap(err, "failed to wait service stable")
 	}
 
 	d.Log("Service is stable now. Completed!")
@@ -442,12 +442,12 @@ func (d *App) Rollback(opt RollbackOption) error {
 	d.Log("Starting rollback")
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
-		return errors.Wrap(err, "rollback failed")
+		return errors.Wrap(err, "failed to describe service status")
 	}
 	currentArn := *sv.TaskDefinition
 	targetArn, err := d.FindRollbackTarget(ctx, currentArn)
 	if err != nil {
-		return errors.Wrap(err, "rollback failed")
+		return errors.Wrap(err, "failed to find rollback target")
 	}
 	d.Log("Rollbacking to", arnToName(targetArn))
 	if *opt.DryRun {
@@ -456,7 +456,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 	}
 
 	if err := d.UpdateService(ctx, targetArn, sv.DesiredCount, false, sv); err != nil {
-		return errors.Wrap(err, "rollback failed")
+		return errors.Wrap(err, "failed to update service")
 	}
 
 	if *opt.NoWait {
@@ -466,7 +466,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
-		return errors.Wrap(err, "rollback failed")
+		return errors.Wrap(err, "failed to wait service stable")
 	}
 
 	d.Log("Service is stable now. Completed!")
@@ -480,7 +480,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 			},
 		)
 		if err != nil {
-			return errors.Wrap(err, "deregister task definition failed")
+			return errors.Wrap(err, "failed to deregister task definition")
 		}
 		d.Log(arnToName(currentArn), "was deregistered successfully")
 	}
@@ -516,7 +516,7 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 			},
 		)
 		if err != nil {
-			return "", errors.Wrap(err, "list taskdefinitions failed")
+			return "", errors.Wrap(err, "failed to list taskdefinitions")
 		}
 		if len(out.TaskDefinitionArns) == 0 {
 			return "", errors.New("rollback target is not found")
@@ -650,6 +650,10 @@ func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
 }
 
 func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error) {
+	if path == "" {
+		return nil, errors.New("service_definition is not defined")
+	}
+
 	c := ServiceDefinition{}
 	if err := config.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
@@ -756,4 +760,30 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, lc *ecs.LogConfig
 		}
 	}()
 	return d.ecs.WaitUntilTasksStoppedWithContext(ctx, d.DescribeTasksInput(task))
+}
+
+func (d *App) Register(opt RegisterOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	d.Log("Starting register task definition")
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load task definition")
+	}
+	if *opt.DryRun {
+		d.Log("task definition:", td.String())
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
+	newTd, err := d.RegisterTaskDefinition(ctx, td)
+	if err != nil {
+		return errors.Wrap(err, "failed to register task definition")
+	}
+
+	if *opt.Output {
+		fmt.Println(newTd.String())
+	}
+	return nil
 }

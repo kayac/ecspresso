@@ -8,6 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
+const DefaultClusterName = "default"
+
 type Config struct {
 	Region                string        `yaml:"region"`
 	Service               string        `yaml:"service"`
@@ -33,11 +35,8 @@ type ServiceDefinition struct {
 }
 
 func (c *Config) Validate() error {
-	if c.Service == "" {
-		return errors.New("service is not defined")
-	}
 	if c.Cluster == "" {
-		return errors.New("cluster is not defined")
+		c.Cluster = DefaultClusterName
 	}
 	if c.TaskDefinitionPath == "" {
 		return errors.New("task_definition is not defined")
