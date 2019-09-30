@@ -5,9 +5,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/alecthomas/kingpin"
 	"github.com/kayac/ecspresso"
+
 	config "github.com/kayac/go-config"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var Version = "current"
@@ -19,9 +20,10 @@ func main() {
 func _main() int {
 	kingpin.Command("version", "show version")
 
-	conf := kingpin.Flag("config", "config file").String()
+	conf := kingpin.Flag("config", "config file").ExistingFile()
 	debug := kingpin.Flag("debug", "enable debug log").Bool()
 
+	var isSetSuspendAutoScaling bool
 	deploy := kingpin.Command("deploy", "deploy service")
 	deployOption := ecspresso.DeployOption{
 		DryRun:             deploy.Flag("dry-run", "dry-run").Bool(),
@@ -29,7 +31,7 @@ func _main() int {
 		SkipTaskDefinition: deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
 		ForceNewDeployment: deploy.Flag("force-new-deployment", "force a new deployment of the service").Bool(),
 		NoWait:             deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		SuspendAutoScaling: deploy.Flag("suspend-auto-scaling", "set suspend to auto-scaling attached to the ECS service").Bool(),
+		SuspendAutoScaling: deploy.Flag("suspend-auto-scaling", "set suspend to auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
 	}
 
 	create := kingpin.Command("create", "create service")
@@ -98,6 +100,9 @@ func _main() int {
 
 	switch sub {
 	case "deploy":
+		if !isSetSuspendAutoScaling {
+			deployOption.SuspendAutoScaling = nil
+		}
 		err = app.Deploy(deployOption)
 	case "status":
 		err = app.Status(statusOption)

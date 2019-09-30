@@ -12,6 +12,7 @@ import (
 
 	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
@@ -108,6 +109,12 @@ func (d *App) describeAutoScaling(s *ecs.Service) error {
 		},
 	)
 	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() == "AccessDeniedException" {
+				d.DebugLog("unable to describe scalable targets. requires IAM for application-autoscaling:Describe* to display informations about auto-scaling.")
+				return nil
+			}
+		}
 		return errors.Wrap(err, "failed to describe scalable targets")
 	}
 	if len(tout.ScalableTargets) == 0 {
@@ -463,8 +470,11 @@ func (d *App) Deploy(opt DeployOption) error {
 		return nil
 	}
 
-	if err := d.suspendAutoScaling(*opt.SuspendAutoScaling); err != nil {
-		return err
+	// manage auto scaling only when set option --suspend-auto-scaling or --no-suspend-auto-scaling explicitly
+	if suspend := opt.SuspendAutoScaling; suspend != nil {
+		if err := d.suspendAutoScaling(*suspend); err != nil {
+			return err
+		}
 	}
 
 	if err := d.UpdateService(ctx, tdArn, count, *opt.ForceNewDeployment, sv); err != nil {
@@ -859,11 +869,11 @@ func (d *App) suspendAutoScaling(suspend bool) error {
 		return errors.Wrap(err, "failed to describe scalable targets")
 	}
 	if len(out.ScalableTargets) == 0 {
-		d.DebugLog(fmt.Sprintf("no scalable target for %s", resouceId))
+		d.Log(fmt.Sprintf("No scalable target for %s", resouceId))
 		return nil
 	}
 	for _, target := range out.ScalableTargets {
-		d.DebugLog(fmt.Sprintf("register scalable target %s set suspend to %t", *target.ResourceId, suspend))
+		d.Log(fmt.Sprintf("Register scalable target %s set suspend to %t", *target.ResourceId, suspend))
 		_, err := d.autoScaling.RegisterScalableTarget(
 			&applicationautoscaling.RegisterScalableTargetInput{
 				ServiceNamespace:  target.ServiceNamespace,
