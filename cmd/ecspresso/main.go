@@ -20,7 +20,7 @@ func main() {
 func _main() int {
 	kingpin.Command("version", "show version")
 
-	conf := kingpin.Flag("config", "config file").Required().String()
+	conf := kingpin.Flag("config", "config file").String()
 	debug := kingpin.Flag("debug", "enable debug log").Bool()
 
 	var isSetSuspendAutoScaling bool
