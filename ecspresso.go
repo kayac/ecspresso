@@ -168,7 +168,6 @@ func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Tim
 }
 
 func (d *App) DescribeTask(ctx context.Context, task *ecs.Task) error {
-	d.Log("Checking if task ran successfully")
 	out, err := d.ecs.DescribeTasksWithContext(ctx, d.DescribeTasksInput(task))
 	if err != nil {
 		return err
@@ -194,7 +193,6 @@ func (d *App) DescribeTask(ctx context.Context, task *ecs.Task) error {
 }
 
 func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*ecs.TaskDefinition, error) {
-	d.Log("Checking if task ran successfully")
 	out, err := d.ecs.DescribeTaskDefinitionWithContext(ctx, &ecs.DescribeTaskDefinitionInput{
 		TaskDefinition: &tdArn,
 	})

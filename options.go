@@ -46,3 +46,12 @@ type RegisterOption struct {
 	DryRun *bool
 	Output *bool
 }
+
+type InitOption struct {
+	Region                *string
+	Cluster               *string
+	Service               *string
+	TaskDefinitionPath    *string
+	ServiceDefinitionPath *string
+	ConfigFilePath        *string
+}

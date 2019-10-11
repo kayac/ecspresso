@@ -20,7 +20,7 @@ func main() {
 func _main() int {
 	kingpin.Command("version", "show version")
 
-	conf := kingpin.Flag("config", "config file").ExistingFile()
+	conf := kingpin.Flag("config", "config file").Required().String()
 	debug := kingpin.Flag("debug", "enable debug log").Bool()
 
 	var isSetSuspendAutoScaling bool
@@ -78,6 +78,15 @@ func _main() int {
 	_ = kingpin.Command("wait", "wait until service stable")
 	waitOption := ecspresso.WaitOption{}
 
+	init := kingpin.Command("init", "create service/task definition files by existing ECS service")
+	initOption := ecspresso.InitOption{
+		Region:                init.Flag("region", "AWS region name").Required().String(),
+		Cluster:               init.Flag("cluster", "cluster name").Default("default").String(),
+		Service:               init.Flag("service", "service name").Required().String(),
+		TaskDefinitionPath:    init.Flag("task-definition-path", "output task definition file path").Default("ecs-task-def.json").String(),
+		ServiceDefinitionPath: init.Flag("service-definition-path", "output service definition file path").Default("ecs-service-def.json").String(),
+	}
+
 	sub := kingpin.Parse()
 	if sub == "version" {
 		fmt.Println("ecspresso", Version)
@@ -85,10 +94,19 @@ func _main() int {
 	}
 
 	c := ecspresso.NewDefaultConfig()
-	if err := config.LoadWithEnv(c, *conf); err != nil {
-		log.Println("Cloud not load config file", conf, err)
-		kingpin.Usage()
-		return 1
+	if sub == "init" {
+		c.Region = *initOption.Region
+		c.Cluster = *initOption.Cluster
+		c.Service = *initOption.Service
+		c.TaskDefinitionPath = *initOption.TaskDefinitionPath
+		c.ServiceDefinitionPath = *initOption.ServiceDefinitionPath
+		initOption.ConfigFilePath = conf
+	} else {
+		if err := config.LoadWithEnv(c, *conf); err != nil {
+			log.Println("Cloud not load config file", conf, err)
+			kingpin.Usage()
+			return 1
+		}
 	}
 
 	app, err := ecspresso.NewApp(c)
@@ -118,6 +136,8 @@ func _main() int {
 		err = app.Wait(waitOption)
 	case "register":
 		err = app.Register(registerOption)
+	case "init":
+		err = app.Init(initOption)
 	default:
 		kingpin.Usage()
 		return 1

@@ -20,11 +20,12 @@ $ brew install kayac/tap/ecspresso
 ## Usage
 
 ```
-usage: ecspresso [<flags>] <command> [<args> ...]
+usage: ecspresso --config=CONFIG [<flags>] <command> [<args> ...]
 
 Flags:
   --help           Show context-sensitive help (also try --help-long and --help-man).
   --config=CONFIG  config file
+  --debug          enable debug log
 
 Commands:
   help [<command>...]
@@ -56,9 +57,33 @@ Commands:
 
   wait
     wait until service stable
+    
+  init --region=REGION --service=SERVICE [<flags>]
+    create service/task definition files by existing ECS service
 ```
 
 For more options for sub-commands, See `ecspresso sub-command --help`.
+
+### Quick Start
+
+ecspresso can easily manage for your existing/running ECS service by codes.
+
+Try `ecspresso init` for your ECS service with option `--region`, `--cluster` and `--service`.
+
+```console
+$ ecspresso init --region ap-northeast-1 --cluster default --service myservice --config config.yaml
+2019/10/12 01:31:48 myservice/default save service definition to ecs-service-def.json
+2019/10/12 01:31:48 myservice/default save task definition to ecs-task-def.json
+2019/10/12 01:31:48 myservice/default save config to config.yaml
+```
+
+Let me see the generated files config.yaml, ecs-service-def.json, and ecs-task-def.json.
+
+And then, you already can deploy the service by ecspresso!
+
+```console
+$ ecspresso deploy --config config.yaml
+```
 
 ### Configuration file
 
