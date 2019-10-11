@@ -62,6 +62,8 @@ Commands:
     create service/task definition files by existing ECS service
 ```
 
+For more options for sub-commands, See `ecspresso sub-command --help`.
+
 ### Quick Start
 
 ecspresso can easily manage for your existing/running ECS service by codes.
