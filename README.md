@@ -64,7 +64,7 @@ Commands:
 
 For more options for sub-commands, See `ecspresso sub-command --help`.
 
-### Quick Start
+## Quick Start
 
 ecspresso can easily manage for your existing/running ECS service by codes.
 
@@ -85,7 +85,7 @@ And then, you already can deploy the service by ecspresso!
 $ ecspresso deploy --config config.yaml
 ```
 
-### Configuration file
+## Configuration file
 
 YAML format.
 
