@@ -12,10 +12,10 @@ const DefaultClusterName = "default"
 
 type Config struct {
 	Region                string        `yaml:"region"`
-	Service               string        `yaml:"service"`
 	Cluster               string        `yaml:"cluster"`
-	TaskDefinitionPath    string        `yaml:"task_definition"`
+	Service               string        `yaml:"service"`
 	ServiceDefinitionPath string        `yaml:"service_definition"`
+	TaskDefinitionPath    string        `yaml:"task_definition"`
 	Timeout               time.Duration `yaml:"timeout"`
 }
 
