@@ -1,0 +1,17 @@
+{
+  "applicationName": "AppECS-default-test",
+  "deploymentGroupName": "DgpECS-default-test",
+  "deploymentConfigName": "CodeDeployDefault.ECSAllAtOnce",
+  "revision": {
+    "revisionType": "AppSpecContent",
+    "appSpecContent": {
+      "content": "{\"version\":1,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::ECS::Service\",\"Properties\":{\"TaskDefinition\":\"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:42\",\"LoadBalancerInfo\":{\"ContainerName\":\"test\",\"ContainerPort\":11212}}}}]}"
+    }
+  },
+  "autoRollbackConfiguration": {
+    "enabled": true,
+    "events": [
+      "DEPLOYMENT_FAILURE"
+    ]
+  }
+}

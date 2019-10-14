@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
@@ -38,6 +39,7 @@ func taskDefinitionName(t *ecs.TaskDefinition) string {
 type App struct {
 	ecs         *ecs.ECS
 	autoScaling *applicationautoscaling.ApplicationAutoScaling
+	codedeploy  *codedeploy.CodeDeploy
 	cwl         *cloudwatchlogs.CloudWatchLogs
 	Service     string
 	Cluster     string
@@ -233,6 +235,7 @@ func NewApp(conf *Config) (*App, error) {
 		Cluster:     conf.Cluster,
 		ecs:         ecs.New(sess),
 		autoScaling: applicationautoscaling.New(sess),
+		codedeploy:  codedeploy.New(sess),
 		cwl:         cloudwatchlogs.New(sess),
 		config:      conf,
 	}
@@ -423,76 +426,6 @@ func (d *App) Run(opt RunOption) error {
 	return nil
 }
 
-func (d *App) Deploy(opt DeployOption) error {
-	ctx, cancel := d.Start()
-	defer cancel()
-
-	d.Log("Starting deploy")
-	sv, err := d.DescribeServiceStatus(ctx, 0)
-	if err != nil {
-		return errors.Wrap(err, "failed to describe service status")
-	}
-
-	var count *int64
-	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
-		count = nil
-	} else if *opt.DesiredCount == KeepDesiredCount {
-		count = sv.DesiredCount
-	} else {
-		count = opt.DesiredCount
-	}
-
-	var tdArn string
-	if *opt.SkipTaskDefinition {
-		tdArn = *sv.TaskDefinition
-	} else {
-		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-		if err != nil {
-			return errors.Wrap(err, "failed to load task definition")
-		}
-		if *opt.DryRun {
-			d.Log("task definition:", td.String())
-		} else {
-			newTd, err := d.RegisterTaskDefinition(ctx, td)
-			if err != nil {
-				return errors.Wrap(err, "failed to register task definition")
-			}
-			tdArn = *newTd.TaskDefinitionArn
-		}
-	}
-	if count != nil {
-		d.Log("desired count:", *count)
-	}
-	if *opt.DryRun {
-		d.Log("DRY RUN OK")
-		return nil
-	}
-
-	// manage auto scaling only when set option --suspend-auto-scaling or --no-suspend-auto-scaling explicitly
-	if suspend := opt.SuspendAutoScaling; suspend != nil {
-		if err := d.suspendAutoScaling(*suspend); err != nil {
-			return err
-		}
-	}
-
-	if err := d.UpdateService(ctx, tdArn, count, *opt.ForceNewDeployment, sv); err != nil {
-		return errors.Wrap(err, "failed to update service")
-	}
-
-	if *opt.NoWait {
-		d.Log("Service is deployed.")
-		return nil
-	}
-
-	time.Sleep(delayForServiceChanged) // wait for service updated
-	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
-		return errors.Wrap(err, "failed to wait service stable")
-	}
-
-	d.Log("Service is stable now. Completed!")
-	return nil
-}
-
 func (d *App) Rollback(opt RollbackOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
@@ -647,30 +580,6 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	)
 }
 
-func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64, force bool, sv *ecs.Service) error {
-	msg := "Updating service"
-	if force {
-		msg = msg + " with force new deployment"
-	}
-	msg = msg + "..."
-	d.Log(msg)
-
-	_, err := d.ecs.UpdateServiceWithContext(
-		ctx,
-		&ecs.UpdateServiceInput{
-			Service:                       aws.String(d.Service),
-			Cluster:                       aws.String(d.Cluster),
-			TaskDefinition:                aws.String(taskDefinitionArn),
-			DesiredCount:                  count,
-			ForceNewDeployment:            &force,
-			NetworkConfiguration:          sv.NetworkConfiguration,
-			HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
-			PlatformVersion:               sv.PlatformVersion,
-		},
-	)
-	return err
-}
-
 func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition) (*ecs.TaskDefinition, error) {
 	d.Log("Registering a new task definition...")
 
@@ -719,7 +628,7 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 		return nil, errors.New("service_definition is not defined")
 	}
 
-	c := ServiceDefinition{}
+	c := ecs.CreateServiceInput{}
 	if err := config.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
 	}
@@ -734,22 +643,11 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 		count = c.DesiredCount
 	}
 
-	return &ecs.CreateServiceInput{
-		Cluster:                       aws.String(d.config.Cluster),
-		DesiredCount:                  count,
-		ServiceName:                   aws.String(d.config.Service),
-		DeploymentConfiguration:       c.DeploymentConfiguration,
-		HealthCheckGracePeriodSeconds: c.HealthCheckGracePeriodSeconds,
-		LaunchType:                    c.LaunchType,
-		LoadBalancers:                 c.LoadBalancers,
-		NetworkConfiguration:          c.NetworkConfiguration,
-		PlatformVersion:               c.PlatformVersion,
-		PlacementConstraints:          c.PlacementConstraints,
-		PlacementStrategy:             c.PlacementStrategy,
-		Role:                          c.Role,
-		SchedulingStrategy:            c.SchedulingStrategy,
-		ServiceRegistries:             c.ServiceRegistries,
-	}, nil
+	c.Cluster = aws.String(d.config.Cluster)
+	c.ServiceName = aws.String(d.config.Service)
+	c.DesiredCount = count
+
+	return &c, nil
 }
 
 func (d *App) GetLogInfo(task *ecs.Task, lc *ecs.LogConfiguration) (string, string) {

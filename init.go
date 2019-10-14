@@ -7,6 +7,8 @@ import (
 	"os"
 
 	"github.com/Songmu/prompter"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -32,6 +34,19 @@ func (d *App) Init(opt InitOption) error {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
 
+	var dd *codedeploy.CreateDeploymentInput
+	if sv.DeploymentController != nil && *sv.DeploymentController.Type == "CODE_DEPLOY" {
+		dd = &codedeploy.CreateDeploymentInput{
+			ApplicationName:     aws.String(fmt.Sprintf("AppECS-%s-%s", d.Cluster, d.Service)),
+			DeploymentGroupName: aws.String(fmt.Sprintf("DgpECS-%s-%s", d.Cluster, d.Service)),
+			AutoRollbackConfiguration: &codedeploy.AutoRollbackConfiguration{
+				Enabled: aws.Bool(true),
+				Events:  []*string{aws.String("DEPLOYMENT_FAILURE")},
+			},
+		}
+	}
+
+	// service-def
 	treatmentServiceDefinition(sv)
 	if b, err := MarshalJSON(sv); err != nil {
 		return errors.Wrap(err, "unable to marshal service definition to JSON")
@@ -42,6 +57,7 @@ func (d *App) Init(opt InitOption) error {
 		}
 	}
 
+	// task-def
 	treatmentTaskDefinition(td)
 	if b, err := MarshalJSON(td); err != nil {
 		return errors.Wrap(err, "unable to marshal task definition to JSON")
@@ -52,6 +68,19 @@ func (d *App) Init(opt InitOption) error {
 		}
 	}
 
+	// deployment-def
+	if dd != nil {
+		if b, err := MarshalJSON(dd); err != nil {
+			return errors.Wrap(err, "unable to marshal deployment definition to JSON")
+		} else {
+			d.Log("save deployment definition to", config.DeploymentDefinitionPath)
+			if err := d.saveFile(config.DeploymentDefinitionPath, b, CreateFileMode); err != nil {
+				return errors.Wrap(err, "failed to write file")
+			}
+		}
+	}
+
+	// config
 	if b, err := yaml.Marshal(config); err != nil {
 		return errors.Wrap(err, "unable to marshal config to YAML")
 	} else {
@@ -71,7 +100,6 @@ func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
 	sv.Events = nil
 	sv.PendingCount = nil
 	sv.PropagateTags = nil
-	sv.PlatformVersion = nil
 	sv.RunningCount = nil
 	sv.Status = nil
 	sv.TaskDefinition = nil
@@ -86,6 +114,7 @@ func treatmentTaskDefinition(td *ecs.TaskDefinition) *ecs.TaskDefinition {
 	td.RequiresAttributes = nil
 	td.Status = nil
 	td.TaskDefinitionArn = nil
+	td.Compatibilities = nil
 	return td
 }
 
