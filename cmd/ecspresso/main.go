@@ -80,11 +80,12 @@ func _main() int {
 
 	init := kingpin.Command("init", "create service/task definition files by existing ECS service")
 	initOption := ecspresso.InitOption{
-		Region:                init.Flag("region", "AWS region name").Required().String(),
-		Cluster:               init.Flag("cluster", "cluster name").Default("default").String(),
-		Service:               init.Flag("service", "service name").Required().String(),
-		TaskDefinitionPath:    init.Flag("task-definition-path", "output task definition file path").Default("ecs-task-def.json").String(),
-		ServiceDefinitionPath: init.Flag("service-definition-path", "output service definition file path").Default("ecs-service-def.json").String(),
+		Region:                   init.Flag("region", "AWS region name").Required().String(),
+		Cluster:                  init.Flag("cluster", "cluster name").Default("default").String(),
+		Service:                  init.Flag("service", "service name").Required().String(),
+		TaskDefinitionPath:       init.Flag("task-definition-path", "output task definition file path").Default("ecs-task-def.json").String(),
+		ServiceDefinitionPath:    init.Flag("service-definition-path", "output service definition file path").Default("ecs-service-def.json").String(),
+		DeploymentDefinitionPath: init.Flag("deployment-definition-path", "output CodeDeploy deployment definition path").Default("codedeploy-def.json").String(),
 	}
 
 	sub := kingpin.Parse()
@@ -100,6 +101,7 @@ func _main() int {
 		c.Service = *initOption.Service
 		c.TaskDefinitionPath = *initOption.TaskDefinitionPath
 		c.ServiceDefinitionPath = *initOption.ServiceDefinitionPath
+		c.DeploymentDefinitionPath = *initOption.DeploymentDefinitionPath
 		initOption.ConfigFilePath = conf
 	} else {
 		if err := config.LoadWithEnv(c, *conf); err != nil {
