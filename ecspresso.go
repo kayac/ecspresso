@@ -81,10 +81,19 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 	fmt.Println("Service:", *s.ServiceName)
 	fmt.Println("Cluster:", arnToName(*s.ClusterArn))
 	fmt.Println("TaskDefinition:", arnToName(*s.TaskDefinition))
-	fmt.Println("Deployments:")
-	for _, dep := range s.Deployments {
-		fmt.Println(spcIndent + formatDeployment(dep))
+	if len(s.Deployments) > 0 {
+		fmt.Println("Deployments:")
+		for _, dep := range s.Deployments {
+			fmt.Println(spcIndent + formatDeployment(dep))
+		}
 	}
+	if len(s.TaskSets) > 0 {
+		fmt.Println("TaskSets:")
+		for _, ts := range s.TaskSets {
+			fmt.Println(spcIndent + formatTaskSet(ts))
+		}
+	}
+
 	if err := d.describeAutoScaling(s); err != nil {
 		return nil, errors.Wrap(err, "failed to describe autoscaling")
 	}
