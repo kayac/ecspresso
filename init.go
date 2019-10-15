@@ -77,6 +77,7 @@ func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
 	sv.RunningCount = nil
 	sv.Status = nil
 	sv.TaskDefinition = nil
+	sv.TaskSets = nil
 	sv.ServiceArn = nil
 	sv.RoleArn = nil
 	sv.ServiceName = nil
