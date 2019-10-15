@@ -209,7 +209,8 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 		id,
 		d.config.Region,
 	)
-	d.Log(fmt.Sprintf("Deployment %s is created on CodeDeploy:", id), u)
+	d.Log(fmt.Sprintf("Deployment %s is created on CodeDeploy:", id))
+	d.Log(u)
 
 	if isatty.IsTerminal(os.Stdout.Fd()) {
 		if err := exec.Command("open", u).Start(); err != nil {
