@@ -49,11 +49,10 @@ type RegisterOption struct {
 }
 
 type InitOption struct {
-	Region                   *string
-	Cluster                  *string
-	Service                  *string
-	TaskDefinitionPath       *string
-	ServiceDefinitionPath    *string
-	ConfigFilePath           *string
-	DeploymentDefinitionPath *string
+	Region                *string
+	Cluster               *string
+	Service               *string
+	TaskDefinitionPath    *string
+	ServiceDefinitionPath *string
+	ConfigFilePath        *string
 }
