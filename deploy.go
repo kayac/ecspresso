@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	config "github.com/kayac/go-config"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
 )
@@ -220,14 +219,15 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	return nil
 }
 
-func (d *App) LoadDeploymentDefinition(path string) (*codedeploy.CreateDeploymentInput, error) {
-	if path == "" {
-		return nil, errors.New("deployment_definition is not defined")
+func (d *App) findDeployment(sv *ecs.Service) (*codedeploy.DeploymentInfo, error) {
+	if len(sv.TaskSets) == 0 {
+		return nil, errors.New("taskSet is not found in service")
 	}
-
-	c := codedeploy.CreateDeploymentInput{}
-	if err := config.LoadWithEnvJSON(&c, path); err != nil {
+	dp, err := d.codedeploy.GetDeployment(&codedeploy.GetDeploymentInput{
+		DeploymentId: sv.TaskSets[0].ExternalId,
+	})
+	if err != nil {
 		return nil, err
 	}
-	return &c, nil
+	return dp.DeploymentInfo, nil
 }
