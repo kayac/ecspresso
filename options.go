@@ -13,6 +13,7 @@ type DeployOption struct {
 	ForceNewDeployment *bool
 	NoWait             *bool
 	SuspendAutoScaling *bool
+	RollbackEvents     *string
 }
 
 type StatusOption struct {

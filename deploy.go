@@ -3,20 +3,22 @@ package ecspresso
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	config "github.com/kayac/go-config"
+	isatty "github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
 )
 
 const (
 	CodeDeployConsoleURLFmt = "https://%s.console.aws.amazon.com/codesuite/codedeploy/deployments/%s?region=%s"
-	AppSpecFmtWithLB        = `
-version: 1
+	AppSpecFmtWithLB        = `version: 1
 Resources:
 - TargetService:
     Type: AWS::ECS::Service
@@ -26,8 +28,7 @@ Resources:
         ContainerName: %s
         ContainerPort: %d
 `
-	AppSpecFmtWithoutLB = `
-version: 1
+	AppSpecFmtWithoutLB = `version: 1
 Resources:
 - TargetService:
     Type: AWS::ECS::Service
@@ -92,7 +93,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	if dc := sv.DeploymentController; dc != nil {
 		switch t := *dc.Type; t {
 		case "CODE_DEPLOY":
-			return d.DeployByCodeDeploy(ctx, tdArn, count, sv)
+			return d.DeployByCodeDeploy(ctx, tdArn, count, sv, opt)
 		default:
 			return fmt.Errorf("could not deploy a service using deployment controller type %s", t)
 		}
@@ -141,14 +142,9 @@ func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count
 	return err
 }
 
-func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int64, sv *ecs.Service) error {
-	dd, err := d.LoadDeploymentDefinition(d.config.DeploymentDefinitionPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to load deployment definition")
-	}
-
+func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int64, sv *ecs.Service, opt DeployOption) error {
 	if *sv.DesiredCount != *count {
-		d.Log("updating desired count to %d", *count)
+		d.Log("updating desired count to", *count)
 		_, err := d.ecs.UpdateServiceWithContext(
 			ctx,
 			&ecs.UpdateServiceInput{
@@ -175,15 +171,33 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	}
 	d.DebugLog("appSpecContent:", appSpec)
 
-	// override
-	dd.DeploymentConfigName = aws.String("CodeDeployDefault.ECSAllAtOnce")
-	dd.Revision = &codedeploy.RevisionLocation{
-		RevisionType: aws.String("AppSpecContent"),
-		AppSpecContent: &codedeploy.AppSpecContent{
-			Content: aws.String(appSpec),
+	// deployment
+	dp, err := d.findDeployment(sv)
+	if err != nil {
+		return err
+	}
+	dd := &codedeploy.CreateDeploymentInput{
+		ApplicationName:      dp.ApplicationName,
+		DeploymentGroupName:  dp.DeploymentGroupName,
+		DeploymentConfigName: dp.DeploymentConfigName,
+		Revision: &codedeploy.RevisionLocation{
+			RevisionType: aws.String("AppSpecContent"),
+			AppSpecContent: &codedeploy.AppSpecContent{
+				Content: aws.String(appSpec),
+			},
 		},
 	}
-	d.Log("creating deployment to CodeDeploy", dd.String())
+	if ev := *opt.RollbackEvents; ev != "" {
+		var events []*string
+		for _, ev := range strings.Split(ev, ",") {
+			events = append(events, aws.String(ev))
+		}
+		dd.AutoRollbackConfiguration = &codedeploy.AutoRollbackConfiguration{
+			Enabled: aws.Bool(true),
+			Events:  events,
+		}
+	}
+	d.DebugLog("creating a deployment to CodeDeploy", dd.String())
 
 	res, err := d.codedeploy.CreateDeploymentWithContext(ctx, dd)
 	if err != nil {
@@ -198,8 +212,10 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	)
 	d.Log(fmt.Sprintf("Deployment %s is created on CodeDeploy:", id), u)
 
-	if err := exec.Command("open", u).Start(); err != nil {
-		d.Log("Couldn't open URL", u)
+	if isatty.IsTerminal(os.Stdout.Fd()) {
+		if err := exec.Command("open", u).Start(); err != nil {
+			d.Log("Couldn't open URL", u)
+		}
 	}
 	return nil
 }

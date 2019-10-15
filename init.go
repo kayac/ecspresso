@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/Songmu/prompter"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/pkg/errors"
@@ -34,18 +33,6 @@ func (d *App) Init(opt InitOption) error {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
 
-	var dd *codedeploy.CreateDeploymentInput
-	if sv.DeploymentController != nil && *sv.DeploymentController.Type == "CODE_DEPLOY" {
-		dd = &codedeploy.CreateDeploymentInput{
-			ApplicationName:     aws.String(fmt.Sprintf("AppECS-%s-%s", d.Cluster, d.Service)),
-			DeploymentGroupName: aws.String(fmt.Sprintf("DgpECS-%s-%s", d.Cluster, d.Service)),
-			AutoRollbackConfiguration: &codedeploy.AutoRollbackConfiguration{
-				Enabled: aws.Bool(true),
-				Events:  []*string{aws.String("DEPLOYMENT_FAILURE")},
-			},
-		}
-	}
-
 	// service-def
 	treatmentServiceDefinition(sv)
 	if b, err := MarshalJSON(sv); err != nil {
@@ -65,18 +52,6 @@ func (d *App) Init(opt InitOption) error {
 		d.Log("save task definition to", config.TaskDefinitionPath)
 		if err := d.saveFile(config.TaskDefinitionPath, b, CreateFileMode); err != nil {
 			return errors.Wrap(err, "failed to write file")
-		}
-	}
-
-	// deployment-def
-	if dd != nil {
-		if b, err := MarshalJSON(dd); err != nil {
-			return errors.Wrap(err, "unable to marshal deployment definition to JSON")
-		} else {
-			d.Log("save deployment definition to", config.DeploymentDefinitionPath)
-			if err := d.saveFile(config.DeploymentDefinitionPath, b, CreateFileMode); err != nil {
-				return errors.Wrap(err, "failed to write file")
-			}
 		}
 	}
 
@@ -127,4 +102,17 @@ func (d *App) saveFile(path string, b []byte, mode os.FileMode) error {
 		}
 	}
 	return ioutil.WriteFile(path, b, mode)
+}
+
+func (d *App) findDeployment(sv *ecs.Service) (*codedeploy.DeploymentInfo, error) {
+	if len(sv.TaskSets) == 0 {
+		return nil, errors.New("taskSet is not found in service")
+	}
+	dp, err := d.codedeploy.GetDeployment(&codedeploy.GetDeploymentInput{
+		DeploymentId: sv.TaskSets[0].ExternalId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return dp.DeploymentInfo, nil
 }

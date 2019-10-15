@@ -9,13 +9,12 @@ import (
 const DefaultClusterName = "default"
 
 type Config struct {
-	Region                   string        `yaml:"region"`
-	Cluster                  string        `yaml:"cluster"`
-	Service                  string        `yaml:"service"`
-	ServiceDefinitionPath    string        `yaml:"service_definition"`
-	TaskDefinitionPath       string        `yaml:"task_definition"`
-	DeploymentDefinitionPath string        `yaml:"deployment_definition"`
-	Timeout                  time.Duration `yaml:"timeout"`
+	Region                string        `yaml:"region"`
+	Cluster               string        `yaml:"cluster"`
+	Service               string        `yaml:"service"`
+	ServiceDefinitionPath string        `yaml:"service_definition"`
+	TaskDefinitionPath    string        `yaml:"task_definition"`
+	Timeout               time.Duration `yaml:"timeout"`
 }
 
 func (c *Config) Validate() error {
