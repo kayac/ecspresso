@@ -26,6 +26,15 @@ func formatDeployment(d *ecs.Deployment) string {
 	)
 }
 
+func formatTaskSet(d *ecs.TaskSet) string {
+	return fmt.Sprintf(
+		"%8s %s desired:%d pending:%d running:%d",
+		*d.Status,
+		arnToName(*d.TaskDefinition),
+		*d.ComputedDesiredCount, *d.PendingCount, *d.RunningCount,
+	)
+}
+
 func formatEvent(e *ecs.ServiceEvent, chars int) []string {
 	line := fmt.Sprintf("%s %s",
 		e.CreatedAt.In(timezone).Format("2006/01/02 15:04:05"),

@@ -32,6 +32,7 @@ func (d *App) Init(opt InitOption) error {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
 
+	// service-def
 	treatmentServiceDefinition(sv)
 	if b, err := MarshalJSON(sv); err != nil {
 		return errors.Wrap(err, "unable to marshal service definition to JSON")
@@ -42,6 +43,7 @@ func (d *App) Init(opt InitOption) error {
 		}
 	}
 
+	// task-def
 	treatmentTaskDefinition(td)
 	if b, err := MarshalJSON(td); err != nil {
 		return errors.Wrap(err, "unable to marshal task definition to JSON")
@@ -52,6 +54,7 @@ func (d *App) Init(opt InitOption) error {
 		}
 	}
 
+	// config
 	if b, err := yaml.Marshal(config); err != nil {
 		return errors.Wrap(err, "unable to marshal config to YAML")
 	} else {
@@ -71,10 +74,10 @@ func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
 	sv.Events = nil
 	sv.PendingCount = nil
 	sv.PropagateTags = nil
-	sv.PlatformVersion = nil
 	sv.RunningCount = nil
 	sv.Status = nil
 	sv.TaskDefinition = nil
+	sv.TaskSets = nil
 	sv.ServiceArn = nil
 	sv.RoleArn = nil
 	sv.ServiceName = nil
@@ -86,6 +89,7 @@ func treatmentTaskDefinition(td *ecs.TaskDefinition) *ecs.TaskDefinition {
 	td.RequiresAttributes = nil
 	td.Status = nil
 	td.TaskDefinitionArn = nil
+	td.Compatibilities = nil
 	return td
 }
 

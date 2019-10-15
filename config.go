@@ -4,8 +4,6 @@ import (
 	"errors"
 	"os"
 	"time"
-
-	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 const DefaultClusterName = "default"
@@ -17,21 +15,6 @@ type Config struct {
 	ServiceDefinitionPath string        `yaml:"service_definition"`
 	TaskDefinitionPath    string        `yaml:"task_definition"`
 	Timeout               time.Duration `yaml:"timeout"`
-}
-
-type ServiceDefinition struct {
-	DeploymentConfiguration       *ecs.DeploymentConfiguration `json:"deploymentConfiguration"`
-	DesiredCount                  *int64                       `json:"desiredCount"`
-	HealthCheckGracePeriodSeconds *int64                       `json:"healthCheckGracePeriod_seconds"`
-	LaunchType                    *string                      `json:"launchType"`
-	LoadBalancers                 []*ecs.LoadBalancer          `json:"loadBalancers"`
-	NetworkConfiguration          *ecs.NetworkConfiguration    `json:"networkConfiguration"`
-	PlacementConstraints          []*ecs.PlacementConstraint   `json:"placementConstraints"`
-	PlacementStrategy             []*ecs.PlacementStrategy     `json:"placementStrategy"`
-	PlatformVersion               *string                      `json:"platformVersion"`
-	Role                          *string                      `json:"role"`
-	SchedulingStrategy            *string                      `json:"schedulingStrategy"`
-	ServiceRegistries             []*ecs.ServiceRegistry       `json:"serviceRegistries"`
 }
 
 func (c *Config) Validate() error {

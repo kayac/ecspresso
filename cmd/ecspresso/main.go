@@ -32,6 +32,7 @@ func _main() int {
 		ForceNewDeployment: deploy.Flag("force-new-deployment", "force a new deployment of the service").Bool(),
 		NoWait:             deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
 		SuspendAutoScaling: deploy.Flag("suspend-auto-scaling", "set suspend to auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
+		RollbackEvents:     deploy.Flag("rollback-events", " rollback when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only.").String(),
 	}
 
 	create := kingpin.Command("create", "create service")
