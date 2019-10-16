@@ -11,7 +11,7 @@ func TestLoadTaskDefinition(t *testing.T) {
 	for _, path := range []string{"tests/td.json", "tests/td-plain.json"} {
 		c := &ecspresso.Config{
 			Region:             "ap-northeast-1",
-			Timeout:            300 * time.Second,
+			Timeout:            600 * time.Second,
 			Service:            "test",
 			Cluster:            "default",
 			TaskDefinitionPath: path,

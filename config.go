@@ -6,7 +6,10 @@ import (
 	"time"
 )
 
-const DefaultClusterName = "default"
+const (
+	DefaultClusterName = "default"
+	DefaultTimeout     = 10 * time.Minute
+)
 
 type Config struct {
 	Region                string        `yaml:"region"`
@@ -30,6 +33,6 @@ func (c *Config) Validate() error {
 func NewDefaultConfig() *Config {
 	return &Config{
 		Region:  os.Getenv("AWS_REGION"),
-		Timeout: 300 * time.Second,
+		Timeout: DefaultTimeout,
 	}
 }
