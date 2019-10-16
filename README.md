@@ -134,8 +134,20 @@ Events:
 
 ### Blue/Green deployment (with AWS CodeDeploy)
 
-Currentry, `ecspresso create` cannot create a service having CODE_DEPLOY deployment controller.
-`ecspresso init` can export existing such services.
+`ecspresso create` can create a service having CODE_DEPLOY deployment controller. See ecs-service-def.json below.
+
+```json5
+{
+  "deploymentController": {
+    "type": "CODE_DEPLOY"
+  },
+  # ...
+}
+```
+
+Currently, ecspresso doesn't create any resources on CodeDeploy. You must create an application and a deployment group for your ECS service on CodeDeploy in the other way.
+
+`ecspresso deploy` creates a new deployment for CodeDeploy, and it continues on CodeDeploy.
 
 ```console
 $ ecspresso deploy --config config.yaml --rollback-events DEPLOYMENT_FAILURE
@@ -153,8 +165,6 @@ Events:
 2019/10/15 22:47:09 myService/default Deployment d-XXXXXXXXX is created on CodeDeploy
 2019/10/15 22:47:09 myService/default https://ap-northeast-1.console.aws.amazon.com/codesuite/codedeploy/deployments/d-XXXXXXXXX?region=ap-northeast-1
 ```
-
-ecspresso creates a deployment for CodeDeploy, and the deployment continues on CodeDeploy.
 
 ## Scale out/in
 

@@ -171,7 +171,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	d.DebugLog("appSpecContent:", appSpec)
 
 	// deployment
-	dp, err := d.findDeployment(sv)
+	dp, err := d.findDeploymentInfo(sv)
 	if err != nil {
 		return err
 	}
@@ -220,15 +220,78 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	return nil
 }
 
-func (d *App) findDeployment(sv *ecs.Service) (*codedeploy.DeploymentInfo, error) {
+func (d *App) findDeploymentInfo(sv *ecs.Service) (*codedeploy.DeploymentInfo, error) {
 	if len(sv.TaskSets) == 0 {
 		return nil, errors.New("taskSet is not found in service")
 	}
-	dp, err := d.codedeploy.GetDeployment(&codedeploy.GetDeploymentInput{
-		DeploymentId: sv.TaskSets[0].ExternalId,
+
+	// already exists deployment by CodeDeploy
+	externalId := sv.TaskSets[0].ExternalId
+	if externalId != nil {
+		dp, err := d.codedeploy.GetDeployment(&codedeploy.GetDeploymentInput{
+			DeploymentId: externalId,
+		})
+		if err != nil {
+			return nil, err
+		}
+		d.DebugLog("depoymentInfo", dp.DeploymentInfo.String())
+		return dp.DeploymentInfo, nil
+	}
+
+	// search deploymentGroup in CodeDeploy
+	d.DebugLog("find all applications in CodeDeploy")
+	la, err := d.codedeploy.ListApplications(&codedeploy.ListApplicationsInput{})
+	if err != nil {
+		return nil, err
+	}
+	if len(la.Applications) == 0 {
+		return nil, errors.New("no any applications in CodeDeploy")
+	}
+
+	apps, err := d.codedeploy.BatchGetApplications(&codedeploy.BatchGetApplicationsInput{
+		ApplicationNames: la.Applications,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return dp.DeploymentInfo, nil
+	for _, info := range apps.ApplicationsInfo {
+		d.DebugLog("application", info.String())
+		if *info.ComputePlatform != "ECS" {
+			continue
+		}
+		lg, err := d.codedeploy.ListDeploymentGroups(&codedeploy.ListDeploymentGroupsInput{
+			ApplicationName: info.ApplicationName,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(lg.DeploymentGroups) == 0 {
+			d.DebugLog("no deploymentGroups in application", *info.ApplicationName)
+			continue
+		}
+		groups, err := d.codedeploy.BatchGetDeploymentGroups(&codedeploy.BatchGetDeploymentGroupsInput{
+			ApplicationName:      info.ApplicationName,
+			DeploymentGroupNames: lg.DeploymentGroups,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, dg := range groups.DeploymentGroupsInfo {
+			d.DebugLog("deploymentGroup", dg.String())
+			for _, ecsService := range dg.EcsServices {
+				if *ecsService.ClusterName == d.config.Cluster && *ecsService.ServiceName == d.config.Service {
+					return &codedeploy.DeploymentInfo{
+						ApplicationName:      aws.String(*info.ApplicationName),
+						DeploymentGroupName:  aws.String(*dg.DeploymentGroupName),
+						DeploymentConfigName: aws.String(*dg.DeploymentConfigName),
+					}, nil
+				}
+			}
+		}
+	}
+	return nil, fmt.Errorf(
+		"failed to find CodeDeploy Application/DeploymentGroup for ECS service %s on cluster %s",
+		d.config.Service,
+		d.config.Cluster,
+	)
 }
