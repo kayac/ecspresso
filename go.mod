@@ -6,7 +6,7 @@ require (
 	github.com/BurntSushi/toml v0.3.0 // indirect
 	github.com/Songmu/prompter v0.0.0-20150725163906-b5721e8d5566
 	github.com/alecthomas/kingpin v1.3.8-0.20190930021037-0a108b7f5563
-	github.com/aws/aws-sdk-go v1.25.20
+	github.com/aws/aws-sdk-go v1.25.26
 	github.com/kayac/go-config v0.1.0
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.10
