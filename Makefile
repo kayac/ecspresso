@@ -1,6 +1,7 @@
 GIT_VER := $(shell git describe --tags)
 DATE := $(shell date +%Y-%m-%dT%H:%M:%S%z)
 export GO111MODULE := on
+export CGO_ENABLED := 0
 
 .PHONY: test binary install clean
 
