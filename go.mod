@@ -3,7 +3,6 @@ module github.com/kayac/ecspresso
 go 1.12
 
 require (
-	github.com/BurntSushi/toml v0.3.0 // indirect
 	github.com/Songmu/prompter v0.0.0-20150725163906-b5721e8d5566
 	github.com/alecthomas/kingpin v1.3.8-0.20190930021037-0a108b7f5563
 	github.com/aws/aws-sdk-go v1.25.16
