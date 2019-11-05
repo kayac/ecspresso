@@ -6,7 +6,7 @@ require (
 	github.com/BurntSushi/toml v0.3.0 // indirect
 	github.com/Songmu/prompter v0.0.0-20150725163906-b5721e8d5566
 	github.com/alecthomas/kingpin v1.3.8-0.20190930021037-0a108b7f5563
-	github.com/aws/aws-sdk-go v1.25.20
+	github.com/aws/aws-sdk-go v1.25.26
 	github.com/kayac/go-config v0.1.0
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.10
@@ -15,5 +15,5 @@ require (
 	github.com/stretchr/testify v1.3.0 // indirect
 	golang.org/x/net v0.0.0-20190503192946-f4e77d36d62c // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
-	gopkg.in/yaml.v2 v2.2.4
+	gopkg.in/yaml.v2 v2.2.5
 )
