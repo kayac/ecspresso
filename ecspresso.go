@@ -30,8 +30,6 @@ var TerminalWidth = 90
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
 
-const KeepDesiredCount = -1
-
 func taskDefinitionName(t *ecs.TaskDefinition) string {
 	return fmt.Sprintf("%s:%d", *t.Family, *t.Revision)
 }
