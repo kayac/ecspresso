@@ -26,6 +26,8 @@ jobs:
 
     - name: packages
       run: PATH=~/go/bin:$PATH make packages
+      env:
+        CGO_ENABLED: 0
 
     - name: release
       env:
