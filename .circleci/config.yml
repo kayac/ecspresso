@@ -8,3 +8,29 @@ jobs:
       - run: |
           make clean
           make test
+  release:
+    docker:
+      - image: circleci/golang:1.13
+    steps:
+      - checkout
+      - run: |
+          go get github.com/mitchellh/gox
+          go get github.com/tcnksm/ghr
+      - run:
+          command: |
+            make packages
+          environment:
+            CGO_ENABLED: 0
+      - run: |
+          make release
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build
+  release:
+    jobs:
+      - release:
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
