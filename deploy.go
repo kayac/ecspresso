@@ -49,8 +49,9 @@ func (d *App) Deploy(opt DeployOption) error {
 	var count *int64
 	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
 		count = nil
-	} else if opt.DesiredCount == nil {
-		count = sv.DesiredCount
+	} else if opt.DesiredCount == nil || *opt.DesiredCount == KeepDesiredCount {
+		// unchanged
+		count = nil
 	} else {
 		count = opt.DesiredCount
 	}

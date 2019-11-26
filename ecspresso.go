@@ -25,6 +25,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const KeepDesiredCount = -1
+
 var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
 var TerminalWidth = 90
 var delayForServiceChanged = 3 * time.Second
