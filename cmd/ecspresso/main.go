@@ -27,7 +27,7 @@ func _main() int {
 	deploy := kingpin.Command("deploy", "deploy service")
 	deployOption := ecspresso.DeployOption{
 		DryRun:             deploy.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:       deploy.Flag("tasks", "desired count of tasks").Int64(),
+		DesiredCount:       deploy.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
 		SkipTaskDefinition: deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
 		ForceNewDeployment: deploy.Flag("force-new-deployment", "force a new deployment of the service").Bool(),
 		NoWait:             deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
