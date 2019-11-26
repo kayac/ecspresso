@@ -549,6 +549,7 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition
 			PlacementConstraints:    td.PlacementConstraints,
 			RequiresCompatibilities: td.RequiresCompatibilities,
 			TaskRoleArn:             td.TaskRoleArn,
+			ProxyConfiguration:      td.ProxyConfiguration,
 			Volumes:                 td.Volumes,
 		},
 	)
