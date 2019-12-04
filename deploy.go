@@ -100,7 +100,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	}
 
 	// rolling deploy (ECS internal)
-	if err := d.UpdateService(ctx, tdArn, count, *opt.ForceNewDeployment, sv); err != nil {
+	if err := d.UpdateService(ctx, tdArn, count, *opt.ForceNewDeployment); err != nil {
 		return errors.Wrap(err, "failed to update service")
 	}
 
@@ -118,7 +118,12 @@ func (d *App) Deploy(opt DeployOption) error {
 	return nil
 }
 
-func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64, force bool, sv *ecs.Service) error {
+func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64, force bool) error {
+	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+	if err != nil {
+		return err
+	}
+
 	msg := "Updating service"
 	if force {
 		msg = msg + " with force new deployment"
@@ -126,19 +131,19 @@ func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count
 	msg = msg + "..."
 	d.Log(msg)
 
-	_, err := d.ecs.UpdateServiceWithContext(
-		ctx,
-		&ecs.UpdateServiceInput{
-			Service:                       aws.String(d.Service),
-			Cluster:                       aws.String(d.Cluster),
-			TaskDefinition:                aws.String(taskDefinitionArn),
-			DesiredCount:                  count,
-			ForceNewDeployment:            &force,
-			NetworkConfiguration:          sv.NetworkConfiguration,
-			HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
-			PlatformVersion:               sv.PlatformVersion,
-		},
-	)
+	in := &ecs.UpdateServiceInput{
+		Service:                       aws.String(d.Service),
+		Cluster:                       aws.String(d.Cluster),
+		CapacityProviderStrategy:      svd.CapacityProviderStrategy,
+		TaskDefinition:                aws.String(taskDefinitionArn),
+		DesiredCount:                  count,
+		ForceNewDeployment:            &force,
+		NetworkConfiguration:          svd.NetworkConfiguration,
+		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
+		PlatformVersion:               svd.PlatformVersion,
+	}
+	d.DebugLog("UpdateServiceInput: " + in.String())
+	_, err = d.ecs.UpdateServiceWithContext(ctx, in)
 	return err
 }
 

@@ -32,7 +32,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return nil
 	}
 
-	if err := d.UpdateService(ctx, targetArn, sv.DesiredCount, false, sv); err != nil {
+	if err := d.UpdateService(ctx, targetArn, sv.DesiredCount, false); err != nil {
 		return errors.Wrap(err, "failed to update service")
 	}
 
