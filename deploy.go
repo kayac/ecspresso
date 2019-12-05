@@ -148,19 +148,17 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 }
 
 func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*ecs.Service, error) {
-	in := &ecs.UpdateServiceInput{
-		Service: aws.String(d.Service),
-		Cluster: aws.String(d.Cluster),
+	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+	if err != nil {
+		return nil, err
 	}
-	if *opt.UpdateService {
-		svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
-		if err != nil {
-			return nil, err
-		}
-		in.CapacityProviderStrategy = svd.CapacityProviderStrategy
-		in.NetworkConfiguration = svd.NetworkConfiguration
-		in.HealthCheckGracePeriodSeconds = svd.HealthCheckGracePeriodSeconds
-		in.PlatformVersion = svd.PlatformVersion
+	in := &ecs.UpdateServiceInput{
+		Service:                       aws.String(d.Service),
+		Cluster:                       aws.String(d.Cluster),
+		CapacityProviderStrategy:      svd.CapacityProviderStrategy,
+		NetworkConfiguration:          svd.NetworkConfiguration,
+		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
+		PlatformVersion:               svd.PlatformVersion,
 	}
 	if *opt.DryRun {
 		d.Log("update service input:", in.String())
