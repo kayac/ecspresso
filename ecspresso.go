@@ -633,6 +633,10 @@ func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ec
 			LaunchType:           sv.LaunchType,
 			Overrides:            ov,
 			Count:                aws.Int64(count),
+			CapacityProviderStrategy: sv.CapacityProviderStrategy,
+			PlacementConstraints:     sv.PlacementConstraints,
+			PlacementStrategy:        sv.PlacementStrategy,
+			PlatformVersion:          sv.PlatformVersion,
 		},
 	)
 	if err != nil {
