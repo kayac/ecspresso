@@ -97,7 +97,7 @@ task_definition: myTask.json
 timeout: 5m
 ```
 
-ecspresso works as below.
+ecspresso deploy works as below.
 
 - Register a new task definition from JSON file.
   - JSON file is allowed both of formats as below.
@@ -107,7 +107,8 @@ ecspresso works as below.
     - If "FOO" is not defined, replaced by "bar"
   - Replace ```{{ must_env `FOO` }}``` syntax in the JSON file to environment variable "FOO".
     - If "FOO" is not defined, abort immediately.
-- Update a service.
+- Update a service tasks.
+  - When `--update-service` option set, update service attributes by service definition.
 - Wait a service stable.
 
 ## Example of deployment
@@ -178,7 +179,7 @@ $ ecspresso deploy --config config.yaml --tasks 10 --skip-task-definition
 
 ## Example of create
 
-escpresso can create service by `service_definition` JSON file and `task_definition`.
+escpresso can create a service by `service_definition` JSON file and `task_definition`.
 
 ```console
 $ ecspresso create --config config.yaml
@@ -215,6 +216,7 @@ Keys are same format as `aws ecs describe-services` output.
 - placementConstraint
 - placementStrategy
 - role
+- etc.
 
 ## Example of run task
 
@@ -223,6 +225,8 @@ $ ecspresso run --config config.yaml --task-def=db-migrate.json
 ```
 
 When `--task-def` is not set, use a task definition included in a service.
+
+Other options for RunTask API are set by service attributes(CapacityProviderStrategy, LaunchType, PlacementConstraints, PlacementStrategy and PlatformVersion).
 
 # Notes
 
@@ -273,6 +277,28 @@ For service-definition,
   },
   // ...
 }
+```
+
+## Fargate Spot support
+
+1. Set capacityProviders and defaultCapacityProviderStrategy to ECS cluster.
+1. If you hope to migrate existing service to use Fargate Spot, define capacityProviderStrategy into service definition as below. `ecspresso deploy --update-service` applies the settings to the service.
+
+```json5
+{
+  "capacityProviderStrategy": [
+    {
+      "base": 1,
+      "capacityProvider": "FARGATE",
+      "weight": 1
+    },
+    {
+      "base": 0,
+      "capacityProvider": "FARGATE_SPOT",
+      "weight": 1
+    }
+  ],
+  # ...
 ```
 
 # LICENCE
