@@ -77,6 +77,12 @@ func (d *App) Deploy(opt DeployOption) error {
 	if count != nil {
 		d.Log("desired count:", *count)
 	}
+	if *opt.UpdateService {
+		sv, err = d.UpdateServiceAttributes(ctx, opt)
+		if err != nil {
+			return errors.Wrap(err, "failed to update service attributes")
+		}
+	}
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
@@ -100,8 +106,8 @@ func (d *App) Deploy(opt DeployOption) error {
 	}
 
 	// rolling deploy (ECS internal)
-	if err := d.UpdateService(ctx, tdArn, count, *opt.ForceNewDeployment); err != nil {
-		return errors.Wrap(err, "failed to update service")
+	if err := d.UpdateServiceTasks(ctx, tdArn, count, opt); err != nil {
+		return errors.Wrap(err, "failed to update service tasks")
 	}
 
 	if *opt.NoWait {
@@ -109,7 +115,6 @@ func (d *App) Deploy(opt DeployOption) error {
 		return nil
 	}
 
-	time.Sleep(delayForServiceChanged) // wait for service updated
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
 		return errors.Wrap(err, "failed to wait service stable")
 	}
@@ -118,33 +123,58 @@ func (d *App) Deploy(opt DeployOption) error {
 	return nil
 }
 
-func (d *App) UpdateService(ctx context.Context, taskDefinitionArn string, count *int64, force bool) error {
-	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
-	if err != nil {
-		return err
+func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, count *int64, opt DeployOption) error {
+	in := &ecs.UpdateServiceInput{
+		Service:            aws.String(d.Service),
+		Cluster:            aws.String(d.Cluster),
+		TaskDefinition:     aws.String(taskDefinitionArn),
+		DesiredCount:       count,
+		ForceNewDeployment: opt.ForceNewDeployment,
 	}
-
-	msg := "Updating service"
-	if force {
+	msg := "Updating service tasks"
+	if *opt.ForceNewDeployment {
 		msg = msg + " with force new deployment"
 	}
 	msg = msg + "..."
 	d.Log(msg)
+	d.DebugLog(in.String())
 
-	in := &ecs.UpdateServiceInput{
-		Service:                       aws.String(d.Service),
-		Cluster:                       aws.String(d.Cluster),
-		CapacityProviderStrategy:      svd.CapacityProviderStrategy,
-		TaskDefinition:                aws.String(taskDefinitionArn),
-		DesiredCount:                  count,
-		ForceNewDeployment:            &force,
-		NetworkConfiguration:          svd.NetworkConfiguration,
-		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
-		PlatformVersion:               svd.PlatformVersion,
+	_, err := d.ecs.UpdateServiceWithContext(ctx, in)
+	if err != nil {
+		return err
 	}
-	d.DebugLog("UpdateServiceInput: " + in.String())
-	_, err = d.ecs.UpdateServiceWithContext(ctx, in)
-	return err
+	time.Sleep(delayForServiceChanged) // wait for service updated
+	return nil
+}
+
+func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*ecs.Service, error) {
+	in := &ecs.UpdateServiceInput{
+		Service: aws.String(d.Service),
+		Cluster: aws.String(d.Cluster),
+	}
+	if *opt.UpdateService {
+		svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+		if err != nil {
+			return nil, err
+		}
+		in.CapacityProviderStrategy = svd.CapacityProviderStrategy
+		in.NetworkConfiguration = svd.NetworkConfiguration
+		in.HealthCheckGracePeriodSeconds = svd.HealthCheckGracePeriodSeconds
+		in.PlatformVersion = svd.PlatformVersion
+	}
+	if *opt.DryRun {
+		d.Log("update service input:", in.String())
+		return nil, nil
+	}
+	d.Log("Updateing service attributes...")
+	d.DebugLog(in.String())
+
+	out, err := d.ecs.UpdateServiceWithContext(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	time.Sleep(delayForServiceChanged) // wait for service updated
+	return out.Service, nil
 }
 
 func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int64, sv *ecs.Service, opt DeployOption) error {

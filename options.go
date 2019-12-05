@@ -14,6 +14,7 @@ type DeployOption struct {
 	NoWait             *bool
 	SuspendAutoScaling *bool
 	RollbackEvents     *string
+	UpdateService      *bool
 }
 
 type StatusOption struct {
