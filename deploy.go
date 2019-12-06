@@ -155,10 +155,12 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 	in := &ecs.UpdateServiceInput{
 		Service:                       aws.String(d.Service),
 		Cluster:                       aws.String(d.Cluster),
+		DeploymentConfiguration:       svd.DeploymentConfiguration,
 		CapacityProviderStrategy:      svd.CapacityProviderStrategy,
 		NetworkConfiguration:          svd.NetworkConfiguration,
 		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
 		PlatformVersion:               svd.PlatformVersion,
+		ForceNewDeployment:            opt.ForceNewDeployment,
 	}
 	if *opt.DryRun {
 		d.Log("update service input:", in.String())
