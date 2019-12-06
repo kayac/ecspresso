@@ -1,0 +1,34 @@
+{
+  "deploymentConfiguration": {
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 100
+  },
+  "capacityProviderStrategy": [
+    {
+      "base": 1,
+      "capacityProvider": "FARGATE",
+      "weight": 1
+    },
+    {
+      "base": 0,
+      "capacityProvider": "FARGATE_SPOT",
+      "weight": 2
+    }
+  ],
+  "enableECSManagedTags": false,
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "assignPublicIp": "ENABLED",
+      "securityGroups": [
+        "sg-0a69199a34e15147a"
+      ],
+      "subnets": [
+        "subnet-04b750544ddd71274",
+        "subnet-0623adfcb3093f18f",
+        "subnet-0376f113bbbc25742"
+      ]
+    }
+  },
+  "platformVersion": "LATEST",
+  "schedulingStrategy": "REPLICA"
+}
