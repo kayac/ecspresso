@@ -11,7 +11,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	d.Log("Starting rollback")
+	d.Log("Starting rollback", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe service status")
@@ -32,8 +32,13 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return nil
 	}
 
-	f := false // Set ForceNewDeployment to false
-	if err := d.UpdateServiceTasks(ctx, targetArn, sv.DesiredCount, DeployOption{ForceNewDeployment: &f}); err != nil {
+	f := false // Set ForceNewDeployment and UpdateService to false
+	if err := d.UpdateServiceTasks(
+		ctx,
+		targetArn,
+		sv.DesiredCount,
+		DeployOption{ForceNewDeployment: &f, UpdateService: &f},
+	); err != nil {
 		return errors.Wrap(err, "failed to update service")
 	}
 

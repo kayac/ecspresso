@@ -1,9 +1,22 @@
 package ecspresso
 
+const dryRunStr = "DRY RUN"
+
+type DryRunnable interface {
+	DryRunString() bool
+}
+
 type CreateOption struct {
 	DryRun       *bool
 	DesiredCount *int64
 	NoWait       *bool
+}
+
+func (opt CreateOption) DryRunString() string {
+	if *opt.DryRun {
+		return dryRunStr
+	}
+	return ""
 }
 
 type DeployOption struct {
@@ -17,6 +30,13 @@ type DeployOption struct {
 	UpdateService      *bool
 }
 
+func (opt DeployOption) DryRunString() string {
+	if *opt.DryRun {
+		return dryRunStr
+	}
+	return ""
+}
+
 type StatusOption struct {
 	Events *int
 }
@@ -27,9 +47,23 @@ type RollbackOption struct {
 	NoWait                   *bool
 }
 
+func (opt RollbackOption) DryRunString() string {
+	if *opt.DryRun {
+		return dryRunStr
+	}
+	return ""
+}
+
 type DeleteOption struct {
 	DryRun *bool
 	Force  *bool
+}
+
+func (opt DeleteOption) DryRunString() string {
+	if *opt.DryRun {
+		return dryRunStr
+	}
+	return ""
 }
 
 type RunOption struct {
@@ -41,12 +75,26 @@ type RunOption struct {
 	Count              *int64
 }
 
+func (opt RunOption) DryRunString() string {
+	if *opt.DryRun {
+		return ""
+	}
+	return ""
+}
+
 type WaitOption struct {
 }
 
 type RegisterOption struct {
 	DryRun *bool
 	Output *bool
+}
+
+func (opt RegisterOption) DryRunString() string {
+	if *opt.DryRun {
+		return dryRunStr
+	}
+	return ""
 }
 
 type InitOption struct {
