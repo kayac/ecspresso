@@ -40,7 +40,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	d.Log("Starting deploy")
+	d.Log("Starting deploy", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe service status")

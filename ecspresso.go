@@ -272,7 +272,7 @@ func (d *App) Create(opt CreateOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	d.Log("Starting create service")
+	d.Log("Starting create service", opt.DryRunString())
 	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to load service definition")
@@ -322,7 +322,7 @@ func (d *App) Delete(opt DeleteOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	d.Log("Deleting service")
+	d.Log("Deleting service", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 3)
 	if err != nil {
 		return err
@@ -357,6 +357,7 @@ func (d *App) Run(opt RunOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
+	d.Log("Running task", opt.DryRunString())
 	var ov ecs.TaskOverride
 	if ovStr := *opt.TaskOverrideStr; ovStr != "" {
 		if err := json.Unmarshal([]byte(ovStr), &ov); err != nil {
@@ -690,7 +691,7 @@ func (d *App) Register(opt RegisterOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	d.Log("Starting register task definition")
+	d.Log("Starting register task definition", opt.DryRunString())
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
