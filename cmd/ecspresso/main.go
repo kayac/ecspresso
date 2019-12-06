@@ -33,6 +33,7 @@ func _main() int {
 		NoWait:             deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
 		SuspendAutoScaling: deploy.Flag("suspend-auto-scaling", "set suspend to auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
 		RollbackEvents:     deploy.Flag("rollback-events", " rollback when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only.").String(),
+		UpdateService:      deploy.Flag("update-service", "update service attributes by service definition").Bool(),
 	}
 
 	refresh := kingpin.Command("refresh", "refresh service. equivalent to deploy --skip-task-definiton --force-new-deployment")
@@ -41,6 +42,7 @@ func _main() int {
 		SkipTaskDefinition: boolp(true),
 		ForceNewDeployment: boolp(true),
 		NoWait:             refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
+		UpdateService:      boolp(false),
 	}
 
 	create := kingpin.Command("create", "create service")
@@ -57,9 +59,9 @@ func _main() int {
 
 	rollback := kingpin.Command("rollback", "rollback service")
 	rollbackOption := ecspresso.RollbackOption{
-		DryRun:                   rollback.Flag("dry-run", "dry-run").Bool(),
+		DryRun: rollback.Flag("dry-run", "dry-run").Bool(),
 		DeregisterTaskDefinition: rollback.Flag("deregister-task-definition", "deregister rolled back task definition").Bool(),
-		NoWait:                   rollback.Flag("no-wait", "exit ecspresso immediately after just rollbacked without waiting for service stable").Bool(),
+		NoWait: rollback.Flag("no-wait", "exit ecspresso immediately after just rollbacked without waiting for service stable").Bool(),
 	}
 
 	delete := kingpin.Command("delete", "delete service")

@@ -32,7 +32,8 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return nil
 	}
 
-	if err := d.UpdateService(ctx, targetArn, sv.DesiredCount, false, sv); err != nil {
+	f := false // Set ForceNewDeployment to false
+	if err := d.UpdateServiceTasks(ctx, targetArn, sv.DesiredCount, DeployOption{ForceNewDeployment: &f}); err != nil {
 		return errors.Wrap(err, "failed to update service")
 	}
 
