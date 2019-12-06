@@ -77,7 +77,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	if count != nil {
 		d.Log("desired count:", *count)
 	}
-	if *opt.UpdateService {
+	if opt.UpdateService != nil && *opt.UpdateService {
 		sv, err = d.UpdateServiceAttributes(ctx, opt)
 		if err != nil {
 			return errors.Wrap(err, "failed to update service attributes")

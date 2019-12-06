@@ -42,6 +42,7 @@ func _main() int {
 		SkipTaskDefinition: boolp(true),
 		ForceNewDeployment: boolp(true),
 		NoWait:             refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
+		UpdateService:      boolp(false),
 	}
 
 	create := kingpin.Command("create", "create service")
