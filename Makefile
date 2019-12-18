@@ -24,3 +24,14 @@ clean:
 
 release:
 	ghr -u kayac -r ecspresso -n "$(GIT_VER)" $(GIT_VER) pkg/
+
+ci-test:
+	$(MAKE) install
+	cd tests/ci && PATH=${GOPATH}/bin:$PATH $(MAKE) test
+
+orb/publish:
+	circleci orb validate orb.yml
+	circleci orb publish orb.yml $(ORB_NAMESPACE)/ecspresso@dev:latest
+
+orb/promote:
+	circleci orb publish promote $(ORB_NAMESPACE)/ecspresso@dev:latest patch
