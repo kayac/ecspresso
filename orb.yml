@@ -14,11 +14,12 @@ commands:
     - run:
         name: "Install ecspresso"
         command: |
-          DIRNAME=ecspresso-<< parameters.version >>-linux-amd64
+          FILENAME=ecspresso-<< parameters.version >>-linux-amd64
           cd /tmp
-          curl -sLO https://github.com/kayac/ecspresso/releases/download/<< parameters.version >>/${DIRNAME}.zip
-          unzip ${DIRNAME}.zip
-          sudo install ${DIRNAME}/ecspresso /usr/local/bin
+          curl -sLO https://github.com/kayac/ecspresso/releases/download/<< parameters.version >>/${FILENAME}.zip
+          unzip ${FILENAME}.zip
+          sudo install ${FILENAME} /usr/local/bin/ecspresso
+          rm -f ${FILENAME} ${FILENAME}.zip
 
 examples:
   install_ecspresso:

@@ -30,7 +30,8 @@ ci-test:
 	cd tests/ci && PATH=${GOPATH}/bin:$PATH $(MAKE) test
 
 orb/publish:
-	circleci orb publish orb.yml $(ORB_ACCOUNT)/ecspresso@dev:latest
+	circleci orb validate orb.yml
+	circleci orb publish orb.yml $(ORB_NAMESPACE)/ecspresso@dev:latest
 
 orb/promote:
-	circleci orb publish promote $(ORB_ACCOUNT)/ecspresso@dev:latest patch
+	circleci orb publish promote $(ORB_NAMESPACE)/ecspresso@dev:latest patch
