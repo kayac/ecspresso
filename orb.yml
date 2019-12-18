@@ -1,0 +1,37 @@
+version: 2.1
+
+description: "orb for ecspresso"
+
+commands:
+  install:
+    description: "install ecspresso"
+    parameters:
+      version:
+        description: ecspresso version
+        type: string
+        default: v0.13.3
+    steps:
+    - run:
+        name: "Install ecspresso"
+        command: |
+          DIRNAME=ecspresso-<< parameters.version >>-linux-amd64
+          cd /tmp
+          curl -sLO https://github.com/kayac/ecspresso/releases/download/<< parameters.version >>/${DIRNAME}.zip
+          unzip ${DIRNAME}.zip
+          sudo install ${DIRNAME}/ecspresso /usr/local/bin
+
+examples:
+  install_ecspresso:
+    description: Easily install ecspresso command
+    usage:
+      version: 2.1
+      orbs:
+        ecspresso: fujiwara/ecspresso@x.y
+        jobs:
+          ecspresso_example:
+          steps:
+            - checkout
+            - ecspresso/install
+            - run:
+                command: |
+                  ecspresso deploy -config config.yaml
