@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/Songmu/prompter v0.0.0-20150725163906-b5721e8d5566
 	github.com/alecthomas/kingpin v1.3.8-0.20190930021037-0a108b7f5563
-	github.com/aws/aws-sdk-go v1.25.47
+	github.com/aws/aws-sdk-go v1.26.8
 	github.com/kayac/go-config v0.1.0
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.10
