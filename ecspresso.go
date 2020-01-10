@@ -236,9 +236,10 @@ func NewApp(conf *Config) (*App, error) {
 	if err := conf.Validate(); err != nil {
 		return nil, errors.Wrap(err, "invalid configuration")
 	}
-	sess := session.Must(session.NewSession(
-		&aws.Config{Region: aws.String(conf.Region)},
-	))
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		Config:            aws.Config{Region: aws.String(conf.Region)},
+		SharedConfigState: session.SharedConfigEnable,
+	}))
 	d := &App{
 		Service:     conf.Service,
 		Cluster:     conf.Cluster,
