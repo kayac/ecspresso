@@ -16,6 +16,23 @@ $ brew install kayac/tap/ecspresso
 
 [Releases](https://github.com/kayac/ecspresso/releases)
 
+### CircleCI Orbs
+
+https://circleci.com/orbs/registry/orb/fujiwara/ecspresso
+
+```yaml
+version: 2.1
+orbs:
+  ecspresso: fujiwara/ecspresso@0.0.3
+  jobs:
+    steps:
+      - checkout
+      - ecspresso/install:
+          version: 0.13.5
+      - run:
+          command: |
+            ecspresso deploy -config config.yaml
+```
 
 ## Usage
 
