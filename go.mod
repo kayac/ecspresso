@@ -10,7 +10,7 @@ require (
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.12
 	github.com/morikuni/aec v0.0.0-20170113033406-39771216ff4c
-	github.com/pkg/errors v0.9.0
+	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.3.0 // indirect
 	golang.org/x/net v0.0.0-20190503192946-f4e77d36d62c // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
