@@ -178,7 +178,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 }
 
 func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int64, sv *ecs.Service, opt DeployOption) error {
-	if *sv.DesiredCount != *count {
+	if count != nil && *sv.DesiredCount != *count {
 		d.Log("updating desired count to", *count)
 		_, err := d.ecs.UpdateServiceWithContext(
 			ctx,
