@@ -166,7 +166,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 		d.Log("update service input:", in.String())
 		return nil, nil
 	}
-	d.Log("Updateing service attributes...")
+	d.Log("Updating service attributes...")
 	d.DebugLog(in.String())
 
 	out, err := d.ecs.UpdateServiceWithContext(ctx, in)
