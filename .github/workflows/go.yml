@@ -5,8 +5,8 @@ jobs:
     strategy:
       matrix:
         go:
-          - 1.12
           - 1.13
+          - 1.14
     name: Build
     runs-on: ubuntu-latest
     steps:
