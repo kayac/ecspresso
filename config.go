@@ -2,9 +2,10 @@ package ecspresso
 
 import (
 	"errors"
-	"log"
 	"os"
 	"time"
+
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 const (
@@ -22,8 +23,8 @@ type Config struct {
 }
 
 type configServiceDefinition struct {
-	Path string            `yaml:"path"`
-	Tags map[string]string `yaml:"tags"`
+	Path string     `yaml:"path"`
+	Tags []*ecs.Tag `yaml:"tags"`
 }
 
 type ConfigServiceDefinition struct {
@@ -48,8 +49,8 @@ func (c *ConfigServiceDefinition) MarshalYAML() (interface{}, error) {
 }
 
 type configTaskDefinition struct {
-	Path string            `yaml:"path"`
-	Tags map[string]string `yaml:"tags"`
+	Path string     `yaml:"path"`
+	Tags []*ecs.Tag `yaml:"tags"`
 }
 
 type ConfigTaskDefinition struct {
@@ -63,7 +64,6 @@ func (c *ConfigTaskDefinition) UnmarshalYAML(unmarshal func(interface{}) error) 
 	if err := unmarshal(&c.configTaskDefinition); err != nil {
 		return err
 	}
-	log.Printf("%#v", c)
 	return nil
 }
 

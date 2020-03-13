@@ -2,5 +2,11 @@ region: ap-northeast-1
 cluster: ecspresso-test
 service: 'nginx-{{env `CIRCLE_BRANCH` `local`}}'
 service_definition: ecs-service-def.json
-task_definition: ecs-task-def.json
+task_definition:
+  path: ecs-task-def.json
+  tags:
+    - key: Service
+      value: ecspresso CI
+    - key: Foo
+      value: baz
 timeout: 10m0s

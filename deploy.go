@@ -66,8 +66,9 @@ func (d *App) Deploy(opt DeployOption) error {
 		}
 		if *opt.DryRun {
 			d.Log("task definition:", td.String())
+			d.Log("task definition tags:", d.config.TaskDefinition.Tags)
 		} else {
-			newTd, err := d.RegisterTaskDefinition(ctx, td)
+			newTd, err := d.RegisterTaskDefinition(ctx, td, d.config.TaskDefinition.Tags)
 			if err != nil {
 				return errors.Wrap(err, "failed to register task definition")
 			}

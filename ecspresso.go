@@ -294,7 +294,7 @@ func (d *App) Create(opt CreateOption) error {
 		return nil
 	}
 
-	newTd, err := d.RegisterTaskDefinition(ctx, td)
+	newTd, err := d.RegisterTaskDefinition(ctx, td, d.config.TaskDefinition.Tags)
 	if err != nil {
 		return errors.Wrap(err, "failed to register task definition")
 	}
@@ -405,7 +405,7 @@ func (d *App) Run(opt RunOption) error {
 		if *opt.DryRun {
 			d.Log("task definition:", td.String())
 		} else {
-			newTd, err = d.RegisterTaskDefinition(ctx, td)
+			newTd, err = d.RegisterTaskDefinition(ctx, td, d.config.TaskDefinition.Tags)
 			if err != nil {
 				return errors.Wrap(err, "failed to register task definition")
 			}
@@ -538,7 +538,7 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	)
 }
 
-func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition) (*ecs.TaskDefinition, error) {
+func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition, tags []*ecs.Tag) (*ecs.TaskDefinition, error) {
 	d.Log("Registering a new task definition...")
 
 	out, err := d.ecs.RegisterTaskDefinitionWithContext(
@@ -555,6 +555,7 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition
 			TaskRoleArn:             td.TaskRoleArn,
 			ProxyConfiguration:      td.ProxyConfiguration,
 			Volumes:                 td.Volumes,
+			Tags:                    tags,
 		},
 	)
 	if err != nil {
@@ -629,12 +630,12 @@ func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ec
 	out, err := d.ecs.RunTaskWithContext(
 		ctx,
 		&ecs.RunTaskInput{
-			Cluster:              aws.String(d.Cluster),
-			TaskDefinition:       aws.String(tdArn),
-			NetworkConfiguration: sv.NetworkConfiguration,
-			LaunchType:           sv.LaunchType,
-			Overrides:            ov,
-			Count:                aws.Int64(count),
+			Cluster:                  aws.String(d.Cluster),
+			TaskDefinition:           aws.String(tdArn),
+			NetworkConfiguration:     sv.NetworkConfiguration,
+			LaunchType:               sv.LaunchType,
+			Overrides:                ov,
+			Count:                    aws.Int64(count),
 			CapacityProviderStrategy: sv.CapacityProviderStrategy,
 			PlacementConstraints:     sv.PlacementConstraints,
 			PlacementStrategy:        sv.PlacementStrategy,
@@ -703,7 +704,7 @@ func (d *App) Register(opt RegisterOption) error {
 		return nil
 	}
 
-	newTd, err := d.RegisterTaskDefinition(ctx, td)
+	newTd, err := d.RegisterTaskDefinition(ctx, td, d.config.TaskDefinition.Tags)
 	if err != nil {
 		return errors.Wrap(err, "failed to register task definition")
 	}

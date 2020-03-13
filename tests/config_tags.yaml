@@ -3,6 +3,9 @@ cluster: test_cluster
 service: test_service
 task_definition:
   path: td.json
+  tags:
+    - key: service
+      value: test
 service_definition:
   path: sv.json
 timeout: 10m
