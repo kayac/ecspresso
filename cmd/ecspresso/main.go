@@ -59,9 +59,9 @@ func _main() int {
 
 	rollback := kingpin.Command("rollback", "rollback service")
 	rollbackOption := ecspresso.RollbackOption{
-		DryRun: rollback.Flag("dry-run", "dry-run").Bool(),
+		DryRun:                   rollback.Flag("dry-run", "dry-run").Bool(),
 		DeregisterTaskDefinition: rollback.Flag("deregister-task-definition", "deregister rolled back task definition").Bool(),
-		NoWait: rollback.Flag("no-wait", "exit ecspresso immediately after just rollbacked without waiting for service stable").Bool(),
+		NoWait:                   rollback.Flag("no-wait", "exit ecspresso immediately after just rollbacked without waiting for service stable").Bool(),
 	}
 
 	delete := kingpin.Command("delete", "delete service")
@@ -109,8 +109,10 @@ func _main() int {
 		c.Region = *initOption.Region
 		c.Cluster = *initOption.Cluster
 		c.Service = *initOption.Service
-		c.TaskDefinitionPath = *initOption.TaskDefinitionPath
-		c.ServiceDefinitionPath = *initOption.ServiceDefinitionPath
+		c.TaskDefinition = &ecspresso.ConfigTaskDefinition{}
+		c.TaskDefinition.Path = *initOption.TaskDefinitionPath
+		c.ServiceDefinition = &ecspresso.ConfigServiceDefinition{}
+		c.ServiceDefinition.Path = *initOption.ServiceDefinitionPath
 		initOption.ConfigFilePath = conf
 	} else {
 		if err := config.LoadWithEnv(c, *conf); err != nil {

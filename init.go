@@ -37,8 +37,8 @@ func (d *App) Init(opt InitOption) error {
 	if b, err := MarshalJSON(sv); err != nil {
 		return errors.Wrap(err, "unable to marshal service definition to JSON")
 	} else {
-		d.Log("save service definition to", config.ServiceDefinitionPath)
-		if err := d.saveFile(config.ServiceDefinitionPath, b, CreateFileMode); err != nil {
+		d.Log("save service definition to", config.ServiceDefinition.Path)
+		if err := d.saveFile(config.ServiceDefinition.Path, b, CreateFileMode); err != nil {
 			return errors.Wrap(err, "failed to write file")
 		}
 	}
@@ -48,8 +48,8 @@ func (d *App) Init(opt InitOption) error {
 	if b, err := MarshalJSON(td); err != nil {
 		return errors.Wrap(err, "unable to marshal task definition to JSON")
 	} else {
-		d.Log("save task definition to", config.TaskDefinitionPath)
-		if err := d.saveFile(config.TaskDefinitionPath, b, CreateFileMode); err != nil {
+		d.Log("save task definition to", config.TaskDefinition.Path)
+		if err := d.saveFile(config.TaskDefinition.Path, b, CreateFileMode); err != nil {
 			return errors.Wrap(err, "failed to write file")
 		}
 	}

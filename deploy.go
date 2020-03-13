@@ -60,7 +60,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	if *opt.SkipTaskDefinition {
 		tdArn = *sv.TaskDefinition
 	} else {
-		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+		td, err := d.LoadTaskDefinition(d.config.TaskDefinition.Path)
 		if err != nil {
 			return errors.Wrap(err, "failed to load task definition")
 		}
@@ -148,7 +148,7 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 }
 
 func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*ecs.Service, error) {
-	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinition.Path)
 	if err != nil {
 		return nil, err
 	}

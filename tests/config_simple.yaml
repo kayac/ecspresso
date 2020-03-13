@@ -1,0 +1,6 @@
+region: ap-northeast-1
+cluster: test_cluster
+service: test_service
+task_definition: td.json
+service_definition: sv.json
+timeout: 10m

@@ -5,16 +5,19 @@ import (
 	"time"
 
 	"github.com/kayac/ecspresso"
+	"github.com/kayac/go-config"
 )
 
 func TestLoadServiceDefinition(t *testing.T) {
 	path := "tests/sv.json"
+	td := &ecspresso.ConfigTaskDefinition{}
+	td.Path = "tests/td.json"
 	c := &ecspresso.Config{
-		Region:             "ap-northeast-1",
-		Timeout:            300 * time.Second,
-		Service:            "test",
-		Cluster:            "default2",
-		TaskDefinitionPath: "tests/td.json",
+		Region:         "ap-northeast-1",
+		Timeout:        300 * time.Second,
+		Service:        "test",
+		Cluster:        "default2",
+		TaskDefinition: td,
 	}
 	app, err := ecspresso.NewApp(c)
 	if err != nil {
@@ -32,5 +35,21 @@ func TestLoadServiceDefinition(t *testing.T) {
 		*sv.LaunchType != "EC2" ||
 		*sv.SchedulingStrategy != "REPLICA" {
 		t.Errorf("unexpected service definition %s", sv.String())
+	}
+}
+
+func TestLoadConfig(t *testing.T) {
+	path := "tests/config_simple.yaml"
+	var c ecspresso.Config
+	if err := config.LoadWithEnv(&c, path); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestLoadConfigWithTags(t *testing.T) {
+	path := "tests/config_tags.yaml"
+	var c ecspresso.Config
+	if err := config.LoadWithEnv(&c, path); err != nil {
+		t.Error(err)
 	}
 }

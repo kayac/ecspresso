@@ -274,11 +274,11 @@ func (d *App) Create(opt CreateOption) error {
 	defer cancel()
 
 	d.Log("Starting create service", opt.DryRunString())
-	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinition.Path)
 	if err != nil {
 		return errors.Wrap(err, "failed to load service definition")
 	}
-	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinition.Path)
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
@@ -385,7 +385,7 @@ func (d *App) Run(opt RunOption) error {
 			d.Log("task definition:", td.String())
 		}
 	} else {
-		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+		td, err := d.LoadTaskDefinition(d.config.TaskDefinition.Path)
 		if err != nil {
 			return errors.Wrap(err, "failed to load task definition")
 		}
@@ -693,7 +693,7 @@ func (d *App) Register(opt RegisterOption) error {
 	defer cancel()
 
 	d.Log("Starting register task definition", opt.DryRunString())
-	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinition.Path)
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
