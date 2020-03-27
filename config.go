@@ -1,10 +1,11 @@
 package ecspresso
 
 import (
-	"errors"
 	"os"
 	"text/template"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -32,12 +33,10 @@ func (c *Config) Validate() error {
 		return errors.New("task_definition is not defined")
 	}
 
-	if c.Plugins.TFState.Path != "" {
-		funcs, err := NewTFStatePluginFuncs(c.Plugins.TFState.Path)
-		if err != nil {
-			return err
+	if p := c.Plugins.TFState; p.Enabled() {
+		if err := p.Setup(c); err != nil {
+			return errors.Wrap(err, "tfstate plugin init failed")
 		}
-		c.templateFuncs = append(c.templateFuncs, funcs)
 	}
 	return nil
 }
@@ -51,8 +50,4 @@ func NewDefaultConfig() *Config {
 
 type ConfigPlugins struct {
 	TFState ConfigPluginTFState `yaml:"tfstate"`
-}
-
-type ConfigPluginTFState struct {
-	Path string `yaml:"path"`
 }

@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"text/template"
@@ -9,7 +10,24 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewTFStatePluginFuncs(path string) (template.FuncMap, error) {
+type ConfigPluginTFState struct {
+	Path string `yaml:"path"`
+}
+
+func (p ConfigPluginTFState) Enabled() bool {
+	return p.Path != ""
+}
+
+func (p ConfigPluginTFState) Setup(c *Config) error {
+	funcs, err := tfstatePluginFuncs(p.Path)
+	if err != nil {
+		return err
+	}
+	c.templateFuncs = append(c.templateFuncs, funcs)
+	return nil
+}
+
+func tfstatePluginFuncs(path string) (template.FuncMap, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		errors.Wrapf(err, "failed to read tfstate: %s", path)
@@ -26,6 +44,9 @@ func NewTFStatePluginFuncs(path string) (template.FuncMap, error) {
 			attrs, err := state.Lookup(addrs)
 			if err != nil {
 				return ""
+			}
+			if attrs.Value == nil {
+				panic(fmt.Sprintf("%s is not found in tfstate", addrs))
 			}
 			return attrs.String()
 		},
