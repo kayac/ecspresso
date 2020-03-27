@@ -45,6 +45,7 @@ type App struct {
 	Cluster     string
 	config      *Config
 	Debug       bool
+	loader      *config.Loader
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
@@ -240,6 +241,10 @@ func NewApp(conf *Config) (*App, error) {
 		Config:            aws.Config{Region: aws.String(conf.Region)},
 		SharedConfigState: session.SharedConfigEnable,
 	}))
+	loader := config.New()
+	for _, funcs := range conf.templateFuncs {
+		loader.Funcs(funcs)
+	}
 	d := &App{
 		Service:     conf.Service,
 		Cluster:     conf.Cluster,
@@ -248,6 +253,7 @@ func NewApp(conf *Config) (*App, error) {
 		codedeploy:  codedeploy.New(sess),
 		cwl:         cloudwatchlogs.New(sess),
 		config:      conf,
+		loader:      loader,
 	}
 	return d, nil
 }
@@ -569,14 +575,14 @@ func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
 	c := struct {
 		TaskDefinition *ecs.TaskDefinition
 	}{}
-	if err := config.LoadWithEnvJSON(&c, path); err != nil {
+	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
 	}
 	if c.TaskDefinition != nil {
 		return c.TaskDefinition, nil
 	}
 	var td ecs.TaskDefinition
-	if err := config.LoadWithEnvJSON(&td, path); err != nil {
+	if err := d.loader.LoadWithEnvJSON(&td, path); err != nil {
 		return nil, err
 	}
 	return &td, nil
@@ -588,7 +594,7 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 	}
 
 	c := ecs.CreateServiceInput{}
-	if err := config.LoadWithEnvJSON(&c, path); err != nil {
+	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
 	}
 

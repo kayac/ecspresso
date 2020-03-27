@@ -3,6 +3,7 @@ package ecspresso
 import (
 	"errors"
 	"os"
+	"text/template"
 	"time"
 )
 
@@ -18,6 +19,9 @@ type Config struct {
 	ServiceDefinitionPath string        `yaml:"service_definition"`
 	TaskDefinitionPath    string        `yaml:"task_definition"`
 	Timeout               time.Duration `yaml:"timeout"`
+	Plugins               ConfigPlugins `yaml:"plugins"`
+
+	templateFuncs []template.FuncMap
 }
 
 func (c *Config) Validate() error {
@@ -27,6 +31,14 @@ func (c *Config) Validate() error {
 	if c.TaskDefinitionPath == "" {
 		return errors.New("task_definition is not defined")
 	}
+
+	if c.Plugins.TFState.Path != "" {
+		funcs, err := NewTFStatePluginFuncs(c.Plugins.TFState.Path)
+		if err != nil {
+			return err
+		}
+		c.templateFuncs = append(c.templateFuncs, funcs)
+	}
 	return nil
 }
 
@@ -35,4 +47,12 @@ func NewDefaultConfig() *Config {
 		Region:  os.Getenv("AWS_REGION"),
 		Timeout: DefaultTimeout,
 	}
+}
+
+type ConfigPlugins struct {
+	TFState ConfigPluginTFState `yaml:"tfstate"`
+}
+
+type ConfigPluginTFState struct {
+	Path string `yaml:"path"`
 }
