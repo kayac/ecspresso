@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"os"
+	"strings"
 	"text/template"
 
 	"github.com/fujiwara/tfstate-lookup/tfstate"
@@ -19,6 +20,9 @@ func NewTFStatePluginFuncs(path string) (template.FuncMap, error) {
 	}
 	return template.FuncMap{
 		"tfstate": func(addrs string) string {
+			if strings.Contains(addrs, "'") {
+				addrs = strings.ReplaceAll(addrs, "'", "\"")
+			}
 			attrs, err := state.Lookup(addrs)
 			if err != nil {
 				return ""
