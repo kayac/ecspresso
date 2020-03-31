@@ -45,6 +45,8 @@ type App struct {
 	Cluster     string
 	config      *Config
 	Debug       bool
+
+	loader *config.Loader
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
@@ -233,9 +235,14 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 }
 
 func NewApp(conf *Config) (*App, error) {
+	loader := config.New()
 	if err := conf.Validate(); err != nil {
 		return nil, errors.Wrap(err, "invalid configuration")
 	}
+	for _, f := range conf.templateFuncs {
+		loader.Funcs(f)
+	}
+
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config:            aws.Config{Region: aws.String(conf.Region)},
 		SharedConfigState: session.SharedConfigEnable,
@@ -248,6 +255,7 @@ func NewApp(conf *Config) (*App, error) {
 		codedeploy:  codedeploy.New(sess),
 		cwl:         cloudwatchlogs.New(sess),
 		config:      conf,
+		loader:      loader,
 	}
 	return d, nil
 }
@@ -569,14 +577,14 @@ func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
 	c := struct {
 		TaskDefinition *ecs.TaskDefinition
 	}{}
-	if err := config.LoadWithEnvJSON(&c, path); err != nil {
+	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
 	}
 	if c.TaskDefinition != nil {
 		return c.TaskDefinition, nil
 	}
 	var td ecs.TaskDefinition
-	if err := config.LoadWithEnvJSON(&td, path); err != nil {
+	if err := d.loader.LoadWithEnvJSON(&td, path); err != nil {
 		return nil, err
 	}
 	return &td, nil
@@ -588,7 +596,7 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 	}
 
 	c := ecs.CreateServiceInput{}
-	if err := config.LoadWithEnvJSON(&c, path); err != nil {
+	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
 	}
 
@@ -629,12 +637,12 @@ func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ec
 	out, err := d.ecs.RunTaskWithContext(
 		ctx,
 		&ecs.RunTaskInput{
-			Cluster:              aws.String(d.Cluster),
-			TaskDefinition:       aws.String(tdArn),
-			NetworkConfiguration: sv.NetworkConfiguration,
-			LaunchType:           sv.LaunchType,
-			Overrides:            ov,
-			Count:                aws.Int64(count),
+			Cluster:                  aws.String(d.Cluster),
+			TaskDefinition:           aws.String(tdArn),
+			NetworkConfiguration:     sv.NetworkConfiguration,
+			LaunchType:               sv.LaunchType,
+			Overrides:                ov,
+			Count:                    aws.Int64(count),
 			CapacityProviderStrategy: sv.CapacityProviderStrategy,
 			PlacementConstraints:     sv.PlacementConstraints,
 			PlacementStrategy:        sv.PlacementStrategy,

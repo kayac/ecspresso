@@ -3,6 +3,7 @@ package ecspresso
 import (
 	"errors"
 	"os"
+	"text/template"
 	"time"
 )
 
@@ -12,12 +13,15 @@ const (
 )
 
 type Config struct {
-	Region                string        `yaml:"region"`
-	Cluster               string        `yaml:"cluster"`
-	Service               string        `yaml:"service"`
-	ServiceDefinitionPath string        `yaml:"service_definition"`
-	TaskDefinitionPath    string        `yaml:"task_definition"`
-	Timeout               time.Duration `yaml:"timeout"`
+	Region                string         `yaml:"region"`
+	Cluster               string         `yaml:"cluster"`
+	Service               string         `yaml:"service"`
+	ServiceDefinitionPath string         `yaml:"service_definition"`
+	TaskDefinitionPath    string         `yaml:"task_definition"`
+	Timeout               time.Duration  `yaml:"timeout"`
+	Plugins               []ConfigPlugin `yaml:"plugins"`
+
+	templateFuncs []template.FuncMap
 }
 
 func (c *Config) Validate() error {
@@ -26,6 +30,11 @@ func (c *Config) Validate() error {
 	}
 	if c.TaskDefinitionPath == "" {
 		return errors.New("task_definition is not defined")
+	}
+	for _, p := range c.Plugins {
+		if err := p.Setup(c); err != nil {
+			return err
+		}
 	}
 	return nil
 }

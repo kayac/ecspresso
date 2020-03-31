@@ -1,0 +1,22 @@
+{
+  "containerDefinitions": [
+    {
+      "cpu": 1024,
+      "essential": true,
+      "image": "{{ tfstate `aws_ecr_repository.all['app'].repository_url` }}:{{ must_env `TAG` }}",
+      "memory": 1024,
+      "name": "app",
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 80,
+          "protocol": "tcp"
+        }
+      ]
+    }
+  ],
+  "family": "app",
+  "requiresCompatibilities": [
+    "EC2"
+  ]
+}

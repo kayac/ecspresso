@@ -318,6 +318,43 @@ For service-definition,
   # ...
 ```
 
+# Plugins
+
+## tfstate
+
+tfstate plugin introduces a template function `tfstate`.
+
+config.yaml
+```yaml
+region: ap-northeast-1
+cluster: default
+service: test
+service_definition: ecs-service-def.json
+task_definition: ecs-task-def.json
+plugins:
+- name: tfstate
+  config:
+    path: terraform.tfstate    # path to tfstate file
+```
+
+ecs-service-def.json
+```json
+{
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "{{ tfstate `aws_subnet.private-a.id` }}"
+      ],
+      "securityGroups": [
+        "{{ tfstate `data.aws_security_group.default.id` }}"
+      ]
+    }
+  }
+}
+```
+
+`{{ tfstate "resource_type.resource_name.attr" }}` will expand to an attribute value of the resource in tfstate.
+
 # LICENCE
 
 MIT
