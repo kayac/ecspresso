@@ -161,6 +161,8 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
 		PlatformVersion:               svd.PlatformVersion,
 		ForceNewDeployment:            opt.ForceNewDeployment,
+		PlacementConstraints:          svd.PlacementConstraints,
+		PlacementStrategy:             svd.PlacementStrategy,
 	}
 	if *opt.DryRun {
 		d.Log("update service input:", in.String())
