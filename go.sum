@@ -19,6 +19,8 @@ github.com/jmespath/go-jmespath v0.3.0 h1:OS12ieG61fsCg5+qLJ+SsW9NicxNkg3b25OyT2
 github.com/jmespath/go-jmespath v0.3.0/go.mod h1:9QtRXoHjLGCJ5IBSaohpXITPlowMeeYCZ7fLUTSywik=
 github.com/kayac/go-config v0.1.0 h1:Yu087bRps9BcmWK9HcuIBGI/YLpmLXYASzPZVZKc8UY=
 github.com/kayac/go-config v0.1.0/go.mod h1:m8920IaLog2vC6iFDMSROoD3n98ThCBW+XzroliX3Bc=
+github.com/kayac/go-config v0.3.0 h1:eQD6Dh8QbNyEIs2N2Uux8+ctsiVLPG+lw2VNfPOfNqc=
+github.com/kayac/go-config v0.3.0/go.mod h1:m8920IaLog2vC6iFDMSROoD3n98ThCBW+XzroliX3Bc=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
