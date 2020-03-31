@@ -1,0 +1,25 @@
+{
+  "deploymentConfiguration": {
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 100
+  },
+  "desiredCount": 1,
+  "enableECSManagedTags": false,
+  "launchType": "EC2",
+  "loadBalancers": [],
+  "placementConstraints": [],
+  "placementStrategy": [],
+  "schedulingStrategy": "REPLICA",
+  "serviceRegistries": [],
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "{{ tfstate `aws_subnet.private-a.id` }}"
+      ],
+      "securityGroups": [
+        "{{ tfstate `data.aws_security_group.default.id` }}"
+      ],
+      "assignPublicIp": "ENABLED"
+    }
+  }
+}
