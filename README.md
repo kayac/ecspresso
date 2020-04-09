@@ -31,7 +31,7 @@ orbs:
           version: 0.13.5
       - run:
           command: |
-            ecspresso deploy -config config.yaml
+            ecspresso deploy --config config.yaml
 ```
 
 ## Usage
