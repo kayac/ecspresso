@@ -191,17 +191,16 @@ func (d *App) DescribeTask(ctx context.Context, task *ecs.Task) error {
 		return errors.New(*f.Reason)
 	}
 
-	for _, c := range out.Tasks[0].Containers {
-		if c.Name != nil && c.Reason != nil {
-			return errors.New(fmt.Sprintf("App: %v, Exit Code: %v", *c.Name, *c.Reason))
+	c := out.Tasks[0].Containers[0]
+	if c.Reason != nil {
+		return errors.New(*c.Reason)
+	}
+	if c.ExitCode != nil && *c.ExitCode != 0 {
+		msg := "Exit Code: " + strconv.FormatInt(*c.ExitCode, 10)
+		if c.Reason != nil {
+			msg += ", Reason: " + *c.Reason
 		}
-		if c.Name != nil && c.ExitCode != nil && *c.ExitCode != 0 {
-			msg := fmt.Sprintf("App: %v, Exit Code: %v", *c.Name, strconv.FormatInt(*c.ExitCode, 10))
-			if c.Reason != nil {
-				msg += ", Reason: " + *c.Reason
-			}
-			return errors.New(msg)
-		}
+		return errors.New(msg)
 	}
 	return nil
 }
