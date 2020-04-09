@@ -73,6 +73,7 @@ type RunOption struct {
 	TaskOverrideStr    *string
 	SkipTaskDefinition *bool
 	Count              *int64
+	WatchContainer     *string
 }
 
 func (opt RunOption) DryRunString() string {

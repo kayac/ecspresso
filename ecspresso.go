@@ -180,7 +180,7 @@ func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Tim
 	return lines, nil
 }
 
-func (d *App) DescribeTask(ctx context.Context, task *ecs.Task) error {
+func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, name *string) error {
 	out, err := d.ecs.DescribeTasksWithContext(ctx, d.DescribeTasksInput(task))
 	if err != nil {
 		return err
@@ -191,16 +191,27 @@ func (d *App) DescribeTask(ctx context.Context, task *ecs.Task) error {
 		return errors.New(*f.Reason)
 	}
 
-	c := out.Tasks[0].Containers[0]
-	if c.Reason != nil {
-		return errors.New(*c.Reason)
+	var container *ecs.Container
+	if name != nil {
+		for _, c := range out.Tasks[0].Containers {
+			if *c.Name == *name {
+				container = c
+				break
+			}
+		}
 	}
-	if c.ExitCode != nil && *c.ExitCode != 0 {
-		msg := "Exit Code: " + strconv.FormatInt(*c.ExitCode, 10)
-		if c.Reason != nil {
-			msg += ", Reason: " + *c.Reason
+	if container == nil {
+		container = out.Tasks[0].Containers[0]
+	}
+
+	if container.ExitCode != nil && *container.ExitCode != 0 {
+		msg := fmt.Sprintf("Container: %s, Exit Code: %s", *container.Name, strconv.FormatInt(*container.ExitCode, 10))
+		if container.Reason != nil {
+			msg += ", Reason: " + *container.Reason
 		}
 		return errors.New(msg)
+	} else if container.Reason != nil {
+		return fmt.Errorf("Container: %s, Reason: %s", *container.Name, *container.Reason)
 	}
 	return nil
 }
@@ -437,8 +448,8 @@ func (d *App) Run(opt RunOption) error {
 	if err := d.WaitRunTask(ctx, task, logConfiguration, time.Now()); err != nil {
 		return errors.Wrap(err, "failed to run task")
 	}
-	if err := d.DescribeTask(ctx, task); err != nil {
-		return errors.Wrap(err, "failed to describe task")
+	if err := d.DescribeTaskStatus(ctx, task, opt.WatchContainer); err != nil {
+		return err
 	}
 	d.Log("Run task completed!")
 
