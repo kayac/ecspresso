@@ -372,15 +372,16 @@ func (d *App) Delete(opt DeleteOption) error {
 }
 
 func containerOf(td *ecs.TaskDefinition, name *string) *ecs.ContainerDefinition {
-	if name != nil {
-		for _, c := range td.ContainerDefinitions {
-			if *c.Name == *name {
-				c := c
-				return c
-			}
+	if name == nil || *name == "" {
+		return td.ContainerDefinitions[0]
+	}
+	for _, c := range td.ContainerDefinitions {
+		if *c.Name == *name {
+			c := c
+			return c
 		}
 	}
-	return td.ContainerDefinitions[0]
+	return nil
 }
 
 func (d *App) Run(opt RunOption) error {
@@ -442,6 +443,9 @@ func (d *App) Run(opt RunOption) error {
 			watchContainer = containerOf(td, opt.WatchContainer)
 		}
 	}
+	if watchContainer == nil {
+		return fmt.Errorf("container %s is not found in task definition", *opt.WatchContainer)
+	}
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
@@ -455,6 +459,7 @@ func (d *App) Run(opt RunOption) error {
 		d.Log("Run task invoked")
 		return nil
 	}
+	d.Log(fmt.Sprintf("Watching container: %s", *watchContainer.Name))
 	if err := d.WaitRunTask(ctx, task, watchContainer, time.Now()); err != nil {
 		return errors.Wrap(err, "failed to run task")
 	}
