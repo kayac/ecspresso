@@ -180,7 +180,7 @@ func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Tim
 	return lines, nil
 }
 
-func (d *App) DescribeTask(ctx context.Context, task *ecs.Task) error {
+func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchContainer *ecs.ContainerDefinition) error {
 	out, err := d.ecs.DescribeTasksWithContext(ctx, d.DescribeTasksInput(task))
 	if err != nil {
 		return err
@@ -191,16 +191,25 @@ func (d *App) DescribeTask(ctx context.Context, task *ecs.Task) error {
 		return errors.New(*f.Reason)
 	}
 
-	c := out.Tasks[0].Containers[0]
-	if c.Reason != nil {
-		return errors.New(*c.Reason)
+	var container *ecs.Container
+	for _, c := range out.Tasks[0].Containers {
+		if *c.Name == *watchContainer.Name {
+			container = c
+			break
+		}
 	}
-	if c.ExitCode != nil && *c.ExitCode != 0 {
-		msg := "Exit Code: " + strconv.FormatInt(*c.ExitCode, 10)
-		if c.Reason != nil {
-			msg += ", Reason: " + *c.Reason
+	if container == nil {
+		container = out.Tasks[0].Containers[0]
+	}
+
+	if container.ExitCode != nil && *container.ExitCode != 0 {
+		msg := fmt.Sprintf("Container: %s, Exit Code: %s", *container.Name, strconv.FormatInt(*container.ExitCode, 10))
+		if container.Reason != nil {
+			msg += ", Reason: " + *container.Reason
 		}
 		return errors.New(msg)
+	} else if container.Reason != nil {
+		return fmt.Errorf("Container: %s, Reason: %s", *container.Name, *container.Reason)
 	}
 	return nil
 }
@@ -362,6 +371,19 @@ func (d *App) Delete(opt DeleteOption) error {
 	return nil
 }
 
+func containerOf(td *ecs.TaskDefinition, name *string) *ecs.ContainerDefinition {
+	if name == nil || *name == "" {
+		return td.ContainerDefinitions[0]
+	}
+	for _, c := range td.ContainerDefinitions {
+		if *c.Name == *name {
+			c := c
+			return c
+		}
+	}
+	return nil
+}
+
 func (d *App) Run(opt RunOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
@@ -380,7 +402,7 @@ func (d *App) Run(opt RunOption) error {
 	}
 
 	var tdArn string
-	var logConfiguration *ecs.LogConfiguration
+	var watchContainer *ecs.ContainerDefinition
 
 	if *opt.SkipTaskDefinition {
 		td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
@@ -388,7 +410,7 @@ func (d *App) Run(opt RunOption) error {
 			return errors.Wrap(err, "failed to describe task definition")
 		}
 		tdArn = *(td.TaskDefinitionArn)
-		logConfiguration = td.ContainerDefinitions[0].LogConfiguration
+		watchContainer = containerOf(td, opt.WatchContainer)
 		if *opt.DryRun {
 			d.Log("task definition:", td.String())
 		}
@@ -418,8 +440,11 @@ func (d *App) Run(opt RunOption) error {
 				return errors.Wrap(err, "failed to register task definition")
 			}
 			tdArn = *newTd.TaskDefinitionArn
-			logConfiguration = newTd.ContainerDefinitions[0].LogConfiguration
+			watchContainer = containerOf(td, opt.WatchContainer)
 		}
+	}
+	if watchContainer == nil {
+		return fmt.Errorf("container %s is not found in task definition", *opt.WatchContainer)
 	}
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
@@ -434,11 +459,12 @@ func (d *App) Run(opt RunOption) error {
 		d.Log("Run task invoked")
 		return nil
 	}
-	if err := d.WaitRunTask(ctx, task, logConfiguration, time.Now()); err != nil {
+	d.Log(fmt.Sprintf("Watching container: %s", *watchContainer.Name))
+	if err := d.WaitRunTask(ctx, task, watchContainer, time.Now()); err != nil {
 		return errors.Wrap(err, "failed to run task")
 	}
-	if err := d.DescribeTask(ctx, task); err != nil {
-		return errors.Wrap(err, "failed to describe task")
+	if err := d.DescribeTaskStatus(ctx, task, watchContainer); err != nil {
+		return err
 	}
 	d.Log("Run task completed!")
 
@@ -617,12 +643,13 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 	return &c, nil
 }
 
-func (d *App) GetLogInfo(task *ecs.Task, lc *ecs.LogConfiguration) (string, string) {
-	taskId := strings.Split(*task.TaskArn, "/")[1]
+func (d *App) GetLogInfo(task *ecs.Task, c *ecs.ContainerDefinition) (string, string) {
+	p := strings.Split(*task.TaskArn, "/")
+	taskID := p[len(p)-1]
+	lc := c.LogConfiguration
 	logStreamPrefix := *lc.Options["awslogs-stream-prefix"]
-	containerName := *task.Containers[0].Name
 
-	logStream := strings.Join([]string{logStreamPrefix, containerName, taskId}, "/")
+	logStream := strings.Join([]string{logStreamPrefix, *c.Name, taskID}, "/")
 	logGroup := *lc.Options["awslogs-group"]
 
 	d.Log("logGroup:", logGroup)
@@ -663,17 +690,18 @@ func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ec
 	return task, nil
 }
 
-func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, lc *ecs.LogConfiguration, startedAt time.Time) error {
+func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *ecs.ContainerDefinition, startedAt time.Time) error {
 	d.Log("Waiting for run task...(it may take a while)")
 	waitCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	lc := watchContainer.LogConfiguration
 	if lc == nil || *lc.LogDriver != "awslogs" || lc.Options["awslogs-stream-prefix"] == nil {
 		d.Log("awslogs not configured")
 		return d.ecs.WaitUntilTasksStoppedWithContext(ctx, d.DescribeTasksInput(task))
 	}
 
-	logGroup, logStream := d.GetLogInfo(task, lc)
+	logGroup, logStream := d.GetLogInfo(task, watchContainer)
 	time.Sleep(3 * time.Second) // wait for log stream
 
 	go func() {
