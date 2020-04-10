@@ -373,6 +373,17 @@ func (d *App) Delete(opt DeleteOption) error {
 	return nil
 }
 
+func logConfigurationOf(td *ecs.TaskDefinition, name *string) *ecs.LogConfiguration {
+	if name != nil {
+		for _, lc := range td.ContainerDefinitions {
+			if *lc.Name == *name {
+				return lc.LogConfiguration
+			}
+		}
+	}
+	return td.ContainerDefinitions[0].LogConfiguration
+}
+
 func (d *App) Run(opt RunOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
@@ -399,7 +410,7 @@ func (d *App) Run(opt RunOption) error {
 			return errors.Wrap(err, "failed to describe task definition")
 		}
 		tdArn = *(td.TaskDefinitionArn)
-		logConfiguration = td.ContainerDefinitions[0].LogConfiguration
+		logConfiguration = logConfigurationOf(td, opt.WatchContainer)
 		if *opt.DryRun {
 			d.Log("task definition:", td.String())
 		}
@@ -429,7 +440,7 @@ func (d *App) Run(opt RunOption) error {
 				return errors.Wrap(err, "failed to register task definition")
 			}
 			tdArn = *newTd.TaskDefinitionArn
-			logConfiguration = newTd.ContainerDefinitions[0].LogConfiguration
+			logConfiguration = logConfigurationOf(newTd, opt.WatchContainer)
 		}
 	}
 	if *opt.DryRun {
