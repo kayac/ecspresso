@@ -698,7 +698,10 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *e
 	lc := watchContainer.LogConfiguration
 	if lc == nil || *lc.LogDriver != "awslogs" || lc.Options["awslogs-stream-prefix"] == nil {
 		d.Log("awslogs not configured")
-		return d.ecs.WaitUntilTasksStoppedWithContext(ctx, d.DescribeTasksInput(task))
+		if err := d.WaitUntilTaskStopped(ctx, task); err != nil {
+			return errors.Wrap(err, "failed to run task")
+		}
+		return nil
 	}
 
 	logGroup, logStream := d.GetLogInfo(task, watchContainer)
@@ -721,7 +724,26 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *e
 			}
 		}
 	}()
-	return d.ecs.WaitUntilTasksStoppedWithContext(ctx, d.DescribeTasksInput(task))
+
+	if err := d.WaitUntilTaskStopped(ctx, task); err != nil {
+		return errors.Wrap(err, "failed to run task")
+	}
+	return nil
+}
+
+func (d *App) WaitUntilTaskStopped(ctx context.Context, task *ecs.Task) error {
+	// Add an option WithWaiterDelay and request.WithWaiterMaxAttempts for a long timeout.
+	// SDK Default is 10 min (MaxAttempts=100 * Delay=6sec) at now.
+	const delay = 6 * time.Second
+	attempts := int((d.config.Timeout / delay)) + 1
+	if (d.config.Timeout % delay) > 0 {
+		attempts++
+	}
+	return d.ecs.WaitUntilTasksStoppedWithContext(
+		ctx, d.DescribeTasksInput(task),
+		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
+		request.WithWaiterMaxAttempts(attempts),
+	)
 }
 
 func (d *App) Register(opt RegisterOption) error {
