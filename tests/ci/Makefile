@@ -1,11 +1,14 @@
-.PHONY: test create deploy rollback refresh deploy-update-service scale down delete help
+.PHONY: test create deploy rollback refresh deploy-update-service scale down delete help run-task status
 
 export CLUSTER := ecspresso-test
 export SERVICE := nginx-$(CIRCLE_BRANCH)
 
 help:
 
-test: create deploy rollback refresh deploy-update-service scale down delete
+test: create run-task deploy rollback refresh deploy-update-service scale down delete
+
+status:
+	ecspresso --config config.yaml status --events 10 --debug
 
 create:
 	ecspresso --config config.yaml create --dry-run
@@ -38,3 +41,7 @@ down:
 delete:
 	ecspresso --config config.yaml delete --dry-run
 	ecspresso --config config.yaml delete --force --debug
+
+run-task:
+	ecspresso --config config.yaml run \
+	--overrides '{"containerOverrides":[{"name":"nginx", "command":["nginx", "-V"]}]}'
