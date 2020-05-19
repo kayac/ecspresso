@@ -14,6 +14,10 @@ create:
 	ecspresso --config config.yaml create --dry-run
 	ecspresso --config config.yaml create --debug
 
+register:
+	ecspresso --config config.yaml register --dry-run
+	ecspresso --config config.yaml register --debug
+
 deploy:
 	ecspresso --config config.yaml deploy --dry-run
 	ecspresso --config config.yaml deploy --debug
