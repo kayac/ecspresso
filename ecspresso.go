@@ -851,16 +851,32 @@ func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition) *ecs.RegisterTaskDe
 
 func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
 	sort.Slice(td.ContainerDefinitions, func(i, j int) bool {
-		return strings.Compare(*td.ContainerDefinitions[i].Name, *td.ContainerDefinitions[j].Name) < 0
+		return strings.Compare(td.ContainerDefinitions[i].String(), td.ContainerDefinitions[j].String()) < 0
 	})
 
 	for _, cd := range td.ContainerDefinitions {
 		sort.Slice(cd.Environment, func(i, j int) bool {
-			return strings.Compare(*cd.Environment[i].Name, *cd.Environment[j].Name) < 0
+			return strings.Compare(cd.Environment[i].String(), cd.Environment[j].String()) < 0
+		})
+
+		sort.Slice(cd.MountPoints, func(i, j int) bool {
+			return strings.Compare(cd.MountPoints[i].String(), cd.MountPoints[j].String()) < 0
+		})
+
+		sort.Slice(cd.PortMappings, func(i, j int) bool {
+			return strings.Compare(cd.PortMappings[i].String(), cd.PortMappings[j].String()) < 0
+		})
+
+		sort.Slice(cd.Volumes, func(i, j int) bool {
+			return strings.Compare(cd.Volumes[i].String(), cd.Volumes[j].String()) < 0
+		})
+
+		sort.Slice(cd.VolumesFrom, func(i, j int) bool {
+			return strings.Compare(cd.VolumesFrom[i].String(), cd.VolumesFrom[j].String()) < 0
 		})
 
 		sort.Slice(cd.Secrets, func(i, j int) bool {
-			return strings.Compare(*cd.Secrets[i].Name, *cd.Secrets[j].Name) < 0
+			return strings.Compare(cd.Secrets[i].String(), cd.Secrets[j].String()) < 0
 		})
 	}
 
