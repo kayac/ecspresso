@@ -577,19 +577,7 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition
 
 	out, err := d.ecs.RegisterTaskDefinitionWithContext(
 		ctx,
-		&ecs.RegisterTaskDefinitionInput{
-			ContainerDefinitions:    td.ContainerDefinitions,
-			Cpu:                     td.Cpu,
-			ExecutionRoleArn:        td.ExecutionRoleArn,
-			Family:                  td.Family,
-			Memory:                  td.Memory,
-			NetworkMode:             td.NetworkMode,
-			PlacementConstraints:    td.PlacementConstraints,
-			RequiresCompatibilities: td.RequiresCompatibilities,
-			TaskRoleArn:             td.TaskRoleArn,
-			ProxyConfiguration:      td.ProxyConfiguration,
-			Volumes:                 td.Volumes,
-		},
+		tdToRegisterTaskDefinitionInput(td),
 	)
 	if err != nil {
 		return nil, err
@@ -808,4 +796,20 @@ func (d *App) suspendAutoScaling(suspend bool) error {
 		}
 	}
 	return nil
+}
+
+func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition) *ecs.RegisterTaskDefinitionInput {
+	return &ecs.RegisterTaskDefinitionInput{
+		ContainerDefinitions:    td.ContainerDefinitions,
+		Cpu:                     td.Cpu,
+		ExecutionRoleArn:        td.ExecutionRoleArn,
+		Family:                  td.Family,
+		Memory:                  td.Memory,
+		NetworkMode:             td.NetworkMode,
+		PlacementConstraints:    td.PlacementConstraints,
+		RequiresCompatibilities: td.RequiresCompatibilities,
+		TaskRoleArn:             td.TaskRoleArn,
+		ProxyConfiguration:      td.ProxyConfiguration,
+		Volumes:                 td.Volumes,
+	}
 }
