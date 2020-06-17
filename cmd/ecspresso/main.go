@@ -99,6 +99,9 @@ func _main() int {
 		ServiceDefinitionPath: init.Flag("service-definition-path", "output service definition file path").Default("ecs-service-def.json").String(),
 	}
 
+	_ = kingpin.Command("diff", "display diff for task definition compared with latest one on ECS")
+	diffOption := ecspresso.DiffOption{}
+
 	sub := kingpin.Parse()
 	if sub == "version" {
 		fmt.Println("ecspresso", Version)
@@ -152,6 +155,8 @@ func _main() int {
 		err = app.Register(registerOption)
 	case "init":
 		err = app.Init(initOption)
+	case "diff":
+		err = app.Diff(diffOption)
 	default:
 		kingpin.Usage()
 		return 1

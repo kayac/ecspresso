@@ -106,3 +106,6 @@ type InitOption struct {
 	ServiceDefinitionPath *string
 	ConfigFilePath        *string
 }
+
+type DiffOption struct {
+}
