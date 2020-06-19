@@ -147,23 +147,28 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 	return nil
 }
 
+func svToUpdateServiceInput(sv *ecs.Service) *ecs.UpdateServiceInput {
+	return &ecs.UpdateServiceInput{
+		CapacityProviderStrategy:      sv.CapacityProviderStrategy,
+		DeploymentConfiguration:       sv.DeploymentConfiguration,
+		HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
+		NetworkConfiguration:          sv.NetworkConfiguration,
+		PlacementConstraints:          sv.PlacementConstraints,
+		PlacementStrategy:             sv.PlacementStrategy,
+		PlatformVersion:               sv.PlatformVersion,
+	}
+}
+
 func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*ecs.Service, error) {
 	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 	if err != nil {
 		return nil, err
 	}
-	in := &ecs.UpdateServiceInput{
-		Service:                       aws.String(d.Service),
-		Cluster:                       aws.String(d.Cluster),
-		DeploymentConfiguration:       svd.DeploymentConfiguration,
-		CapacityProviderStrategy:      svd.CapacityProviderStrategy,
-		NetworkConfiguration:          svd.NetworkConfiguration,
-		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
-		PlatformVersion:               svd.PlatformVersion,
-		ForceNewDeployment:            opt.ForceNewDeployment,
-		PlacementConstraints:          svd.PlacementConstraints,
-		PlacementStrategy:             svd.PlacementStrategy,
-	}
+	in := svToUpdateServiceInput(svd)
+	in.Service = aws.String(d.Service)
+	in.Cluster = aws.String(d.Cluster)
+	in.ForceNewDeployment = opt.ForceNewDeployment
+
 	if *opt.DryRun {
 		d.Log("update service input:", in.String())
 		return nil, nil
