@@ -74,7 +74,7 @@ func (d *App) GetLogEventsInput(logGroup string, logStream string, startAt int64
 	}
 }
 
-func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Service, error) {
+func (d *App) DescribeService(ctx context.Context) (*ecs.Service, error) {
 	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe service")
@@ -82,7 +82,14 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 	if len(out.Services) == 0 {
 		return nil, errors.New("service is not found")
 	}
-	s := out.Services[0]
+	return out.Services[0], nil
+}
+
+func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Service, error) {
+	s, err := d.DescribeService(ctx)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Println("Service:", *s.ServiceName)
 	fmt.Println("Cluster:", arnToName(*s.ClusterArn))
 	fmt.Println("TaskDefinition:", arnToName(*s.TaskDefinition))
@@ -318,9 +325,28 @@ func (d *App) Create(opt CreateOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to register task definition")
 	}
-	svd.TaskDefinition = newTd.TaskDefinitionArn
-
-	if _, err := d.ecs.CreateServiceWithContext(ctx, svd); err != nil {
+	createServiceInput := &ecs.CreateServiceInput{
+		Cluster:                       aws.String(d.config.Cluster),
+		CapacityProviderStrategy:      svd.CapacityProviderStrategy,
+		DeploymentConfiguration:       svd.DeploymentConfiguration,
+		DeploymentController:          svd.DeploymentController,
+		DesiredCount:                  svd.DesiredCount,
+		EnableECSManagedTags:          svd.EnableECSManagedTags,
+		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
+		LaunchType:                    svd.LaunchType,
+		LoadBalancers:                 svd.LoadBalancers,
+		NetworkConfiguration:          svd.NetworkConfiguration,
+		PlacementConstraints:          svd.PlacementConstraints,
+		PlacementStrategy:             svd.PlacementStrategy,
+		PlatformVersion:               svd.PlatformVersion,
+		PropagateTags:                 svd.PropagateTags,
+		SchedulingStrategy:            svd.SchedulingStrategy,
+		ServiceName:                   svd.ServiceName,
+		ServiceRegistries:             svd.ServiceRegistries,
+		Tags:                          svd.Tags,
+		TaskDefinition:                newTd.TaskDefinitionArn,
+	}
+	if _, err := d.ecs.CreateServiceWithContext(ctx, createServiceInput); err != nil {
 		return errors.Wrap(err, "failed to create service")
 	}
 	d.Log("Service is created")
@@ -607,12 +633,12 @@ func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
 	return &td, nil
 }
 
-func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error) {
+func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
 	if path == "" {
 		return nil, errors.New("service_definition is not defined")
 	}
 
-	c := ecs.CreateServiceInput{}
+	c := ecs.Service{}
 	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
 	}
@@ -627,7 +653,6 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 		count = c.DesiredCount
 	}
 
-	c.Cluster = aws.String(d.config.Cluster)
 	c.ServiceName = aws.String(d.config.Service)
 	c.DesiredCount = count
 
