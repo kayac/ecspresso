@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -162,7 +163,7 @@ func sortServiceDefinitionForDiff(sv *ecs.Service) {
 		}
 	}
 
-	if sv.HealthCheckGracePeriodSeconds == nil {
+	if len(sv.LoadBalancers) > 0 && sv.HealthCheckGracePeriodSeconds == nil {
 		sv.HealthCheckGracePeriodSeconds = aws.Int64(0)
 	}
 	if nc := sv.NetworkConfiguration; nc != nil {
@@ -188,6 +189,9 @@ func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
 		"RequiresCompatibilities",
 		"Volumes",
 	)
+	if td.Cpu != nil {
+		td.Cpu = toNumberCPU(*td.Cpu)
+	}
 
 	for _, cd := range td.ContainerDefinitions {
 		if cd.Cpu == nil {
@@ -202,4 +206,16 @@ func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
 			"Secrets",
 		)
 	}
+}
+
+func toNumberCPU(cpu string) *string {
+	if i := strings.Index(strings.ToLower(cpu), "vcpu"); i > 0 {
+		if ns, err := strconv.ParseFloat(strings.Trim(cpu[0:i], " "), 64); err != nil {
+			return nil
+		} else {
+			nn := fmt.Sprintf("%d", int(ns*1024))
+			return &nn
+		}
+	}
+	return &cpu
 }
