@@ -141,6 +141,13 @@ func sortSlicesInDefinition(t reflect.Type, v reflect.Value, fieldNames ...strin
 	}
 }
 
+func equalString(a *string, b string) bool {
+	if a == nil {
+		return b == ""
+	}
+	return *a == b
+}
+
 func sortServiceDefinitionForDiff(sv *ecs.Service) {
 	sortSlicesInDefinition(
 		reflect.TypeOf(*sv), reflect.Indirect(reflect.ValueOf(sv)),
@@ -148,7 +155,7 @@ func sortServiceDefinitionForDiff(sv *ecs.Service) {
 		"PlacementStrategy",
 		"RequiresCompatibilities",
 	)
-	if sv.LaunchType != nil && *sv.LaunchType == ecs.LaunchTypeFargate && sv.PlatformVersion == nil {
+	if equalString(sv.LaunchType, ecs.LaunchTypeFargate) && sv.PlatformVersion == nil {
 		sv.PlatformVersion = aws.String("LATEST")
 	}
 	if sv.SchedulingStrategy == nil && sv.DeploymentConfiguration == nil {
@@ -156,7 +163,7 @@ func sortServiceDefinitionForDiff(sv *ecs.Service) {
 			MaximumPercent:        aws.Int64(200),
 			MinimumHealthyPercent: aws.Int64(100),
 		}
-	} else if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == ecs.SchedulingStrategyDaemon && sv.DeploymentConfiguration == nil {
+	} else if equalString(sv.SchedulingStrategy, ecs.SchedulingStrategyDaemon) && sv.DeploymentConfiguration == nil {
 		sv.DeploymentConfiguration = &ecs.DeploymentConfiguration{
 			MaximumPercent:        aws.Int64(100),
 			MinimumHealthyPercent: aws.Int64(0),

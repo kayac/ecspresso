@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/json/jsonutil"
 )
 
-func MarshalJSON(s interface{}) ([]byte, error) {
+func marshalJSON(s interface{}) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 	b, err := jsonutil.BuildJSON(s)
 	if err != nil {
@@ -15,5 +15,18 @@ func MarshalJSON(s interface{}) ([]byte, error) {
 	}
 	json.Indent(&buf, b, "", "  ")
 	buf.WriteString("\n")
-	return buf.Bytes(), nil
+	return &buf, nil
+}
+
+func MarshalJSON(s interface{}) ([]byte, error) {
+	b, err := marshalJSON(s)
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), err
+}
+
+func MarshalJSONString(s interface{}) string {
+	b, _ := marshalJSON(s)
+	return b.String()
 }

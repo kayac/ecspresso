@@ -312,8 +312,10 @@ func (d *App) Create(opt CreateOption) error {
 	}
 
 	if *opt.DryRun {
-		d.Log("task definition:", td.String())
-		d.Log("service definition:", svd.String())
+		d.Log("task definition:")
+		d.LogJSON(td)
+		d.Log("service definition:")
+		d.LogJSON(svd)
 		d.Log("DRY RUN OK")
 		return nil
 	}
@@ -438,7 +440,8 @@ func (d *App) Run(opt RunOption) error {
 		tdArn = *(td.TaskDefinitionArn)
 		watchContainer = containerOf(td, opt.WatchContainer)
 		if *opt.DryRun {
-			d.Log("task definition:", td.String())
+			d.Log("task definition:")
+			d.LogJSON(td)
 		}
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
@@ -459,7 +462,8 @@ func (d *App) Run(opt RunOption) error {
 		_ = newTd
 
 		if *opt.DryRun {
-			d.Log("task definition:", td.String())
+			d.Log("task definition:")
+			d.LogJSON(td)
 		} else {
 			newTd, err = d.RegisterTaskDefinition(ctx, td)
 			if err != nil {
@@ -557,6 +561,10 @@ func (d *App) DebugLog(v ...interface{}) {
 		return
 	}
 	d.Log(v...)
+}
+
+func (d *App) LogJSON(v interface{}) {
+	fmt.Print(MarshalJSONString(v))
 }
 
 func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error {
@@ -769,7 +777,8 @@ func (d *App) Register(opt RegisterOption) error {
 		return errors.Wrap(err, "failed to load task definition")
 	}
 	if *opt.DryRun {
-		d.Log("task definition:", td.String())
+		d.Log("task definition:")
+		d.LogJSON(td)
 		d.Log("DRY RUN OK")
 		return nil
 	}
@@ -780,7 +789,7 @@ func (d *App) Register(opt RegisterOption) error {
 	}
 
 	if *opt.Output {
-		fmt.Println(newTd.String())
+		d.LogJSON(newTd)
 	}
 	return nil
 }

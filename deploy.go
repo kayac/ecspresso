@@ -65,7 +65,8 @@ func (d *App) Deploy(opt DeployOption) error {
 			return errors.Wrap(err, "failed to load task definition")
 		}
 		if *opt.DryRun {
-			d.Log("task definition:", td.String())
+			d.Log("task definition:")
+			d.LogJSON(td)
 		} else {
 			newTd, err := d.RegisterTaskDefinition(ctx, td)
 			if err != nil {
@@ -170,7 +171,8 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 	in.ForceNewDeployment = opt.ForceNewDeployment
 
 	if *opt.DryRun {
-		d.Log("update service input:", in.String())
+		d.Log("update service input:")
+		d.LogJSON(in)
 		return nil, nil
 	}
 	d.Log("Updating service attributes...")
