@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.31.0
 	github.com/kayac/go-config v0.3.2
 	github.com/kayac/go-config/tfstate v0.0.0-20200526163631-723a9d864f5f
+	github.com/kylelemons/godebug v1.1.0
 	github.com/mattn/go-isatty v0.0.12
 	github.com/morikuni/aec v0.0.0-20170113033406-39771216ff4c
 	github.com/pkg/errors v0.9.1

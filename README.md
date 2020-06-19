@@ -77,6 +77,9 @@ Commands:
     
   init --region=REGION --service=SERVICE [<flags>]
     create service/task definition files by existing ECS service
+
+  diff [<flags>]
+    display diff for task definition compared with latest one on ECS
 ```
 
 For more options for sub-commands, See `ecspresso sub-command --help`.

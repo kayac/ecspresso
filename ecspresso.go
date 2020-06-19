@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/kayac/go-config"
+	"github.com/kylelemons/godebug/diff"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
 	"github.com/pkg/errors"
@@ -577,19 +579,7 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition
 
 	out, err := d.ecs.RegisterTaskDefinitionWithContext(
 		ctx,
-		&ecs.RegisterTaskDefinitionInput{
-			ContainerDefinitions:    td.ContainerDefinitions,
-			Cpu:                     td.Cpu,
-			ExecutionRoleArn:        td.ExecutionRoleArn,
-			Family:                  td.Family,
-			Memory:                  td.Memory,
-			NetworkMode:             td.NetworkMode,
-			PlacementConstraints:    td.PlacementConstraints,
-			RequiresCompatibilities: td.RequiresCompatibilities,
-			TaskRoleArn:             td.TaskRoleArn,
-			ProxyConfiguration:      td.ProxyConfiguration,
-			Volumes:                 td.Volumes,
-		},
+		tdToRegisterTaskDefinitionInput(td),
 	)
 	if err != nil {
 		return nil, err
@@ -772,6 +762,39 @@ func (d *App) Register(opt RegisterOption) error {
 	return nil
 }
 
+func (d *App) Diff(opt DiffOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	newTd, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load task definition")
+	}
+
+	remoteTd, err := d.DescribeTaskDefinition(ctx, *newTd.Family)
+	if err != nil {
+		return errors.Wrap(err, "failed to describe task definition")
+	}
+
+	// sort lists in task definition
+	sortTaskDefinitionForDiff(newTd)
+	sortTaskDefinitionForDiff(remoteTd)
+
+	newTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(newTd))
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal new task definition")
+	}
+
+	remoteTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(remoteTd))
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal remote task definition")
+	}
+
+	fmt.Println(diff.Diff(string(remoteTdBytes), string(newTdBytes)))
+
+	return nil
+}
+
 func (d *App) suspendAutoScaling(suspend bool) error {
 	resouceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
 
@@ -808,4 +831,54 @@ func (d *App) suspendAutoScaling(suspend bool) error {
 		}
 	}
 	return nil
+}
+
+func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition) *ecs.RegisterTaskDefinitionInput {
+	return &ecs.RegisterTaskDefinitionInput{
+		ContainerDefinitions:    td.ContainerDefinitions,
+		Cpu:                     td.Cpu,
+		ExecutionRoleArn:        td.ExecutionRoleArn,
+		Family:                  td.Family,
+		Memory:                  td.Memory,
+		NetworkMode:             td.NetworkMode,
+		PlacementConstraints:    td.PlacementConstraints,
+		RequiresCompatibilities: td.RequiresCompatibilities,
+		TaskRoleArn:             td.TaskRoleArn,
+		ProxyConfiguration:      td.ProxyConfiguration,
+		Volumes:                 td.Volumes,
+	}
+}
+
+func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
+	sort.Slice(td.ContainerDefinitions, func(i, j int) bool {
+		return strings.Compare(td.ContainerDefinitions[i].String(), td.ContainerDefinitions[j].String()) < 0
+	})
+
+	for _, cd := range td.ContainerDefinitions {
+		sort.Slice(cd.Environment, func(i, j int) bool {
+			return strings.Compare(cd.Environment[i].String(), cd.Environment[j].String()) < 0
+		})
+
+		sort.Slice(cd.MountPoints, func(i, j int) bool {
+			return strings.Compare(cd.MountPoints[i].String(), cd.MountPoints[j].String()) < 0
+		})
+
+		sort.Slice(cd.PortMappings, func(i, j int) bool {
+			return strings.Compare(cd.PortMappings[i].String(), cd.PortMappings[j].String()) < 0
+		})
+
+		sort.Slice(cd.Volumes, func(i, j int) bool {
+			return strings.Compare(cd.Volumes[i].String(), cd.Volumes[j].String()) < 0
+		})
+
+		sort.Slice(cd.VolumesFrom, func(i, j int) bool {
+			return strings.Compare(cd.VolumesFrom[i].String(), cd.VolumesFrom[j].String()) < 0
+		})
+
+		sort.Slice(cd.Secrets, func(i, j int) bool {
+			return strings.Compare(cd.Secrets[i].String(), cd.Secrets[j].String()) < 0
+		})
+	}
+
+	return
 }
