@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -790,8 +791,9 @@ func (d *App) Diff(opt DiffOption) error {
 		return errors.Wrap(err, "failed to marshal remote task definition")
 	}
 
-	fmt.Println(diff.Diff(string(remoteTdBytes), string(newTdBytes)))
-
+	if d := diff.Diff(string(remoteTdBytes), string(newTdBytes)); d != "" {
+		fmt.Println(d)
+	}
 	return nil
 }
 
@@ -849,35 +851,71 @@ func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition) *ecs.RegisterTaskDe
 	}
 }
 
+var stringerType = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
+
+func fillAndSortSlices(t reflect.Type, v reflect.Value, fieldNames ...string) {
+	isSortableField := func(name string) bool {
+		for _, n := range fieldNames {
+			if n == name {
+				return true
+			}
+		}
+		return false
+	}
+	for i := 0; i < t.NumField(); i++ {
+		fv, field := v.Field(i), t.Field(i)
+		if fv.Kind() != reflect.Slice || !fv.CanSet() {
+			continue
+		}
+		if size := fv.Len(); size == 0 {
+			// fill empty slice
+			fv.Set(reflect.MakeSlice(fv.Type(), 0, 0))
+			continue
+		} else if isSortableField(field.Name) {
+			// sort
+			slice := make([]reflect.Value, 0, size)
+			for i := 0; i < size; i++ {
+				slice = append(slice, fv.Index(i))
+			}
+			sort.Slice(slice, func(i, j int) bool {
+				iv, jv := reflect.Indirect(slice[i]), reflect.Indirect(slice[j])
+				var is, js string
+				if iv.Kind() == reflect.String && jv.Kind() == reflect.String {
+					is, js = iv.Interface().(string), jv.Interface().(string)
+				} else if iv.Type().Implements(stringerType) && jv.Type().Implements(stringerType) {
+					is, js = iv.String(), jv.String()
+				}
+				return strings.Compare(is, js) < 0
+			})
+			sorted := reflect.MakeSlice(fv.Type(), size, size)
+			for i := 0; i < size; i++ {
+				sorted.Index(i).Set(slice[i])
+			}
+			fv.Set(sorted)
+		}
+	}
+}
+
 func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
-	sort.Slice(td.ContainerDefinitions, func(i, j int) bool {
-		return strings.Compare(td.ContainerDefinitions[i].String(), td.ContainerDefinitions[j].String()) < 0
-	})
+	fillAndSortSlices(
+		reflect.TypeOf(*td), reflect.Indirect(reflect.ValueOf(td)),
+		"ContainerDefinitions",
+		"RequiresCompatibilities",
+		"Volumes",
+	)
 
 	for _, cd := range td.ContainerDefinitions {
-		sort.Slice(cd.Environment, func(i, j int) bool {
-			return strings.Compare(cd.Environment[i].String(), cd.Environment[j].String()) < 0
-		})
-
-		sort.Slice(cd.MountPoints, func(i, j int) bool {
-			return strings.Compare(cd.MountPoints[i].String(), cd.MountPoints[j].String()) < 0
-		})
-
-		sort.Slice(cd.PortMappings, func(i, j int) bool {
-			return strings.Compare(cd.PortMappings[i].String(), cd.PortMappings[j].String()) < 0
-		})
-
-		sort.Slice(cd.Volumes, func(i, j int) bool {
-			return strings.Compare(cd.Volumes[i].String(), cd.Volumes[j].String()) < 0
-		})
-
-		sort.Slice(cd.VolumesFrom, func(i, j int) bool {
-			return strings.Compare(cd.VolumesFrom[i].String(), cd.VolumesFrom[j].String()) < 0
-		})
-
-		sort.Slice(cd.Secrets, func(i, j int) bool {
-			return strings.Compare(cd.Secrets[i].String(), cd.Secrets[j].String()) < 0
-		})
+		if cd.Cpu == nil {
+			cd.Cpu = aws.Int64(0)
+		}
+		fillAndSortSlices(
+			reflect.TypeOf(*cd), reflect.Indirect(reflect.ValueOf(cd)),
+			"Environment",
+			"MountPoints",
+			"PortMappings",
+			"VolumesFrom",
+			"Secrets",
+		)
 	}
 
 	return
