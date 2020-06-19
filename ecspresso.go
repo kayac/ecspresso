@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +20,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/kayac/go-config"
-	"github.com/kylelemons/godebug/diff"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
 	"github.com/pkg/errors"
@@ -788,40 +785,6 @@ func (d *App) Register(opt RegisterOption) error {
 	return nil
 }
 
-func (d *App) Diff(opt DiffOption) error {
-	ctx, cancel := d.Start()
-	defer cancel()
-
-	newTd, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to load task definition")
-	}
-
-	remoteTd, err := d.DescribeTaskDefinition(ctx, *newTd.Family)
-	if err != nil {
-		return errors.Wrap(err, "failed to describe task definition")
-	}
-
-	// sort lists in task definition
-	sortTaskDefinitionForDiff(newTd)
-	sortTaskDefinitionForDiff(remoteTd)
-
-	newTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(newTd))
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal new task definition")
-	}
-
-	remoteTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(remoteTd))
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal remote task definition")
-	}
-
-	if d := diff.Diff(string(remoteTdBytes), string(newTdBytes)); d != "" {
-		fmt.Println(d)
-	}
-	return nil
-}
-
 func (d *App) suspendAutoScaling(suspend bool) error {
 	resouceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
 
@@ -858,88 +821,4 @@ func (d *App) suspendAutoScaling(suspend bool) error {
 		}
 	}
 	return nil
-}
-
-func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition) *ecs.RegisterTaskDefinitionInput {
-	return &ecs.RegisterTaskDefinitionInput{
-		ContainerDefinitions:    td.ContainerDefinitions,
-		Cpu:                     td.Cpu,
-		ExecutionRoleArn:        td.ExecutionRoleArn,
-		Family:                  td.Family,
-		Memory:                  td.Memory,
-		NetworkMode:             td.NetworkMode,
-		PlacementConstraints:    td.PlacementConstraints,
-		RequiresCompatibilities: td.RequiresCompatibilities,
-		TaskRoleArn:             td.TaskRoleArn,
-		ProxyConfiguration:      td.ProxyConfiguration,
-		Volumes:                 td.Volumes,
-	}
-}
-
-var stringerType = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
-
-func sortSlicesInDefinition(t reflect.Type, v reflect.Value, fieldNames ...string) {
-	isSortableField := func(name string) bool {
-		for _, n := range fieldNames {
-			if n == name {
-				return true
-			}
-		}
-		return false
-	}
-	for i := 0; i < t.NumField(); i++ {
-		fv, field := v.Field(i), t.Field(i)
-		if fv.Kind() != reflect.Slice || !fv.CanSet() {
-			continue
-		}
-		if !isSortableField(field.Name) {
-			continue
-		}
-		size := fv.Len()
-		slice := make([]reflect.Value, 0, size)
-		for i := 0; i < size; i++ {
-			slice[i] = fv.Index(i)
-		}
-		sort.Slice(slice, func(i, j int) bool {
-			iv, jv := reflect.Indirect(slice[i]), reflect.Indirect(slice[j])
-			var is, js string
-			if iv.Kind() == reflect.String && jv.Kind() == reflect.String {
-				is, js = iv.Interface().(string), jv.Interface().(string)
-			} else if iv.Type().Implements(stringerType) && jv.Type().Implements(stringerType) {
-				is, js = iv.String(), jv.String()
-			}
-			return strings.Compare(is, js) < 0
-		})
-		sorted := reflect.MakeSlice(fv.Type(), size, size)
-		for i := 0; i < size; i++ {
-			sorted.Index(i).Set(slice[i])
-		}
-		fv.Set(sorted)
-	}
-}
-
-func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
-	sortSlicesInDefinition(
-		reflect.TypeOf(*td), reflect.Indirect(reflect.ValueOf(td)),
-		"ContainerDefinitions",
-		"PlacementConstraints",
-		"RequiresCompatibilities",
-		"Volumes",
-	)
-
-	for _, cd := range td.ContainerDefinitions {
-		if cd.Cpu == nil {
-			cd.Cpu = aws.Int64(0)
-		}
-		sortSlicesInDefinition(
-			reflect.TypeOf(*cd), reflect.Indirect(reflect.ValueOf(cd)),
-			"Environment",
-			"MountPoints",
-			"PortMappings",
-			"VolumesFrom",
-			"Secrets",
-		)
-	}
-
-	return
 }
