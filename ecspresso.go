@@ -853,7 +853,7 @@ func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition) *ecs.RegisterTaskDe
 
 var stringerType = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
 
-func fillAndSortSlices(t reflect.Type, v reflect.Value, fieldNames ...string) {
+func sortSlicesInDefinition(t reflect.Type, v reflect.Value, fieldNames ...string) {
 	isSortableField := func(name string) bool {
 		for _, n := range fieldNames {
 			if n == name {
@@ -867,39 +867,37 @@ func fillAndSortSlices(t reflect.Type, v reflect.Value, fieldNames ...string) {
 		if fv.Kind() != reflect.Slice || !fv.CanSet() {
 			continue
 		}
-		if size := fv.Len(); size == 0 {
-			// fill empty slice
-			fv.Set(reflect.MakeSlice(fv.Type(), 0, 0))
+		if !isSortableField(field.Name) {
 			continue
-		} else if isSortableField(field.Name) {
-			// sort
-			slice := make([]reflect.Value, 0, size)
-			for i := 0; i < size; i++ {
-				slice = append(slice, fv.Index(i))
-			}
-			sort.Slice(slice, func(i, j int) bool {
-				iv, jv := reflect.Indirect(slice[i]), reflect.Indirect(slice[j])
-				var is, js string
-				if iv.Kind() == reflect.String && jv.Kind() == reflect.String {
-					is, js = iv.Interface().(string), jv.Interface().(string)
-				} else if iv.Type().Implements(stringerType) && jv.Type().Implements(stringerType) {
-					is, js = iv.String(), jv.String()
-				}
-				return strings.Compare(is, js) < 0
-			})
-			sorted := reflect.MakeSlice(fv.Type(), size, size)
-			for i := 0; i < size; i++ {
-				sorted.Index(i).Set(slice[i])
-			}
-			fv.Set(sorted)
 		}
+		size := fv.Len()
+		slice := make([]reflect.Value, 0, size)
+		for i := 0; i < size; i++ {
+			slice[i] = fv.Index(i)
+		}
+		sort.Slice(slice, func(i, j int) bool {
+			iv, jv := reflect.Indirect(slice[i]), reflect.Indirect(slice[j])
+			var is, js string
+			if iv.Kind() == reflect.String && jv.Kind() == reflect.String {
+				is, js = iv.Interface().(string), jv.Interface().(string)
+			} else if iv.Type().Implements(stringerType) && jv.Type().Implements(stringerType) {
+				is, js = iv.String(), jv.String()
+			}
+			return strings.Compare(is, js) < 0
+		})
+		sorted := reflect.MakeSlice(fv.Type(), size, size)
+		for i := 0; i < size; i++ {
+			sorted.Index(i).Set(slice[i])
+		}
+		fv.Set(sorted)
 	}
 }
 
 func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
-	fillAndSortSlices(
+	sortSlicesInDefinition(
 		reflect.TypeOf(*td), reflect.Indirect(reflect.ValueOf(td)),
 		"ContainerDefinitions",
+		"PlacementConstraints",
 		"RequiresCompatibilities",
 		"Volumes",
 	)
@@ -908,7 +906,7 @@ func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
 		if cd.Cpu == nil {
 			cd.Cpu = aws.Int64(0)
 		}
-		fillAndSortSlices(
+		sortSlicesInDefinition(
 			reflect.TypeOf(*cd), reflect.Indirect(reflect.ValueOf(cd)),
 			"Environment",
 			"MountPoints",
