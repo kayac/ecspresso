@@ -28,8 +28,7 @@ func TestLoadServiceDefinition(t *testing.T) {
 		t.Errorf("%s load failed: %s", path, err)
 	}
 
-	if *sv.Cluster != "default2" ||
-		*sv.ServiceName != "test" ||
+	if *sv.ServiceName != "test" ||
 		*sv.DesiredCount != 2 ||
 		*sv.LoadBalancers[0].TargetGroupArn != "arn:aws:elasticloadbalancing:us-east-1:1111111111:targetgroup/test/12345678" ||
 		*sv.LaunchType != "EC2" ||

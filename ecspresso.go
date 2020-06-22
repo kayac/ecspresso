@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -21,7 +20,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/kayac/go-config"
-	"github.com/kylelemons/godebug/diff"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
 	"github.com/pkg/errors"
@@ -73,7 +71,7 @@ func (d *App) GetLogEventsInput(logGroup string, logStream string, startAt int64
 	}
 }
 
-func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Service, error) {
+func (d *App) DescribeService(ctx context.Context) (*ecs.Service, error) {
 	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe service")
@@ -81,7 +79,14 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 	if len(out.Services) == 0 {
 		return nil, errors.New("service is not found")
 	}
-	s := out.Services[0]
+	return out.Services[0], nil
+}
+
+func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Service, error) {
+	s, err := d.DescribeService(ctx)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Println("Service:", *s.ServiceName)
 	fmt.Println("Cluster:", arnToName(*s.ClusterArn))
 	fmt.Println("TaskDefinition:", arnToName(*s.TaskDefinition))
@@ -307,8 +312,10 @@ func (d *App) Create(opt CreateOption) error {
 	}
 
 	if *opt.DryRun {
-		d.Log("task definition:", td.String())
-		d.Log("service definition:", svd.String())
+		d.Log("task definition:")
+		d.LogJSON(td)
+		d.Log("service definition:")
+		d.LogJSON(svd)
 		d.Log("DRY RUN OK")
 		return nil
 	}
@@ -317,9 +324,28 @@ func (d *App) Create(opt CreateOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to register task definition")
 	}
-	svd.TaskDefinition = newTd.TaskDefinitionArn
-
-	if _, err := d.ecs.CreateServiceWithContext(ctx, svd); err != nil {
+	createServiceInput := &ecs.CreateServiceInput{
+		Cluster:                       aws.String(d.config.Cluster),
+		CapacityProviderStrategy:      svd.CapacityProviderStrategy,
+		DeploymentConfiguration:       svd.DeploymentConfiguration,
+		DeploymentController:          svd.DeploymentController,
+		DesiredCount:                  svd.DesiredCount,
+		EnableECSManagedTags:          svd.EnableECSManagedTags,
+		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
+		LaunchType:                    svd.LaunchType,
+		LoadBalancers:                 svd.LoadBalancers,
+		NetworkConfiguration:          svd.NetworkConfiguration,
+		PlacementConstraints:          svd.PlacementConstraints,
+		PlacementStrategy:             svd.PlacementStrategy,
+		PlatformVersion:               svd.PlatformVersion,
+		PropagateTags:                 svd.PropagateTags,
+		SchedulingStrategy:            svd.SchedulingStrategy,
+		ServiceName:                   svd.ServiceName,
+		ServiceRegistries:             svd.ServiceRegistries,
+		Tags:                          svd.Tags,
+		TaskDefinition:                newTd.TaskDefinitionArn,
+	}
+	if _, err := d.ecs.CreateServiceWithContext(ctx, createServiceInput); err != nil {
 		return errors.Wrap(err, "failed to create service")
 	}
 	d.Log("Service is created")
@@ -414,7 +440,8 @@ func (d *App) Run(opt RunOption) error {
 		tdArn = *(td.TaskDefinitionArn)
 		watchContainer = containerOf(td, opt.WatchContainer)
 		if *opt.DryRun {
-			d.Log("task definition:", td.String())
+			d.Log("task definition:")
+			d.LogJSON(td)
 		}
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
@@ -435,7 +462,8 @@ func (d *App) Run(opt RunOption) error {
 		_ = newTd
 
 		if *opt.DryRun {
-			d.Log("task definition:", td.String())
+			d.Log("task definition:")
+			d.LogJSON(td)
 		} else {
 			newTd, err = d.RegisterTaskDefinition(ctx, td)
 			if err != nil {
@@ -535,6 +563,10 @@ func (d *App) DebugLog(v ...interface{}) {
 	d.Log(v...)
 }
 
+func (d *App) LogJSON(v interface{}) {
+	fmt.Print(MarshalJSONString(v))
+}
+
 func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error {
 	d.Log("Waiting for service stable...(it will take a few minutes)")
 	waitCtx, cancel := context.WithCancel(ctx)
@@ -606,12 +638,12 @@ func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
 	return &td, nil
 }
 
-func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error) {
+func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
 	if path == "" {
 		return nil, errors.New("service_definition is not defined")
 	}
 
-	c := ecs.CreateServiceInput{}
+	c := ecs.Service{}
 	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
 	}
@@ -626,7 +658,6 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.CreateServiceInput, error
 		count = c.DesiredCount
 	}
 
-	c.Cluster = aws.String(d.config.Cluster)
 	c.ServiceName = aws.String(d.config.Service)
 	c.DesiredCount = count
 
@@ -746,7 +777,8 @@ func (d *App) Register(opt RegisterOption) error {
 		return errors.Wrap(err, "failed to load task definition")
 	}
 	if *opt.DryRun {
-		d.Log("task definition:", td.String())
+		d.Log("task definition:")
+		d.LogJSON(td)
 		d.Log("DRY RUN OK")
 		return nil
 	}
@@ -757,41 +789,8 @@ func (d *App) Register(opt RegisterOption) error {
 	}
 
 	if *opt.Output {
-		fmt.Println(newTd.String())
+		d.LogJSON(newTd)
 	}
-	return nil
-}
-
-func (d *App) Diff(opt DiffOption) error {
-	ctx, cancel := d.Start()
-	defer cancel()
-
-	newTd, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to load task definition")
-	}
-
-	remoteTd, err := d.DescribeTaskDefinition(ctx, *newTd.Family)
-	if err != nil {
-		return errors.Wrap(err, "failed to describe task definition")
-	}
-
-	// sort lists in task definition
-	sortTaskDefinitionForDiff(newTd)
-	sortTaskDefinitionForDiff(remoteTd)
-
-	newTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(newTd))
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal new task definition")
-	}
-
-	remoteTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(remoteTd))
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal remote task definition")
-	}
-
-	fmt.Println(diff.Diff(string(remoteTdBytes), string(newTdBytes)))
-
 	return nil
 }
 
@@ -831,54 +830,4 @@ func (d *App) suspendAutoScaling(suspend bool) error {
 		}
 	}
 	return nil
-}
-
-func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition) *ecs.RegisterTaskDefinitionInput {
-	return &ecs.RegisterTaskDefinitionInput{
-		ContainerDefinitions:    td.ContainerDefinitions,
-		Cpu:                     td.Cpu,
-		ExecutionRoleArn:        td.ExecutionRoleArn,
-		Family:                  td.Family,
-		Memory:                  td.Memory,
-		NetworkMode:             td.NetworkMode,
-		PlacementConstraints:    td.PlacementConstraints,
-		RequiresCompatibilities: td.RequiresCompatibilities,
-		TaskRoleArn:             td.TaskRoleArn,
-		ProxyConfiguration:      td.ProxyConfiguration,
-		Volumes:                 td.Volumes,
-	}
-}
-
-func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
-	sort.Slice(td.ContainerDefinitions, func(i, j int) bool {
-		return strings.Compare(td.ContainerDefinitions[i].String(), td.ContainerDefinitions[j].String()) < 0
-	})
-
-	for _, cd := range td.ContainerDefinitions {
-		sort.Slice(cd.Environment, func(i, j int) bool {
-			return strings.Compare(cd.Environment[i].String(), cd.Environment[j].String()) < 0
-		})
-
-		sort.Slice(cd.MountPoints, func(i, j int) bool {
-			return strings.Compare(cd.MountPoints[i].String(), cd.MountPoints[j].String()) < 0
-		})
-
-		sort.Slice(cd.PortMappings, func(i, j int) bool {
-			return strings.Compare(cd.PortMappings[i].String(), cd.PortMappings[j].String()) < 0
-		})
-
-		sort.Slice(cd.Volumes, func(i, j int) bool {
-			return strings.Compare(cd.Volumes[i].String(), cd.Volumes[j].String()) < 0
-		})
-
-		sort.Slice(cd.VolumesFrom, func(i, j int) bool {
-			return strings.Compare(cd.VolumesFrom[i].String(), cd.VolumesFrom[j].String()) < 0
-		})
-
-		sort.Slice(cd.Secrets, func(i, j int) bool {
-			return strings.Compare(cd.Secrets[i].String(), cd.Secrets[j].String()) < 0
-		})
-	}
-
-	return
 }
