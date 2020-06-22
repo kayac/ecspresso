@@ -199,6 +199,9 @@ func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
 	if td.Cpu != nil {
 		td.Cpu = toNumberCPU(*td.Cpu)
 	}
+	if td.Memory != nil {
+		td.Memory = toNumberMemory(*td.Memory)
+	}
 
 	for _, cd := range td.ContainerDefinitions {
 		if cd.Cpu == nil {
@@ -225,4 +228,16 @@ func toNumberCPU(cpu string) *string {
 		}
 	}
 	return &cpu
+}
+
+func toNumberMemory(memory string) *string {
+	if i := strings.Index(memory, "GB"); i > 0 {
+		if ns, err := strconv.ParseFloat(strings.Trim(memory[0:i], " "), 64); err != nil {
+			return nil
+		} else {
+			nn := fmt.Sprintf("%d", int(ns*1024))
+			return &nn
+		}
+	}
+	return &memory
 }

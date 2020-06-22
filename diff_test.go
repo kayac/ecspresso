@@ -25,7 +25,8 @@ func TestToNumberCPU(t *testing.T) {
 }
 
 var testTaskDefinition1 = &ecs.TaskDefinition{
-	Cpu: aws.String("0.25 vCPU"),
+	Cpu:    aws.String("0.25 vCPU"),
+	Memory: aws.String("1 GB"),
 	ContainerDefinitions: []*ecs.ContainerDefinition{
 		{
 			Name:  aws.String("app"),
@@ -49,7 +50,8 @@ var testTaskDefinition1 = &ecs.TaskDefinition{
 }
 
 var testTaskDefinition2 = &ecs.TaskDefinition{
-	Cpu: aws.String("256"),
+	Cpu:    aws.String("256"),
+	Memory: aws.String("1024"),
 	ContainerDefinitions: []*ecs.ContainerDefinition{
 		{
 			Name:  aws.String("web"),
