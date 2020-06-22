@@ -15,11 +15,26 @@ var testSuiteToNumberCPU = [][]string{
 	{"4 vcpu", "4096"},
 }
 
+var testSuiteToNumberMemory = [][]string{
+	{"512", "512"},
+	{"0.5 GB", "512"},
+	{"4GB", "4096"},
+}
+
 func TestToNumberCPU(t *testing.T) {
 	for _, s := range testSuiteToNumberCPU {
 		cpu := ecspresso.ToNumberCPU(s[0])
 		if !ecspresso.EqualString(cpu, s[1]) {
 			t.Errorf("unexpected vcpu convertion %s => %s expected %s", s[0], *cpu, s[1])
+		}
+	}
+}
+
+func TestToNumberMemory(t *testing.T) {
+	for _, s := range testSuiteToNumberMemory {
+		cpu := ecspresso.ToNumberMemory(s[0])
+		if !ecspresso.EqualString(cpu, s[1]) {
+			t.Errorf("unexpected memory convertion %s => %s expected %s", s[0], *cpu, s[1])
 		}
 	}
 }

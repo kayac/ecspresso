@@ -5,4 +5,5 @@ var (
 	SortServiceDefinitionForDiff = sortServiceDefinitionForDiff
 	EqualString                  = equalString
 	ToNumberCPU                  = toNumberCPU
+	ToNumberMemory               = toNumberMemory
 )
