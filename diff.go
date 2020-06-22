@@ -130,7 +130,7 @@ func sortSlicesInDefinition(t reflect.Type, v reflect.Value, fieldNames ...strin
 				} else if iv.Type().Implements(stringerType) && jv.Type().Implements(stringerType) {
 					is, js = iv.Interface().(fmt.Stringer).String(), jv.Interface().(fmt.Stringer).String()
 				}
-				return strings.Compare(is, js) < 0
+				return is < js
 			})
 			sorted := reflect.MakeSlice(fv.Type(), size, size)
 			for i := 0; i < size; i++ {
