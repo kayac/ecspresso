@@ -189,20 +189,6 @@ func sortServiceDefinitionForDiff(sv *ecs.Service) {
 }
 
 func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
-	sortSlicesInDefinition(
-		reflect.TypeOf(*td), reflect.Indirect(reflect.ValueOf(td)),
-		"ContainerDefinitions",
-		"PlacementConstraints",
-		"RequiresCompatibilities",
-		"Volumes",
-	)
-	if td.Cpu != nil {
-		td.Cpu = toNumberCPU(*td.Cpu)
-	}
-	if td.Memory != nil {
-		td.Memory = toNumberMemory(*td.Memory)
-	}
-
 	for _, cd := range td.ContainerDefinitions {
 		if cd.Cpu == nil {
 			cd.Cpu = aws.Int64(0)
@@ -215,6 +201,19 @@ func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
 			"VolumesFrom",
 			"Secrets",
 		)
+	}
+	sortSlicesInDefinition(
+		reflect.TypeOf(*td), reflect.Indirect(reflect.ValueOf(td)),
+		"ContainerDefinitions",
+		"PlacementConstraints",
+		"RequiresCompatibilities",
+		"Volumes",
+	)
+	if td.Cpu != nil {
+		td.Cpu = toNumberCPU(*td.Cpu)
+	}
+	if td.Memory != nil {
+		td.Memory = toNumberMemory(*td.Memory)
 	}
 }
 
