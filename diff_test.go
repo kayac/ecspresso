@@ -58,6 +58,7 @@ var testTaskDefinition1 = &ecs.TaskDefinition{
 			},
 		},
 		{
+			Cpu:   aws.Int64(0),
 			Name:  aws.String("web"),
 			Image: aws.String("nginx:latest"),
 		},
@@ -73,7 +74,6 @@ var testTaskDefinition2 = &ecs.TaskDefinition{
 			Image: aws.String("nginx:latest"),
 		},
 		{
-			Cpu:   aws.Int64(0),
 			Name:  aws.String("app"),
 			Image: aws.String("debian:buster"),
 			Environment: []*ecs.KeyValuePair{
