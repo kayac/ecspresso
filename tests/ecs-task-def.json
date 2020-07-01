@@ -6,6 +6,12 @@
       "image": "{{ tfstate `aws_ecr_repository.all['app'].repository_url` }}:{{ must_env `TAG` }}",
       "memory": 1024,
       "name": "app",
+      "environment": [
+        {
+          "name": "JSON",
+          "value": "{{ env `JSON` | json_escape }}"
+        }
+      ],
       "portMappings": [
         {
           "containerPort": 80,
