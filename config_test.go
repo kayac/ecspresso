@@ -42,6 +42,7 @@ func TestLoadConfigWithPlugin(t *testing.T) {
 	defer os.Chdir(dir)
 	os.Chdir(filepath.Join(dir, "tests"))
 	os.Setenv("TAG", "testing")
+	os.Setenv("JSON", `{"foo":"bar"}`)
 
 	var conf ecspresso.Config
 	err := config.LoadWithEnv(&conf, "config.yaml")
@@ -78,5 +79,9 @@ func TestLoadConfigWithPlugin(t *testing.T) {
 	image := *td.ContainerDefinitions[0].Image
 	if image != "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/app:testing" {
 		t.Errorf("unexpected image got:%s", image)
+	}
+	env := td.ContainerDefinitions[0].Environment[0]
+	if *env.Name != "JSON" || *env.Value != `{"foo":"bar"}` {
+		t.Errorf("unexpected JSON got:%s", *env.Value)
 	}
 }

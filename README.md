@@ -74,7 +74,7 @@ Commands:
 
   wait
     wait until service stable
-    
+
   init --region=REGION --service=SERVICE [<flags>]
     create service/task definition files by existing ECS service
 
@@ -130,6 +130,8 @@ ecspresso deploy works as below.
 - Update a service tasks.
   - When `--update-service` option set, update service attributes by service definition.
 - Wait a service stable.
+
+Configuration files and task/service definition files are read by [go-config](https://github.com/kayac/go-config). go-config has template functions `env`, `must_env` and `json_escape`.
 
 ## Example of deployment
 
