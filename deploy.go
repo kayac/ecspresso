@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kayac/ecspresso/appspec"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -17,23 +19,6 @@ import (
 
 const (
 	CodeDeployConsoleURLFmt = "https://%s.console.aws.amazon.com/codesuite/codedeploy/deployments/%s?region=%s"
-	AppSpecFmtWithLB        = `version: 1
-Resources:
-- TargetService:
-    Type: AWS::ECS::Service
-    Properties:
-      TaskDefinition: "%s"
-      LoadBalancerInfo:
-        ContainerName: %s
-        ContainerPort: %d
-`
-	AppSpecFmtWithoutLB = `version: 1
-Resources:
-- TargetService:
-    Type: AWS::ECS::Service
-    Properties:
-      TaskDefinition: "%s"
-`
 )
 
 func (d *App) Deploy(opt DeployOption) error {
@@ -83,6 +68,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to update service attributes")
 		}
+
 	}
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
@@ -166,9 +152,16 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 		return nil, err
 	}
 	in := svToUpdateServiceInput(svd)
+	if isCodeDeploy(svd) {
+		// unable to update attributes below with a CODE_DEPLOY deployment controller.
+		in.NetworkConfiguration = nil
+		in.PlatformVersion = nil
+		in.ForceNewDeployment = nil
+	} else {
+		in.ForceNewDeployment = opt.ForceNewDeployment
+	}
 	in.Service = aws.String(d.Service)
 	in.Cluster = aws.String(d.Cluster)
-	in.ForceNewDeployment = opt.ForceNewDeployment
 
 	if *opt.DryRun {
 		d.Log("update service input:")
@@ -183,7 +176,13 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 		return nil, err
 	}
 	time.Sleep(delayForServiceChanged) // wait for service updated
-	return out.Service, nil
+	sv := out.Service
+
+	if isCodeDeploy(sv) {
+		sv.NetworkConfiguration = svd.NetworkConfiguration
+		sv.PlatformVersion = svd.PlatformVersion
+	}
+	return sv, nil
 }
 
 func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int64, sv *ecs.Service, opt DeployOption) error {
@@ -202,18 +201,26 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 		}
 	}
 
-	var appSpec string
-	if sv.LoadBalancers != nil && len(sv.LoadBalancers) > 0 {
-		appSpec = fmt.Sprintf(
-			AppSpecFmtWithLB,
-			taskDefinitionArn,
-			*sv.LoadBalancers[0].ContainerName,
-			*sv.LoadBalancers[0].ContainerPort,
-		)
-	} else {
-		appSpec = fmt.Sprintf(AppSpecFmtWithoutLB, taskDefinitionArn)
+	appSpec := &appspec.AppSpec{
+		Version: aws.String("0.0"),
+		Resources: []*appspec.Resource{
+			{
+				TargetService: &appspec.TargetService{
+					Type: aws.String("AWS::ECS::Service"),
+					Properties: &appspec.Properties{
+						TaskDefinition: aws.String(taskDefinitionArn),
+						LoadBalancerInfo: &appspec.LoadBalancerInfo{
+							ContainerName: sv.LoadBalancers[0].ContainerName,
+							ContainerPort: sv.LoadBalancers[0].ContainerPort,
+						},
+						PlatformVersion:      sv.PlatformVersion,
+						NetworkConfiguration: sv.NetworkConfiguration,
+					},
+				},
+			},
+		},
 	}
-	d.DebugLog("appSpecContent:", appSpec)
+	d.DebugLog("appSpecContent:", appSpec.String())
 
 	// deployment
 	dp, err := d.findDeploymentInfo(sv)
@@ -227,7 +234,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 		Revision: &codedeploy.RevisionLocation{
 			RevisionType: aws.String("AppSpecContent"),
 			AppSpecContent: &codedeploy.AppSpecContent{
-				Content: aws.String(appSpec),
+				Content: aws.String(appSpec.String()),
 			},
 		},
 	}
@@ -339,4 +346,12 @@ func (d *App) findDeploymentInfo(sv *ecs.Service) (*codedeploy.DeploymentInfo, e
 		d.config.Service,
 		d.config.Cluster,
 	)
+}
+
+func isCodeDeploy(sv *ecs.Service) bool {
+	dc := sv.DeploymentController
+	if dc != nil && dc.Type != nil && *dc.Type == "CODE_DEPLOY" {
+		return true
+	}
+	return false
 }
