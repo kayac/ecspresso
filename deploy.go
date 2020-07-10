@@ -179,6 +179,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 	sv := out.Service
 
 	if isCodeDeploy(sv) {
+		// restore service attributes for CodeDeploy deployment
 		sv.NetworkConfiguration = svd.NetworkConfiguration
 		sv.PlatformVersion = svd.PlatformVersion
 	}
