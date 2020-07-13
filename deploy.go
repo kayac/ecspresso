@@ -152,7 +152,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 		return nil, err
 	}
 	in := svToUpdateServiceInput(svd)
-	if isCodeDeploy(svd) {
+	if isCodeDeploy(svd.DeploymentController) {
 		// unable to update attributes below with a CODE_DEPLOY deployment controller.
 		in.NetworkConfiguration = nil
 		in.PlatformVersion = nil
@@ -178,7 +178,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	sv := out.Service
 
-	if isCodeDeploy(sv) {
+	if isCodeDeploy(sv.DeploymentController) {
 		// restore service attributes for CodeDeploy deployment
 		sv.NetworkConfiguration = svd.NetworkConfiguration
 		sv.PlatformVersion = svd.PlatformVersion
@@ -349,8 +349,7 @@ func (d *App) findDeploymentInfo(sv *ecs.Service) (*codedeploy.DeploymentInfo, e
 	)
 }
 
-func isCodeDeploy(sv *ecs.Service) bool {
-	dc := sv.DeploymentController
+func isCodeDeploy(dc *ecs.DeploymentController) bool {
 	if dc != nil && dc.Type != nil && *dc.Type == "CODE_DEPLOY" {
 		return true
 	}

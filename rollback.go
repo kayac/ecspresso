@@ -17,7 +17,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return errors.Wrap(err, "failed to describe service status")
 	}
 
-	if isCodeDeploy(sv) {
+	if isCodeDeploy(sv.DeploymentController) {
 		return errors.New("could not rollback service using deployment controller CODE_DEPLOY")
 	}
 
