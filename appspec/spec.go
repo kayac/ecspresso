@@ -5,9 +5,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+var Version = "0.0"
+
 type AppSpec struct {
-	Version   *string `yaml:"version"`
-	Resources []*Resource
+	Version   *string     `yaml:"version"`
+	Resources []*Resource `yaml:"Resources"`
+}
+
+func New() *AppSpec {
+	return &AppSpec{
+		Version: &Version,
+	}
 }
 
 func (a *AppSpec) String() string {
@@ -16,22 +24,22 @@ func (a *AppSpec) String() string {
 }
 
 type Resource struct {
-	TargetService *TargetService
+	TargetService *TargetService `yaml:"TargetService"`
 }
 
 type TargetService struct {
-	Type       *string
-	Properties *Properties
+	Type       *string     `yaml:"Type"`
+	Properties *Properties `yaml:"Properties"`
 }
 
 type Properties struct {
-	TaskDefinition       *string
-	LoadBalancerInfo     *LoadBalancerInfo
-	PlatformVersion      *string
-	NetworkConfiguration *ecs.NetworkConfiguration
+	TaskDefinition       *string                   `yaml:"TaskDefinition"`
+	LoadBalancerInfo     *LoadBalancerInfo         `yaml:"LoadBalancerInfo"`
+	PlatformVersion      *string                   `yaml:"PlatformVersion"`
+	NetworkConfiguration *ecs.NetworkConfiguration `yaml:"NetworkConfiguration"`
 }
 
 type LoadBalancerInfo struct {
-	ContainerName *string
-	ContainerPort *int64
+	ContainerName *string `yaml:"ContainerName"`
+	ContainerPort *int64  `yaml:"ContainerPort"`
 }

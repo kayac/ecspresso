@@ -202,21 +202,19 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 		}
 	}
 
-	appSpec := &appspec.AppSpec{
-		Version: aws.String("0.0"),
-		Resources: []*appspec.Resource{
-			{
-				TargetService: &appspec.TargetService{
-					Type: aws.String("AWS::ECS::Service"),
-					Properties: &appspec.Properties{
-						TaskDefinition: aws.String(taskDefinitionArn),
-						LoadBalancerInfo: &appspec.LoadBalancerInfo{
-							ContainerName: sv.LoadBalancers[0].ContainerName,
-							ContainerPort: sv.LoadBalancers[0].ContainerPort,
-						},
-						PlatformVersion:      sv.PlatformVersion,
-						NetworkConfiguration: sv.NetworkConfiguration,
+	appSpec := appspec.New()
+	appSpec.Resources = []*appspec.Resource{
+		{
+			TargetService: &appspec.TargetService{
+				Type: aws.String("AWS::ECS::Service"),
+				Properties: &appspec.Properties{
+					TaskDefinition: aws.String(taskDefinitionArn),
+					LoadBalancerInfo: &appspec.LoadBalancerInfo{
+						ContainerName: sv.LoadBalancers[0].ContainerName,
+						ContainerPort: sv.LoadBalancers[0].ContainerPort,
 					},
+					PlatformVersion:      sv.PlatformVersion,
+					NetworkConfiguration: sv.NetworkConfiguration,
 				},
 			},
 		},
