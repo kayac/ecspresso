@@ -189,6 +189,22 @@ Events:
 2019/10/15 22:47:09 myService/default https://ap-northeast-1.console.aws.amazon.com/codesuite/codedeploy/deployments/d-XXXXXXXXX?region=ap-northeast-1
 ```
 
+CodeDeploy appspec hooks can be defined in a config file. ecspresso creates `Resources` and `version` elements in appspec on deploy automatically.
+
+```yaml
+cluster: default
+service: test
+service_definition: ecs-service-def.json
+task_definition: ecs-task-def.json
+appspec:
+  Hooks:
+    - BeforeInstall: "LambdaFunctionToValidateBeforeInstall"
+    - AfterInstall: "LambdaFunctionToValidateAfterTraffic"
+    - AfterAllowTestTraffic: "LambdaFunctionToValidateAfterTestTrafficStarts"
+    - BeforeAllowTraffic: "LambdaFunctionToValidateBeforeAllowingProductionTraffic"
+    - AfterAllowTraffic: "LambdaFunctionToValidateAfterAllowingProductionTraffic"
+```
+
 ## Scale out/in
 
 To change desired count of the service, specify `--tasks` option.
