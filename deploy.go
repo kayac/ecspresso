@@ -202,24 +202,14 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 		}
 	}
 
-	appSpec := appspec.New()
-	appSpec.Resources = []*appspec.Resource{
-		{
-			TargetService: &appspec.TargetService{
-				Type: aws.String("AWS::ECS::Service"),
-				Properties: &appspec.Properties{
-					TaskDefinition: aws.String(taskDefinitionArn),
-					LoadBalancerInfo: &appspec.LoadBalancerInfo{
-						ContainerName: sv.LoadBalancers[0].ContainerName,
-						ContainerPort: sv.LoadBalancers[0].ContainerPort,
-					},
-					PlatformVersion:      sv.PlatformVersion,
-					NetworkConfiguration: sv.NetworkConfiguration,
-				},
-			},
-		},
+	spec, err := appspec.NewWithService(sv, taskDefinitionArn)
+	if err != nil {
+		return errors.Wrap(err, "failed to create appspec")
 	}
-	d.DebugLog("appSpecContent:", appSpec.String())
+	if d.config.AppSpec != nil {
+		spec.Hooks = d.config.AppSpec.Hooks
+	}
+	d.DebugLog("appSpecContent:", spec.String())
 
 	// deployment
 	dp, err := d.findDeploymentInfo(sv)
@@ -233,7 +223,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 		Revision: &codedeploy.RevisionLocation{
 			RevisionType: aws.String("AppSpecContent"),
 			AppSpecContent: &codedeploy.AppSpecContent{
-				Content: aws.String(appSpec.String()),
+				Content: aws.String(spec.String()),
 			},
 		},
 	}

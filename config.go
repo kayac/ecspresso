@@ -5,6 +5,8 @@ import (
 	"os"
 	"text/template"
 	"time"
+
+	"github.com/kayac/ecspresso/appspec"
 )
 
 const (
@@ -13,13 +15,14 @@ const (
 )
 
 type Config struct {
-	Region                string         `yaml:"region"`
-	Cluster               string         `yaml:"cluster"`
-	Service               string         `yaml:"service"`
-	ServiceDefinitionPath string         `yaml:"service_definition"`
-	TaskDefinitionPath    string         `yaml:"task_definition"`
-	Timeout               time.Duration  `yaml:"timeout"`
-	Plugins               []ConfigPlugin `yaml:"plugins"`
+	Region                string           `yaml:"region"`
+	Cluster               string           `yaml:"cluster"`
+	Service               string           `yaml:"service"`
+	ServiceDefinitionPath string           `yaml:"service_definition"`
+	TaskDefinitionPath    string           `yaml:"task_definition"`
+	Timeout               time.Duration    `yaml:"timeout"`
+	Plugins               []ConfigPlugin   `yaml:"plugins"`
+	AppSpec               *appspec.AppSpec `yaml:"appspec"`
 
 	templateFuncs []template.FuncMap
 }
