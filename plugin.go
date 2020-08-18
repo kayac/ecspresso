@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kayac/go-config/tfstate"
+	"github.com/fujiwara/tfstate-lookup/tfstate"
 )
 
 type ConfigPlugin struct {
@@ -27,7 +27,7 @@ func setupPluginTFState(p ConfigPlugin, c *Config) error {
 	if !ok {
 		return errors.New("tfstate plugin requires path for tfstate file as string")
 	}
-	funcs, err := tfstate.Load(path)
+	funcs, err := tfstate.FuncMap(path)
 	if err != nil {
 		return err
 	}

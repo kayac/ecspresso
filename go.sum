@@ -28,8 +28,8 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 h1:Ghm4eQYC0nEPnSJdVkTrXpu9KtoVCSo1hg7mtI7G9KU=
 github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239/go.mod h1:Gdwt2ce0yfBxPvZrHkprdPPTTS3N5rwmLE8T22KBXlw=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
-github.com/fujiwara/tfstate-lookup v0.0.11 h1:tEM5JNHXsjRIuHmc4UbJzA4hOJVbcmdSHf+sVBT1un4=
-github.com/fujiwara/tfstate-lookup v0.0.11/go.mod h1:08o5Rm5pKzvIxoZe3D0NIT8AHYBqTzyUU03BZ/c0IKA=
+github.com/fujiwara/tfstate-lookup v0.0.12 h1:Ax8Xws/BvXRO2NH13QqGZJtk6X5aITJCSBdlaWqMLwU=
+github.com/fujiwara/tfstate-lookup v0.0.12/go.mod h1:08o5Rm5pKzvIxoZe3D0NIT8AHYBqTzyUU03BZ/c0IKA=
 github.com/go-sql-driver/mysql v1.5.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
 github.com/google/go-cmp v0.3.1 h1:Xye71clBPdm5HgqGwUkwhbynsUJZhDbS20FvLhQ2izg=
 github.com/google/go-cmp v0.3.1/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
@@ -44,12 +44,8 @@ github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 h1:IPJ3dvxmJ4uc
 github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869/go.mod h1:cJ6Cj7dQo+O6GJNiMx+Pa94qKj+TG8ONdKHgMNIyyag=
 github.com/jmespath/go-jmespath v0.3.0 h1:OS12ieG61fsCg5+qLJ+SsW9NicxNkg3b25OyT2yCeUc=
 github.com/jmespath/go-jmespath v0.3.0/go.mod h1:9QtRXoHjLGCJ5IBSaohpXITPlowMeeYCZ7fLUTSywik=
-github.com/kayac/go-config v0.4.1 h1:h8+GOg4McEda1HaTL/plJT5jcXC1WiPGE5Fzgi8CnN4=
-github.com/kayac/go-config v0.4.1/go.mod h1:5C4ZN+sMjYpEX0bi+AcgF6g0hZYVdzZiV16TEyzAzfk=
 github.com/kayac/go-config v0.4.2 h1:gdp+dhvVzapEj0f7p7Sy9gChN50ZS2WcThbOexJCFwE=
 github.com/kayac/go-config v0.4.2/go.mod h1:5C4ZN+sMjYpEX0bi+AcgF6g0hZYVdzZiV16TEyzAzfk=
-github.com/kayac/go-config/tfstate v0.0.0-20200817062630-a1dc51ca7726 h1:rPGDil9VvFa6kzBoTV2KiNKK2LAuUHSrA5LZiWEmI7Q=
-github.com/kayac/go-config/tfstate v0.0.0-20200817062630-a1dc51ca7726/go.mod h1:20ezltHl7gZjQ2hNrJUvyImSuK4umjzqloJ7JpfoJZI=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
