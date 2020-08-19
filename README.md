@@ -34,6 +34,23 @@ orbs:
             ecspresso deploy --config config.yaml
 ```
 
+### GitHub Actions
+
+Action kayac/ecspresso@v0 installs ecspresso binary for Linux into /usr/local/bin. This action runs install only.
+
+```yml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: kayac/ecspresso@v0
+        with:
+          version: v0.17.3
+      - run: |
+          ecspresso deploy --config config.yaml
+```
+
 ## Usage
 
 ```
