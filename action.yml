@@ -1,0 +1,15 @@
+inputs:
+  version:
+    description: "A version to install ecspresso"
+    default: "v0.17.3"
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        FILENAME=ecspresso-${{ inputs.version }}-linux-amd64
+        cd /tmp
+        curl -sLO https://github.com/kayac/ecspresso/releases/download/${{ inputs.version }}/${FILENAME}.zip
+        unzip ${FILENAME}.zip
+        sudo install ${FILENAME} /usr/local/bin/ecspresso
+        rm -f ${FILENAME} ${FILENAME}.zip
+      shell: bash
