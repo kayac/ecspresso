@@ -276,19 +276,6 @@ func (d *App) findDeploymentInfo(sv *ecs.Service) (*codedeploy.DeploymentInfo, e
 		return nil, errors.New("taskSet is not found in service")
 	}
 
-	// already exists deployment by CodeDeploy
-	externalId := sv.TaskSets[0].ExternalId
-	if externalId != nil {
-		dp, err := d.codedeploy.GetDeployment(&codedeploy.GetDeploymentInput{
-			DeploymentId: externalId,
-		})
-		if err != nil {
-			return nil, err
-		}
-		d.DebugLog("depoymentInfo", dp.DeploymentInfo.String())
-		return dp.DeploymentInfo, nil
-	}
-
 	// search deploymentGroup in CodeDeploy
 	d.DebugLog("find all applications in CodeDeploy")
 	la, err := d.codedeploy.ListApplications(&codedeploy.ListApplicationsInput{})
