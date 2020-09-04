@@ -27,12 +27,11 @@ func calcDesiredCount(sv *ecs.Service, opt optWithDesiredCount) (count *int64) {
 		count = nil
 		return
 	}
-	if opt.getDesiredCount() != nil && *opt.getDesiredCount() == DefaultDesiredCount {
-		// default
-		return
-	}
-	if opt.getDesiredCount() != nil {
-		count = opt.getDesiredCount()
+	if oc := opt.getDesiredCount(); oc != nil {
+		if *oc == DefaultDesiredCount {
+			return
+		}
+		count = oc // --tasks
 	}
 	return
 }
