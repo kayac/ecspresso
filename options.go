@@ -6,10 +6,18 @@ type DryRunnable interface {
 	DryRunString() bool
 }
 
+type optWithDesiredCount interface {
+	getDesiredCount() *int64
+}
+
 type CreateOption struct {
 	DryRun       *bool
 	DesiredCount *int64
 	NoWait       *bool
+}
+
+func (opt CreateOption) getDesiredCount() *int64 {
+	return opt.DesiredCount
 }
 
 func (opt CreateOption) DryRunString() string {
@@ -28,6 +36,10 @@ type DeployOption struct {
 	SuspendAutoScaling *bool
 	RollbackEvents     *string
 	UpdateService      *bool
+}
+
+func (opt DeployOption) getDesiredCount() *int64 {
+	return opt.DesiredCount
 }
 
 func (opt DeployOption) DryRunString() string {

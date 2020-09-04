@@ -21,19 +21,19 @@ const (
 	CodeDeployConsoleURLFmt = "https://%s.console.aws.amazon.com/codesuite/codedeploy/deployments/%s?region=%s"
 )
 
-func calcDesiredCount(sv *ecs.Service, opt DeployOption) (count *int64) {
+func calcDesiredCount(sv *ecs.Service, opt optWithDesiredCount) (count *int64) {
 	count = sv.DesiredCount // default
 	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
 		count = nil
 		return
 	}
-	if opt.DesiredCount != nil && *opt.DesiredCount == KeepDesiredCount {
+	if opt.getDesiredCount() != nil && *opt.getDesiredCount() == KeepDesiredCount {
 		// unchanged
 		count = nil
 		return
 	}
-	if opt.DesiredCount != nil {
-		count = opt.DesiredCount
+	if opt.getDesiredCount() != nil {
+		count = opt.getDesiredCount()
 	}
 
 	return
