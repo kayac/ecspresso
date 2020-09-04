@@ -6,4 +6,5 @@ var (
 	EqualString                  = equalString
 	ToNumberCPU                  = toNumberCPU
 	ToNumberMemory               = toNumberMemory
+	CalcDesiredCount             = calcDesiredCount
 )

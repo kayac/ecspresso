@@ -21,29 +21,38 @@ const (
 	CodeDeployConsoleURLFmt = "https://%s.console.aws.amazon.com/codesuite/codedeploy/deployments/%s?region=%s"
 )
 
+func calcDesiredCount(sv *ecs.Service, opt optWithDesiredCount) (count *int64) {
+	count = sv.DesiredCount // default
+	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
+		count = nil
+		return
+	}
+	if oc := opt.getDesiredCount(); oc != nil {
+		if *oc == DefaultDesiredCount {
+			return
+		}
+		count = oc // --tasks
+	}
+	return
+}
+
 func (d *App) Deploy(opt DeployOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
 	d.Log("Starting deploy", opt.DryRunString())
-	sv, err := d.DescribeServiceStatus(ctx, 0)
+	sv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe service status")
 	}
 
-	var count *int64
-	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
-		count = nil
-	} else if opt.DesiredCount == nil || *opt.DesiredCount == KeepDesiredCount {
-		// unchanged
-		count = nil
-	} else {
-		count = opt.DesiredCount
-	}
-
 	var tdArn string
 	if *opt.SkipTaskDefinition {
-		tdArn = *sv.TaskDefinition
+		currentSv, err := d.DescribeServiceStatus(ctx, 0)
+		if err != nil {
+			return errors.Wrap(err, "failed to describe service status")
+		}
+		tdArn = *currentSv.TaskDefinition
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
@@ -60,12 +69,16 @@ func (d *App) Deploy(opt DeployOption) error {
 			tdArn = *newTd.TaskDefinitionArn
 		}
 	}
+
+	count := calcDesiredCount(sv, opt)
 	if count != nil {
 		d.Log("desired count:", *count)
+	} else {
+		d.Log("desired count: unchanged")
 	}
+
 	if opt.UpdateService != nil && *opt.UpdateService {
-		sv, err = d.UpdateServiceAttributes(ctx, opt)
-		if err != nil {
+		if err = d.UpdateServiceAttributes(ctx, sv, opt); err != nil {
 			return errors.Wrap(err, "failed to update service attributes")
 		}
 
@@ -146,13 +159,9 @@ func svToUpdateServiceInput(sv *ecs.Service) *ecs.UpdateServiceInput {
 	}
 }
 
-func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*ecs.Service, error) {
-	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
-	if err != nil {
-		return nil, err
-	}
-	in := svToUpdateServiceInput(svd)
-	if isCodeDeploy(svd.DeploymentController) {
+func (d *App) UpdateServiceAttributes(ctx context.Context, sv *ecs.Service, opt DeployOption) error {
+	in := svToUpdateServiceInput(sv)
+	if isCodeDeploy(sv.DeploymentController) {
 		// unable to update attributes below with a CODE_DEPLOY deployment controller.
 		in.NetworkConfiguration = nil
 		in.PlatformVersion = nil
@@ -166,28 +175,20 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 	if *opt.DryRun {
 		d.Log("update service input:")
 		d.LogJSON(in)
-		return nil, nil
+		return nil
 	}
 	d.Log("Updating service attributes...")
 	d.DebugLog(in.String())
 
-	out, err := d.ecs.UpdateServiceWithContext(ctx, in)
-	if err != nil {
-		return nil, err
+	if _, err := d.ecs.UpdateServiceWithContext(ctx, in); err != nil {
+		return err
 	}
 	time.Sleep(delayForServiceChanged) // wait for service updated
-	sv := out.Service
-
-	if isCodeDeploy(sv.DeploymentController) {
-		// restore service attributes for CodeDeploy deployment
-		sv.NetworkConfiguration = svd.NetworkConfiguration
-		sv.PlatformVersion = svd.PlatformVersion
-	}
-	return sv, nil
+	return nil
 }
 
 func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int64, sv *ecs.Service, opt DeployOption) error {
-	if count != nil && *sv.DesiredCount != *count {
+	if count != nil {
 		d.Log("updating desired count to", *count)
 		_, err := d.ecs.UpdateServiceWithContext(
 			ctx,

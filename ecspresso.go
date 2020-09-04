@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const KeepDesiredCount = -1
+const DefaultDesiredCount = -1
 
 var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
 var TerminalWidth = 90
@@ -304,9 +304,7 @@ func (d *App) Create(opt CreateOption) error {
 		return errors.Wrap(err, "failed to load task definition")
 	}
 
-	if *opt.DesiredCount != 1 {
-		svd.DesiredCount = opt.DesiredCount
-	}
+	count := calcDesiredCount(svd, opt)
 
 	if *opt.DryRun {
 		d.Log("task definition:")
@@ -326,7 +324,7 @@ func (d *App) Create(opt CreateOption) error {
 		CapacityProviderStrategy:      svd.CapacityProviderStrategy,
 		DeploymentConfiguration:       svd.DeploymentConfiguration,
 		DeploymentController:          svd.DeploymentController,
-		DesiredCount:                  svd.DesiredCount,
+		DesiredCount:                  count,
 		EnableECSManagedTags:          svd.EnableECSManagedTags,
 		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
 		LaunchType:                    svd.LaunchType,
@@ -645,18 +643,7 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
 		return nil, err
 	}
 
-	var count *int64
-	if c.SchedulingStrategy == nil || *c.SchedulingStrategy == "REPLICA" && c.DesiredCount == nil {
-		// set default desired count to 1 only when SchedulingStrategy is REPLICA(default)
-		count = aws.Int64(1)
-	} else if *c.SchedulingStrategy == "DAEMON" {
-		count = nil
-	} else {
-		count = c.DesiredCount
-	}
-
 	c.ServiceName = aws.String(d.config.Service)
-	c.DesiredCount = count
 
 	return &c, nil
 }
