@@ -22,7 +22,7 @@ clean:
 	rm -f pkg/*
 
 release:
-	ghr -u kayac -r ecspresso -n "$(GIT_VER)" $(GIT_VER) pkg/
+	ghr -prerelease -u kayac -r ecspresso -n "$(GIT_VER)" $(GIT_VER) pkg/
 
 ci-test:
 	$(MAKE) install
