@@ -37,13 +37,18 @@ var desiredCountTestSuite = []desiredCountTestCase{
 	},
 	{
 		sv:       &ecs.Service{DesiredCount: aws.Int64(1)},
-		opt:      ecspresso.DeployOption{DesiredCount: aws.Int64(ecspresso.KeepDesiredCount)},
-		expected: nil,
+		opt:      ecspresso.DeployOption{DesiredCount: aws.Int64(ecspresso.DefaultDesiredCount)},
+		expected: aws.Int64(1),
 	},
 	{
 		sv:       &ecs.Service{DesiredCount: nil},
 		opt:      ecspresso.DeployOption{DesiredCount: aws.Int64(5)},
 		expected: aws.Int64(5),
+	},
+	{
+		sv:       &ecs.Service{DesiredCount: nil},
+		opt:      ecspresso.DeployOption{DesiredCount: aws.Int64(ecspresso.DefaultDesiredCount)},
+		expected: nil,
 	},
 }
 

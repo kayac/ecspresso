@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const KeepDesiredCount = -1
+const DefaultDesiredCount = -1
 
 var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
 var TerminalWidth = 90
