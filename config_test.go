@@ -4,28 +4,23 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/kayac/ecspresso"
-	"github.com/kayac/go-config"
 )
 
 func TestLoadServiceDefinition(t *testing.T) {
-	path := "tests/sv.json"
-	c := &ecspresso.Config{
-		Region:             "ap-northeast-1",
-		Timeout:            300 * time.Second,
-		Service:            "test",
-		Cluster:            "default2",
-		TaskDefinitionPath: "tests/td.json",
+	c := &ecspresso.Config{}
+	err := c.Load("tests/test.yaml")
+	if err != nil {
+		t.Error(err)
 	}
 	app, err := ecspresso.NewApp(c)
 	if err != nil {
 		t.Error(err)
 	}
-	sv, err := app.LoadServiceDefinition(path)
+	sv, err := app.LoadServiceDefinition(c.ServiceDefinitionPath)
 	if err != nil || sv == nil {
-		t.Errorf("%s load failed: %s", path, err)
+		t.Errorf("%s load failed: %s", c.ServiceDefinitionPath, err)
 	}
 
 	if *sv.ServiceName != "test" ||
@@ -44,12 +39,12 @@ func TestLoadConfigWithPlugin(t *testing.T) {
 	os.Setenv("TAG", "testing")
 	os.Setenv("JSON", `{"foo":"bar"}`)
 
-	var conf ecspresso.Config
-	err := config.LoadWithEnv(&conf, "config.yaml")
+	conf := &ecspresso.Config{}
+	err := conf.Load("config.yaml")
 	if err != nil {
 		t.Error(err)
 	}
-	app, err := ecspresso.NewApp(&conf)
+	app, err := ecspresso.NewApp(conf)
 	if err != nil {
 		t.Error(err)
 	}

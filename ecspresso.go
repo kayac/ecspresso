@@ -252,9 +252,6 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 
 func NewApp(conf *Config) (*App, error) {
 	loader := config.New()
-	if err := conf.Validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid configuration")
-	}
 	for _, f := range conf.templateFuncs {
 		loader.Funcs(f)
 	}
