@@ -190,18 +190,19 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *ecs.Service, opt 
 func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int64, sv *ecs.Service, opt DeployOption) error {
 	if count != nil {
 		d.Log("updating desired count to", *count)
-		_, err := d.ecs.UpdateServiceWithContext(
-			ctx,
-			&ecs.UpdateServiceInput{
-				Service:      aws.String(d.Service),
-				Cluster:      aws.String(d.Cluster),
-				DesiredCount: count,
-			},
-		)
-		if err != nil {
-			return errors.Wrap(err, "failed to update service")
-		}
 	}
+	out, err := d.ecs.UpdateServiceWithContext(
+		ctx,
+		&ecs.UpdateServiceInput{
+			Service:      aws.String(d.Service),
+			Cluster:      aws.String(d.Cluster),
+			DesiredCount: count,
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update service")
+	}
+	sv = out.Service // update with running service info
 
 	spec, err := appspec.NewWithService(sv, taskDefinitionArn)
 	if err != nil {
