@@ -21,6 +21,24 @@ const (
 	CodeDeployConsoleURLFmt = "https://%s.console.aws.amazon.com/codesuite/codedeploy/deployments/%s?region=%s"
 )
 
+func calcDesiredCount(sv *ecs.Service, opt DeployOption) (count *int64) {
+	count = sv.DesiredCount // default
+	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
+		count = nil
+		return
+	}
+	if opt.DesiredCount != nil && *opt.DesiredCount == KeepDesiredCount {
+		// unchanged
+		count = nil
+		return
+	}
+	if opt.DesiredCount != nil {
+		count = opt.DesiredCount
+	}
+
+	return
+}
+
 func (d *App) Deploy(opt DeployOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
@@ -29,16 +47,6 @@ func (d *App) Deploy(opt DeployOption) error {
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe service status")
-	}
-
-	var count *int64
-	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
-		count = nil
-	} else if opt.DesiredCount == nil || *opt.DesiredCount == KeepDesiredCount {
-		// unchanged
-		count = nil
-	} else {
-		count = opt.DesiredCount
 	}
 
 	var tdArn string
@@ -60,9 +68,6 @@ func (d *App) Deploy(opt DeployOption) error {
 			tdArn = *newTd.TaskDefinitionArn
 		}
 	}
-	if count != nil {
-		d.Log("desired count:", *count)
-	}
 	if opt.UpdateService != nil && *opt.UpdateService {
 		sv, err = d.UpdateServiceAttributes(ctx, opt)
 		if err != nil {
@@ -80,6 +85,13 @@ func (d *App) Deploy(opt DeployOption) error {
 		if err := d.suspendAutoScaling(*suspend); err != nil {
 			return err
 		}
+	}
+
+	count := calcDesiredCount(sv, opt)
+	if count != nil {
+		d.Log("desired count:", *count)
+	} else {
+		d.Log("desired count: unchanged")
 	}
 
 	// detect controller
@@ -187,7 +199,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, opt DeployOption) (*e
 }
 
 func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int64, sv *ecs.Service, opt DeployOption) error {
-	if count != nil && *sv.DesiredCount != *count {
+	if count != nil {
 		d.Log("updating desired count to", *count)
 		_, err := d.ecs.UpdateServiceWithContext(
 			ctx,
