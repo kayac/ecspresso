@@ -7,8 +7,6 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/kayac/ecspresso"
-
-	config "github.com/kayac/go-config"
 )
 
 var Version = "current"
@@ -117,8 +115,8 @@ func _main() int {
 		c.ServiceDefinitionPath = *initOption.ServiceDefinitionPath
 		initOption.ConfigFilePath = conf
 	} else {
-		if err := config.LoadWithEnv(c, *conf); err != nil {
-			log.Println("Cloud not load config file", conf, err)
+		if err := c.Load(*conf); err != nil {
+			log.Println("Cloud not load config file", *conf, err)
 			kingpin.Usage()
 			return 1
 		}
