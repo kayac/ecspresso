@@ -502,10 +502,20 @@ func (d *App) Wait(opt WaitOption) error {
 
 	d.Log("Waiting for the service stable")
 
-	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
-		return errors.Wrap(err, "the service still unstable")
+	sv, err := d.DescribeServiceStatus(ctx, 0)
+	if err != nil {
+		return err
 	}
-
+	if isCodeDeploy(sv.DeploymentController) {
+		err := d.WaitForCodeDeploy(ctx, sv)
+		if err != nil {
+			return errors.Wrap(err, "failed to wait for a deployment successfully")
+		}
+	} else {
+		if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
+			return errors.Wrap(err, "the service still unstable")
+		}
+	}
 	d.Log("Service is stable now. Completed!")
 	return nil
 }
@@ -814,4 +824,36 @@ func (d *App) suspendAutoScaling(suspend bool) error {
 		}
 	}
 	return nil
+}
+
+func (d *App) WaitForCodeDeploy(ctx context.Context, sv *ecs.Service) error {
+	dp, err := d.findDeploymentInfo(sv)
+	if err != nil {
+		return err
+	}
+	out, err := d.codedeploy.ListDeploymentsWithContext(
+		ctx,
+		&codedeploy.ListDeploymentsInput{
+			ApplicationName:     dp.ApplicationName,
+			DeploymentGroupName: dp.DeploymentGroupName,
+			IncludeOnlyStatuses: []*string{
+				aws.String("Created"),
+				aws.String("Queued"),
+				aws.String("InProgress"),
+				aws.String("Ready"),
+			},
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if len(out.Deployments) == 0 {
+		return errors.New("no deployments found in progress")
+	}
+	dpID := out.Deployments[0]
+	d.Log("Waiting for a deployment successful ID: " + *dpID)
+	return d.codedeploy.WaitUntilDeploymentSuccessfulWithContext(
+		ctx,
+		&codedeploy.GetDeploymentInput{DeploymentId: dpID},
+	)
 }
