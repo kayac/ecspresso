@@ -47,7 +47,15 @@ func (d *App) Deploy(opt DeployOption) error {
 	}
 
 	var tdArn string
-	if *opt.SkipTaskDefinition {
+	if *opt.LatestTaskDefinition {
+		family := strings.Split(arnToName(*sv.TaskDefinition), ":")[0]
+		var err error
+		tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
+		if err != nil {
+			return errors.Wrap(err, "failed to load latest task definition")
+		}
+	} else if *opt.SkipTaskDefinition {
+		tdArn = *sv.TaskDefinition
 		currentSv, err := d.DescribeServiceStatus(ctx, 0)
 		if err != nil {
 			return errors.Wrap(err, "failed to describe service status")

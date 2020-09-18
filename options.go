@@ -28,14 +28,15 @@ func (opt CreateOption) DryRunString() string {
 }
 
 type DeployOption struct {
-	DryRun             *bool
-	DesiredCount       *int64
-	SkipTaskDefinition *bool
-	ForceNewDeployment *bool
-	NoWait             *bool
-	SuspendAutoScaling *bool
-	RollbackEvents     *string
-	UpdateService      *bool
+	DryRun               *bool
+	DesiredCount         *int64
+	SkipTaskDefinition   *bool
+	ForceNewDeployment   *bool
+	NoWait               *bool
+	SuspendAutoScaling   *bool
+	RollbackEvents       *string
+	UpdateService        *bool
+	LatestTaskDefinition *bool
 }
 
 func (opt DeployOption) getDesiredCount() *int64 {
