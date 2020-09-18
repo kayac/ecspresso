@@ -546,6 +546,23 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 	}
 }
 
+func (d *App) findLatestTaskDefinitionArn(ctx context.Context, family string) (string, error) {
+	out, err := d.ecs.ListTaskDefinitionsWithContext(ctx,
+		&ecs.ListTaskDefinitionsInput{
+			FamilyPrefix: aws.String(family),
+			MaxResults:   aws.Int64(1),
+			Sort:         aws.String("DESC"),
+		},
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to list taskdefinitions")
+	}
+	if len(out.TaskDefinitionArns) == 0 {
+		return "", errors.New("no task definitions are found")
+	}
+	return *out.TaskDefinitionArns[0], nil
+}
+
 func (d *App) Name() string {
 	return fmt.Sprintf("%s/%s", d.Service, d.Cluster)
 }
