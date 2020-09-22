@@ -21,29 +21,32 @@ const (
 	CodeDeployConsoleURLFmt = "https://%s.console.aws.amazon.com/codesuite/codedeploy/deployments/%s?region=%s"
 )
 
-func calcDesiredCount(sv *ecs.Service, opt optWithDesiredCount) (count *int64) {
-	count = sv.DesiredCount // default
+func calcDesiredCount(sv *ecs.Service, opt optWithDesiredCount) *int64 {
 	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
-		count = nil
-		return
+		return nil
 	}
 	if oc := opt.getDesiredCount(); oc != nil {
 		if *oc == DefaultDesiredCount {
-			return
+			return sv.DesiredCount
 		}
-		count = oc // --tasks
+		return oc // --tasks
 	}
-	return
+	return nil
 }
 
 func (d *App) Deploy(opt DeployOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
+	var sv *ecs.Service
 	d.Log("Starting deploy", opt.DryRunString())
-	sv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+	currentSv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
-		return errors.Wrap(err, "failed to describe service status")
+		return errors.Wrap(err, "failed to describe current service status")
+	}
+	sv, err = d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load service definition")
 	}
 
 	var tdArn string
@@ -55,11 +58,6 @@ func (d *App) Deploy(opt DeployOption) error {
 			return errors.Wrap(err, "failed to load latest task definition")
 		}
 	} else if *opt.SkipTaskDefinition {
-		tdArn = *sv.TaskDefinition
-		currentSv, err := d.DescribeServiceStatus(ctx, 0)
-		if err != nil {
-			return errors.Wrap(err, "failed to describe service status")
-		}
 		tdArn = *currentSv.TaskDefinition
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)

@@ -1,11 +1,11 @@
-.PHONY: test create deploy rollback refresh deploy-update-service scale down delete help run-task status
+.PHONY: test create deploy rollback refresh deploy-no-update-service scale down delete help run-task status
 
 export CLUSTER := ecspresso-test
 export SERVICE := nginx-$(CIRCLE_BRANCH)
 
 help:
 
-test: create run-task deploy rollback refresh deploy-update-service scale down delete
+test: create run-task deploy rollback refresh deploy-no-update-service scale down delete
 
 status:
 	ecspresso --config config.yaml status --events 10 --debug
@@ -22,9 +22,9 @@ deploy:
 	ecspresso --config config.yaml deploy --dry-run
 	ecspresso --config config.yaml deploy --debug
 
-deploy-update-service:
-	ecspresso --config config.yaml deploy --update-service --dry-run
-	ecspresso --config config.yaml deploy --update-service --force-new-deployment --debug
+deploy-no-update-service:
+	ecspresso --config config.yaml deploy --no-update-service --dry-run
+	ecspresso --config config.yaml deploy --no-update-service --force-new-deployment --debug
 
 refresh:
 	ecspresso --config config.yaml refresh --dry-run

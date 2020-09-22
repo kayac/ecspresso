@@ -28,7 +28,7 @@ var desiredCountTestSuite = []desiredCountTestCase{
 	{
 		sv:       &ecs.Service{DesiredCount: aws.Int64(2)},
 		opt:      ecspresso.DeployOption{DesiredCount: nil},
-		expected: aws.Int64(2),
+		expected: nil,
 	},
 	{
 		sv:       &ecs.Service{DesiredCount: aws.Int64(1)},
@@ -53,16 +53,16 @@ var desiredCountTestSuite = []desiredCountTestCase{
 }
 
 func TestCalcDesiredCount(t *testing.T) {
-	for _, c := range desiredCountTestSuite {
+	for n, c := range desiredCountTestSuite {
 		count := ecspresso.CalcDesiredCount(c.sv, c.opt)
 		if count == nil && c.expected == nil {
 			// ok
 		} else if count != nil && c.expected == nil {
-			t.Errorf("unexpected desired count:%d expected:nil", *count)
+			t.Errorf("case %d unexpected desired count:%d expected:nil", n, *count)
 		} else if count == nil && c.expected != nil {
-			t.Errorf("unexpected desired count:nil expected:%d", *c.expected)
+			t.Errorf("case %d unexpected desired count:nil expected:%d", n, *c.expected)
 		} else if *count != *c.expected {
-			t.Errorf("unexpected desired count:%d expected:%d", *count, *c.expected)
+			t.Errorf("case %d unexpected desired count:%d expected:%d", n, *count, *c.expected)
 		} else {
 			// ok
 		}
