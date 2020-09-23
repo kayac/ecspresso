@@ -49,3 +49,6 @@ delete:
 run-task:
 	ecspresso --config config.yaml run \
 	--overrides '{"containerOverrides":[{"name":"nginx", "command":["nginx", "-V"]}]}'
+
+wait:
+	ecspresso --config config.yaml wait

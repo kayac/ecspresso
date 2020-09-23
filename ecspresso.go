@@ -643,7 +643,6 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition
 }
 
 func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
-	d.Log("Creating a new task definition by", path)
 	c := struct {
 		TaskDefinition *ecs.TaskDefinition
 	}{}

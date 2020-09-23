@@ -8,7 +8,6 @@ import (
 
 	"github.com/kayac/ecspresso/appspec"
 	gc "github.com/kayac/go-config"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -47,15 +46,13 @@ func (c *Config) Restrict() error {
 	if c.dir == "" {
 		c.dir = "."
 	}
-	c.ServiceDefinitionPath = filepath.Join(c.dir, c.ServiceDefinitionPath)
-	if _, err := os.Stat(c.ServiceDefinitionPath); err != nil {
-		return errors.Wrapf(err, "service_definition:%s is not found", c.ServiceDefinitionPath)
+	if c.ServiceDefinitionPath != "" {
+		c.ServiceDefinitionPath = filepath.Join(c.dir, c.ServiceDefinitionPath)
+	}
+	if c.TaskDefinitionPath != "" {
+		c.TaskDefinitionPath = filepath.Join(c.dir, c.TaskDefinitionPath)
 	}
 
-	c.TaskDefinitionPath = filepath.Join(c.dir, c.TaskDefinitionPath)
-	if _, err := os.Stat(c.TaskDefinitionPath); err != nil {
-		return errors.Wrapf(err, "task_definition:%s is not found", c.TaskDefinitionPath)
-	}
 	for _, p := range c.Plugins {
 		if err := p.Setup(c); err != nil {
 			return err
