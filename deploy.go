@@ -40,13 +40,9 @@ func (d *App) Deploy(opt DeployOption) error {
 
 	var sv *ecs.Service
 	d.Log("Starting deploy", opt.DryRunString())
-	currentSv, err := d.DescribeServiceStatus(ctx, 0)
+	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe current service status")
-	}
-	sv, err = d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to load service definition")
 	}
 
 	var tdArn string
@@ -58,7 +54,7 @@ func (d *App) Deploy(opt DeployOption) error {
 			return errors.Wrap(err, "failed to load latest task definition")
 		}
 	} else if *opt.SkipTaskDefinition {
-		tdArn = *currentSv.TaskDefinition
+		tdArn = *sv.TaskDefinition
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
@@ -76,19 +72,33 @@ func (d *App) Deploy(opt DeployOption) error {
 		}
 	}
 
-	count := calcDesiredCount(sv, opt)
+	var count *int64
+	if d.config.ServiceDefinitionPath != "" && opt.UpdateService != nil && *opt.UpdateService {
+		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+		if err != nil {
+			return errors.Wrap(err, "failed to load service definition")
+		}
+		ds, err := diffServices(sv, newSv)
+		if err != nil {
+			return errors.Wrap(err, "failed to diff of service definitions")
+		}
+		if ds != "" {
+			if err = d.UpdateServiceAttributes(ctx, newSv, opt); err != nil {
+				return errors.Wrap(err, "failed to update service attributes")
+			}
+		} else {
+			d.Log("service attributes will not change")
+		}
+		count = calcDesiredCount(newSv, opt)
+	} else {
+		count = calcDesiredCount(sv, opt)
+	}
 	if count != nil {
 		d.Log("desired count:", *count)
 	} else {
 		d.Log("desired count: unchanged")
 	}
 
-	if opt.UpdateService != nil && *opt.UpdateService {
-		if err = d.UpdateServiceAttributes(ctx, sv, opt); err != nil {
-			return errors.Wrap(err, "failed to update service attributes")
-		}
-
-	}
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
