@@ -31,17 +31,19 @@ func _main() int {
 		NoWait:               deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
 		SuspendAutoScaling:   deploy.Flag("suspend-auto-scaling", "set suspend to auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
 		RollbackEvents:       deploy.Flag("rollback-events", " rollback when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only.").String(),
-		UpdateService:        deploy.Flag("update-service", "update service attributes by service definition").Bool(),
-		LatestTaskDefinition: deploy.Flag("latest-task-definition", "deploy with latest task definition without registering new task definition").Bool(),
+		UpdateService:        deploy.Flag("update-service", "update service attributes by service definition").Default("true").Bool(),
+		LatestTaskDefinition: deploy.Flag("latest-task-definition", "deploy with latest task definition without registering new task definition").Default("false").Bool(),
 	}
 
-	refresh := kingpin.Command("refresh", "refresh service. equivalent to deploy --skip-task-definition --force-new-deployment")
+	refresh := kingpin.Command("refresh", "refresh service. equivalent to deploy --skip-task-definition --force-new-deployment --no-update-service")
 	refreshOption := ecspresso.DeployOption{
-		DryRun:             refresh.Flag("dry-run", "dry-run").Bool(),
-		SkipTaskDefinition: boolp(true),
-		ForceNewDeployment: boolp(true),
-		NoWait:             refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		UpdateService:      boolp(false),
+		DryRun:               refresh.Flag("dry-run", "dry-run").Bool(),
+		DesiredCount:         nil,
+		SkipTaskDefinition:   boolp(true),
+		ForceNewDeployment:   boolp(true),
+		NoWait:               refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
+		UpdateService:        boolp(false),
+		LatestTaskDefinition: boolp(false),
 	}
 
 	create := kingpin.Command("create", "create service")
@@ -170,4 +172,8 @@ func _main() int {
 
 func boolp(b bool) *bool {
 	return &b
+}
+
+func int64p(i int64) *int64 {
+	return &i
 }
