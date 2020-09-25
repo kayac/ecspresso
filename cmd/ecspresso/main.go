@@ -103,6 +103,11 @@ func _main() int {
 	_ = kingpin.Command("diff", "display diff for task definition compared with latest one on ECS")
 	diffOption := ecspresso.DiffOption{}
 
+	appspec := kingpin.Command("appspec", "output AppSpec YAML for CodeDeploy to STDOUT")
+	appspecOption := ecspresso.AppSpecOption{
+		TaskDefinition: appspec.Flag("task-definition", "use task definition arn in AppSpec (latest, current or Arn)").Default("latest").String(),
+	}
+
 	sub := kingpin.Parse()
 	if sub == "version" {
 		fmt.Println("ecspresso", Version)
@@ -158,6 +163,8 @@ func _main() int {
 		err = app.Init(initOption)
 	case "diff":
 		err = app.Diff(diffOption)
+	case "appspec":
+		err = app.AppSpec(appspecOption)
 	default:
 		kingpin.Usage()
 		return 1
