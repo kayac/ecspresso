@@ -125,5 +125,4 @@ type DiffOption struct {
 
 type AppSpecOption struct {
 	TaskDefinition *string
-	Output         *string
 }
