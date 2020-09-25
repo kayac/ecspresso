@@ -119,7 +119,7 @@ func _main() int {
 		initOption.ConfigFilePath = conf
 	} else {
 		if err := c.Load(*conf); err != nil {
-			log.Println("Cloud not load config file", *conf, err)
+			log.Println("Could not load config file", *conf, err)
 			kingpin.Usage()
 			return 1
 		}
