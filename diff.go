@@ -225,6 +225,12 @@ func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
 	if td.Memory != nil {
 		td.Memory = toNumberMemory(*td.Memory)
 	}
+	if td.ProxyConfiguration != nil && len(td.ProxyConfiguration.Properties) > 0 {
+		sortSlicesInDefinition(
+			reflect.TypeOf(*td.ProxyConfiguration), reflect.Indirect(reflect.ValueOf(td.ProxyConfiguration)),
+			"Properties",
+		)
+	}
 }
 
 func toNumberCPU(cpu string) *string {
