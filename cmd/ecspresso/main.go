@@ -49,7 +49,7 @@ func _main() int {
 	create := kingpin.Command("create", "create service")
 	createOption := ecspresso.CreateOption{
 		DryRun:       create.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount: create.Flag("tasks", "desired count of tasks").Default("1").Int64(),
+		DesiredCount: create.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
 		NoWait:       create.Flag("no-wait", "exit ecspresso immediately after just created without waiting for service stable").Bool(),
 	}
 
