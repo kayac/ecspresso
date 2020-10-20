@@ -214,11 +214,15 @@ func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
 	}
 	sortSlicesInDefinition(
 		reflect.TypeOf(*td), reflect.Indirect(reflect.ValueOf(td)),
-		"ContainerDefinitions",
 		"PlacementConstraints",
 		"RequiresCompatibilities",
 		"Volumes",
 	)
+	// containerDefinitions are sorted by name
+	sort.Slice(td.ContainerDefinitions, func(i, j int) bool {
+		return *(td.ContainerDefinitions[i].Name) > *(td.ContainerDefinitions[j].Name)
+	})
+
 	if td.Cpu != nil {
 		td.Cpu = toNumberCPU(*td.Cpu)
 	}
