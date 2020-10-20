@@ -1,12 +1,13 @@
 package ecspresso
 
 import (
-	"errors"
 	"os"
+	"path/filepath"
 	"text/template"
 	"time"
 
 	"github.com/kayac/ecspresso/appspec"
+	gc "github.com/kayac/go-config"
 )
 
 const (
@@ -25,15 +26,33 @@ type Config struct {
 	AppSpec               *appspec.AppSpec `yaml:"appspec"`
 
 	templateFuncs []template.FuncMap
+	dir           string
 }
 
-func (c *Config) Validate() error {
+// Load loads configuration file from file path.
+func (c *Config) Load(p string) error {
+	if err := gc.LoadWithEnv(c, p); err != nil {
+		return err
+	}
+	c.dir = filepath.Dir(p)
+	return c.Restrict()
+}
+
+// Restrict restricts a configuration.
+func (c *Config) Restrict() error {
 	if c.Cluster == "" {
 		c.Cluster = DefaultClusterName
 	}
-	if c.TaskDefinitionPath == "" {
-		return errors.New("task_definition is not defined")
+	if c.dir == "" {
+		c.dir = "."
 	}
+	if c.ServiceDefinitionPath != "" {
+		c.ServiceDefinitionPath = filepath.Join(c.dir, c.ServiceDefinitionPath)
+	}
+	if c.TaskDefinitionPath != "" {
+		c.TaskDefinitionPath = filepath.Join(c.dir, c.TaskDefinitionPath)
+	}
+
 	for _, p := range c.Plugins {
 		if err := p.Setup(c); err != nil {
 			return err

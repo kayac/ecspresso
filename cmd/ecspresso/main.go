@@ -7,8 +7,6 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/kayac/ecspresso"
-
-	config "github.com/kayac/go-config"
 )
 
 var Version = "current"
@@ -33,23 +31,25 @@ func _main() int {
 		NoWait:               deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
 		SuspendAutoScaling:   deploy.Flag("suspend-auto-scaling", "set suspend to auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
 		RollbackEvents:       deploy.Flag("rollback-events", " rollback when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only.").String(),
-		UpdateService:        deploy.Flag("update-service", "update service attributes by service definition").Bool(),
-		LatestTaskDefinition: deploy.Flag("latest-task-definition", "deploy with latest task definition without registering new task definition").Bool(),
+		UpdateService:        deploy.Flag("update-service", "update service attributes by service definition").Default("true").Bool(),
+		LatestTaskDefinition: deploy.Flag("latest-task-definition", "deploy with latest task definition without registering new task definition").Default("false").Bool(),
 	}
 
-	refresh := kingpin.Command("refresh", "refresh service. equivalent to deploy --skip-task-definition --force-new-deployment")
+	refresh := kingpin.Command("refresh", "refresh service. equivalent to deploy --skip-task-definition --force-new-deployment --no-update-service")
 	refreshOption := ecspresso.DeployOption{
-		DryRun:             refresh.Flag("dry-run", "dry-run").Bool(),
-		SkipTaskDefinition: boolp(true),
-		ForceNewDeployment: boolp(true),
-		NoWait:             refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		UpdateService:      boolp(false),
+		DryRun:               refresh.Flag("dry-run", "dry-run").Bool(),
+		DesiredCount:         nil,
+		SkipTaskDefinition:   boolp(true),
+		ForceNewDeployment:   boolp(true),
+		NoWait:               refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
+		UpdateService:        boolp(false),
+		LatestTaskDefinition: boolp(false),
 	}
 
 	create := kingpin.Command("create", "create service")
 	createOption := ecspresso.CreateOption{
 		DryRun:       create.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount: create.Flag("tasks", "desired count of tasks").Default("1").Int64(),
+		DesiredCount: create.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
 		NoWait:       create.Flag("no-wait", "exit ecspresso immediately after just created without waiting for service stable").Bool(),
 	}
 
@@ -103,6 +103,11 @@ func _main() int {
 	_ = kingpin.Command("diff", "display diff for task definition compared with latest one on ECS")
 	diffOption := ecspresso.DiffOption{}
 
+	appspec := kingpin.Command("appspec", "output AppSpec YAML for CodeDeploy to STDOUT")
+	appspecOption := ecspresso.AppSpecOption{
+		TaskDefinition: appspec.Flag("task-definition", "use task definition arn in AppSpec (latest, current or Arn)").Default("latest").String(),
+	}
+
 	sub := kingpin.Parse()
 	if sub == "version" {
 		fmt.Println("ecspresso", Version)
@@ -118,8 +123,8 @@ func _main() int {
 		c.ServiceDefinitionPath = *initOption.ServiceDefinitionPath
 		initOption.ConfigFilePath = conf
 	} else {
-		if err := config.LoadWithEnv(c, *conf); err != nil {
-			log.Println("Could not load config file", conf, err)
+		if err := c.Load(*conf); err != nil {
+			log.Println("Could not load config file", *conf, err)
 			kingpin.Usage()
 			return 1
 		}
@@ -158,6 +163,8 @@ func _main() int {
 		err = app.Init(initOption)
 	case "diff":
 		err = app.Diff(diffOption)
+	case "appspec":
+		err = app.AppSpec(appspecOption)
 	default:
 		kingpin.Usage()
 		return 1
@@ -172,4 +179,8 @@ func _main() int {
 
 func boolp(b bool) *bool {
 	return &b
+}
+
+func int64p(i int64) *int64 {
+	return &i
 }

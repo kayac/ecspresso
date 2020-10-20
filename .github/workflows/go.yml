@@ -5,22 +5,21 @@ jobs:
     strategy:
       matrix:
         go:
-          - 1.13
           - 1.14
+          - 1.15
     name: Build
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go }}
+        id: go
 
-    - name: Set up Go
-      uses: actions/setup-go@v1
-      with:
-        go-version: ${{ matrix.go }}
-      id: go
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v1
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v1
-
-    - name: Build & Test
-      run: |
-        make clean
-        make test
+      - name: Build & Test
+        run: |
+          make clean
+          make test

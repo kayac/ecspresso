@@ -63,6 +63,19 @@ var testTaskDefinition1 = &ecs.TaskDefinition{
 			Image: aws.String("nginx:latest"),
 		},
 	},
+	ProxyConfiguration: &ecs.ProxyConfiguration{
+		ContainerName: aws.String("envoy"),
+		Properties: []*ecs.KeyValuePair{
+			{
+				Name:  aws.String("ProxyIngressPort"),
+				Value: aws.String("15000"),
+			},
+			{
+				Name:  aws.String("ProxyEgressPort"),
+				Value: aws.String("15001"),
+			},
+		},
+	},
 }
 
 var testTaskDefinition2 = &ecs.TaskDefinition{
@@ -89,6 +102,19 @@ var testTaskDefinition2 = &ecs.TaskDefinition{
 		},
 	},
 	Volumes: []*ecs.Volume{},
+	ProxyConfiguration: &ecs.ProxyConfiguration{
+		ContainerName: aws.String("envoy"),
+		Properties: []*ecs.KeyValuePair{
+			{
+				Name:  aws.String("ProxyEgressPort"),
+				Value: aws.String("15001"),
+			},
+			{
+				Name:  aws.String("ProxyIngressPort"),
+				Value: aws.String("15000"),
+			},
+		},
+	},
 }
 
 func TestTaskDefinitionDiffer(t *testing.T) {

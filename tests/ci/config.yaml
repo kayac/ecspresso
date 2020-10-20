@@ -1,10 +1,10 @@
 region: ap-northeast-1
 cluster: ecspresso-test
 service: 'nginx-{{env `CIRCLE_BRANCH` `local`}}'
-service_definition: '{{ env `SERVICE_DEF` `ecs-service-definition` }}.json'
+service_definition: '{{ env `SERVICE_DEF` `ecs-service-def` }}.json'
 task_definition: ecs-task-def.json
 timeout: 10m0s
-plugins:
-- name: tfstate
-  config:
-    path: terraform.tfstate
+#plugins:
+#- name: tfstate
+#  config:
+#    path: terraform.tfstate

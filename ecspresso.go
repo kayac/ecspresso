@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const KeepDesiredCount = -1
+const DefaultDesiredCount = -1
 
 var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
 var TerminalWidth = 90
@@ -252,9 +252,6 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 
 func NewApp(conf *Config) (*App, error) {
 	loader := config.New()
-	if err := conf.Validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid configuration")
-	}
 	for _, f := range conf.templateFuncs {
 		loader.Funcs(f)
 	}
@@ -307,8 +304,9 @@ func (d *App) Create(opt CreateOption) error {
 		return errors.Wrap(err, "failed to load task definition")
 	}
 
-	if *opt.DesiredCount != 1 {
-		svd.DesiredCount = opt.DesiredCount
+	count := calcDesiredCount(svd, opt)
+	if count == nil && (svd.SchedulingStrategy != nil && *svd.SchedulingStrategy == "REPLICA") {
+		count = aws.Int64(1) // Must provide desired count for replica scheduling strategy
 	}
 
 	if *opt.DryRun {
@@ -329,7 +327,7 @@ func (d *App) Create(opt CreateOption) error {
 		CapacityProviderStrategy:      svd.CapacityProviderStrategy,
 		DeploymentConfiguration:       svd.DeploymentConfiguration,
 		DeploymentController:          svd.DeploymentController,
-		DesiredCount:                  svd.DesiredCount,
+		DesiredCount:                  count,
 		EnableECSManagedTags:          svd.EnableECSManagedTags,
 		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
 		LaunchType:                    svd.LaunchType,
@@ -507,10 +505,20 @@ func (d *App) Wait(opt WaitOption) error {
 
 	d.Log("Waiting for the service stable")
 
-	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
-		return errors.Wrap(err, "the service still unstable")
+	sv, err := d.DescribeServiceStatus(ctx, 0)
+	if err != nil {
+		return err
 	}
-
+	if isCodeDeploy(sv.DeploymentController) {
+		err := d.WaitForCodeDeploy(ctx, sv)
+		if err != nil {
+			return errors.Wrap(err, "failed to wait for a deployment successfully")
+		}
+	} else {
+		if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
+			return errors.Wrap(err, "the service still unstable")
+		}
+	}
 	d.Log("Service is stable now. Completed!")
 	return nil
 }
@@ -638,7 +646,6 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition
 }
 
 func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
-	d.Log("Creating a new task definition by", path)
 	c := struct {
 		TaskDefinition *ecs.TaskDefinition
 	}{}
@@ -665,18 +672,7 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
 		return nil, err
 	}
 
-	var count *int64
-	if c.SchedulingStrategy == nil || *c.SchedulingStrategy == "REPLICA" && c.DesiredCount == nil {
-		// set default desired count to 1 only when SchedulingStrategy is REPLICA(default)
-		count = aws.Int64(1)
-	} else if *c.SchedulingStrategy == "DAEMON" {
-		count = nil
-	} else {
-		count = c.DesiredCount
-	}
-
 	c.ServiceName = aws.String(d.config.Service)
-	c.DesiredCount = count
 
 	return &c, nil
 }
@@ -847,4 +843,36 @@ func (d *App) suspendAutoScaling(suspend bool) error {
 		}
 	}
 	return nil
+}
+
+func (d *App) WaitForCodeDeploy(ctx context.Context, sv *ecs.Service) error {
+	dp, err := d.findDeploymentInfo(sv)
+	if err != nil {
+		return err
+	}
+	out, err := d.codedeploy.ListDeploymentsWithContext(
+		ctx,
+		&codedeploy.ListDeploymentsInput{
+			ApplicationName:     dp.ApplicationName,
+			DeploymentGroupName: dp.DeploymentGroupName,
+			IncludeOnlyStatuses: []*string{
+				aws.String("Created"),
+				aws.String("Queued"),
+				aws.String("InProgress"),
+				aws.String("Ready"),
+			},
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if len(out.Deployments) == 0 {
+		return errors.New("no deployments found in progress")
+	}
+	dpID := out.Deployments[0]
+	d.Log("Waiting for a deployment successful ID: " + *dpID)
+	return d.codedeploy.WaitUntilDeploymentSuccessfulWithContext(
+		ctx,
+		&codedeploy.GetDeploymentInput{DeploymentId: dpID},
+	)
 }
