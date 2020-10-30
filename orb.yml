@@ -9,7 +9,7 @@ commands:
       version:
         description: ecspresso version
         type: string
-        default: v0.17.0
+        default: v1.1.0
     steps:
       - run:
           name: "Install ecspresso"
