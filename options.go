@@ -80,13 +80,14 @@ func (opt DeleteOption) DryRunString() string {
 }
 
 type RunOption struct {
-	DryRun             *bool
-	TaskDefinition     *string
-	NoWait             *bool
-	TaskOverrideStr    *string
-	SkipTaskDefinition *bool
-	Count              *int64
-	WatchContainer     *string
+	DryRun               *bool
+	TaskDefinition       *string
+	NoWait               *bool
+	TaskOverrideStr      *string
+	SkipTaskDefinition   *bool
+	Count                *int64
+	WatchContainer       *string
+	LatestTaskDefinition *bool
 }
 
 func (opt RunOption) DryRunString() string {
