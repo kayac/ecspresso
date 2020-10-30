@@ -73,13 +73,14 @@ func _main() int {
 
 	run := kingpin.Command("run", "run task")
 	runOption := ecspresso.RunOption{
-		DryRun:             run.Flag("dry-run", "dry-run").Bool(),
-		TaskDefinition:     run.Flag("task-def", "task definition json for run task").String(),
-		NoWait:             run.Flag("no-wait", "exit ecspresso after task run").Bool(),
-		TaskOverrideStr:    run.Flag("overrides", "task overrides JSON string").Default("").String(),
-		SkipTaskDefinition: run.Flag("skip-task-definition", "skip register a new task definition").Bool(),
-		Count:              run.Flag("count", "the number of tasks (max 10)").Default("1").Int64(),
-		WatchContainer:     run.Flag("watch-container", "the container name to watch exit code").String(),
+		DryRun:               run.Flag("dry-run", "dry-run").Bool(),
+		TaskDefinition:       run.Flag("task-def", "task definition json for run task").String(),
+		NoWait:               run.Flag("no-wait", "exit ecspresso after task run").Bool(),
+		TaskOverrideStr:      run.Flag("overrides", "task overrides JSON string").Default("").String(),
+		SkipTaskDefinition:   run.Flag("skip-task-definition", "skip register a new task definition").Bool(),
+		Count:                run.Flag("count", "the number of tasks (max 10)").Default("1").Int64(),
+		WatchContainer:       run.Flag("watch-container", "the container name to watch exit code").String(),
+		LatestTaskDefinition: run.Flag("latest-task-definition", "run with latest task definition without registering new task definition").Default("false").Bool(),
 	}
 
 	register := kingpin.Command("register", "register task definition")

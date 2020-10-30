@@ -430,7 +430,24 @@ func (d *App) Run(opt RunOption) error {
 	var tdArn string
 	var watchContainer *ecs.ContainerDefinition
 
-	if *opt.SkipTaskDefinition {
+	if *opt.LatestTaskDefinition {
+		family := strings.Split(arnToName(*sv.TaskDefinition), ":")[0]
+		var err error
+		tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
+		if err != nil {
+			return errors.Wrap(err, "failed to load latest task definition")
+		}
+
+		td, err := d.DescribeTaskDefinition(ctx, tdArn)
+		if err != nil {
+			return errors.Wrap(err, "failed to describe task definition")
+		}
+		watchContainer = containerOf(td, opt.WatchContainer)
+		if *opt.DryRun {
+			d.Log("task definition:")
+			d.LogJSON(td)
+		}
+	} else if *opt.SkipTaskDefinition {
 		td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
 		if err != nil {
 			return errors.Wrap(err, "failed to describe task definition")
