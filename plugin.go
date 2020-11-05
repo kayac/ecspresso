@@ -3,6 +3,7 @@ package ecspresso
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	"github.com/fujiwara/tfstate-lookup/tfstate"
 )
@@ -27,7 +28,7 @@ func setupPluginTFState(p ConfigPlugin, c *Config) error {
 	if !ok {
 		return errors.New("tfstate plugin requires path for tfstate file as string")
 	}
-	funcs, err := tfstate.FuncMap(path)
+	funcs, err := tfstate.FuncMap(filepath.Join(c.dir, path))
 	if err != nil {
 		return err
 	}
