@@ -2,7 +2,6 @@ package ecspresso_test
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/kayac/ecspresso"
@@ -33,14 +32,11 @@ func TestLoadServiceDefinition(t *testing.T) {
 }
 
 func TestLoadConfigWithPlugin(t *testing.T) {
-	dir, _ := os.Getwd()
-	defer os.Chdir(dir)
-	os.Chdir(filepath.Join(dir, "tests"))
 	os.Setenv("TAG", "testing")
 	os.Setenv("JSON", `{"foo":"bar"}`)
 
 	conf := &ecspresso.Config{}
-	err := conf.Load("config.yaml")
+	err := conf.Load("tests/config.yaml")
 	if err != nil {
 		t.Error(err)
 	}
