@@ -31,12 +31,20 @@ func TestLoadServiceDefinition(t *testing.T) {
 	}
 }
 
+func TestLoadConfigWithPluginAbsPath(t *testing.T) {
+	testLoadConfigWithPlugin(t, "tests/config_abs.yaml")
+}
+
 func TestLoadConfigWithPlugin(t *testing.T) {
+	testLoadConfigWithPlugin(t, "tests/config.yaml")
+}
+
+func testLoadConfigWithPlugin(t *testing.T, path string) {
 	os.Setenv("TAG", "testing")
 	os.Setenv("JSON", `{"foo":"bar"}`)
 
 	conf := &ecspresso.Config{}
-	err := conf.Load("tests/config.yaml")
+	err := conf.Load(path)
 	if err != nil {
 		t.Error(err)
 	}
