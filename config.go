@@ -46,10 +46,10 @@ func (c *Config) Restrict() error {
 	if c.dir == "" {
 		c.dir = "."
 	}
-	if c.ServiceDefinitionPath != "" {
+	if c.ServiceDefinitionPath != "" && !filepath.IsAbs(c.ServiceDefinitionPath) {
 		c.ServiceDefinitionPath = filepath.Join(c.dir, c.ServiceDefinitionPath)
 	}
-	if c.TaskDefinitionPath != "" {
+	if c.TaskDefinitionPath != "" && !filepath.IsAbs(c.TaskDefinitionPath) {
 		c.TaskDefinitionPath = filepath.Join(c.dir, c.TaskDefinitionPath)
 	}
 
