@@ -8,7 +8,7 @@ cmd/ecspresso/ecspresso: *.go cmd/ecspresso/*.go go.* appspec/*.go
 	cd cmd/ecspresso && go build -ldflags "-s -w -X main.Version=${GIT_VER} -X main.buildDate=${DATE}" -gcflags="-trimpath=${PWD}"
 
 install: cmd/ecspresso/ecspresso
-	install cmd/ecspresso/ecspresso ${GOPATH}/bin
+	install cmd/ecspresso/ecspresso ${GOPATH}/ecspresso
 
 test:
 	go test -race ./...
