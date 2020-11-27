@@ -18,11 +18,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/codedeploy"
-	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
@@ -45,10 +42,10 @@ type App struct {
 	autoScaling *applicationautoscaling.ApplicationAutoScaling
 	codedeploy  *codedeploy.CodeDeploy
 	cwl         *cloudwatchlogs.CloudWatchLogs
-	elbv2       *elbv2.ELBV2
 	iam         *iam.IAM
-	ssm         *ssm.SSM
-	ecr         *ecr.ECR
+
+	sess     *session.Session
+	verifier *verifier
 
 	Service string
 	Cluster string
@@ -276,11 +273,9 @@ func NewApp(conf *Config) (*App, error) {
 		autoScaling: applicationautoscaling.New(sess),
 		codedeploy:  codedeploy.New(sess),
 		cwl:         cloudwatchlogs.New(sess),
-		elbv2:       elbv2.New(sess),
 		iam:         iam.New(sess),
-		ssm:         ssm.New(sess),
-		ecr:         ecr.New(sess),
 
+		sess:   sess,
 		config: conf,
 		loader: loader,
 	}
