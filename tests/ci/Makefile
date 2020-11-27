@@ -52,3 +52,6 @@ run-task:
 
 wait:
 	ecspresso --config config.yaml wait
+
+verify: build
+	ecspresso --config config.yaml verify
