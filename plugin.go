@@ -20,7 +20,6 @@ func (p ConfigPlugin) Setup(c *Config) error {
 	default:
 		return fmt.Errorf("plugin %s is not available", p.Name)
 	}
-	return nil
 }
 
 func setupPluginTFState(p ConfigPlugin, c *Config) error {

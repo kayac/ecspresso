@@ -106,15 +106,10 @@ func (d *App) Verify(opt VerifyOption) error {
 		{name: "ServiceDefinition", fn: d.verifyServiceDefinition},
 		{name: "Cluster", fn: d.verifyCluster},
 	}
-	hasError := 0
 	for _, r := range resources {
 		if err := d.verifyResource(ctx, r.name, r.fn); err != nil {
-			hasError++
-			d.Log(err.Error())
+			return err
 		}
-	}
-	if hasError > 0 {
-		return errors.Errorf("%d errors found", hasError)
 	}
 	d.Log("Verify OK!")
 	return nil
