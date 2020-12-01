@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/kayac/ecspresso"
 )
 
@@ -68,6 +69,13 @@ func testLoadConfigWithPlugin(t *testing.T, path string) {
 	}
 	if subnetID != "subnet-07ac54af5e41a4fc4" {
 		t.Errorf("unexpected subnet id got:%s", subnetID)
+	}
+	cb := *svd.DeploymentConfiguration.DeploymentCircuitBreaker
+	if !aws.BoolValue(cb.Enable) {
+		t.Errorf("unexpected deploymentCircuitBreaker.enable got:%v", *cb.Enable)
+	}
+	if !aws.BoolValue(cb.Rollback) {
+		t.Errorf("unexpected deploymentCircuitBreaker.rollback got:%v", *cb.Rollback)
 	}
 
 	td, err := app.LoadTaskDefinition(conf.TaskDefinitionPath)
