@@ -29,7 +29,7 @@ jobs:
     steps:
       - checkout
       - ecspresso/install:
-          version: 1.1.3
+          version: v1.1.3
       - run:
           command: |
             ecspresso version
