@@ -109,8 +109,10 @@ func _main() int {
 		TaskDefinition: appspec.Flag("task-definition", "use task definition arn in AppSpec (latest, current or Arn)").Default("latest").String(),
 	}
 
-	_ = kingpin.Command("verify", "verify resources in configurations")
-	verifyOption := ecspresso.VerifyOption{}
+	verify := kingpin.Command("verify", "verify resources in configurations")
+	verifyOption := ecspresso.VerifyOption{
+		PutLogs: verify.Flag("put-logs", "put verification logs to CloudWatch Logs").Default("true").Bool(),
+	}
 
 	sub := kingpin.Parse()
 	if sub == "version" {

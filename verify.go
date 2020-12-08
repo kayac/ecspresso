@@ -30,6 +30,7 @@ type verifier struct {
 	elbv2 *elbv2.ELBV2
 	ssm   *ssm.SSM
 	ecr   *ecr.ECR
+	opt   *VerifyOption
 }
 
 func newVerifier(sess *session.Session) *verifier {
@@ -59,16 +60,12 @@ func (d *App) newAssumedVerifier(sess *session.Session, executionRole string) (*
 			*out.Credentials.SessionToken,
 		),
 	})
-	return &verifier{
-		cwl:   cloudwatchlogs.New(assumedSess),
-		elbv2: elbv2.New(assumedSess),
-		ssm:   ssm.New(assumedSess),
-		ecr:   ecr.New(assumedSess),
-	}, nil
+	return newVerifier(assumedSess), nil
 }
 
 // VerifyOption represents options for Verify()
 type VerifyOption struct {
+	PutLogs *bool
 }
 
 type verifyResourceFunc func(context.Context) error
@@ -93,6 +90,7 @@ func (d *App) Verify(opt VerifyOption) error {
 	} else {
 		d.verifier = newVerifier(d.sess)
 	}
+	d.verifier.opt = &opt
 
 	ctx, cancel := d.Start()
 	defer cancel()
@@ -357,6 +355,11 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *ecs.ContainerDefini
 	if region == nil {
 		return errors.New("awslogs-region is required")
 	}
+
+	if !aws.BoolValue(d.verifier.opt.PutLogs) {
+		return verifySkipErr(fmt.Sprintf("putting logs to %s", *group))
+	}
+
 	var stream string
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	if prefix != nil {
