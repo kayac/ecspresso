@@ -357,6 +357,140 @@ For service-definition,
   # ...
 ```
 
+## How to check diff and verify service/task definitions before deploy.
+
+ecspresso supports `diff` and `verify` subcommands.
+
+### diff
+
+Shows defferencies between local task/service definitions and remote (on ECS) definitions.
+
+```diff
+$ ecspresso --config config.yaml diff
+--- arn:aws:ecs:ap-northeast-1:123456789012:service/ecspresso-test/nginx-local
++++ ecs-service-def.json
+ {
+   "capacityProviderStrategy": [
+     {
+       "base": 1,
+       "capacityProvider": "FARGATE",
+       "weight": 1
+     },
+     {
+       "base": 0,
+       "capacityProvider": "FARGATE_SPOT",
+       "weight": 2
+     }
+   ],
+   "deploymentConfiguration": {
+     "deploymentCircuitBreaker": {
+       "enable": true,
+       "rollback": true
+     },
+     "maximumPercent": 200,
+     "minimumHealthyPercent": 100
+   },
+   "networkConfiguration": {
+     "awsvpcConfiguration": {
+       "assignPublicIp": "ENABLED",
+       "securityGroups": [
+         "sg-0a69199a34e15147a"
+       ],
+       "subnets": [
+         "subnet-0376f113bbbc25742",
+         "subnet-04b750544ddd71274",
+         "subnet-0623adfcb3093f18f"
+       ]
+     }
+   },
+   "placementConstraints": [],
+   "placementStrategy": [],
+-  "platformVersion": "1.3.0"
++  "platformVersion": "LATEST"
+ }
+ 
+--- arn:aws:ecs:ap-northeast-1:314472643515:task-definition/ecspresso-test:202
++++ ecs-task-def.json
+ {
+   "containerDefinitions": [
+     {
+       "cpu": 0,
+       "environment": [],
+       "essential": true,
+-      "image": "nginx:latest",
++      "image": "nginx:alpine",
+       "logConfiguration": {
+         "logDriver": "awslogs",
+         "options": {
+           "awslogs-group": "ecspresso-test",
+           "awslogs-region": "ap-northeast-1",
+           "awslogs-stream-prefix": "nginx"
+         }
+       },
+       "mountPoints": [],
+       "name": "nginx",
+       "portMappings": [
+         {
+           "containerPort": 80,
+           "hostPort": 80,
+           "protocol": "tcp"
+         }
+       ],
+       "secrets": [],
+       "volumesFrom": []
+     }
+   ],
+   "cpu": "256",
+   "executionRoleArn": "arn:aws:iam::123456789012:role/ecsTaskRole",
+   "family": "ecspresso-test",
+   "memory": "512",
+   "networkMode": "awsvpc",
+   "placementConstraints": [],
+   "requiresCompatibilities": [
+     "EC2",
+     "FARGATE"
+   ],
+   "taskRoleArn": "arn:aws:iam::123456789012:role/ecsTaskRole",
+   "volumes": []
+ }
+```
+
+### verify
+
+Verify resources which related with service/task definitions.
+
+For example,
+- An ECS cluster exists.
+- The target groups in service definitions matches container name and port defined in task definition.
+- A task role and a task execution role exist and can be assumed by ecs-tasks.amazonaws.com.
+- Container images exist at URL defined in task definition. (Checks only for ECR or DockerHub public images.)
+- Secrets in task definition exist and be readable.
+- Can create log streams, can put messages to the streams in specified CloudWatch log groups.
+
+ecspresso verify tries to assume role to task execution role defined in task definition to verify these items. If faild to assume role, continue to verify with the current sessions.
+
+```console
+$ ecspresso --config config.yaml verify
+2020/12/08 11:43:10 nginx-local/ecspresso-test Starting verify
+  TaskDefinition
+    ExecutionRole[arn:aws:iam::123456789012:role/ecsTaskRole]
+    --> [OK]
+    TaskRole[arn:aws:iam::123456789012:role/ecsTaskRole]
+    --> [OK]
+    ContainerDefinition[nginx]
+      Image[nginx:alpine]
+      --> [OK]
+      LogConfiguration[awslogs]
+      --> [OK]
+    --> [OK]
+  --> [OK]
+  ServiceDefinition
+  --> [OK]
+  Cluster
+  --> [OK]
+2020/12/08 11:43:14 nginx-local/ecspresso-test Verify OK!
+```
+
 # Plugins
 
 ## tfstate
