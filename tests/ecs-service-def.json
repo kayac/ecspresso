@@ -1,7 +1,11 @@
 {
   "deploymentConfiguration": {
     "maximumPercent": 200,
-    "minimumHealthyPercent": 100
+    "minimumHealthyPercent": 100,
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    }
   },
   "desiredCount": 1,
   "enableECSManagedTags": false,
