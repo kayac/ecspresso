@@ -114,6 +114,13 @@ func _main() int {
 		PutLogs: verify.Flag("put-logs", "put verification logs to CloudWatch Logs").Default("true").Bool(),
 	}
 
+	render := kingpin.Command("render", "render config, service definition or task definition file to stdout")
+	renderOption := ecspresso.RenderOption{
+		ServiceDefinition: render.Flag("service-definition", "render service definition").Bool(),
+		TaskDefinition:    render.Flag("task-definition", "render task definition").Bool(),
+		ConfigFile:        render.Flag("config-file", "render config file").Bool(),
+	}
+
 	sub := kingpin.Parse()
 	if sub == "version" {
 		fmt.Println("ecspresso", Version)
@@ -173,6 +180,8 @@ func _main() int {
 		err = app.AppSpec(appspecOption)
 	case "verify":
 		err = app.Verify(verifyOption)
+	case "render":
+		err = app.Render(renderOption)
 	default:
 		kingpin.Usage()
 		return 1
