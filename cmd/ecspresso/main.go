@@ -6,7 +6,9 @@ import (
 	"os"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/fatih/color"
 	"github.com/kayac/ecspresso"
+	"github.com/mattn/go-isatty"
 )
 
 var Version = "current"
@@ -20,6 +22,12 @@ func _main() int {
 
 	conf := kingpin.Flag("config", "config file").String()
 	debug := kingpin.Flag("debug", "enable debug log").Bool()
+
+	colorDefault := "false"
+	if isatty.IsTerminal(os.Stdout.Fd()) {
+		colorDefault = "true"
+	}
+	colorOpt := kingpin.Flag("color", "enalble colored output").Default(colorDefault).Bool()
 
 	var isSetSuspendAutoScaling bool
 	deploy := kingpin.Command("deploy", "deploy service")
@@ -149,6 +157,7 @@ func _main() int {
 		return 1
 	}
 	app.Debug = *debug
+	color.NoColor = !*colorOpt
 
 	switch sub {
 	case "deploy":
