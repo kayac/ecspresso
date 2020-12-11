@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/fatih/color"
@@ -26,21 +27,46 @@ import (
 )
 
 type verifier struct {
-	cwl   *cloudwatchlogs.CloudWatchLogs
-	elbv2 *elbv2.ELBV2
-	ssm   *ssm.SSM
-	ecr   *ecr.ECR
-	opt   *VerifyOption
+	cwl            *cloudwatchlogs.CloudWatchLogs
+	elbv2          *elbv2.ELBV2
+	ssm            *ssm.SSM
+	secretsmanager *secretsmanager.SecretsManager
+	ecr            *ecr.ECR
+	opt            *VerifyOption
 }
 
 func newVerifier(sess *session.Session, opt *VerifyOption) *verifier {
 	return &verifier{
-		cwl:   cloudwatchlogs.New(sess),
-		elbv2: elbv2.New(sess),
-		ssm:   ssm.New(sess),
-		ecr:   ecr.New(sess),
-		opt:   opt,
+		cwl:            cloudwatchlogs.New(sess),
+		elbv2:          elbv2.New(sess),
+		ssm:            ssm.New(sess),
+		secretsmanager: secretsmanager.New(sess),
+		ecr:            ecr.New(sess),
+		opt:            opt,
 	}
+}
+
+func (v *verifier) getSecretValue(ctx context.Context, from string) (string, error) {
+	var name string
+	if strings.HasPrefix(from, "arn:aws:secretsmanager:") {
+		out, err := v.secretsmanager.GetSecretValue(&secretsmanager.GetSecretValueInput{
+			SecretId: &from, // arn
+		})
+		if err != nil {
+			return "", err
+		}
+		return *out.SecretString, err
+	} else if strings.HasPrefix(from, "arn:aws:ssm:") {
+		ns := strings.Split(from, ":")
+		name = strings.TrimPrefix(ns[len(ns)-1], "parameter")
+	} else {
+		name = from
+	}
+	out, err := v.ssm.GetParameterWithContext(ctx, &ssm.GetParameterInput{
+		Name:           &name,
+		WithDecryption: aws.Bool(true),
+	})
+	return out.String(), err
 }
 
 func (d *App) newAssumedVerifier(sess *session.Session, executionRole string, opt *VerifyOption) (*verifier, error) {
@@ -322,16 +348,10 @@ func (d *App) verifyContainer(ctx context.Context, c *ecs.ContainerDefinition) e
 		return err
 	}
 	for _, secret := range c.Secrets {
-		name := fmt.Sprintf("Secret[%s]", *secret.Name)
+		name := fmt.Sprintf("Secret %s[%s]", *secret.Name, *secret.ValueFrom)
 		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
-			_, err := d.verifier.ssm.GetParameterWithContext(ctx, &ssm.GetParameterInput{
-				Name:           secret.ValueFrom,
-				WithDecryption: aws.Bool(true),
-			})
-			if err != nil {
-				return err
-			}
-			return nil
+			_, err := d.verifier.getSecretValue(ctx, *secret.ValueFrom)
+			return err
 		})
 		if err != nil {
 			return err
