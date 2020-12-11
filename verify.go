@@ -33,24 +33,46 @@ type verifier struct {
 	opt   *VerifyOption
 }
 
-func newVerifier(sess *session.Session) *verifier {
+func colorString(fn func(string, ...interface{}) string, format string, args ...interface{}) string {
+	return fn(format, args...)
+}
+
+func plainString(_ func(string, ...interface{}) string, format string, args ...interface{}) string {
+	return fmt.Sprintf(format, args...)
+}
+
+func (v *verifier) colorString() func(func(string, ...interface{}) string, string, ...interface{}) string {
+	if aws.BoolValue(v.opt.Color) {
+		return colorString
+	}
+	return plainString
+}
+
+func newVerifier(sess *session.Session, opt *VerifyOption) *verifier {
 	return &verifier{
 		cwl:   cloudwatchlogs.New(sess),
 		elbv2: elbv2.New(sess),
 		ssm:   ssm.New(sess),
 		ecr:   ecr.New(sess),
+		opt:   opt,
 	}
 }
 
-func (d *App) newAssumedVerifier(sess *session.Session, executionRole string) (*verifier, error) {
+func (d *App) newAssumedVerifier(sess *session.Session, executionRole string, opt *VerifyOption) (*verifier, error) {
 	svc := sts.New(sess)
 	out, err := svc.AssumeRole(&sts.AssumeRoleInput{
 		RoleArn:         &executionRole,
 		RoleSessionName: aws.String("ecspresso-verifier"),
 	})
+	cstr := colorString
+	if !*opt.Color {
+		cstr = plainString
+	}
 	if err != nil {
-		color.Yellow("WARNING: failed to assume role to taskExecutuionRole. Continue to verifiy with current session. %s", err.Error())
-		return newVerifier(sess), nil
+		fmt.Println(
+			cstr(color.YellowString, "WARNING: failed to assume role to taskExecutuionRole. Continue to verifiy with current session. %s", err.Error()),
+		)
+		return newVerifier(sess, opt), nil
 	}
 	assumedSess := session.New(&aws.Config{
 		Region: sess.Config.Region,
@@ -60,12 +82,13 @@ func (d *App) newAssumedVerifier(sess *session.Session, executionRole string) (*
 			*out.Credentials.SessionToken,
 		),
 	})
-	return newVerifier(assumedSess), nil
+	return newVerifier(assumedSess, opt), nil
 }
 
 // VerifyOption represents options for Verify()
 type VerifyOption struct {
 	PutLogs *bool
+	Color   *bool
 }
 
 type verifyResourceFunc func(context.Context) error
@@ -83,14 +106,13 @@ func (d *App) Verify(opt VerifyOption) error {
 		return err
 	}
 	if td.ExecutionRoleArn != nil {
-		d.verifier, err = d.newAssumedVerifier(d.sess, *td.ExecutionRoleArn)
+		d.verifier, err = d.newAssumedVerifier(d.sess, *td.ExecutionRoleArn, &opt)
 		if err != nil {
 			return err
 		}
 	} else {
-		d.verifier = newVerifier(d.sess)
+		d.verifier = newVerifier(d.sess, &opt)
 	}
-	d.verifier.opt = &opt
 
 	ctx, cancel := d.Start()
 	defer cancel()
@@ -123,16 +145,17 @@ func (d *App) verifyResource(ctx context.Context, resourceType string, verifyFun
 		fmt.Printf(indent+f+"\n", args...)
 	}
 	print("%s", resourceType)
+	cstr := d.verifier.colorString()
 	err := verifyFunc(ctx)
 	if err != nil {
 		if _, ok := err.(verifySkipErr); ok {
-			print("--> %s [%s] %s", resourceType, color.CyanString("SKIP"), color.CyanString(err.Error()))
+			print("--> %s [%s] %s", resourceType, cstr(color.CyanString, "SKIP"), cstr(color.CyanString, err.Error()))
 			return nil
 		}
-		print("--> %s [%s] %s", resourceType, color.RedString("NG"), color.RedString(err.Error()))
+		print("--> %s [%s] %s", resourceType, cstr(color.RedString, "NG"), cstr(color.RedString, err.Error()))
 		return errors.Wrapf(err, "verify %s failed", resourceType)
 	}
-	print("--> [%s]", color.GreenString("OK"))
+	print("--> [%s]", cstr(color.GreenString, "OK"))
 	return nil
 }
 

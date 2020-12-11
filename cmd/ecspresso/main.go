@@ -7,6 +7,7 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/kayac/ecspresso"
+	"github.com/mattn/go-isatty"
 )
 
 var Version = "current"
@@ -110,8 +111,13 @@ func _main() int {
 	}
 
 	verify := kingpin.Command("verify", "verify resources in configurations")
+	verifyColorDefault := "false"
+	if isatty.IsTerminal(os.Stdout.Fd()) {
+		verifyColorDefault = "true"
+	}
 	verifyOption := ecspresso.VerifyOption{
 		PutLogs: verify.Flag("put-logs", "put verification logs to CloudWatch Logs").Default("true").Bool(),
+		Color:   verify.Flag("color", "colored output (default enabled when run in terminal)").Default(verifyColorDefault).Bool(),
 	}
 
 	render := kingpin.Command("render", "render config, service definition or task definition file to stdout")
