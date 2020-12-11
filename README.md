@@ -4,6 +4,10 @@ ecspresso is a deployment tool for Amazon ECS.
 
 (pronounced same as "espresso")
 
+## Documents
+
+[ecspresso Advent Calendar 2020](https://adventar.org/calendars/5916) (Japanese)
+
 ## Install
 
 ### Homebrew (macOS and Linux)
