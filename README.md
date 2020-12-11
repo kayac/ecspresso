@@ -55,12 +55,13 @@ jobs:
 ## Usage
 
 ```
-usage: ecspresso --config=CONFIG [<flags>] <command> [<args> ...]
+usage: ecspresso [<flags>] <command> [<args> ...]
 
 Flags:
   --help           Show context-sensitive help (also try --help-long and --help-man).
   --config=CONFIG  config file
   --debug          enable debug log
+  --color          enalble colored output
 
 Commands:
   help [<command>...]
@@ -71,6 +72,10 @@ Commands:
 
   deploy [<flags>]
     deploy service
+
+  refresh [<flags>]
+    refresh service. equivalent to deploy --skip-task-definition --force-new-deployment
+    --no-update-service
 
   create [<flags>]
     create service
@@ -96,8 +101,17 @@ Commands:
   init --region=REGION --service=SERVICE [<flags>]
     create service/task definition files by existing ECS service
 
-  diff [<flags>]
+  diff
     display diff for task definition compared with latest one on ECS
+
+  appspec [<flags>]
+    output AppSpec YAML for CodeDeploy to STDOUT
+
+  verify [<flags>]
+    verify resources in configurations
+
+  render [<flags>]
+    render config, service definition or task definition file to stdout
 ```
 
 For more options for sub-commands, See `ecspresso sub-command --help`.
@@ -409,7 +423,7 @@ $ ecspresso --config config.yaml diff
 +  "platformVersion": "LATEST"
  }
  
---- arn:aws:ecs:ap-northeast-1:314472643515:task-definition/ecspresso-test:202
+--- arn:aws:ecs:ap-northeast-1:123456789012:task-definition/ecspresso-test:202
 +++ ecs-task-def.json
  {
    "containerDefinitions": [
