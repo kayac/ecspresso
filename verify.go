@@ -33,21 +33,6 @@ type verifier struct {
 	opt   *VerifyOption
 }
 
-func colorString(fn func(string, ...interface{}) string, format string, args ...interface{}) string {
-	return fn(format, args...)
-}
-
-func plainString(_ func(string, ...interface{}) string, format string, args ...interface{}) string {
-	return fmt.Sprintf(format, args...)
-}
-
-func (v *verifier) colorString() func(func(string, ...interface{}) string, string, ...interface{}) string {
-	if aws.BoolValue(v.opt.Color) {
-		return colorString
-	}
-	return plainString
-}
-
 func newVerifier(sess *session.Session, opt *VerifyOption) *verifier {
 	return &verifier{
 		cwl:   cloudwatchlogs.New(sess),
@@ -64,13 +49,9 @@ func (d *App) newAssumedVerifier(sess *session.Session, executionRole string, op
 		RoleArn:         &executionRole,
 		RoleSessionName: aws.String("ecspresso-verifier"),
 	})
-	cstr := colorString
-	if !*opt.Color {
-		cstr = plainString
-	}
 	if err != nil {
 		fmt.Println(
-			cstr(color.YellowString, "WARNING: failed to assume role to taskExecutuionRole. Continue to verifiy with current session. %s", err.Error()),
+			color.YellowString("WARNING: failed to assume role to taskExecutuionRole. Continue to verifiy with current session. %s", err.Error()),
 		)
 		return newVerifier(sess, opt), nil
 	}
@@ -88,7 +69,6 @@ func (d *App) newAssumedVerifier(sess *session.Session, executionRole string, op
 // VerifyOption represents options for Verify()
 type VerifyOption struct {
 	PutLogs *bool
-	Color   *bool
 }
 
 type verifyResourceFunc func(context.Context) error
@@ -145,17 +125,16 @@ func (d *App) verifyResource(ctx context.Context, resourceType string, verifyFun
 		fmt.Printf(indent+f+"\n", args...)
 	}
 	print("%s", resourceType)
-	cstr := d.verifier.colorString()
 	err := verifyFunc(ctx)
 	if err != nil {
 		if _, ok := err.(verifySkipErr); ok {
-			print("--> %s [%s] %s", resourceType, cstr(color.CyanString, "SKIP"), cstr(color.CyanString, err.Error()))
+			print("--> %s [%s] %s", resourceType, color.CyanString("SKIP"), color.CyanString(err.Error()))
 			return nil
 		}
-		print("--> %s [%s] %s", resourceType, cstr(color.RedString, "NG"), cstr(color.RedString, err.Error()))
+		print("--> %s [%s] %s", resourceType, color.RedString("NG"), color.RedString(err.Error()))
 		return errors.Wrapf(err, "verify %s failed", resourceType)
 	}
-	print("--> [%s]", cstr(color.GreenString, "OK"))
+	print("--> [%s]", color.GreenString("OK"))
 	return nil
 }
 

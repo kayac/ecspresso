@@ -122,7 +122,6 @@ type InitOption struct {
 }
 
 type DiffOption struct {
-	Color *bool
 }
 
 type AppSpecOption struct {

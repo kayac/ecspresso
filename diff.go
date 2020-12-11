@@ -62,21 +62,12 @@ func (d *App) Diff(opt DiffOption) error {
 		return errors.Wrap(err, "failed to describe service")
 	}
 
-	cstr := plainString
-	if aws.BoolValue(opt.Color) {
-		cstr = colorString
-	}
-
 	if ds, err := diffServices(newSv, remoteSv); err != nil {
 		return err
 	} else if ds != "" {
-		fmt.Println(cstr(color.RedString, "--- %s", *remoteSv.ServiceArn))
-		fmt.Println(cstr(color.GreenString, "+++ %s", d.config.ServiceDefinitionPath))
-		if aws.BoolValue(opt.Color) {
-			fmt.Print(coloredDiff(ds))
-		} else {
-			fmt.Println(ds)
-		}
+		fmt.Println(color.RedString("--- %s", *remoteSv.ServiceArn))
+		fmt.Println(color.GreenString("+++ %s", d.config.ServiceDefinitionPath))
+		fmt.Print(coloredDiff(ds))
 	}
 
 	// task definition
@@ -93,13 +84,9 @@ func (d *App) Diff(opt DiffOption) error {
 	if ds, err := diffTaskDefs(newTd, remoteTd); err != nil {
 		return err
 	} else if ds != "" {
-		fmt.Println(cstr(color.RedString, "--- %s", *remoteTd.TaskDefinitionArn))
-		fmt.Println(cstr(color.GreenString, "+++ %s", d.config.TaskDefinitionPath))
-		if aws.BoolValue(opt.Color) {
-			fmt.Print(coloredDiff(ds))
-		} else {
-			fmt.Println(ds)
-		}
+		fmt.Println(color.RedString("--- %s", *remoteTd.TaskDefinitionArn))
+		fmt.Println(color.GreenString("+++ %s", d.config.TaskDefinitionPath))
+		fmt.Print(coloredDiff(ds))
 	}
 
 	return nil
@@ -109,9 +96,9 @@ func coloredDiff(src string) string {
 	var b strings.Builder
 	for _, line := range strings.Split(src, "\n") {
 		if strings.HasPrefix(line, "-") {
-			b.WriteString(colorString(color.RedString, line) + "\n")
+			b.WriteString(color.RedString(line) + "\n")
 		} else if strings.HasPrefix(line, "+") {
-			b.WriteString(colorString(color.GreenString, line) + "\n")
+			b.WriteString(color.GreenString(line) + "\n")
 		} else {
 			b.WriteString(line + "\n")
 		}
