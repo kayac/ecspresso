@@ -102,8 +102,14 @@ func _main() int {
 		ServiceDefinitionPath: init.Flag("service-definition-path", "output service definition file path").Default("ecs-service-def.json").String(),
 	}
 
-	_ = kingpin.Command("diff", "display diff for task definition compared with latest one on ECS")
-	diffOption := ecspresso.DiffOption{}
+	diff := kingpin.Command("diff", "display diff for task definition compared with latest one on ECS")
+	diffColorDefault := "false"
+	if isatty.IsTerminal(os.Stdout.Fd()) {
+		diffColorDefault = "true"
+	}
+	diffOption := ecspresso.DiffOption{
+		Color: diff.Flag("color", "colored output (default enabled when in a terminal)").Default(diffColorDefault).Bool(),
+	}
 
 	appspec := kingpin.Command("appspec", "output AppSpec YAML for CodeDeploy to STDOUT")
 	appspecOption := ecspresso.AppSpecOption{
@@ -117,7 +123,7 @@ func _main() int {
 	}
 	verifyOption := ecspresso.VerifyOption{
 		PutLogs: verify.Flag("put-logs", "put verification logs to CloudWatch Logs").Default("true").Bool(),
-		Color:   verify.Flag("color", "colored output (default enabled when run in terminal)").Default(verifyColorDefault).Bool(),
+		Color:   verify.Flag("color", "colored output (default enabled when in a terminal)").Default(verifyColorDefault).Bool(),
 	}
 
 	render := kingpin.Command("render", "render config, service definition or task definition file to stdout")

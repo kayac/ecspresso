@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/fatih/color"
 	"github.com/kylelemons/godebug/diff"
 	"github.com/pkg/errors"
 )
@@ -61,16 +62,26 @@ func (d *App) Diff(opt DiffOption) error {
 		return errors.Wrap(err, "failed to describe service")
 	}
 
+	cstr := plainString
+	if aws.BoolValue(opt.Color) {
+		cstr = colorString
+	}
+
 	if ds, err := diffServices(newSv, remoteSv); err != nil {
 		return err
 	} else if ds != "" {
-		fmt.Println("---", *remoteSv.ServiceArn)
-		fmt.Println("+++", d.config.ServiceDefinitionPath)
-		fmt.Println(ds)
+		fmt.Println(cstr(color.RedString, "--- %s", *remoteSv.ServiceArn))
+		fmt.Println(cstr(color.GreenString, "+++ %s", d.config.ServiceDefinitionPath))
+		if aws.BoolValue(opt.Color) {
+			fmt.Print(coloredDiff(ds))
+		} else {
+			fmt.Println(ds)
+		}
 	}
 
 	// task definition
-	newTd, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	newTd, err := d.
+		LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
@@ -82,12 +93,30 @@ func (d *App) Diff(opt DiffOption) error {
 	if ds, err := diffTaskDefs(newTd, remoteTd); err != nil {
 		return err
 	} else if ds != "" {
-		fmt.Println("---", *remoteTd.TaskDefinitionArn)
-		fmt.Println("+++", d.config.TaskDefinitionPath)
-		fmt.Println(ds)
+		fmt.Println(cstr(color.RedString, "--- %s", *remoteTd.TaskDefinitionArn))
+		fmt.Println(cstr(color.GreenString, "+++ %s", d.config.TaskDefinitionPath))
+		if aws.BoolValue(opt.Color) {
+			fmt.Print(coloredDiff(ds))
+		} else {
+			fmt.Println(ds)
+		}
 	}
 
 	return nil
+}
+
+func coloredDiff(src string) string {
+	var b strings.Builder
+	for _, line := range strings.Split(src, "\n") {
+		if strings.HasPrefix(line, "-") {
+			b.WriteString(colorString(color.RedString, line) + "\n")
+		} else if strings.HasPrefix(line, "+") {
+			b.WriteString(colorString(color.GreenString, line) + "\n")
+		} else {
+			b.WriteString(line + "\n")
+		}
+	}
+	return b.String()
 }
 
 func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition) *ecs.RegisterTaskDefinitionInput {
