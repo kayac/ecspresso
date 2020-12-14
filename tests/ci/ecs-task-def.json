@@ -11,6 +11,20 @@
           "awslogs-stream-prefix": "nginx"
         }
       },
+      "secrets": [
+        {
+          "name": "FOO",
+          "valueFrom": "/ecspresso-test/foo"
+        },
+        {
+          "name": "BAR",
+          "valueFrom": "arn:aws:ssm:{{must_env `AWS_REGION`}}:{{must_env `AWS_ACCOUNT_ID`}}:parameter/ecspresso-test/bar"
+        },
+        {
+          "name": "BAZ",
+          "valueFrom": "arn:aws:secretsmanager:{{must_env `AWS_REGION`}}:{{must_env `AWS_ACCOUNT_ID`}}:secret:ecspresso-test/baz-06XQOH:bar::"
+        }
+      ],
       "name": "nginx",
       "portMappings": [
         {

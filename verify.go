@@ -46,27 +46,35 @@ func newVerifier(sess *session.Session, opt *VerifyOption) *verifier {
 	}
 }
 
-func (v *verifier) getSecretValue(ctx context.Context, from string) (string, error) {
-	var name string
+func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
+	// secrets manager
 	if strings.HasPrefix(from, "arn:aws:secretsmanager:") {
-		out, err := v.secretsmanager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-			SecretId: &from, // arn
-		})
-		if err != nil {
-			return "", err
+		// https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/specifying-sensitive-data-secrets.html
+		// Truncate additional params in secretsmanager Arn.
+		part := strings.Split(from, ":")
+		if len(part) < 7 {
+			return errors.New("invalid arn format")
 		}
-		return *out.SecretString, err
-	} else if strings.HasPrefix(from, "arn:aws:ssm:") {
+		secretArn := strings.Join(part[0:7], ":")
+		_, err := v.secretsmanager.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{
+			SecretId: &secretArn,
+		})
+		return err
+	}
+
+	// ssm
+	var name string
+	if strings.HasPrefix(from, "arn:aws:ssm:") {
 		ns := strings.Split(from, ":")
 		name = strings.TrimPrefix(ns[len(ns)-1], "parameter")
 	} else {
 		name = from
 	}
-	out, err := v.ssm.GetParameterWithContext(ctx, &ssm.GetParameterInput{
+	_, err := v.ssm.GetParameterWithContext(ctx, &ssm.GetParameterInput{
 		Name:           &name,
 		WithDecryption: aws.Bool(true),
 	})
-	return out.String(), err
+	return err
 }
 
 func (d *App) newAssumedVerifier(sess *session.Session, executionRole string, opt *VerifyOption) (*verifier, error) {
@@ -350,8 +358,7 @@ func (d *App) verifyContainer(ctx context.Context, c *ecs.ContainerDefinition) e
 	for _, secret := range c.Secrets {
 		name := fmt.Sprintf("Secret %s[%s]", *secret.Name, *secret.ValueFrom)
 		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
-			_, err := d.verifier.getSecretValue(ctx, *secret.ValueFrom)
-			return err
+			return d.verifier.existsSecretValue(ctx, *secret.ValueFrom)
 		})
 		if err != nil {
 			return err
