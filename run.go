@@ -1,12 +1,16 @@
 package ecspresso
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/morikuni/aec"
 	"github.com/pkg/errors"
 )
 
@@ -114,4 +118,92 @@ func (d *App) Run(opt RunOption) error {
 	d.Log("Run task completed!")
 
 	return nil
+}
+
+func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ecs.TaskOverride, count int64) (*ecs.Task, error) {
+	d.Log("Running task")
+
+	out, err := d.ecs.RunTaskWithContext(
+		ctx,
+		&ecs.RunTaskInput{
+			Cluster:                  aws.String(d.Cluster),
+			TaskDefinition:           aws.String(tdArn),
+			NetworkConfiguration:     sv.NetworkConfiguration,
+			LaunchType:               sv.LaunchType,
+			Overrides:                ov,
+			Count:                    aws.Int64(count),
+			CapacityProviderStrategy: sv.CapacityProviderStrategy,
+			PlacementConstraints:     sv.PlacementConstraints,
+			PlacementStrategy:        sv.PlacementStrategy,
+			PlatformVersion:          sv.PlatformVersion,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(out.Failures) > 0 {
+		f := out.Failures[0]
+		d.Log("Task ARN: " + *f.Arn)
+		return nil, errors.New(*f.Reason)
+	}
+
+	task := out.Tasks[0]
+	d.Log("Task ARN:", *task.TaskArn)
+	return task, nil
+}
+
+func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *ecs.ContainerDefinition, startedAt time.Time) error {
+	d.Log("Waiting for run task...(it may take a while)")
+	waitCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	lc := watchContainer.LogConfiguration
+	if lc == nil || *lc.LogDriver != "awslogs" || lc.Options["awslogs-stream-prefix"] == nil {
+		d.Log("awslogs not configured")
+		if err := d.WaitUntilTaskStopped(ctx, task); err != nil {
+			return errors.Wrap(err, "failed to run task")
+		}
+		return nil
+	}
+
+	logGroup, logStream := d.GetLogInfo(task, watchContainer)
+	time.Sleep(3 * time.Second) // wait for log stream
+
+	go func() {
+		tick := time.Tick(5 * time.Second)
+		var lines int
+		for {
+			select {
+			case <-waitCtx.Done():
+				return
+			case <-tick:
+				if isTerminal {
+					for i := 0; i < lines; i++ {
+						fmt.Print(aec.EraseLine(aec.EraseModes.All), aec.PreviousLine(1))
+					}
+				}
+				lines, _ = d.GetLogEvents(waitCtx, logGroup, logStream, startedAt)
+			}
+		}
+	}()
+
+	if err := d.WaitUntilTaskStopped(ctx, task); err != nil {
+		return errors.Wrap(err, "failed to run task")
+	}
+	return nil
+}
+
+func (d *App) WaitUntilTaskStopped(ctx context.Context, task *ecs.Task) error {
+	// Add an option WithWaiterDelay and request.WithWaiterMaxAttempts for a long timeout.
+	// SDK Default is 10 min (MaxAttempts=100 * Delay=6sec) at now.
+	const delay = 6 * time.Second
+	attempts := int((d.config.Timeout / delay)) + 1
+	if (d.config.Timeout % delay) > 0 {
+		attempts++
+	}
+	return d.ecs.WaitUntilTasksStoppedWithContext(
+		ctx, d.DescribeTasksInput(task),
+		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
+		request.WithWaiterMaxAttempts(attempts),
+	)
 }
