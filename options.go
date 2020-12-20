@@ -1,5 +1,7 @@
 package ecspresso
 
+import "github.com/aws/aws-sdk-go/service/ecs"
+
 const dryRunStr = "DRY RUN"
 
 type DryRunnable interface {
@@ -88,6 +90,8 @@ type RunOption struct {
 	Count                *int64
 	WatchContainer       *string
 	LatestTaskDefinition *bool
+	PropagateTags        *string
+	Tags                 []*ecs.Tag
 }
 
 func (opt RunOption) DryRunString() string {

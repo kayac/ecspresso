@@ -100,7 +100,7 @@ func (d *App) Run(opt RunOption) error {
 		return nil
 	}
 
-	task, err := d.RunTask(ctx, tdArn, sv, &ov, *opt.Count)
+	task, err := d.RunTask(ctx, tdArn, sv, &ov, &opt)
 	if err != nil {
 		return errors.Wrap(err, "failed to run task")
 	}
@@ -120,24 +120,43 @@ func (d *App) Run(opt RunOption) error {
 	return nil
 }
 
-func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ecs.TaskOverride, count int64) (*ecs.Task, error) {
+func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ecs.TaskOverride, opt *RunOption) (*ecs.Task, error) {
 	d.Log("Running task")
 
-	out, err := d.ecs.RunTaskWithContext(
-		ctx,
-		&ecs.RunTaskInput{
-			Cluster:                  aws.String(d.Cluster),
-			TaskDefinition:           aws.String(tdArn),
-			NetworkConfiguration:     sv.NetworkConfiguration,
-			LaunchType:               sv.LaunchType,
-			Overrides:                ov,
-			Count:                    aws.Int64(count),
-			CapacityProviderStrategy: sv.CapacityProviderStrategy,
-			PlacementConstraints:     sv.PlacementConstraints,
-			PlacementStrategy:        sv.PlacementStrategy,
-			PlatformVersion:          sv.PlatformVersion,
-		},
-	)
+	in := &ecs.RunTaskInput{
+		Cluster:                  aws.String(d.Cluster),
+		TaskDefinition:           aws.String(tdArn),
+		NetworkConfiguration:     sv.NetworkConfiguration,
+		LaunchType:               sv.LaunchType,
+		Overrides:                ov,
+		Count:                    opt.Count,
+		CapacityProviderStrategy: sv.CapacityProviderStrategy,
+		PlacementConstraints:     sv.PlacementConstraints,
+		PlacementStrategy:        sv.PlacementStrategy,
+		PlatformVersion:          sv.PlatformVersion,
+		Tags:                     opt.Tags,
+	}
+
+	switch aws.StringValue(opt.PropagateTags) {
+	case "SERVICE":
+		out, err := d.ecs.ListTagsForResourceWithContext(ctx, &ecs.ListTagsForResourceInput{
+			ResourceArn: sv.ServiceArn,
+		})
+		if err != nil {
+			return nil, err
+		}
+		d.DebugLog("propagate tags from service", *sv.ServiceArn, out.String())
+		for _, tag := range out.Tags {
+			in.Tags = append(in.Tags, tag)
+		}
+	case "":
+		in.PropagateTags = nil
+	default:
+		in.PropagateTags = opt.PropagateTags
+	}
+	d.DebugLog("run task input", in.String())
+
+	out, err := d.ecs.RunTaskWithContext(ctx, in)
 	if err != nil {
 		return nil, err
 	}
