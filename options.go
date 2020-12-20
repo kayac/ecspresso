@@ -1,6 +1,12 @@
 package ecspresso
 
-import "github.com/aws/aws-sdk-go/service/ecs"
+import (
+	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/pkg/errors"
+)
 
 const dryRunStr = "DRY RUN"
 
@@ -91,7 +97,7 @@ type RunOption struct {
 	WatchContainer       *string
 	LatestTaskDefinition *bool
 	PropagateTags        *string
-	Tags                 []*ecs.Tag
+	Tags                 *string
 }
 
 func (opt RunOption) DryRunString() string {
@@ -99,6 +105,32 @@ func (opt RunOption) DryRunString() string {
 		return ""
 	}
 	return ""
+}
+
+func parseTags(s string) ([]*ecs.Tag, error) {
+	tags := make([]*ecs.Tag, 0)
+	if s == "" {
+		return tags, nil
+	}
+
+	tagsStr := strings.Split(s, ",")
+	for _, tag := range tagsStr {
+		if tag == "" {
+			continue
+		}
+		pair := strings.SplitN(tag, "=", 2)
+		if len(pair) != 2 {
+			return tags, errors.Errorf("invalid tag format. Key=Value is required: %s", tag)
+		}
+		if len(pair[0]) == 0 {
+			return tags, errors.Errorf("tag Key is required")
+		}
+		tags = append(tags, &ecs.Tag{
+			Key:   aws.String(pair[0]),
+			Value: aws.String(pair[1]),
+		})
+	}
+	return tags, nil
 }
 
 type WaitOption struct {

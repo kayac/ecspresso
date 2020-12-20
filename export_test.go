@@ -7,4 +7,5 @@ var (
 	ToNumberCPU                  = toNumberCPU
 	ToNumberMemory               = toNumberMemory
 	CalcDesiredCount             = calcDesiredCount
+	ParseTags                    = parseTags
 )

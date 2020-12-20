@@ -90,6 +90,7 @@ func _main() int {
 		WatchContainer:       run.Flag("watch-container", "the container name to watch exit code").String(),
 		LatestTaskDefinition: run.Flag("latest-task-definition", "run with latest task definition without registering new task definition").Default("false").Bool(),
 		PropagateTags:        run.Flag("propagate-tags", "propagate the tags for the task (SERVICE or TASK_DEFINITION)").Default("").Enum("SERVICE", "TASK_DEFINITION", ""),
+		Tags:                 run.Flag("tags", "tags for the task: format is KeyFoo=ValueFoo,KeyBar=ValueBar").String(),
 	}
 
 	register := kingpin.Command("register", "register task definition")

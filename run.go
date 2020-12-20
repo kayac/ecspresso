@@ -123,6 +123,11 @@ func (d *App) Run(opt RunOption) error {
 func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ecs.TaskOverride, opt *RunOption) (*ecs.Task, error) {
 	d.Log("Running task")
 
+	tags, err := parseTags(*opt.Tags)
+	if err != nil {
+		return nil, err
+	}
+
 	in := &ecs.RunTaskInput{
 		Cluster:                  aws.String(d.Cluster),
 		TaskDefinition:           aws.String(tdArn),
@@ -134,7 +139,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ec
 		PlacementConstraints:     sv.PlacementConstraints,
 		PlacementStrategy:        sv.PlacementStrategy,
 		PlatformVersion:          sv.PlatformVersion,
-		Tags:                     opt.Tags,
+		Tags:                     tags,
 	}
 
 	switch aws.StringValue(opt.PropagateTags) {
