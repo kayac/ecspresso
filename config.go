@@ -6,6 +6,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/kayac/ecspresso/appspec"
 	gc "github.com/kayac/go-config"
 )
@@ -27,6 +28,7 @@ type Config struct {
 
 	templateFuncs []template.FuncMap
 	dir           string
+	sess          *session.Session
 }
 
 // Load loads configuration file from file path.
@@ -35,11 +37,13 @@ func (c *Config) Load(p string) error {
 		return err
 	}
 	c.dir = filepath.Dir(p)
-	return c.Restrict()
+	return nil
 }
 
-// Restrict restricts a configuration.
-func (c *Config) Restrict() error {
+// Setup setups the configuration.
+func (c *Config) Setup(sess *session.Session) error {
+	c.sess = sess
+
 	if c.Cluster == "" {
 		c.Cluster = DefaultClusterName
 	}

@@ -16,7 +16,7 @@ func TestLoadTaskDefinition(t *testing.T) {
 			Cluster:            "default",
 			TaskDefinitionPath: path,
 		}
-		if err := c.Restrict(); err != nil {
+		if err := c.Setup(nil); err != nil {
 			t.Error(err)
 		}
 		app, err := ecspresso.NewApp(c)

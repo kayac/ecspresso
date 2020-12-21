@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/fujiwara/tfstate-lookup/tfstate"
+	"github.com/kayac/ecspresso/cloudformation"
 )
 
 type ConfigPlugin struct {
@@ -17,6 +18,8 @@ func (p ConfigPlugin) Setup(c *Config) error {
 	switch p.Name {
 	case "tfstate":
 		return setupPluginTFState(p, c)
+	case "cfn_output":
+		return setupPluginCFnOutput(p, c)
 	default:
 		return fmt.Errorf("plugin %s is not available", p.Name)
 	}
@@ -35,5 +38,10 @@ func setupPluginTFState(p ConfigPlugin, c *Config) error {
 		return err
 	}
 	c.templateFuncs = append(c.templateFuncs, funcs)
+	return nil
+}
+
+func setupPluginCFnOutput(p ConfigPlugin, c *Config) error {
+	c.templateFuncs = append(c.templateFuncs, cloudformation.NewFuncs(c.sess))
 	return nil
 }
