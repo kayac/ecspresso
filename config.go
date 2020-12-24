@@ -3,11 +3,14 @@ package ecspresso
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 	"time"
 
+	gv "github.com/hashicorp/go-version"
 	"github.com/kayac/ecspresso/appspec"
 	gc "github.com/kayac/go-config"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -16,6 +19,7 @@ const (
 )
 
 type Config struct {
+	RequiredVersion       string           `yaml:"requried_version"`
 	Region                string           `yaml:"region"`
 	Cluster               string           `yaml:"cluster"`
 	Service               string           `yaml:"service"`
@@ -30,16 +34,16 @@ type Config struct {
 }
 
 // Load loads configuration file from file path.
-func (c *Config) Load(p string) error {
+func (c *Config) Load(currentVersion string, p string) error {
 	if err := gc.LoadWithEnv(c, p); err != nil {
 		return err
 	}
 	c.dir = filepath.Dir(p)
-	return c.Restrict()
+	return c.Restrict(currentVersion)
 }
 
 // Restrict restricts a configuration.
-func (c *Config) Restrict() error {
+func (c *Config) Restrict(currentVersion string) error {
 	if c.Cluster == "" {
 		c.Cluster = DefaultClusterName
 	}
@@ -58,7 +62,45 @@ func (c *Config) Restrict() error {
 			return err
 		}
 	}
+
+	if c.RequiredVersion != "" {
+		constraints, err := gv.NewConstraint(c.RequiredVersion)
+		if err != nil {
+			return errors.Wrap(err, "required_version is invalid format")
+		}
+		onlyConstraintLessThan := true
+		for _, constraint := range constraints {
+			if !strings.HasPrefix(strings.Trim(constraint.String(), " "), "<") {
+				onlyConstraintLessThan = false
+				break
+			}
+		}
+		if onlyConstraintLessThan {
+			return errors.New("required_version cannot only be less than a constraint")
+		}
+		if !checkRequiredVersion(currentVersion, constraints) {
+			return errors.New("the current version does not meet the required_version")
+		}
+	}
+
 	return nil
+}
+
+func checkRequiredVersion(currentVersion string, constraints gv.Constraints) bool {
+	if currentVersion == "current" {
+		// if only GreaterThan constraint, pass check required version
+		for _, constraint := range constraints {
+			if !strings.HasPrefix(strings.Trim(constraint.String(), " "), ">") {
+				return false
+			}
+		}
+		return true
+	}
+	v, err := gv.NewVersion(currentVersion)
+	if err != nil {
+		return false
+	}
+	return constraints.Check(v)
 }
 
 func NewDefaultConfig() *Config {

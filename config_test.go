@@ -2,6 +2,7 @@ package ecspresso_test
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -10,7 +11,7 @@ import (
 
 func TestLoadServiceDefinition(t *testing.T) {
 	c := &ecspresso.Config{}
-	err := c.Load("tests/test.yaml")
+	err := c.Load("current", "tests/test.yaml")
 	if err != nil {
 		t.Error(err)
 	}
@@ -45,7 +46,7 @@ func testLoadConfigWithPlugin(t *testing.T, path string) {
 	os.Setenv("JSON", `{"foo":"bar"}`)
 
 	conf := &ecspresso.Config{}
-	err := conf.Load(path)
+	err := conf.Load("current", path)
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,5 +91,87 @@ func testLoadConfigWithPlugin(t *testing.T, path string) {
 	env := td.ContainerDefinitions[0].Environment[0]
 	if *env.Name != "JSON" || *env.Value != `{"foo":"bar"}` {
 		t.Errorf("unexpected JSON got:%s", *env.Value)
+	}
+}
+
+func TestRestrictConfigWithRequiredVersion(t *testing.T) {
+	cases := []struct {
+		RequiredVersion string
+		CurrentVersion  string
+	}{
+		{
+			RequiredVersion: ">= v1.0.0",
+			CurrentVersion:  "v1.2.1",
+		},
+		{
+			RequiredVersion: "= v1.0.0",
+			CurrentVersion:  "1.0.0",
+		},
+		{
+			RequiredVersion: ">= v1, < v2",
+			CurrentVersion:  "1.2.1",
+		},
+		{
+			RequiredVersion: ">= v1",
+			CurrentVersion:  "current",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.CurrentVersion+":"+c.RequiredVersion, func(t *testing.T) {
+			conf := ecspresso.NewDefaultConfig()
+			conf.RequiredVersion = c.RequiredVersion
+
+			if err := conf.Restrict(c.CurrentVersion); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestRestrictConfigWithInvalidRequiredVersion(t *testing.T) {
+	cases := []struct {
+		RequiredVersion string
+		CurrentVersion  string
+		ErrorMessage    string
+	}{
+		{
+			RequiredVersion: "hoge",
+			CurrentVersion:  "v1.2.1",
+			ErrorMessage:    "required_version is invalid format:",
+		},
+		{
+			RequiredVersion: "< v1.0.0",
+			CurrentVersion:  "v1.2.1",
+			ErrorMessage:    "required_version cannot only be less than a constraint",
+		},
+		{
+			RequiredVersion: "< v1.0.0, < v2",
+			CurrentVersion:  "v1.2.1",
+			ErrorMessage:    "required_version cannot only be less than a constraint",
+		},
+		{
+			RequiredVersion: "= v1.0.0",
+			CurrentVersion:  "v1.2.1",
+			ErrorMessage:    "the current version does not meet the required_version",
+		},
+		{
+			RequiredVersion: ">= v0, <v1",
+			CurrentVersion:  "v1.2.1",
+			ErrorMessage:    "the current version does not meet the required_version",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.CurrentVersion+":"+c.RequiredVersion, func(t *testing.T) {
+			conf := ecspresso.NewDefaultConfig()
+			conf.RequiredVersion = c.RequiredVersion
+			err := conf.Restrict(c.CurrentVersion)
+			if err == nil {
+				t.Error("expected any error, but no error")
+				return
+			}
+			if !strings.HasPrefix(err.Error(), c.ErrorMessage) {
+				t.Errorf("unexpected error got:%s", err)
+			}
+		})
 	}
 }
