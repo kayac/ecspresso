@@ -22,7 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/fatih/color"
-	"github.com/kayac/ecspresso/dockerhub"
+	"github.com/kayac/ecspresso/registry"
 	"github.com/pkg/errors"
 )
 
@@ -281,49 +281,31 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 }
 
 var (
-	ecrImageURLRegex    = regexp.MustCompile(`dkr\.ecr\..+.amazonaws\.com/.*:.*`)
-	dockerHubImageRegex = regexp.MustCompile(`([a-zA-Z0-9_-]+/)?[a-zA-Z0-9_-]+:.*`)
+	ecrImageURLRegex = regexp.MustCompile(`dkr\.ecr\..+.amazonaws\.com/.*:.*`)
 )
 
 func (d *App) verifyECRImage(ctx context.Context, image string) error {
-	rr := strings.Split(strings.SplitN(image, "/", 2)[1], ":")
-	repo, tag := rr[0], rr[1]
-	var nextToken *string
-	for {
-		out, err := d.verifier.ecr.ListImagesWithContext(ctx, &ecr.ListImagesInput{
-			RepositoryName: aws.String(repo),
-			Filter:         &ecr.ListImagesFilter{TagStatus: aws.String("TAGGED")},
-			NextToken:      nextToken,
-		})
-		if err != nil {
-			return err
-		}
-		nextToken = out.NextToken
-		for _, img := range out.ImageIds {
-			d.DebugLog(*img.ImageTag)
-			if aws.StringValue(img.ImageTag) == tag {
-				return nil
-			}
-		}
-		if nextToken == nil {
-			break
-		}
-	}
-	return errors.Errorf("%s:%s not found", repo, tag)
-}
-
-func (d *App) verifyDockerHubImage(ctx context.Context, image string) error {
-	rr := strings.Split(image, ":")
-	repoName, tag := rr[0], rr[1]
-	if !strings.Contains(repoName, "/") {
-		repoName = "library/" + repoName
-	}
-	d.DebugLog(fmt.Sprintf("dockerhub repo=%s tag=%s", repoName, tag))
-
-	repo, err := dockerhub.New(repoName)
+	d.DebugLog("VERIFY ECR Image")
+	out, err := d.verifier.ecr.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
 	if err != nil {
 		return err
 	}
+	token := out.AuthorizationData[0].AuthorizationToken
+	return d.verifyRegistryImage(ctx, image, "AWS", aws.StringValue(token))
+}
+
+func (d *App) verifyRegistryImage(ctx context.Context, image, user, password string) error {
+	rr := strings.SplitN(image, ":", 2)
+	image = rr[0]
+	var tag string
+	if len(rr) == 1 {
+		tag = "latest"
+	} else {
+		tag = rr[1]
+	}
+	d.DebugLog(fmt.Sprintf("image=%s tag=%s", image, tag))
+
+	repo := registry.New(image, user, password)
 	ok, err := repo.HasImage(tag)
 	if err != nil {
 		return err
@@ -331,7 +313,7 @@ func (d *App) verifyDockerHubImage(ctx context.Context, image string) error {
 	if ok {
 		return nil
 	}
-	return errors.Errorf("%s:%s is not found in DockerHub", repoName, tag)
+	return errors.Errorf("%s:%s is not found in Registry", image, tag)
 }
 
 func (d *App) verifyImage(ctx context.Context, image string) error {
@@ -340,10 +322,8 @@ func (d *App) verifyImage(ctx context.Context, image string) error {
 	}
 	if ecrImageURLRegex.MatchString(image) {
 		return d.verifyECRImage(ctx, image)
-	} else if dockerHubImageRegex.MatchString(image) {
-		return d.verifyDockerHubImage(ctx, image)
 	}
-	return verifySkipErr("not supported URL (patches are welcome!)")
+	return d.verifyRegistryImage(ctx, image, "", "")
 }
 
 func (d *App) verifyContainer(ctx context.Context, c *ecs.ContainerDefinition) error {
