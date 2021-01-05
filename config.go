@@ -1,11 +1,13 @@
 package ecspresso
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"text/template"
 	"time"
 
+	"github.com/fatih/color"
 	gv "github.com/hashicorp/go-version"
 	"github.com/kayac/ecspresso/appspec"
 	gc "github.com/kayac/go-config"
@@ -75,8 +77,14 @@ func (c *Config) Restrict() error {
 
 // ValidateVersion validates a version satisfies required_version.
 func (c *Config) ValidateVersion(version string) error {
+	if c.versionConstraints == nil {
+		return nil
+	}
 	v, err := gv.NewVersion(version)
 	if err != nil {
+		fmt.Println(
+			color.YellowString("WARNING: Invalid version format \"%s\" Skip checking required_version.", version),
+		)
 		// invalid version string (e.g. "current") always allowed
 		return nil
 	}
