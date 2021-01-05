@@ -4,7 +4,7 @@ export GO111MODULE := on
 
 .PHONY: test binary install clean
 
-cmd/ecspresso/ecspresso: *.go cmd/ecspresso/*.go go.* appspec/*.go
+cmd/ecspresso/ecspresso: *.go cmd/ecspresso/*.go go.* */*.go
 	cd cmd/ecspresso && go build -ldflags "-s -w -X main.Version=${GIT_VER} -X main.buildDate=${DATE}" -gcflags="-trimpath=${PWD}"
 
 install: cmd/ecspresso/ecspresso
