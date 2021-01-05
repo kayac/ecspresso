@@ -112,6 +112,10 @@ func TestRestrictConfigWithRequiredVersion(t *testing.T) {
 			CurrentVersion:  "1.2.1",
 		},
 		{
+			RequiredVersion: ">= v1.2.1, < v2",
+			CurrentVersion:  "v1.2.1+3-g04fdc8e",
+		},
+		{
 			RequiredVersion: ">= v1",
 			CurrentVersion:  "current",
 		},
@@ -153,6 +157,10 @@ func TestRestrictConfigWithInvalidRequiredVersion(t *testing.T) {
 			RequiredVersion: "= v1.0.0",
 			CurrentVersion:  "v1.2.1",
 			ErrorMessage:    "the current version does not meet the required_version",
+		},
+		{
+			RequiredVersion: ">= v1.2.2, < v2",
+			CurrentVersion:  "v1.2.1+3-g04fdc8e",
 		},
 		{
 			RequiredVersion: ">= v0, <v1",
