@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
 )
 
-// Repositry represents DockeHub repositry
+const dockerHubHost = "registry.hub.docker.com"
+
+// Repositry represents a repositry using Docker Registry API v2.
 type Repositry struct {
 	client   *http.Client
 	host     string
@@ -28,25 +31,31 @@ func New(image, user, password string) *Repositry {
 		password: password,
 	}
 	p := strings.SplitN(image, "/", 2)
-	host := p[0]
-	if strings.Contains(host, ".") {
+	if strings.Contains(p[0], ".") && len(p) >= 2 {
 		// Docker registry v2 API
-		c.host = host
+		c.host = p[0]
 		c.repo = p[1]
 	} else {
 		// DockerHub
 		if !strings.Contains(image, "/") {
 			image = "library/" + image
 		}
-		c.host = "registry.hub.docker.com"
+		c.host = dockerHubHost
 		c.repo = image
 	}
 	return c
 }
 
 func (c *Repositry) login(endpoint, service, scope string) error {
-	u := fmt.Sprintf("%s?service=%s&scope=%s", endpoint, service, scope)
-	req, err := http.NewRequest("GET", u, nil)
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return err
+	}
+	u.RawQuery = strings.Join([]string{
+		"service=" + url.QueryEscape(service),
+		"scope=" + url.QueryEscape(scope),
+	}, "&")
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return err
 	}
@@ -57,13 +66,13 @@ func (c *Repositry) login(endpoint, service, scope string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return errors.Errorf("login failed %s", resp.Status)
 	}
-	defer resp.Body.Close()
 	dec := json.NewDecoder(resp.Body)
 	var body struct {
-		Token string
+		Token string `json:"Token"`
 	}
 	if err := dec.Decode(&body); err != nil {
 		return err
@@ -78,6 +87,7 @@ func (c *Repositry) login(endpoint, service, scope string) error {
 func (c *Repositry) getManifests(tag string) (*http.Response, error) {
 	u := fmt.Sprintf("https://%s/v2/%s/manifests/%s", c.host, c.repo, tag)
 	req, _ := http.NewRequest(http.MethodHead, u, nil)
+	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	} else if c.user == "AWS" && c.password != "" {
@@ -120,7 +130,7 @@ func (c *Repositry) HasImage(tag string) (bool, error) {
 }
 
 var (
-	partRegexp = regexp.MustCompile(`([a-zA-Z0-9_]+)="([^"]*)"`)
+	partRegexp = regexp.MustCompile(`[a-zA-Z0-9_]+="[^"]*"`)
 )
 
 func parseAuthHeader(bearer string) (endpoint, service, scope string) {

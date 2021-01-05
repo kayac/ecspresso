@@ -286,7 +286,10 @@ var (
 
 func (d *App) verifyECRImage(ctx context.Context, image string) error {
 	d.DebugLog("VERIFY ECR Image")
-	out, err := d.verifier.ecr.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
+	out, err := d.verifier.ecr.GetAuthorizationTokenWithContext(
+		ctx,
+		&ecr.GetAuthorizationTokenInput{},
+	)
 	if err != nil {
 		return err
 	}
