@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/fujiwara/cfn-lookup/cfn"
 	"github.com/fujiwara/tfstate-lookup/tfstate"
@@ -15,7 +16,7 @@ type ConfigPlugin struct {
 }
 
 func (p ConfigPlugin) Setup(c *Config) error {
-	switch p.Name {
+	switch strings.ToLower(p.Name) {
 	case "tfstate":
 		return setupPluginTFState(p, c)
 	case "cloudformation":
