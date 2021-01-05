@@ -7,6 +7,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/fatih/color"
 	gv "github.com/hashicorp/go-version"
 	"github.com/kayac/ecspresso/appspec"
@@ -34,6 +35,7 @@ type Config struct {
 	templateFuncs      []template.FuncMap
 	dir                string
 	versionConstraints gv.Constraints
+	sess               *session.Session
 }
 
 // Load loads configuration file from file path.
@@ -66,7 +68,11 @@ func (c *Config) Restrict() error {
 		}
 		c.versionConstraints = constraints
 	}
+	return nil
+}
 
+func (c *Config) setupPlugins(sess *session.Session) error {
+	c.sess = sess
 	for _, p := range c.Plugins {
 		if err := p.Setup(c); err != nil {
 			return err

@@ -20,7 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/kayac/go-config"
+	gc "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
 	"github.com/pkg/errors"
@@ -52,7 +52,7 @@ type App struct {
 	config  *Config
 	Debug   bool
 
-	loader *config.Loader
+	loader *gc.Loader
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
@@ -257,15 +257,19 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 }
 
 func NewApp(conf *Config) (*App, error) {
-	loader := config.New()
-	for _, f := range conf.templateFuncs {
-		loader.Funcs(f)
-	}
-
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config:            aws.Config{Region: aws.String(conf.Region)},
 		SharedConfigState: session.SharedConfigEnable,
 	}))
+
+	if err := conf.setupPlugins(sess); err != nil {
+		return nil, err
+	}
+	loader := gc.New()
+	for _, f := range conf.templateFuncs {
+		loader.Funcs(f)
+	}
+
 	d := &App{
 		Service:     conf.Service,
 		Cluster:     conf.Cluster,
