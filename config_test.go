@@ -108,6 +108,14 @@ func TestRestrictConfigWithRequiredVersion(t *testing.T) {
 			CurrentVersion:  "1.0.0",
 		},
 		{
+			RequiredVersion: "~> v1.1.0",
+			CurrentVersion:  "1.1.5",
+		},
+		{
+			RequiredVersion: "~> v1.0",
+			CurrentVersion:  "1.2.1",
+		},
+		{
 			RequiredVersion: ">= v1, < v2",
 			CurrentVersion:  "1.2.1",
 		},
@@ -141,31 +149,27 @@ func TestRestrictConfigWithInvalidRequiredVersion(t *testing.T) {
 		{
 			RequiredVersion: "hoge",
 			CurrentVersion:  "v1.2.1",
-			ErrorMessage:    "required_version is invalid format:",
-		},
-		{
-			RequiredVersion: "< v1.0.0",
-			CurrentVersion:  "v1.2.1",
-			ErrorMessage:    "required_version cannot only be less than a constraint",
-		},
-		{
-			RequiredVersion: "< v1.0.0, < v2",
-			CurrentVersion:  "v1.2.1",
-			ErrorMessage:    "required_version cannot only be less than a constraint",
+			ErrorMessage:    "required_version has invalid format",
 		},
 		{
 			RequiredVersion: "= v1.0.0",
 			CurrentVersion:  "v1.2.1",
-			ErrorMessage:    "the current version does not meet the required_version",
+			ErrorMessage:    "does not satisfy constraints",
+		},
+		{
+			RequiredVersion: "~> v1.1.0",
+			CurrentVersion:  "v1.2.0",
+			ErrorMessage:    "does not satisfy constraints",
 		},
 		{
 			RequiredVersion: ">= v1.2.2, < v2",
 			CurrentVersion:  "v1.2.1+3-g04fdc8e",
+			ErrorMessage:    "does not satisfy constraints",
 		},
 		{
 			RequiredVersion: ">= v0, <v1",
 			CurrentVersion:  "v1.2.1",
-			ErrorMessage:    "the current version does not meet the required_version",
+			ErrorMessage:    "does not satisfy constraints",
 		},
 	}
 	for _, c := range cases {
@@ -177,7 +181,7 @@ func TestRestrictConfigWithInvalidRequiredVersion(t *testing.T) {
 				t.Error("expected any error, but no error")
 				return
 			}
-			if !strings.HasPrefix(err.Error(), c.ErrorMessage) {
+			if !strings.Contains(err.Error(), c.ErrorMessage) {
 				t.Errorf("unexpected error got:%s", err)
 			}
 		})

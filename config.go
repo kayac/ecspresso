@@ -3,7 +3,6 @@ package ecspresso
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 	"time"
 
@@ -66,20 +65,10 @@ func (c *Config) Restrict(currentVersion string) error {
 	if c.RequiredVersion != "" {
 		constraints, err := gv.NewConstraint(c.RequiredVersion)
 		if err != nil {
-			return errors.Wrap(err, "required_version is invalid format")
-		}
-		onlyConstraintLessThan := true
-		for _, constraint := range constraints {
-			if !strings.HasPrefix(strings.Trim(constraint.String(), " "), "<") {
-				onlyConstraintLessThan = false
-				break
-			}
-		}
-		if onlyConstraintLessThan {
-			return errors.New("required_version cannot only be less than a constraint")
+			return errors.Wrap(err, "required_version has invalid format")
 		}
 		if !checkRequiredVersion(currentVersion, constraints) {
-			return errors.New("the current version does not meet the required_version")
+			return errors.Errorf("version %s does not satisfy constraints required_version: %s", currentVersion, constraints)
 		}
 	}
 
@@ -87,18 +76,9 @@ func (c *Config) Restrict(currentVersion string) error {
 }
 
 func checkRequiredVersion(currentVersion string, constraints gv.Constraints) bool {
-	if currentVersion == "current" {
-		// if only GreaterThan constraint, pass check required version
-		for _, constraint := range constraints {
-			if !strings.HasPrefix(strings.Trim(constraint.String(), " "), ">") {
-				return false
-			}
-		}
-		return true
-	}
 	v, err := gv.NewVersion(currentVersion)
 	if err != nil {
-		return false
+		return true
 	}
 	return constraints.Check(v)
 }
