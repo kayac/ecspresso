@@ -2,6 +2,7 @@ package ecspresso_test
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -90,5 +91,126 @@ func testLoadConfigWithPlugin(t *testing.T, path string) {
 	env := td.ContainerDefinitions[0].Environment[0]
 	if *env.Name != "JSON" || *env.Value != `{"foo":"bar"}` {
 		t.Errorf("unexpected JSON got:%s", *env.Value)
+	}
+}
+
+func TestRestrictConfigWithRequiredVersion(t *testing.T) {
+	cases := []struct {
+		RequiredVersion string
+		CurrentVersion  string
+	}{
+		{
+			RequiredVersion: ">= v1.0.0",
+			CurrentVersion:  "v1.2.1",
+		},
+		{
+			RequiredVersion: "= v1.0.0",
+			CurrentVersion:  "1.0.0",
+		},
+		{
+			RequiredVersion: "~> v1.1.0",
+			CurrentVersion:  "1.1.5",
+		},
+		{
+			RequiredVersion: "~> v1.0",
+			CurrentVersion:  "1.2.1",
+		},
+		{
+			RequiredVersion: ">= v1, < v2",
+			CurrentVersion:  "1.2.1",
+		},
+		{
+			RequiredVersion: ">= v1.2.1, < v2",
+			CurrentVersion:  "v1.2.1+3-g04fdc8e",
+		},
+		{
+			RequiredVersion: ">= v1",
+			CurrentVersion:  "current",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.CurrentVersion+":"+c.RequiredVersion, func(t *testing.T) {
+			conf := ecspresso.NewDefaultConfig()
+			conf.RequiredVersion = c.RequiredVersion
+
+			if err := conf.ValidateVersion(c.CurrentVersion); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestConfigWithRequiredVersionUnsatisfied(t *testing.T) {
+	cases := []struct {
+		RequiredVersion string
+		CurrentVersion  string
+		ErrorMessage    string
+	}{
+		{
+			RequiredVersion: "= v1.0.0",
+			CurrentVersion:  "v1.2.1",
+			ErrorMessage:    "does not satisfy constraints",
+		},
+		{
+			RequiredVersion: "~> v1.1.0",
+			CurrentVersion:  "v1.2.0",
+			ErrorMessage:    "does not satisfy constraints",
+		},
+		{
+			RequiredVersion: ">= v1.2.2, < v2",
+			CurrentVersion:  "v1.2.1+3-g04fdc8e",
+			ErrorMessage:    "does not satisfy constraints",
+		},
+		{
+			RequiredVersion: ">= v0, <v1",
+			CurrentVersion:  "v1.2.1",
+			ErrorMessage:    "does not satisfy constraints",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.CurrentVersion+":"+c.RequiredVersion, func(t *testing.T) {
+			conf := ecspresso.NewDefaultConfig()
+			conf.RequiredVersion = c.RequiredVersion
+			if err := conf.Restrict(); err != nil {
+				t.Error(err)
+				return
+			}
+			err := conf.ValidateVersion(c.CurrentVersion)
+			if err == nil {
+				t.Error("expected any error, but no error")
+				return
+			}
+			if !strings.Contains(err.Error(), c.ErrorMessage) {
+				t.Errorf("unexpected error got:%s", err)
+			}
+		})
+	}
+}
+
+func TestConfigWithInvalidRequiredVersion(t *testing.T) {
+	cases := []struct {
+		RequiredVersion string
+		CurrentVersion  string
+		ErrorMessage    string
+	}{
+		{
+			RequiredVersion: "hoge",
+			CurrentVersion:  "v1.2.1",
+			ErrorMessage:    "invalid format",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.CurrentVersion+":"+c.RequiredVersion, func(t *testing.T) {
+			conf := ecspresso.NewDefaultConfig()
+			conf.RequiredVersion = c.RequiredVersion
+			err := conf.Restrict()
+			if err == nil {
+				t.Error("expected any error, but no error")
+				return
+			}
+			if !strings.Contains(err.Error(), c.ErrorMessage) {
+				t.Errorf("unexpected error got:%s", err)
+			}
+		})
 	}
 }

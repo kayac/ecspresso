@@ -9,6 +9,7 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/fujiwara/tfstate-lookup v0.0.14
 	github.com/google/go-cmp v0.5.2
+	github.com/hashicorp/go-version v1.2.1
 	github.com/kayac/go-config v0.5.0
 	github.com/kylelemons/godebug v1.1.0
 	github.com/mattn/go-isatty v0.0.12

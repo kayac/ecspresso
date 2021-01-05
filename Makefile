@@ -1,4 +1,4 @@
-GIT_VER := $(shell git describe --tags)
+GIT_VER := $(shell git describe --tags | sed -e 's/-/+/')
 DATE := $(shell date +%Y-%m-%dT%H:%M:%S%z)
 export GO111MODULE := on
 
