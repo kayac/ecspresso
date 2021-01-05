@@ -11,7 +11,7 @@ import (
 
 func TestLoadServiceDefinition(t *testing.T) {
 	c := &ecspresso.Config{}
-	err := c.Load("current", "tests/test.yaml")
+	err := c.Load("tests/test.yaml")
 	if err != nil {
 		t.Error(err)
 	}
@@ -46,7 +46,7 @@ func testLoadConfigWithPlugin(t *testing.T, path string) {
 	os.Setenv("JSON", `{"foo":"bar"}`)
 
 	conf := &ecspresso.Config{}
-	err := conf.Load("current", path)
+	err := conf.Load(path)
 	if err != nil {
 		t.Error(err)
 	}
@@ -133,7 +133,7 @@ func TestRestrictConfigWithRequiredVersion(t *testing.T) {
 			conf := ecspresso.NewDefaultConfig()
 			conf.RequiredVersion = c.RequiredVersion
 
-			if err := conf.Restrict(c.CurrentVersion); err != nil {
+			if err := conf.ValidateVersion(c.CurrentVersion); err != nil {
 				t.Error(err)
 			}
 		})
@@ -176,7 +176,7 @@ func TestRestrictConfigWithInvalidRequiredVersion(t *testing.T) {
 		t.Run(c.CurrentVersion+":"+c.RequiredVersion, func(t *testing.T) {
 			conf := ecspresso.NewDefaultConfig()
 			conf.RequiredVersion = c.RequiredVersion
-			err := conf.Restrict(c.CurrentVersion)
+			err := conf.ValidateVersion(c.CurrentVersion)
 			if err == nil {
 				t.Error("expected any error, but no error")
 				return
