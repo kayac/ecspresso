@@ -134,6 +134,7 @@ func _main() int {
 		fmt.Println("ecspresso", Version)
 		return 0
 	}
+	color.NoColor = !*colorOpt
 
 	c := ecspresso.NewDefaultConfig()
 	if sub == "init" {
@@ -161,7 +162,6 @@ func _main() int {
 		return 1
 	}
 	app.Debug = *debug
-	color.NoColor = !*colorOpt
 
 	switch sub {
 	case "deploy":

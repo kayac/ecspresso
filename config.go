@@ -83,7 +83,7 @@ func (c *Config) ValidateVersion(version string) error {
 	v, err := gv.NewVersion(version)
 	if err != nil {
 		fmt.Println(
-			color.YellowString("WARNING: Invalid version format \"%s\" Skip checking required_version.", version),
+			color.YellowString("WARNING: Invalid version format \"%s\". Skip checking required_version.", version),
 		)
 		// invalid version string (e.g. "current") always allowed
 		return nil
