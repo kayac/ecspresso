@@ -144,7 +144,7 @@ func _main() int {
 		c.ServiceDefinitionPath = *initOption.ServiceDefinitionPath
 		initOption.ConfigFilePath = conf
 	} else {
-		if err := c.Load(*conf); err != nil {
+		if err := c.Load(Version, *conf); err != nil {
 			log.Println("Could not load config file", *conf, err)
 			kingpin.Usage()
 			return 1
