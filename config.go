@@ -7,6 +7,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/fatih/color"
 	gv "github.com/hashicorp/go-version"
@@ -68,11 +69,15 @@ func (c *Config) Restrict() error {
 		}
 		c.versionConstraints = constraints
 	}
-	return nil
+	var err error
+	c.sess, err = session.NewSessionWithOptions(session.Options{
+		Config:            aws.Config{Region: aws.String(c.Region)},
+		SharedConfigState: session.SharedConfigEnable,
+	})
+	return err
 }
 
-func (c *Config) setupPlugins(sess *session.Session) error {
-	c.sess = sess
+func (c *Config) setupPlugins() error {
 	for _, p := range c.Plugins {
 		if err := p.Setup(c); err != nil {
 			return err

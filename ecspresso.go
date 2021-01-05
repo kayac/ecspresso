@@ -257,12 +257,7 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 }
 
 func NewApp(conf *Config) (*App, error) {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config:            aws.Config{Region: aws.String(conf.Region)},
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-
-	if err := conf.setupPlugins(sess); err != nil {
+	if err := conf.setupPlugins(); err != nil {
 		return nil, err
 	}
 	loader := gc.New()
@@ -270,6 +265,7 @@ func NewApp(conf *Config) (*App, error) {
 		loader.Funcs(f)
 	}
 
+	sess := conf.sess
 	d := &App{
 		Service:     conf.Service,
 		Cluster:     conf.Cluster,
