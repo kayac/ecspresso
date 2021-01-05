@@ -19,7 +19,7 @@ const (
 
 // Config represents a configuration.
 type Config struct {
-	RequiredVersion       string           `yaml:"requried_version,omitempty"`
+	RequiredVersion       string           `yaml:"required_version,omitempty"`
 	Region                string           `yaml:"region"`
 	Cluster               string           `yaml:"cluster"`
 	Service               string           `yaml:"service"`
@@ -29,8 +29,9 @@ type Config struct {
 	Plugins               []ConfigPlugin   `yaml:"plugins,omitempty"`
 	AppSpec               *appspec.AppSpec `yaml:"appspec,omitempty"`
 
-	templateFuncs []template.FuncMap
-	dir           string
+	templateFuncs      []template.FuncMap
+	dir                string
+	versionConstraints gv.Constraints
 }
 
 // Load loads configuration file from file path.
@@ -56,6 +57,13 @@ func (c *Config) Restrict() error {
 	if c.TaskDefinitionPath != "" && !filepath.IsAbs(c.TaskDefinitionPath) {
 		c.TaskDefinitionPath = filepath.Join(c.dir, c.TaskDefinitionPath)
 	}
+	if c.RequiredVersion != "" {
+		constraints, err := gv.NewConstraint(c.RequiredVersion)
+		if err != nil {
+			return errors.Wrap(err, "required_version has invalid format")
+		}
+		c.versionConstraints = constraints
+	}
 
 	for _, p := range c.Plugins {
 		if err := p.Setup(c); err != nil {
@@ -65,22 +73,15 @@ func (c *Config) Restrict() error {
 	return nil
 }
 
-// ValidateVersion validates current version satisfies required_version.
-func (c *Config) ValidateVersion(current string) error {
-	if c.RequiredVersion == "" {
-		return nil
-	}
-	constraints, err := gv.NewConstraint(c.RequiredVersion)
-	if err != nil {
-		return errors.Wrap(err, "required_version has invalid format")
-	}
-	v, err := gv.NewVersion(current)
+// ValidateVersion validates a version satisfies required_version.
+func (c *Config) ValidateVersion(version string) error {
+	v, err := gv.NewVersion(version)
 	if err != nil {
 		// invalid version string (e.g. "current") always allowed
 		return nil
 	}
-	if !constraints.Check(v) {
-		return errors.Errorf("version %s does not satisfy constraints required_version: %s", current, constraints)
+	if !c.versionConstraints.Check(v) {
+		return errors.Errorf("version %s does not satisfy constraints required_version: %s", version, c.versionConstraints)
 	}
 
 	return nil
