@@ -586,7 +586,7 @@ ecs-service-def.json
     "awsvpcConfiguration": {
       "subnets": [
         "{{ cfn_output `ECS-ecspresso` `SubnetAz1` }}",
-        "{{ cfn_output `ECS-ecspresso` `SubnetAz2` }}",
+        "{{ cfn_output `ECS-ecspresso` `SubnetAz2` }}"
       ],
       "securityGroups": [
         "{{ cfn_export `ECS-ecspresso-EcsSecurityGroupId` }}"
