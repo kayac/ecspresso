@@ -200,6 +200,15 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 		return err
 	}
 
+	// networkMode
+	if aws.StringValue(td.NetworkMode) == "awsvpc" {
+		if sv.NetworkConfiguration == nil || sv.NetworkConfiguration.AwsvpcConfiguration == nil {
+			return errors.New(
+				`networkConfiguration.awsvpcConfiguration required for the taskDefinition networkMode=awsvpc`,
+			)
+		}
+	}
+
 	// LB
 	for i, lb := range sv.LoadBalancers {
 		name := fmt.Sprintf("LoadBalancer[%d]", i)
