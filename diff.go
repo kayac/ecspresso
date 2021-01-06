@@ -71,12 +71,11 @@ func (d *App) Diff(opt DiffOption) error {
 	}
 
 	// task definition
-	newTd, err := d.
-		LoadTaskDefinition(d.config.TaskDefinitionPath)
+	newTd, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
-	remoteTd, err := d.DescribeTaskDefinition(ctx, *newTd.Family)
+	remoteTd, err := d.DescribeTaskDefinition(ctx, *remoteSv.TaskDefinition)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
