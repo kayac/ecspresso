@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
+	"github.com/fujiwara/cfn-lookup/cfn"
 	"github.com/fujiwara/tfstate-lookup/tfstate"
 )
 
@@ -14,9 +16,11 @@ type ConfigPlugin struct {
 }
 
 func (p ConfigPlugin) Setup(c *Config) error {
-	switch p.Name {
+	switch strings.ToLower(p.Name) {
 	case "tfstate":
 		return setupPluginTFState(p, c)
+	case "cloudformation":
+		return setupPluginCFn(p, c)
 	default:
 		return fmt.Errorf("plugin %s is not available", p.Name)
 	}
@@ -43,6 +47,15 @@ func setupPluginTFState(p ConfigPlugin, c *Config) error {
 		return errors.New("tfstate plugin requires path or url for tfstate location")
 	}
 	funcs, err := tfstate.FuncMap(loc)
+	if err != nil {
+		return err
+	}
+	c.templateFuncs = append(c.templateFuncs, funcs)
+	return nil
+}
+
+func setupPluginCFn(p ConfigPlugin, c *Config) error {
+	funcs, err := cfn.FuncMap(c.sess)
 	if err != nil {
 		return err
 	}
