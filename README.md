@@ -525,9 +525,9 @@ service: test
 service_definition: ecs-service-def.json
 task_definition: ecs-task-def.json
 plugins:
-- name: tfstate
-  config:
-    path: terraform.tfstate    # path to tfstate file
+  - name: tfstate
+    config:
+      path: terraform.tfstate    # path to tfstate file
 ```
 
 ecs-service-def.json
@@ -547,6 +547,54 @@ ecs-service-def.json
 ```
 
 `{{ tfstate "resource_type.resource_name.attr" }}` will expand to an attribute value of the resource in tfstate.
+
+## cloudformation
+
+cloudformation plugin introduces template functions `cfn_output` and `cfn_export`.
+
+An example of CloudFormation stack template defines Outputs and Exports.
+
+```yaml
+# StackName: ECS-ecspresso
+Outputs:
+  SubnetAz1:
+    Value: !Ref PublicSubnetAz1
+  SubnetAz2:
+    Value: !Ref PublicSubnetAz2
+  EcsSecurityGroupId:
+    Value: !Ref EcsSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-EcsSecurityGroupId
+```
+
+Load cloudformation plugin in a config file.
+
+config.yaml
+```yaml
+# ...
+plugins:
+  - name: cloudformation
+```
+
+`cfn_output StackName OutputKey` lookups OutputValue of OutputKey in the StackName.
+`cfn_export ExportName` lookups exported value by name.
+
+ecs-service-def.json
+```json
+{
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "{{ cfn_output `ECS-ecspresso` `SubnetAz1` }}",
+        "{{ cfn_output `ECS-ecspresso` `SubnetAz2` }}"
+      ],
+      "securityGroups": [
+        "{{ cfn_export `ECS-ecspresso-EcsSecurityGroupId` }}"
+      ]
+    }
+  }
+}
+```
 
 # LICENCE
 

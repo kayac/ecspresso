@@ -22,7 +22,7 @@
         },
         {
           "name": "BAZ",
-          "valueFrom": "arn:aws:secretsmanager:{{must_env `AWS_REGION`}}:{{must_env `AWS_ACCOUNT_ID`}}:secret:ecspresso-test/baz-06XQOH:bar::"
+          "valueFrom": "arn:aws:secretsmanager:{{must_env `AWS_REGION`}}:{{must_env `AWS_ACCOUNT_ID`}}:secret:ecspresso-test/baz-06XQOH"
         }
       ],
       "name": "nginx",
