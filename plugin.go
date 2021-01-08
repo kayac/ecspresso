@@ -23,14 +23,26 @@ func (p ConfigPlugin) Setup(c *Config) error {
 }
 
 func setupPluginTFState(p ConfigPlugin, c *Config) error {
-	path, ok := p.Config["path"].(string)
-	if !ok {
-		return errors.New("tfstate plugin requires path for tfstate file as string")
+	var loc string
+	if p.Config["path"] != nil {
+		path, ok := p.Config["path"].(string)
+		if !ok {
+			return errors.New("tfstate plugin requires path for tfstate file as a string")
+		}
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(c.dir, path)
+		}
+		loc = path
+	} else if p.Config["url"] != nil {
+		u, ok := p.Config["url"].(string)
+		if !ok {
+			return errors.New("tfstate plugin requires url for tfstate URL as a string")
+		}
+		loc = u
+	} else {
+		return errors.New("tfstate plugin requires path or url for tfstate location")
 	}
-	if !filepath.IsAbs(path) {
-		path = filepath.Join(c.dir, path)
-	}
-	funcs, err := tfstate.FuncMap(path)
+	funcs, err := tfstate.FuncMap(loc)
 	if err != nil {
 		return err
 	}

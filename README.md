@@ -528,6 +528,7 @@ plugins:
 - name: tfstate
   config:
     path: terraform.tfstate    # path to tfstate file
+    # or url: s3://my-bucket/terraform.tfstate
 ```
 
 ecs-service-def.json
