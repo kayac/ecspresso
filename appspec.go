@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/kayac/ecspresso/appspec"
 	"github.com/pkg/errors"
 )
@@ -31,6 +32,13 @@ func (d *App) AppSpec(opt AppSpecOption) error {
 		if !strings.HasPrefix(taskDefinitionArn, "arn:aws:ecs:") {
 			return errors.New("--task-definition requires current, latest or a valid task definition arn")
 		}
+	}
+	if aws.BoolValue(opt.UpdateService) {
+		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+		if err != nil {
+			return err
+		}
+		sv = newSv
 	}
 
 	spec, err := appspec.NewWithService(sv, taskDefinitionArn)

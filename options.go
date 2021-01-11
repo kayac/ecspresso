@@ -162,4 +162,5 @@ type DiffOption struct {
 
 type AppSpecOption struct {
 	TaskDefinition *string
+	UpdateService  *bool
 }

@@ -677,7 +677,7 @@ func (d *App) suspendAutoScaling(suspend bool) error {
 }
 
 func (d *App) WaitForCodeDeploy(ctx context.Context, sv *ecs.Service) error {
-	dp, err := d.findDeploymentInfo(sv)
+	dp, err := d.findDeploymentInfo()
 	if err != nil {
 		return err
 	}

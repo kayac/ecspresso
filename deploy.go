@@ -73,7 +73,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	}
 
 	var count *int64
-	if d.config.ServiceDefinitionPath != "" && opt.UpdateService != nil && *opt.UpdateService {
+	if d.config.ServiceDefinitionPath != "" && aws.BoolValue(opt.UpdateService) {
 		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 		if err != nil {
 			return errors.Wrap(err, "failed to load service definition")
@@ -86,6 +86,7 @@ func (d *App) Deploy(opt DeployOption) error {
 			if err = d.UpdateServiceAttributes(ctx, newSv, opt); err != nil {
 				return errors.Wrap(err, "failed to update service attributes")
 			}
+			sv = newSv // updated
 		} else {
 			d.Log("service attributes will not change")
 		}
@@ -207,7 +208,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	if count != nil {
 		d.Log("updating desired count to", *count)
 	}
-	out, err := d.ecs.UpdateServiceWithContext(
+	_, err := d.ecs.UpdateServiceWithContext(
 		ctx,
 		&ecs.UpdateServiceInput{
 			Service:      aws.String(d.Service),
@@ -218,7 +219,6 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	if err != nil {
 		return errors.Wrap(err, "failed to update service")
 	}
-	sv = out.Service // update with running service info
 
 	spec, err := appspec.NewWithService(sv, taskDefinitionArn)
 	if err != nil {
@@ -230,7 +230,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	d.DebugLog("appSpecContent:", spec.String())
 
 	// deployment
-	dp, err := d.findDeploymentInfo(sv)
+	dp, err := d.findDeploymentInfo()
 	if err != nil {
 		return err
 	}
@@ -279,11 +279,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	return nil
 }
 
-func (d *App) findDeploymentInfo(sv *ecs.Service) (*codedeploy.DeploymentInfo, error) {
-	if len(sv.TaskSets) == 0 {
-		return nil, errors.New("taskSet is not found in service")
-	}
-
+func (d *App) findDeploymentInfo() (*codedeploy.DeploymentInfo, error) {
 	// search deploymentGroup in CodeDeploy
 	d.DebugLog("find all applications in CodeDeploy")
 	la, err := d.codedeploy.ListApplications(&codedeploy.ListApplicationsInput{})
