@@ -219,6 +219,10 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	if err != nil {
 		return errors.Wrap(err, "failed to update service")
 	}
+	if aws.BoolValue(opt.SkipTaskDefinition) && !aws.BoolValue(opt.UpdateService) && !aws.BoolValue(opt.ForceNewDeployment) {
+		// no need to create new deployment.
+		return nil
+	}
 
 	spec, err := appspec.NewWithService(sv, taskDefinitionArn)
 	if err != nil {
@@ -245,7 +249,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 			},
 		},
 	}
-	if ev := *opt.RollbackEvents; ev != "" {
+	if ev := aws.StringValue(opt.RollbackEvents); ev != "" {
 		var events []*string
 		for _, ev := range strings.Split(ev, ",") {
 			events = append(events, aws.String(ev))
