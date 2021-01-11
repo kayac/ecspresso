@@ -117,6 +117,7 @@ func _main() int {
 	appspec := kingpin.Command("appspec", "output AppSpec YAML for CodeDeploy to STDOUT")
 	appspecOption := ecspresso.AppSpecOption{
 		TaskDefinition: appspec.Flag("task-definition", "use task definition arn in AppSpec (latest, current or Arn)").Default("latest").String(),
+		UpdateService:  appspec.Flag("update-service", "update service attributes by service definition").Default("true").Bool(),
 	}
 
 	verify := kingpin.Command("verify", "verify resources in configurations")
