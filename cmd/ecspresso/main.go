@@ -46,7 +46,7 @@ func _main() int {
 	scale := kingpin.Command("scale", "scale service. equivalent to deploy --skip-task-definition --no-update-service")
 	scaleOption := ecspresso.DeployOption{
 		DryRun:               scale.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
+		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Required().Int64(),
 		SkipTaskDefinition:   boolp(true),
 		ForceNewDeployment:   boolp(false),
 		NoWait:               scale.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
