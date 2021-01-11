@@ -83,6 +83,9 @@ Commands:
     refresh service. equivalent to deploy --skip-task-definition --force-new-deployment
     --no-update-service
 
+  scale --tasks=TASKS [<flags>]
+    scale service. equivalent to deploy --skip-task-definition --no-update-service
+
   create [<flags>]
     create service
 
@@ -245,13 +248,13 @@ appspec:
 
 ## Scale out/in
 
-To change desired count of the service, specify `--tasks` option.
-
-If `--skip-task-definition` is set, task definition will not be registered.
+To change a desired count of the service, specify `scale --tasks`.
 
 ```console
-$ ecspresso deploy --config config.yaml --tasks 10 --skip-task-definition
+$ ecspresso scale --config config.yaml --tasks 10
 ```
+
+`scale` command is equivalent to `deploy --skip-task-definition --no-update-service`.
 
 ## Example of create
 

@@ -43,6 +43,17 @@ func _main() int {
 		LatestTaskDefinition: deploy.Flag("latest-task-definition", "deploy with latest task definition without registering new task definition").Default("false").Bool(),
 	}
 
+	scale := kingpin.Command("scale", "scale service. equivalent to deploy --skip-task-definition --no-update-service")
+	scaleOption := ecspresso.DeployOption{
+		DryRun:               scale.Flag("dry-run", "dry-run").Bool(),
+		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Required().Int64(),
+		SkipTaskDefinition:   boolp(true),
+		ForceNewDeployment:   boolp(false),
+		NoWait:               scale.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
+		UpdateService:        boolp(false),
+		LatestTaskDefinition: boolp(false),
+	}
+
 	refresh := kingpin.Command("refresh", "refresh service. equivalent to deploy --skip-task-definition --force-new-deployment --no-update-service")
 	refreshOption := ecspresso.DeployOption{
 		DryRun:               refresh.Flag("dry-run", "dry-run").Bool(),
@@ -174,6 +185,8 @@ func _main() int {
 		err = app.Deploy(deployOption)
 	case "refresh":
 		err = app.Deploy(refreshOption)
+	case "scale":
+		err = app.Deploy(scaleOption)
 	case "status":
 		err = app.Status(statusOption)
 	case "rollback":
