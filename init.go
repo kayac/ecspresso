@@ -70,6 +70,7 @@ func (d *App) Init(opt InitOption) error {
 func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
 	sv.ClusterArn = nil
 	sv.CreatedAt = nil
+	sv.CreatedBy = nil
 	sv.Deployments = nil
 	sv.Events = nil
 	sv.PendingCount = nil
