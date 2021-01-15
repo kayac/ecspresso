@@ -158,6 +158,10 @@ func _main() int {
 		c.TaskDefinitionPath = *initOption.TaskDefinitionPath
 		c.ServiceDefinitionPath = *initOption.ServiceDefinitionPath
 		initOption.ConfigFilePath = conf
+		if err := c.Restrict(); err != nil {
+			log.Println("Could not init config", err)
+			return 1
+		}
 	} else {
 		if err := c.Load(*conf); err != nil {
 			log.Println("Could not load config file", *conf, err)
