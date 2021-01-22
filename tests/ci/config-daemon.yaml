@@ -1,0 +1,6 @@
+region: ap-northeast-1
+cluster: ecspresso-test-ec2
+service: nginx-local-daemon
+service_definition: ecs-service-def-daemon.json
+task_definition: ecs-task-def-daemon.json
+timeout: 10m0s

@@ -1,7 +1,7 @@
 inputs:
   version:
     description: "A version to install ecspresso"
-    default: "v1.2.0"
+    default: "v1.3.1"
 runs:
   using: "composite"
   steps:
