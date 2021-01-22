@@ -2,56 +2,60 @@
 
 export CLUSTER := ecspresso-test
 export SERVICE := nginx-$(CIRCLE_BRANCH)
+CONFIG ?= config.yaml
 
 help:
 
-test: create run-task deploy rollback refresh deploy-no-update-service scale down delete
+test: verify create run-task deploy rollback refresh deploy-no-update-service scale down delete
 
 status:
-	ecspresso --config config.yaml status --events 10 --debug
+	ecspresso --config $(CONFIG) status --events 10 --debug
 
 create:
-	ecspresso --config config.yaml create --dry-run
-	ecspresso --config config.yaml create --debug
+	ecspresso --config $(CONFIG) create --dry-run
+	ecspresso --config $(CONFIG) create --debug
 
 register:
-	ecspresso --config config.yaml register --dry-run
-	ecspresso --config config.yaml register --debug
+	ecspresso --config $(CONFIG) register --dry-run
+	ecspresso --config $(CONFIG) register --debug
 
 deploy:
-	ecspresso --config config.yaml deploy --dry-run
-	ecspresso --config config.yaml deploy --debug
+	ecspresso --config $(CONFIG) deploy --dry-run
+	ecspresso --config $(CONFIG) deploy --debug
 
 deploy-no-update-service:
-	ecspresso --config config.yaml deploy --no-update-service --dry-run
-	ecspresso --config config.yaml deploy --no-update-service --force-new-deployment --debug
+	ecspresso --config $(CONFIG) deploy --no-update-service --dry-run
+	ecspresso --config $(CONFIG) deploy --no-update-service --force-new-deployment --debug
 
 refresh:
-	ecspresso --config config.yaml refresh --dry-run
-	ecspresso --config config.yaml refresh --debug
+	ecspresso --config $(CONFIG) refresh --dry-run
+	ecspresso --config $(CONFIG) refresh --debug
 
 rollback:
-	ecspresso --config config.yaml rollback --deregister-task-definition --dry-run
-	ecspresso --config config.yaml rollback --deregister-task-definition --debug
+	ecspresso --config $(CONFIG) rollback --deregister-task-definition --dry-run
+	ecspresso --config $(CONFIG) rollback --deregister-task-definition --debug
 
 scale:
-	ecspresso --config config.yaml deploy --tasks 2 --skip-task-definition --dry-run
-	ecspresso --config config.yaml deploy --tasks 2 --skip-task-definition --debug
+	ecspresso --config $(CONFIG) scale --tasks 2 --dry-run
+	ecspresso --config $(CONFIG) scale --tasks 2 --debug
 
 down:
-	ecspresso --config config.yaml deploy --tasks 0 --skip-task-definition --dry-run
-	ecspresso --config config.yaml deploy --tasks 0 --skip-task-definition --debug
+	ecspresso --config $(CONFIG) scale --tasks 0 --dry-run
+	ecspresso --config $(CONFIG) scale --tasks 0 --debug
 
 delete:
-	ecspresso --config config.yaml delete --dry-run
-	ecspresso --config config.yaml delete --force --debug
+	ecspresso --config $(CONFIG) delete --dry-run
+	ecspresso --config $(CONFIG) delete --force --debug
 
 run-task:
-	ecspresso --config config.yaml run \
+	ecspresso --config $(CONFIG) run \
 	--overrides '{"containerOverrides":[{"name":"nginx", "command":["nginx", "-V"]}]}'
 
 wait:
-	ecspresso --config config.yaml wait
+	ecspresso --config $(CONFIG) wait
 
 verify:
-	ecspresso --config config.yaml verify --debug
+	ecspresso --config $(CONFIG) verify --debug
+
+diff:
+	ecspresso --config $(CONFIG) diff

@@ -43,11 +43,10 @@
   "executionRoleArn": "arn:aws:iam::{{must_env `AWS_ACCOUNT_ID`}}:role/ecsTaskRole",
   "family": "ecspresso-test",
   "memory": "512",
-  "networkMode": "awsvpc",
+  "networkMode": "host",
   "placementConstraints": [],
   "requiresCompatibilities": [
-    "EC2",
-    "FARGATE"
+    "EC2"
   ],
   "taskRoleArn": "arn:aws:iam::{{must_env `AWS_ACCOUNT_ID`}}:role/ecsTaskRole",
   "volumes": []
