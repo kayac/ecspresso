@@ -22,7 +22,7 @@ const (
 )
 
 func calcDesiredCount(sv *ecs.Service, opt optWithDesiredCount) *int64 {
-	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
+	if aws.StringValue(sv.SchedulingStrategy) == "DAEMON" {
 		return nil
 	}
 	if oc := opt.getDesiredCount(); oc != nil {
@@ -165,7 +165,7 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 }
 
 func svToUpdateServiceInput(sv *ecs.Service) *ecs.UpdateServiceInput {
-	return &ecs.UpdateServiceInput{
+	in := &ecs.UpdateServiceInput{
 		CapacityProviderStrategy:      sv.CapacityProviderStrategy,
 		DeploymentConfiguration:       sv.DeploymentConfiguration,
 		HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
@@ -174,6 +174,11 @@ func svToUpdateServiceInput(sv *ecs.Service) *ecs.UpdateServiceInput {
 		PlacementStrategy:             sv.PlacementStrategy,
 		PlatformVersion:               sv.PlatformVersion,
 	}
+	if aws.StringValue(sv.SchedulingStrategy) == "DAEMON" {
+		in.PlacementStrategy = nil
+		in.PlacementConstraints = nil
+	}
+	return in
 }
 
 func (d *App) UpdateServiceAttributes(ctx context.Context, sv *ecs.Service, opt DeployOption) error {

@@ -3,6 +3,7 @@ package ecspresso
 import (
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/pkg/errors"
 )
@@ -32,16 +33,14 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return nil
 	}
 
-	count := sv.DesiredCount
-	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
-		count = nil
-	}
-	f := false // Set ForceNewDeployment and UpdateService to false
 	if err := d.UpdateServiceTasks(
 		ctx,
 		targetArn,
-		count,
-		DeployOption{ForceNewDeployment: &f, UpdateService: &f},
+		nil,
+		DeployOption{
+			ForceNewDeployment: aws.Bool(false),
+			UpdateService:      aws.Bool(false),
+		},
 	); err != nil {
 		return errors.Wrap(err, "failed to update service")
 	}
