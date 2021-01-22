@@ -32,11 +32,15 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return nil
 	}
 
+	count := sv.DesiredCount
+	if sv.SchedulingStrategy != nil && *sv.SchedulingStrategy == "DAEMON" {
+		count = nil
+	}
 	f := false // Set ForceNewDeployment and UpdateService to false
 	if err := d.UpdateServiceTasks(
 		ctx,
 		targetArn,
-		sv.DesiredCount,
+		count,
 		DeployOption{ForceNewDeployment: &f, UpdateService: &f},
 	); err != nil {
 		return errors.Wrap(err, "failed to update service")
