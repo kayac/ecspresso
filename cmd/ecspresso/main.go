@@ -22,6 +22,7 @@ func _main() int {
 
 	conf := kingpin.Flag("config", "config file").String()
 	debug := kingpin.Flag("debug", "enable debug log").Bool()
+	envFile := kingpin.Flag("envfile", "environmet file").String()
 
 	colorDefault := "false"
 	if isatty.IsTerminal(os.Stdout.Fd()) {
@@ -149,7 +150,12 @@ func _main() int {
 		fmt.Println("ecspresso", Version)
 		return 0
 	}
+
 	color.NoColor = !*colorOpt
+	if err := ecspresso.ExportEnvFile(*envFile); err != nil {
+		log.Println("Failed to load envfile", err)
+		return 1
+	}
 
 	c := ecspresso.NewDefaultConfig()
 	if sub == "init" {
