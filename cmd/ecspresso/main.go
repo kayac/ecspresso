@@ -133,7 +133,8 @@ func _main() int {
 
 	verify := kingpin.Command("verify", "verify resources in configurations")
 	verifyOption := ecspresso.VerifyOption{
-		PutLogs: verify.Flag("put-logs", "put verification logs to CloudWatch Logs").Default("true").Bool(),
+		GetSecrets: verify.Flag("get-secrets", "get secrets from ParameterStore or SecretsManager").Default("true").Bool(),
+		PutLogs:    verify.Flag("put-logs", "put verification logs to CloudWatch Logs").Default("true").Bool(),
 	}
 
 	render := kingpin.Command("render", "render config, service definition or task definition file to stdout")

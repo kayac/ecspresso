@@ -47,6 +47,10 @@ func newVerifier(sess *session.Session, opt *VerifyOption) *verifier {
 }
 
 func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
+	if !aws.BoolValue(v.opt.GetSecrets) {
+		return verifySkipErr(fmt.Sprintf("get a secret value for %s", from))
+	}
+
 	// secrets manager
 	if strings.HasPrefix(from, "arn:aws:secretsmanager:") {
 		// https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/specifying-sensitive-data-secrets.html
@@ -102,7 +106,8 @@ func (d *App) newAssumedVerifier(sess *session.Session, executionRole string, op
 
 // VerifyOption represents options for Verify()
 type VerifyOption struct {
-	PutLogs *bool
+	GetSecrets *bool
+	PutLogs    *bool
 }
 
 type verifyResourceFunc func(context.Context) error
