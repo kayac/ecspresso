@@ -64,10 +64,11 @@ jobs:
 usage: ecspresso [<flags>] <command> [<args> ...]
 
 Flags:
-  --help           Show context-sensitive help (also try --help-long and --help-man).
-  --config=CONFIG  config file
-  --debug          enable debug log
-  --color          enalble colored output
+  --help                 Show context-sensitive help (also try --help-long and --help-man).
+  --config=CONFIG        config file
+  --debug                enable debug log
+  --envfile=ENVFILE ...  environment files
+  --color                enalble colored output
 
 Commands:
   help [<command>...]

@@ -22,7 +22,7 @@ func _main() int {
 
 	conf := kingpin.Flag("config", "config file").String()
 	debug := kingpin.Flag("debug", "enable debug log").Bool()
-	envFiles := kingpin.Flag("envfile", "environmet file").Strings()
+	envFiles := kingpin.Flag("envfile", "environment files").Strings()
 
 	colorDefault := "false"
 	if isatty.IsTerminal(os.Stdout.Fd()) {
