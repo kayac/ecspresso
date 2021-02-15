@@ -122,6 +122,7 @@ func _main() int {
 		Service:               init.Flag("service", "service name").Required().String(),
 		TaskDefinitionPath:    init.Flag("task-definition-path", "output task definition file path").Default("ecs-task-def.json").String(),
 		ServiceDefinitionPath: init.Flag("service-definition-path", "output service definition file path").Default("ecs-service-def.json").String(),
+		ForceOverwrite:        init.Flag("force-overwrite", "force overwrite files").Bool(),
 	}
 
 	_ = kingpin.Command("diff", "display diff for task definition compared with latest one on ECS")

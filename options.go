@@ -156,6 +156,7 @@ type InitOption struct {
 	TaskDefinitionPath    *string
 	ServiceDefinitionPath *string
 	ConfigFilePath        *string
+	ForceOverwrite        *bool
 }
 
 type DiffOption struct {
