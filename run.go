@@ -76,10 +76,9 @@ func (d *App) Run(opt RunOption) error {
 			}
 			td = runTd
 		}
+		watchContainer = containerOf(td, opt.WatchContainer)
 
 		var newTd *ecs.TaskDefinition
-		_ = newTd
-
 		if *opt.DryRun {
 			d.Log("task definition:")
 			d.LogJSON(td)
@@ -89,7 +88,6 @@ func (d *App) Run(opt RunOption) error {
 				return errors.Wrap(err, "failed to register task definition")
 			}
 			tdArn = *newTd.TaskDefinitionArn
-			watchContainer = containerOf(td, opt.WatchContainer)
 		}
 	}
 	if watchContainer == nil {
