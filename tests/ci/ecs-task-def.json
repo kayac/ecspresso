@@ -4,7 +4,7 @@
       "cpu": 0,
       "environment": [],
       "essential": true,
-      "image": "nginx:latest",
+      "image": "nginx:{{ env `NGINX_VERSION` `latest` }}",
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {

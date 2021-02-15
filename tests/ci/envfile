@@ -1,0 +1,2 @@
+SERVICE="nginx-local"
+NGINX_VERSION=latest
