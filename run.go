@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -20,7 +21,7 @@ func (d *App) Run(opt RunOption) error {
 	d.Log("Running task", opt.DryRunString())
 	var ov ecs.TaskOverride
 	if ovStr := aws.StringValue(opt.TaskOverrideStr); ovStr != "" {
-		if err := d.loader.LoadWithEnvJSONBytes(&ov, []byte(ovStr)); err != nil {
+		if err := json.Unmarshal([]byte(ovStr), &ov); err != nil {
 			return errors.Wrap(err, "invalid overrides")
 		}
 	} else if ovFile := aws.StringValue(opt.TaskOverrideFile); ovFile != "" {
