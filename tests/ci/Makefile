@@ -48,8 +48,18 @@ delete:
 	ecspresso --config $(CONFIG) --envfile envfile delete --force --debug
 
 run-task:
-	ecspresso --config $(CONFIG) --envfile envfile run \
-	--overrides '{"containerOverrides":[{"name":"nginx", "command":["nginx", "-V"]}]}'
+	ecspresso --config $(CONFIG) --envfile envfile --envfile envfile.override run \
+		--overrides '{"containerOverrides":[{"name":"nginx", "command":["nginx", "-V"]}]}' \
+		--dry-run
+	ecspresso --config $(CONFIG) --envfile envfile --envfile envfile.override run \
+		--overrides '{"containerOverrides":[{"name":"nginx", "command":["nginx", "-V"]}]}' \
+		--debug
+	OPTION=-v ecspresso --config $(CONFIG) --envfile envfile --envfile envfile.override run \
+		--overrides-file=overrides.json \
+		--dry-run
+	OPTION=-v ecspresso --config $(CONFIG) --envfile envfile --envfile envfile.override run \
+		--overrides-file=overrides.json \
+		--debug
 
 wait:
 	ecspresso --config $(CONFIG) --envfile envfile wait
