@@ -38,7 +38,7 @@ func (d *App) Init(opt InitOption) error {
 		return errors.Wrap(err, "unable to marshal service definition to JSON")
 	} else {
 		d.Log("save service definition to", config.ServiceDefinitionPath)
-		if err := d.saveFile(config.ServiceDefinitionPath, b, CreateFileMode); err != nil {
+		if err := d.saveFile(config.ServiceDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
 			return errors.Wrap(err, "failed to write file")
 		}
 	}
@@ -49,7 +49,7 @@ func (d *App) Init(opt InitOption) error {
 		return errors.Wrap(err, "unable to marshal task definition to JSON")
 	} else {
 		d.Log("save task definition to", config.TaskDefinitionPath)
-		if err := d.saveFile(config.TaskDefinitionPath, b, CreateFileMode); err != nil {
+		if err := d.saveFile(config.TaskDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
 			return errors.Wrap(err, "failed to write file")
 		}
 	}
@@ -59,7 +59,7 @@ func (d *App) Init(opt InitOption) error {
 		return errors.Wrap(err, "unable to marshal config to YAML")
 	} else {
 		d.Log("save config to", *opt.ConfigFilePath)
-		if err := d.saveFile(*opt.ConfigFilePath, b, CreateFileMode); err != nil {
+		if err := d.saveFile(*opt.ConfigFilePath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
 			return errors.Wrap(err, "failed to write file")
 		}
 	}
@@ -96,8 +96,8 @@ func treatmentTaskDefinition(td *ecs.TaskDefinition) *ecs.TaskDefinition {
 	return td
 }
 
-func (d *App) saveFile(path string, b []byte, mode os.FileMode) error {
-	if _, err := os.Stat(path); err == nil {
+func (d *App) saveFile(path string, b []byte, mode os.FileMode, force bool) error {
+	if _, err := os.Stat(path); err == nil && !force {
 		ok := prompter.YN(fmt.Sprintf("Overwrite existing file %s?", path), false)
 		if !ok {
 			d.Log("skip", path)
