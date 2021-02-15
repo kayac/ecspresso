@@ -117,7 +117,7 @@ func _main() int {
 
 	init := kingpin.Command("init", "create service/task definition files by existing ECS service")
 	initOption := ecspresso.InitOption{
-		Region:                init.Flag("region", "AWS region name").Required().String(),
+		Region:                init.Flag("region", "AWS region name").Default(os.Getenv("AWS_REGION")).String(),
 		Cluster:               init.Flag("cluster", "cluster name").Default("default").String(),
 		Service:               init.Flag("service", "service name").Required().String(),
 		TaskDefinitionPath:    init.Flag("task-definition-path", "output task definition file path").Default("ecs-task-def.json").String(),

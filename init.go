@@ -91,6 +91,8 @@ func treatmentTaskDefinition(td *ecs.TaskDefinition) *ecs.TaskDefinition {
 	td.Status = nil
 	td.TaskDefinitionArn = nil
 	td.Compatibilities = nil
+	td.RegisteredAt = nil
+	td.RegisteredBy = nil
 	return td
 }
 
