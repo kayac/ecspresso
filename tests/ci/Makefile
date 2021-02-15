@@ -49,7 +49,17 @@ delete:
 
 run-task:
 	ecspresso --config $(CONFIG) run \
-	--overrides '{"containerOverrides":[{"name":"nginx", "command":["nginx", "-V"]}]}'
+		--overrides '{"containerOverrides":[{"name":"nginx", "command":["nginx", "-V"]}]}' \
+		--dry-run
+	ecspresso --config $(CONFIG) run \
+		--overrides '{"containerOverrides":[{"name":"nginx", "command":["nginx", "-V"]}]}' \
+		--debug
+	OPTION=-v ecspresso --config $(CONFIG) run \
+		--overrides-file=overrides.json \
+		--dry-run
+	OPTION=-v ecspresso --config $(CONFIG) run \
+		--overrides-file=overrides.json \
+		--debug
 
 wait:
 	ecspresso --config $(CONFIG) wait

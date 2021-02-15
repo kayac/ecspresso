@@ -96,6 +96,7 @@ func _main() int {
 		TaskDefinition:       run.Flag("task-def", "task definition json for run task").String(),
 		NoWait:               run.Flag("no-wait", "exit ecspresso after task run").Bool(),
 		TaskOverrideStr:      run.Flag("overrides", "task overrides JSON string").Default("").String(),
+		TaskOverrideFile:     run.Flag("overrides-file", "task overrides JSON file path").Default("").String(),
 		SkipTaskDefinition:   run.Flag("skip-task-definition", "skip register a new task definition").Bool(),
 		Count:                run.Flag("count", "the number of tasks (max 10)").Default("1").Int64(),
 		WatchContainer:       run.Flag("watch-container", "the container name to watch exit code").String(),

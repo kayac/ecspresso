@@ -20,11 +20,16 @@ func (d *App) Run(opt RunOption) error {
 
 	d.Log("Running task", opt.DryRunString())
 	var ov ecs.TaskOverride
-	if ovStr := *opt.TaskOverrideStr; ovStr != "" {
+	if ovStr := aws.StringValue(opt.TaskOverrideStr); ovStr != "" {
 		if err := json.Unmarshal([]byte(ovStr), &ov); err != nil {
 			return errors.Wrap(err, "invalid overrides")
 		}
+	} else if ovFile := aws.StringValue(opt.TaskOverrideFile); ovFile != "" {
+		if err := d.loader.LoadWithEnvJSON(&ov, ovFile); err != nil {
+			return errors.Wrap(err, "failed to read overrides-file")
+		}
 	}
+	d.DebugLog("Overrides:", ov.String())
 
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {

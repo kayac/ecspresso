@@ -1,0 +1,11 @@
+{
+    "containerOverrides": [
+        {
+            "name": "nginx",
+            "command": [
+                "nginx",
+                "{{ must_env `OPTION` }}"
+            ]
+        }
+    ]
+}

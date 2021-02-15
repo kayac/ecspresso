@@ -92,6 +92,7 @@ type RunOption struct {
 	TaskDefinition       *string
 	NoWait               *bool
 	TaskOverrideStr      *string
+	TaskOverrideFile     *string
 	SkipTaskDefinition   *bool
 	Count                *int64
 	WatchContainer       *string
