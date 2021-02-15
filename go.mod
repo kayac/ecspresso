@@ -17,5 +17,5 @@ require (
 	github.com/mattn/go-isatty v0.0.12
 	github.com/morikuni/aec v1.0.0
 	github.com/pkg/errors v0.9.1
-	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v2 v2.4.0
 )
