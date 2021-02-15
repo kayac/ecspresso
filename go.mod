@@ -12,7 +12,7 @@ require (
 	github.com/google/go-cmp v0.5.4
 	github.com/hashicorp/go-envparse v0.0.0-20200406174449-d9cfd743a15e
 	github.com/hashicorp/go-version v1.2.1
-	github.com/kayac/go-config v0.5.0
+	github.com/kayac/go-config v0.5.1
 	github.com/kylelemons/godebug v1.1.0
 	github.com/mattn/go-isatty v0.0.12
 	github.com/morikuni/aec v1.0.0
