@@ -28,7 +28,8 @@ jobs:
 
       - name: Check for same revision exists
         run: |
-          if [ gh release list | grep -e "^v[0-9]{8}-${{ env.NIGHTLY_REV }}" ]; then
+          gh release list | grep -e "^v[0-9]{8}-${{ env.NIGHTLY_REV }}"
+          if [ $? -eq 0 ]; then
             echo "${{ env.NIGHTLY_REV }} already exists"
             echo "DO_RELEASE=true" >> $GITHUB_ENV
           fi
