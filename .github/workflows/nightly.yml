@@ -34,6 +34,7 @@ jobs:
           gh release list | grep -e "^v[0-9]{8}-${{ env.NIGHTLY_REV }}"
           if [ $? -eq 0 ]; then
             echo "${{ env.NIGHTLY_REV }} already exists"
+          else
             echo "DO_RELEASE=true" >> $GITHUB_ENV
           fi
 
