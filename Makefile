@@ -1,4 +1,4 @@
-GIT_VER := $(shell git describe --tags | sed -e 's/-/+/')
+GIT_VER ?= $(shell git describe --tags | sed -e 's/-/+/')
 DATE := $(shell date +%Y-%m-%dT%H:%M:%S%z)
 export GO111MODULE := on
 
@@ -14,7 +14,7 @@ test:
 	go test -race ./...
 
 packages:
-	cd cmd/ecspresso && gox -os="linux darwin" -arch="amd64" -output "../../pkg/{{.Dir}}-${GIT_VER}-{{.OS}}-{{.Arch}}" -ldflags "-w -s -X main.Version=${GIT_VER} -X main.buildDate=${DATE}"
+	cd cmd/ecspresso && gox -os="linux darwin" -arch="amd64 arm64" -output "../../pkg/{{.Dir}}-${GIT_VER}-{{.OS}}-{{.Arch}}" -ldflags "-w -s -X main.Version=${GIT_VER} -X main.buildDate=${DATE}"
 	cd pkg && find . -name "*${GIT_VER}*" -type f -exec zip {}.zip {} \;
 
 clean:

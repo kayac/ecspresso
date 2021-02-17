@@ -1,0 +1,53 @@
+name: Nightly release
+on:
+  schedule:
+    - cron: "10 6 * * *"
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.16
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+        with:
+          ref: v1
+
+      - name: Set env
+        run: |
+          rev=$(git rev-parse --short HEAD)
+          today=$(date +%Y%m%d)
+          echo "NIGHTLY_REV=${rev}" >> $GITHUB_ENV
+          echo "NIGHTLY_VERSION=v${today}-${rev}" >> $GITHUB_ENV
+
+      - name: Check for same revision exists
+        run: |
+          if [ gh release list | grep -e "^v[0-9]{8}-${{ env.NIGHTLY_REV }}" ]; then
+            echo "${{ env.NIGHTLY_REV }} already exists"
+            echo "DO_RELEASE=true" >> $GITHUB_ENV
+          fi
+
+      - name: setup tools
+        run: |
+          go get github.com/mitchellh/gox
+          go get github.com/tcnksm/ghr
+        if: ${{ env.DO_RELEASE }}
+
+      - name: packages
+        run: |
+          PATH=~/go/bin:$PATH make packages GIT_VER=${{ env.NIGHTLY_VERSION }}
+        env:
+          CGO_ENABLED: 0
+        if: ${{ env.DO_RELEASE }}
+
+      - name: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PATH=~/go/bin:$PATH make release GIT_VER=${{ env.NIGHTLY_VERSION }}
+        if: ${{ env.DO_RELEASE }}
