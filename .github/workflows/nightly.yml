@@ -2,6 +2,7 @@ name: Nightly release
 on:
   schedule:
     - cron: "10 6 * * *"
+  workflow_dispatch:
 
 jobs:
   release:
