@@ -31,7 +31,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set +e
-          gh release list | grep -e "^v[0-9]{8}-${{ env.NIGHTLY_REV }}"
+          gh release list | grep -E "^v[0-9]{8}-${{ env.NIGHTLY_REV }}"
           if [ $? -eq 0 ]; then
             echo "${{ env.NIGHTLY_REV }} already exists"
           else
