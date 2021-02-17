@@ -27,6 +27,8 @@ jobs:
           echo "NIGHTLY_VERSION=v${today}-${rev}" >> $GITHUB_ENV
 
       - name: Check for same revision exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release list | grep -e "^v[0-9]{8}-${{ env.NIGHTLY_REV }}"
           if [ $? -eq 0 ]; then
