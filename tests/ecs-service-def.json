@@ -21,7 +21,7 @@
         "{{ tfstate `aws_subnet.private-a.id` }}"
       ],
       "securityGroups": [
-        "{{ tfstate `data.aws_security_group.default['first'].id` }}"
+        "{{ tfstatef `data.aws_security_group.default['%s'].id` `first` }}"
       ],
       "assignPublicIp": "ENABLED"
     }
