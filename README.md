@@ -541,7 +541,7 @@ ecs-service-def.json
   "networkConfiguration": {
     "awsvpcConfiguration": {
       "subnets": [
-        "{{ tfstate `aws_subnet.private-a.id` }}"
+        "{{ tfstatef `aws_subnet.private['%s'].id` `az-a` }}"
       ],
       "securityGroups": [
         "{{ tfstate `data.aws_security_group.default.id` }}"
@@ -552,6 +552,12 @@ ecs-service-def.json
 ```
 
 `{{ tfstate "resource_type.resource_name.attr" }}` will expand to an attribute value of the resource in tfstate.
+
+`{{ tfstatef "resource_type.resource_name['%s'].attr" "index" }}` is similar to `{{ tfstatef "resource_type.resource_name['index'].attr" }}`. This function is useful to build a resource address with environment variables.
+
+```
+{{ tfstatef `aws_subnet.ecs['%s'].id` (must_env `SERVICE`) }}
+```
 
 ## cloudformation
 
