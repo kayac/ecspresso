@@ -28,7 +28,7 @@ func _main() int {
 	if isatty.IsTerminal(os.Stdout.Fd()) {
 		colorDefault = "true"
 	}
-	colorOpt := kingpin.Flag("color", "enalble colored output").Default(colorDefault).Bool()
+	colorOpt := kingpin.Flag("color", "enable colored output").Default(colorDefault).Bool()
 
 	var isSetSuspendAutoScaling bool
 	deploy := kingpin.Command("deploy", "deploy service")
