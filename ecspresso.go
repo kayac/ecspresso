@@ -311,6 +311,10 @@ func (d *App) Create(opt CreateOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
+	tdTags, err := d.LoadTaskDefinitionTags(d.config.TaskDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load task definition tags")
+	}
 
 	count := calcDesiredCount(svd, opt)
 	if count == nil && (svd.SchedulingStrategy != nil && *svd.SchedulingStrategy == "REPLICA") {
@@ -320,13 +324,15 @@ func (d *App) Create(opt CreateOption) error {
 	if *opt.DryRun {
 		d.Log("task definition:")
 		d.LogJSON(td)
+		d.Log("task definition tags:")
+		d.LogJSON(tdTags)
 		d.Log("service definition:")
 		d.LogJSON(svd)
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	newTd, err := d.RegisterTaskDefinition(ctx, td)
+	newTd, err := d.RegisterTaskDefinition(ctx, td, tdTags)
 	if err != nil {
 		return errors.Wrap(err, "failed to register task definition")
 	}
@@ -550,12 +556,12 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	)
 }
 
-func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition) (*ecs.TaskDefinition, error) {
+func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition, tdTags []*ecs.Tag) (*ecs.TaskDefinition, error) {
 	d.Log("Registering a new task definition...")
 
 	out, err := d.ecs.RegisterTaskDefinitionWithContext(
 		ctx,
-		tdToRegisterTaskDefinitionInput(td),
+		tdToRegisterTaskDefinitionInput(td, tdTags),
 	)
 	if err != nil {
 		return nil, err
@@ -637,14 +643,20 @@ func (d *App) Register(opt RegisterOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
+	tdTags, err := d.LoadTaskDefinitionTags(d.config.TaskDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load task definition tags")
+	}
 	if *opt.DryRun {
 		d.Log("task definition:")
 		d.LogJSON(td)
+		d.Log("task definition tags:")
+		d.LogJSON(tdTags)
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	newTd, err := d.RegisterTaskDefinition(ctx, td)
+	newTd, err := d.RegisterTaskDefinition(ctx, td, tdTags)
 	if err != nil {
 		return errors.Wrap(err, "failed to register task definition")
 	}

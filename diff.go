@@ -32,15 +32,16 @@ func diffServices(local, remote *ecs.Service) (string, error) {
 }
 
 func diffTaskDefs(local, remote *ecs.TaskDefinition) (string, error) {
+	var tdTags []*ecs.Tag
 	sortTaskDefinitionForDiff(local)
 	sortTaskDefinitionForDiff(remote)
 
-	newTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(local))
+	newTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(local, tdTags))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal new task definition")
 	}
 
-	remoteTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(remote))
+	remoteTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(remote, tdTags))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal remote task definition")
 	}
@@ -105,7 +106,7 @@ func coloredDiff(src string) string {
 	return b.String()
 }
 
-func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition) *ecs.RegisterTaskDefinitionInput {
+func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition, tdTags []*ecs.Tag) *ecs.RegisterTaskDefinitionInput {
 	return &ecs.RegisterTaskDefinitionInput{
 		ContainerDefinitions:    td.ContainerDefinitions,
 		Cpu:                     td.Cpu,
@@ -118,6 +119,7 @@ func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition) *ecs.RegisterTaskDe
 		TaskRoleArn:             td.TaskRoleArn,
 		ProxyConfiguration:      td.ProxyConfiguration,
 		Volumes:                 td.Volumes,
+		Tags:                    tdTags,
 	}
 }
 
