@@ -8,7 +8,7 @@ import (
 )
 
 func TestLoadTaskDefinition(t *testing.T) {
-	for _, path := range []string{"tests/td-plain.json"} {
+	for _, path := range []string{"tests/td.json", "tests/td-plain.json"} {
 		c := &ecspresso.Config{
 			Region:             "ap-northeast-1",
 			Timeout:            600 * time.Second,
@@ -31,7 +31,7 @@ func TestLoadTaskDefinition(t *testing.T) {
 }
 
 func TestLoadTaskDefinitionTags(t *testing.T) {
-	for _, path := range []string{"tests/td.json", "tests/td-plain.json"} {
+	for _, path := range []string{"tests/td-plain.json"} {
 		c := &ecspresso.Config{
 			Region:             "ap-northeast-1",
 			Timeout:            600 * time.Second,

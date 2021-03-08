@@ -31,17 +31,16 @@ func diffServices(local, remote *ecs.Service) (string, error) {
 	return diff.Diff(string(remoteSvBytes), string(newSvBytes)), nil
 }
 
-func diffTaskDefs(local, remote *ecs.TaskDefinition) (string, error) {
-	var tdTags []*ecs.Tag
+func diffTaskDefs(local *ecs.TaskDefinition, localTags []*ecs.Tag, remote *ecs.TaskDefinition, remoteTags []*ecs.Tag) (string, error) {
 	sortTaskDefinitionForDiff(local)
 	sortTaskDefinitionForDiff(remote)
 
-	newTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(local, tdTags))
+	newTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(local, localTags))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal new task definition")
 	}
 
-	remoteTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(remote, tdTags))
+	remoteTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(remote, remoteTags))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal remote task definition")
 	}
@@ -76,12 +75,16 @@ func (d *App) Diff(opt DiffOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
-	remoteTd, err := d.DescribeTaskDefinition(ctx, *remoteSv.TaskDefinition)
+	newTdTags, err := d.LoadTaskDefinitionTags(d.config.TaskDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load task definition")
+	}
+	remoteTd, remoteTdTags, err := d.DescribeTaskDefinition(ctx, *remoteSv.TaskDefinition)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
 
-	if ds, err := diffTaskDefs(newTd, remoteTd); err != nil {
+	if ds, err := diffTaskDefs(newTd, newTdTags, remoteTd, remoteTdTags); err != nil {
 		return err
 	} else if ds != "" {
 		fmt.Println(color.RedString("--- %s", *remoteTd.TaskDefinitionArn))

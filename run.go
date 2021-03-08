@@ -47,7 +47,7 @@ func (d *App) Run(opt RunOption) error {
 			return errors.Wrap(err, "failed to load latest task definition")
 		}
 
-		td, err := d.DescribeTaskDefinition(ctx, tdArn)
+		td, tdTags, err := d.DescribeTaskDefinition(ctx, tdArn)
 		if err != nil {
 			return errors.Wrap(err, "failed to describe task definition")
 		}
@@ -55,9 +55,11 @@ func (d *App) Run(opt RunOption) error {
 		if *opt.DryRun {
 			d.Log("task definition:")
 			d.LogJSON(td)
+			d.Log("task definition tags:")
+			d.LogJSON(tdTags)
 		}
 	} else if *opt.SkipTaskDefinition {
-		td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
+		td, tdTags, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
 		if err != nil {
 			return errors.Wrap(err, "failed to describe task definition")
 		}
@@ -66,6 +68,8 @@ func (d *App) Run(opt RunOption) error {
 		if *opt.DryRun {
 			d.Log("task definition:")
 			d.LogJSON(td)
+			d.Log("task definition tags:")
+			d.LogJSON(tdTags)
 		}
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)

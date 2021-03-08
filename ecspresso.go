@@ -226,14 +226,14 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchConta
 	return nil
 }
 
-func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*ecs.TaskDefinition, error) {
+func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*ecs.TaskDefinition, []*ecs.Tag, error) {
 	out, err := d.ecs.DescribeTaskDefinitionWithContext(ctx, &ecs.DescribeTaskDefinitionInput{
 		TaskDefinition: &tdArn,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return out.TaskDefinition, nil
+	return out.TaskDefinition, out.Tags, nil
 }
 
 func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream string, startedAt time.Time) (int, error) {
