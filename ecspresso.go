@@ -229,6 +229,7 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchConta
 func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*ecs.TaskDefinition, []*ecs.Tag, error) {
 	out, err := d.ecs.DescribeTaskDefinitionWithContext(ctx, &ecs.DescribeTaskDefinitionInput{
 		TaskDefinition: &tdArn,
+		Include:        []*string{aws.String("TAGS")},
 	})
 	if err != nil {
 		return nil, nil, err
