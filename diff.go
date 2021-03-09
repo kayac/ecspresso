@@ -34,6 +34,8 @@ func diffServices(local, remote *ecs.Service) (string, error) {
 func diffTaskDefs(local *ecs.TaskDefinition, localTags []*ecs.Tag, remote *ecs.TaskDefinition, remoteTags []*ecs.Tag) (string, error) {
 	sortTaskDefinitionForDiff(local)
 	sortTaskDefinitionForDiff(remote)
+	sortTaskDefinitionTagsForDiff(localTags)
+	sortTaskDefinitionTagsForDiff(remoteTags)
 
 	newTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(local, localTags))
 	if err != nil {
@@ -254,6 +256,12 @@ func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
 			reflect.TypeOf(*td.ProxyConfiguration), reflect.Indirect(reflect.ValueOf(td.ProxyConfiguration)),
 			"Properties",
 		)
+	}
+}
+
+func sortTaskDefinitionTagsForDiff(tdTags []*ecs.Tag) {
+	if tdTags != nil && len(tdTags) > 0 {
+		sort.SliceStable(tdTags, func(i, j int) bool { return *tdTags[i].Key < *tdTags[j].Key })
 	}
 }
 

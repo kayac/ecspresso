@@ -127,6 +127,36 @@ func TestTaskDefinitionDiffer(t *testing.T) {
 	}
 }
 
+var testTaskDefinitionTags1 = []*ecs.Tag{
+	{
+		Key:   aws.String("AppVersion"),
+		Value: aws.String("v1"),
+	}, {
+		Key:   aws.String("Environment"),
+		Value: aws.String("Dev"),
+	},
+}
+
+var testTaskDefinitionTags2 = []*ecs.Tag{
+	{
+		Key:   aws.String("Environment"),
+		Value: aws.String("Dev"),
+	}, {
+		Key:   aws.String("AppVersion"),
+		Value: aws.String("v1"),
+	},
+}
+
+func TestTaskDefinitionTaagsDiffer(t *testing.T) {
+	ecspresso.SortTaskDefinitionTagsForDiff(testTaskDefinitionTags1)
+	ecspresso.SortTaskDefinitionTagsForDiff(testTaskDefinitionTags2)
+	if ecspresso.MarshalJSONString(testTaskDefinitionTags1) != ecspresso.MarshalJSONString(testTaskDefinitionTags2) {
+		t.Error("failed to SortTaskDefinitionTagsForDiff")
+		t.Log(ecspresso.MarshalJSONString(testTaskDefinitionTags1))
+		t.Log(ecspresso.MarshalJSONString(testTaskDefinitionTags2))
+	}
+}
+
 var testServiceDefinition1 = &ecs.Service{
 	LaunchType: aws.String("FARGATE"),
 	NetworkConfiguration: &ecs.NetworkConfiguration{
