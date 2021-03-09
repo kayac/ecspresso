@@ -68,6 +68,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		if *opt.DryRun {
 			d.Log("task definition:")
 			d.LogJSON(td)
+			d.Log("task definition tags:")
 			d.LogJSON(tdTags)
 		} else {
 			newTd, err := d.RegisterTaskDefinition(ctx, td, tdTags)
