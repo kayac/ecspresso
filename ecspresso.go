@@ -594,14 +594,7 @@ func (d *App) LoadTaskDefinitionTags(path string) ([]*ecs.Tag, error) {
 	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
 	}
-	if c.Tags != nil {
-		return c.Tags, nil
-	}
-	var tdTags []*ecs.Tag
-	if err := d.loader.LoadWithEnvJSON(&tdTags, path); err != nil {
-		return nil, err
-	}
-	return tdTags, nil
+	return c.Tags, nil
 }
 
 func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {

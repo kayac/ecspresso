@@ -31,7 +31,7 @@ func TestLoadTaskDefinition(t *testing.T) {
 }
 
 func TestLoadTaskDefinitionTags(t *testing.T) {
-	for _, path := range []string{"tests/td-plain.json"} {
+	for _, path := range []string{"tests/td.json", "tests/td-plain.json"} {
 		c := &ecspresso.Config{
 			Region:             "ap-northeast-1",
 			Timeout:            600 * time.Second,
@@ -46,8 +46,8 @@ func TestLoadTaskDefinitionTags(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		tdTags, err := app.LoadTaskDefinitionTags(path)
-		if err != nil || tdTags == nil {
+		_, err = app.LoadTaskDefinitionTags(path)
+		if err != nil {
 			t.Errorf("%s load failed: %s", path, err)
 		}
 	}
