@@ -87,5 +87,11 @@
         "value": ""
       }
     ]
-  }
+  },
+  "tags": [
+    {
+      "key": "TagKey",
+      "value": "TagValue"
+    }
+  ]
 }
