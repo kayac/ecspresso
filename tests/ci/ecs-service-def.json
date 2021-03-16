@@ -21,6 +21,7 @@
   },
   "desiredCount": 1,
   "enableECSManagedTags": false,
+  "enableExecuteCommand": true,
   "loadBalancers": [],
   "networkConfiguration": {
     "awsvpcConfiguration": {

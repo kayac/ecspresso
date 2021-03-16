@@ -337,6 +337,7 @@ func (d *App) Create(opt CreateOption) error {
 		DeploymentController:          svd.DeploymentController,
 		DesiredCount:                  count,
 		EnableECSManagedTags:          svd.EnableECSManagedTags,
+		EnableExecuteCommand:          svd.EnableExecuteCommand,
 		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
 		LaunchType:                    svd.LaunchType,
 		LoadBalancers:                 svd.LoadBalancers,
