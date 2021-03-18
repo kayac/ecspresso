@@ -721,6 +721,9 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to list deployments")
 	}
+	if len(ld.Deployments) == 0 {
+		return errors.New("no deployments are found")
+	}
 
 	dpID := ld.Deployments[0] // latest deployment id
 	_, err = d.codedeploy.StopDeploymentWithContext(ctx, &codedeploy.StopDeploymentInput{
