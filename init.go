@@ -44,7 +44,6 @@ func (d *App) Init(opt InitOption) error {
 	}
 
 	// task-def
-	//treatmentTaskDefinition(td)
 	if b, err := MarshalJSON(td); err != nil {
 		return errors.Wrap(err, "unable to marshal task definition to JSON")
 	} else {
@@ -83,17 +82,6 @@ func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
 	sv.RoleArn = nil
 	sv.ServiceName = nil
 	return sv
-}
-
-func treatmentTaskDefinition(td *TaskDefinition) *TaskDefinition {
-	td.Revision = nil
-	td.RequiresAttributes = nil
-	td.Status = nil
-	td.TaskDefinitionArn = nil
-	td.Compatibilities = nil
-	td.RegisteredAt = nil
-	td.RegisteredBy = nil
-	return td
 }
 
 func (d *App) saveFile(path string, b []byte, mode os.FileMode, force bool) error {
