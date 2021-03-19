@@ -249,6 +249,7 @@ func sortTaskDefinitionForDiff(td *TaskDefinitionInput) {
 		"PlacementConstraints",
 		"RequiresCompatibilities",
 		"Volumes",
+		"Tags",
 	)
 	// containerDefinitions are sorted by name
 	sort.Slice(td.ContainerDefinitions, func(i, j int) bool {
@@ -266,12 +267,6 @@ func sortTaskDefinitionForDiff(td *TaskDefinitionInput) {
 			reflect.TypeOf(*td.ProxyConfiguration), reflect.Indirect(reflect.ValueOf(td.ProxyConfiguration)),
 			"Properties",
 		)
-	}
-}
-
-func sortTaskDefinitionTagsForDiff(tdTags []*ecs.Tag) {
-	if tdTags != nil && len(tdTags) > 0 {
-		sort.SliceStable(tdTags, func(i, j int) bool { return *tdTags[i].Key < *tdTags[j].Key })
 	}
 }
 

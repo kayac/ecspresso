@@ -60,16 +60,10 @@ func (d *App) Deploy(opt DeployOption) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to load task definition")
 		}
-		tdTags, err := d.LoadTaskDefinitionTags(d.config.TaskDefinitionPath)
-		if err != nil {
-			return errors.Wrap(err, "failed to load task definition tags")
-		}
 
 		if *opt.DryRun {
 			d.Log("task definition:")
 			d.LogJSON(td)
-			d.Log("task definition tags:")
-			d.LogJSON(tdTags)
 		} else {
 			newTd, err := d.RegisterTaskDefinition(ctx, td)
 			if err != nil {
