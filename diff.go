@@ -31,18 +31,16 @@ func diffServices(local, remote *ecs.Service) (string, error) {
 	return diff.Diff(string(remoteSvBytes), string(newSvBytes)), nil
 }
 
-func diffTaskDefs(local *TaskDefinition, localTags []*ecs.Tag, remote *TaskDefinition, remoteTags []*ecs.Tag) (string, error) {
+func diffTaskDefs(local *TaskDefinitionInput, remote *TaskDefinitionInput) (string, error) {
 	sortTaskDefinitionForDiff(local)
 	sortTaskDefinitionForDiff(remote)
-	sortTaskDefinitionTagsForDiff(localTags)
-	sortTaskDefinitionTagsForDiff(remoteTags)
 
-	newTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(local, localTags))
+	newTdBytes, err := MarshalJSON(local)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal new task definition")
 	}
 
-	remoteTdBytes, err := MarshalJSON(tdToRegisterTaskDefinitionInput(remote, remoteTags))
+	remoteTdBytes, err := MarshalJSON(remote)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal remote task definition")
 	}
@@ -77,19 +75,15 @@ func (d *App) Diff(opt DiffOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
-	newTdTags, err := d.LoadTaskDefinitionTags(d.config.TaskDefinitionPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to load task definition")
-	}
-	remoteTd, remoteTdTags, err := d.DescribeTaskDefinition(ctx, *remoteSv.TaskDefinition)
+	remoteTd, err := d.DescribeTaskDefinition(ctx, *remoteSv.TaskDefinition)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
 
-	if ds, err := diffTaskDefs(newTd, newTdTags, remoteTd, remoteTdTags); err != nil {
+	if ds, err := diffTaskDefs(newTd, remoteTd); err != nil {
 		return err
 	} else if ds != "" {
-		fmt.Println(color.RedString("--- %s", *remoteTd.TaskDefinitionArn))
+		fmt.Println(color.RedString("--- %s", *remoteSv.TaskDefinition))
 		fmt.Println(color.GreenString("+++ %s", d.config.TaskDefinitionPath))
 		fmt.Print(coloredDiff(ds))
 	}
@@ -111,8 +105,8 @@ func coloredDiff(src string) string {
 	return b.String()
 }
 
-func tdToRegisterTaskDefinitionInput(td *TaskDefinition, tdTags []*ecs.Tag) *ecs.RegisterTaskDefinitionInput {
-	return &ecs.RegisterTaskDefinitionInput{
+func tdToTaskDefinitionInput(td *TaskDefinition, tdTags []*ecs.Tag) *TaskDefinitionInput {
+	return &TaskDefinitionInput{
 		ContainerDefinitions:    td.ContainerDefinitions,
 		Cpu:                     td.Cpu,
 		ExecutionRoleArn:        td.ExecutionRoleArn,
@@ -126,6 +120,22 @@ func tdToRegisterTaskDefinitionInput(td *TaskDefinition, tdTags []*ecs.Tag) *ecs
 		Volumes:                 td.Volumes,
 		Tags:                    tdTags,
 	}
+}
+
+func tdInputToTaskDefinitionWithTags(td *TaskDefinitionInput) (*TaskDefinition, []*ecs.Tag) {
+	return &ecs.TaskDefinition{
+		ContainerDefinitions:    td.ContainerDefinitions,
+		Cpu:                     td.Cpu,
+		ExecutionRoleArn:        td.ExecutionRoleArn,
+		Family:                  td.Family,
+		Memory:                  td.Memory,
+		NetworkMode:             td.NetworkMode,
+		PlacementConstraints:    td.PlacementConstraints,
+		RequiresCompatibilities: td.RequiresCompatibilities,
+		TaskRoleArn:             td.TaskRoleArn,
+		ProxyConfiguration:      td.ProxyConfiguration,
+		Volumes:                 td.Volumes,
+	}, td.Tags
 }
 
 var stringerType = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
@@ -220,7 +230,7 @@ func sortServiceDefinitionForDiff(sv *ecs.Service) {
 	}
 }
 
-func sortTaskDefinitionForDiff(td *TaskDefinition) {
+func sortTaskDefinitionForDiff(td *TaskDefinitionInput) {
 	for _, cd := range td.ContainerDefinitions {
 		if cd.Cpu == nil {
 			cd.Cpu = aws.Int64(0)

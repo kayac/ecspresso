@@ -27,7 +27,7 @@ func (d *App) Init(opt InitOption) error {
 	}
 
 	sv := out.Services[0]
-	td, _, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
+	td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
@@ -44,7 +44,7 @@ func (d *App) Init(opt InitOption) error {
 	}
 
 	// task-def
-	treatmentTaskDefinition(td)
+	//treatmentTaskDefinition(td)
 	if b, err := MarshalJSON(td); err != nil {
 		return errors.Wrap(err, "unable to marshal task definition to JSON")
 	} else {

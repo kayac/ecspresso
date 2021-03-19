@@ -71,7 +71,7 @@ func (d *App) Deploy(opt DeployOption) error {
 			d.Log("task definition tags:")
 			d.LogJSON(tdTags)
 		} else {
-			newTd, err := d.RegisterTaskDefinition(ctx, td, tdTags)
+			newTd, err := d.RegisterTaskDefinition(ctx, td)
 			if err != nil {
 				return errors.Wrap(err, "failed to register task definition")
 			}

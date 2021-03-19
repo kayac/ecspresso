@@ -47,7 +47,7 @@ func (d *App) Run(opt RunOption) error {
 			return errors.Wrap(err, "failed to load latest task definition")
 		}
 
-		td, tdTags, err := d.DescribeTaskDefinition(ctx, tdArn)
+		td, err := d.DescribeTaskDefinition(ctx, tdArn)
 		if err != nil {
 			return errors.Wrap(err, "failed to describe task definition")
 		}
@@ -55,30 +55,22 @@ func (d *App) Run(opt RunOption) error {
 		if *opt.DryRun {
 			d.Log("task definition:")
 			d.LogJSON(td)
-			d.Log("task definition tags:")
-			d.LogJSON(tdTags)
 		}
 	} else if *opt.SkipTaskDefinition {
-		td, tdTags, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
+		td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
 		if err != nil {
 			return errors.Wrap(err, "failed to describe task definition")
 		}
-		tdArn = *(td.TaskDefinitionArn)
+		tdArn = *sv.TaskDefinition
 		watchContainer = containerOf(td, opt.WatchContainer)
 		if *opt.DryRun {
 			d.Log("task definition:")
 			d.LogJSON(td)
-			d.Log("task definition tags:")
-			d.LogJSON(tdTags)
 		}
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
 			return errors.Wrap(err, "failed to load task definition")
-		}
-		tdTags, err := d.LoadTaskDefinitionTags(d.config.TaskDefinitionPath)
-		if err != nil {
-			return errors.Wrap(err, "failed to load task definition tags")
 		}
 
 		if len(*opt.TaskDefinition) > 0 {
@@ -88,12 +80,6 @@ func (d *App) Run(opt RunOption) error {
 				return errors.Wrap(err, "failed to load task definition")
 			}
 			td = runTd
-
-			runTdTags, err := d.LoadTaskDefinitionTags(*opt.TaskDefinition)
-			if err != nil {
-				return errors.Wrap(err, "failed to load task definition tags")
-			}
-			tdTags = runTdTags
 		}
 		watchContainer = containerOf(td, opt.WatchContainer)
 
@@ -102,7 +88,7 @@ func (d *App) Run(opt RunOption) error {
 			d.Log("task definition:")
 			d.LogJSON(td)
 		} else {
-			newTd, err = d.RegisterTaskDefinition(ctx, td, tdTags)
+			newTd, err = d.RegisterTaskDefinition(ctx, td)
 			if err != nil {
 				return errors.Wrap(err, "failed to register task definition")
 			}
