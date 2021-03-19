@@ -85,7 +85,7 @@ func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
 	return sv
 }
 
-func treatmentTaskDefinition(td *ecs.TaskDefinition) *ecs.TaskDefinition {
+func treatmentTaskDefinition(td *TaskDefinition) *TaskDefinition {
 	td.Revision = nil
 	td.RequiresAttributes = nil
 	td.Status = nil

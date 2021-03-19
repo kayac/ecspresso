@@ -32,7 +32,9 @@ var TerminalWidth = 90
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
 
-func taskDefinitionName(t *ecs.TaskDefinition) string {
+type TaskDefinition = ecs.TaskDefinition
+
+func taskDefinitionName(t *TaskDefinition) string {
 	return fmt.Sprintf("%s:%d", *t.Family, *t.Revision)
 }
 
@@ -226,7 +228,7 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchConta
 	return nil
 }
 
-func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*ecs.TaskDefinition, []*ecs.Tag, error) {
+func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDefinition, []*ecs.Tag, error) {
 	out, err := d.ecs.DescribeTaskDefinitionWithContext(ctx, &ecs.DescribeTaskDefinitionInput{
 		TaskDefinition: &tdArn,
 		Include:        []*string{aws.String("TAGS")},
@@ -412,7 +414,7 @@ func (d *App) Delete(opt DeleteOption) error {
 	return nil
 }
 
-func containerOf(td *ecs.TaskDefinition, name *string) *ecs.ContainerDefinition {
+func containerOf(td *TaskDefinition, name *string) *ecs.ContainerDefinition {
 	if name == nil || *name == "" {
 		return td.ContainerDefinitions[0]
 	}
@@ -557,7 +559,7 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	)
 }
 
-func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition, tdTags []*ecs.Tag) (*ecs.TaskDefinition, error) {
+func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinition, tdTags []*ecs.Tag) (*TaskDefinition, error) {
 	d.Log("Registering a new task definition...")
 
 	out, err := d.ecs.RegisterTaskDefinitionWithContext(
@@ -571,9 +573,9 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition
 	return out.TaskDefinition, nil
 }
 
-func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
+func (d *App) LoadTaskDefinition(path string) (*TaskDefinition, error) {
 	c := struct {
-		TaskDefinition *ecs.TaskDefinition
+		TaskDefinition *TaskDefinition
 	}{}
 	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
@@ -581,7 +583,7 @@ func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
 	if c.TaskDefinition != nil {
 		return c.TaskDefinition, nil
 	}
-	var td ecs.TaskDefinition
+	var td TaskDefinition
 	if err := d.loader.LoadWithEnvJSON(&td, path); err != nil {
 		return nil, err
 	}

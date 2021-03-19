@@ -97,7 +97,7 @@ func (d *App) Run(opt RunOption) error {
 		}
 		watchContainer = containerOf(td, opt.WatchContainer)
 
-		var newTd *ecs.TaskDefinition
+		var newTd *TaskDefinition
 		if *opt.DryRun {
 			d.Log("task definition:")
 			d.LogJSON(td)

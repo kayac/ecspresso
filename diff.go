@@ -31,7 +31,7 @@ func diffServices(local, remote *ecs.Service) (string, error) {
 	return diff.Diff(string(remoteSvBytes), string(newSvBytes)), nil
 }
 
-func diffTaskDefs(local *ecs.TaskDefinition, localTags []*ecs.Tag, remote *ecs.TaskDefinition, remoteTags []*ecs.Tag) (string, error) {
+func diffTaskDefs(local *TaskDefinition, localTags []*ecs.Tag, remote *TaskDefinition, remoteTags []*ecs.Tag) (string, error) {
 	sortTaskDefinitionForDiff(local)
 	sortTaskDefinitionForDiff(remote)
 	sortTaskDefinitionTagsForDiff(localTags)
@@ -111,7 +111,7 @@ func coloredDiff(src string) string {
 	return b.String()
 }
 
-func tdToRegisterTaskDefinitionInput(td *ecs.TaskDefinition, tdTags []*ecs.Tag) *ecs.RegisterTaskDefinitionInput {
+func tdToRegisterTaskDefinitionInput(td *TaskDefinition, tdTags []*ecs.Tag) *ecs.RegisterTaskDefinitionInput {
 	return &ecs.RegisterTaskDefinitionInput{
 		ContainerDefinitions:    td.ContainerDefinitions,
 		Cpu:                     td.Cpu,
@@ -220,7 +220,7 @@ func sortServiceDefinitionForDiff(sv *ecs.Service) {
 	}
 }
 
-func sortTaskDefinitionForDiff(td *ecs.TaskDefinition) {
+func sortTaskDefinitionForDiff(td *TaskDefinition) {
 	for _, cd := range td.ContainerDefinitions {
 		if cd.Cpu == nil {
 			cd.Cpu = aws.Int64(0)
