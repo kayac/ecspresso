@@ -316,10 +316,6 @@ func (d *App) Create(opt CreateOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
-	tdTags, err := d.LoadTaskDefinitionTags(d.config.TaskDefinitionPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to load task definition tags")
-	}
 
 	count := calcDesiredCount(svd, opt)
 	if count == nil && (svd.SchedulingStrategy != nil && *svd.SchedulingStrategy == "REPLICA") {
@@ -329,8 +325,6 @@ func (d *App) Create(opt CreateOption) error {
 	if *opt.DryRun {
 		d.Log("task definition:")
 		d.LogJSON(td)
-		d.Log("task definition tags:")
-		d.LogJSON(tdTags)
 		d.Log("service definition:")
 		d.LogJSON(svd)
 		d.Log("DRY RUN OK")
@@ -592,16 +586,6 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 	return &td, nil
 }
 
-func (d *App) LoadTaskDefinitionTags(path string) ([]*ecs.Tag, error) {
-	c := struct {
-		Tags []*ecs.Tag
-	}{}
-	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
-		return nil, err
-	}
-	return c.Tags, nil
-}
-
 func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
 	if path == "" {
 		return nil, errors.New("service_definition is not defined")
@@ -641,15 +625,9 @@ func (d *App) Register(opt RegisterOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
-	tdTags, err := d.LoadTaskDefinitionTags(d.config.TaskDefinitionPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to load task definition tags")
-	}
 	if *opt.DryRun {
 		d.Log("task definition:")
 		d.LogJSON(td)
-		d.Log("task definition tags:")
-		d.LogJSON(tdTags)
 		d.Log("DRY RUN OK")
 		return nil
 	}

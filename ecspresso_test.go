@@ -46,8 +46,8 @@ func TestLoadTaskDefinitionTags(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		tdTags, err := app.LoadTaskDefinitionTags(path)
-		if err != nil || tdTags != nil {
+		_, err = app.LoadTaskDefinition(path)
+		if err != nil {
 			t.Errorf("%s load failed: %s", path, err)
 		}
 	}
@@ -67,8 +67,8 @@ func TestLoadTaskDefinitionTags(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		tdTags, err := app.LoadTaskDefinitionTags(path)
-		if err != nil || tdTags == nil {
+		td, err := app.LoadTaskDefinition(path)
+		if err != nil || len(td.Tags) == 0 {
 			t.Errorf("%s load failed: %s", path, err)
 		}
 	}

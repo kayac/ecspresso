@@ -31,7 +31,7 @@ func diffServices(local, remote *ecs.Service) (string, error) {
 	return diff.Diff(string(remoteSvBytes), string(newSvBytes)), nil
 }
 
-func diffTaskDefs(local *TaskDefinitionInput, remote *TaskDefinitionInput) (string, error) {
+func diffTaskDefs(local, remote *TaskDefinitionInput) (string, error) {
 	sortTaskDefinitionForDiff(local)
 	sortTaskDefinitionForDiff(remote)
 

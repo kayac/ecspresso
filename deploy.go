@@ -60,7 +60,6 @@ func (d *App) Deploy(opt DeployOption) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to load task definition")
 		}
-
 		if *opt.DryRun {
 			d.Log("task definition:")
 			d.LogJSON(td)
