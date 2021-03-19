@@ -164,7 +164,7 @@ func sortSlicesInDefinition(t reflect.Type, v reflect.Value, fieldNames ...strin
 			for i := 0; i < size; i++ {
 				slice[i] = fv.Index(i)
 			}
-			sort.Slice(slice, func(i, j int) bool {
+			sort.SliceStable(slice, func(i, j int) bool {
 				iv, jv := reflect.Indirect(slice[i]), reflect.Indirect(slice[j])
 				var is, js string
 				if iv.Kind() == reflect.String && jv.Kind() == reflect.String {
@@ -252,7 +252,7 @@ func sortTaskDefinitionForDiff(td *TaskDefinitionInput) {
 		"Tags",
 	)
 	// containerDefinitions are sorted by name
-	sort.Slice(td.ContainerDefinitions, func(i, j int) bool {
+	sort.SliceStable(td.ContainerDefinitions, func(i, j int) bool {
 		return *(td.ContainerDefinitions[i].Name) > *(td.ContainerDefinitions[j].Name)
 	})
 
