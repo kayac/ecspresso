@@ -226,14 +226,15 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchConta
 	return nil
 }
 
-func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*ecs.TaskDefinition, error) {
+func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*ecs.TaskDefinition, []*ecs.Tag, error) {
 	out, err := d.ecs.DescribeTaskDefinitionWithContext(ctx, &ecs.DescribeTaskDefinitionInput{
 		TaskDefinition: &tdArn,
+		Include:        []*string{aws.String("TAGS")},
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return out.TaskDefinition, nil
+	return out.TaskDefinition, out.Tags, nil
 }
 
 func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream string, startedAt time.Time) (int, error) {
@@ -311,6 +312,10 @@ func (d *App) Create(opt CreateOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
+	tdTags, err := d.LoadTaskDefinitionTags(d.config.TaskDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load task definition tags")
+	}
 
 	count := calcDesiredCount(svd, opt)
 	if count == nil && (svd.SchedulingStrategy != nil && *svd.SchedulingStrategy == "REPLICA") {
@@ -320,13 +325,15 @@ func (d *App) Create(opt CreateOption) error {
 	if *opt.DryRun {
 		d.Log("task definition:")
 		d.LogJSON(td)
+		d.Log("task definition tags:")
+		d.LogJSON(tdTags)
 		d.Log("service definition:")
 		d.LogJSON(svd)
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	newTd, err := d.RegisterTaskDefinition(ctx, td)
+	newTd, err := d.RegisterTaskDefinition(ctx, td, tdTags)
 	if err != nil {
 		return errors.Wrap(err, "failed to register task definition")
 	}
@@ -550,12 +557,12 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	)
 }
 
-func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition) (*ecs.TaskDefinition, error) {
+func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition, tdTags []*ecs.Tag) (*ecs.TaskDefinition, error) {
 	d.Log("Registering a new task definition...")
 
 	out, err := d.ecs.RegisterTaskDefinitionWithContext(
 		ctx,
-		tdToRegisterTaskDefinitionInput(td),
+		tdToRegisterTaskDefinitionInput(td, tdTags),
 	)
 	if err != nil {
 		return nil, err
@@ -579,6 +586,16 @@ func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
 		return nil, err
 	}
 	return &td, nil
+}
+
+func (d *App) LoadTaskDefinitionTags(path string) ([]*ecs.Tag, error) {
+	c := struct {
+		Tags []*ecs.Tag
+	}{}
+	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
+		return nil, err
+	}
+	return c.Tags, nil
 }
 
 func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
@@ -620,14 +637,20 @@ func (d *App) Register(opt RegisterOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
+	tdTags, err := d.LoadTaskDefinitionTags(d.config.TaskDefinitionPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load task definition tags")
+	}
 	if *opt.DryRun {
 		d.Log("task definition:")
 		d.LogJSON(td)
+		d.Log("task definition tags:")
+		d.LogJSON(tdTags)
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	newTd, err := d.RegisterTaskDefinition(ctx, td)
+	newTd, err := d.RegisterTaskDefinition(ctx, td, tdTags)
 	if err != nil {
 		return errors.Wrap(err, "failed to register task definition")
 	}

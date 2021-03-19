@@ -27,7 +27,7 @@ func (d *App) Init(opt InitOption) error {
 	}
 
 	sv := out.Services[0]
-	td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
+	td, _, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
