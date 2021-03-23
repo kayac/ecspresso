@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	gc "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
@@ -42,6 +43,7 @@ type App struct {
 	codedeploy  *codedeploy.CodeDeploy
 	cwl         *cloudwatchlogs.CloudWatchLogs
 	iam         *iam.IAM
+	elbv2       *elbv2.ELBV2
 
 	sess     *session.Session
 	verifier *verifier
@@ -273,6 +275,7 @@ func NewApp(conf *Config) (*App, error) {
 		codedeploy:  codedeploy.New(sess),
 		cwl:         cloudwatchlogs.New(sess),
 		iam:         iam.New(sess),
+		elbv2:       elbv2.New(sess),
 
 		sess:   sess,
 		config: conf,

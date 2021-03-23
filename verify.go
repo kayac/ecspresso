@@ -218,7 +218,7 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 	for i, lb := range sv.LoadBalancers {
 		name := fmt.Sprintf("LoadBalancer[%d]", i)
 		err := d.verifyResource(ctx, name, func(context.Context) error {
-			out, err := d.verifier.elbv2.DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
+			out, err := d.elbv2.DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
 				TargetGroupArns: []*string{lb.TargetGroupArn},
 			})
 			if err != nil {
