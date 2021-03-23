@@ -42,8 +42,8 @@ type App struct {
 	autoScaling *applicationautoscaling.ApplicationAutoScaling
 	codedeploy  *codedeploy.CodeDeploy
 	cwl         *cloudwatchlogs.CloudWatchLogs
-	iam         *iam.IAM
 	elbv2       *elbv2.ELBV2
+	iam         *iam.IAM
 
 	sess     *session.Session
 	verifier *verifier
@@ -274,8 +274,8 @@ func NewApp(conf *Config) (*App, error) {
 		autoScaling: applicationautoscaling.New(sess),
 		codedeploy:  codedeploy.New(sess),
 		cwl:         cloudwatchlogs.New(sess),
-		iam:         iam.New(sess),
 		elbv2:       elbv2.New(sess),
+		iam:         iam.New(sess),
 
 		sess:   sess,
 		config: conf,
