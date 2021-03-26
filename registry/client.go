@@ -88,11 +88,13 @@ func (c *Repositry) getManifests(tag string) (*http.Response, error) {
 	u := fmt.Sprintf("https://%s/v2/%s/manifests/%s", c.host, c.repo, tag)
 	req, _ := http.NewRequest(http.MethodHead, u, nil)
 	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
-	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
-	} else if c.user == "AWS" && c.password != "" {
+	if c.user == "AWS" && c.password != "" {
 		// ECR
 		req.Header.Set("Authorization", "Basic "+c.password)
+	} else {
+		// even if the token is empty, always set an Authorization header.
+		// because public ghcr.io repositories reject requests without the header.
+		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
