@@ -61,7 +61,7 @@ func (d *App) Run(opt RunOption) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to describe task definition")
 		}
-		tdArn = *(td.TaskDefinitionArn)
+		tdArn = *sv.TaskDefinition
 		watchContainer = containerOf(td, opt.WatchContainer)
 		if *opt.DryRun {
 			d.Log("task definition:")
@@ -83,7 +83,7 @@ func (d *App) Run(opt RunOption) error {
 		}
 		watchContainer = containerOf(td, opt.WatchContainer)
 
-		var newTd *ecs.TaskDefinition
+		var newTd *TaskDefinition
 		if *opt.DryRun {
 			d.Log("task definition:")
 			d.LogJSON(td)

@@ -39,7 +39,7 @@ func TestToNumberMemory(t *testing.T) {
 	}
 }
 
-var testTaskDefinition1 = &ecs.TaskDefinition{
+var testTaskDefinition1 = &ecspresso.TaskDefinitionInput{
 	Cpu:    aws.String("0.25 vCPU"),
 	Memory: aws.String("1 GB"),
 	ContainerDefinitions: []*ecs.ContainerDefinition{
@@ -76,9 +76,18 @@ var testTaskDefinition1 = &ecs.TaskDefinition{
 			},
 		},
 	},
+	Tags: []*ecs.Tag{
+		{
+			Key:   aws.String("AppVersion"),
+			Value: aws.String("v1"),
+		}, {
+			Key:   aws.String("Environment"),
+			Value: aws.String("Dev"),
+		},
+	},
 }
 
-var testTaskDefinition2 = &ecs.TaskDefinition{
+var testTaskDefinition2 = &ecspresso.TaskDefinitionInput{
 	Cpu:    aws.String("256"),
 	Memory: aws.String("1024"),
 	ContainerDefinitions: []*ecs.ContainerDefinition{
@@ -113,6 +122,15 @@ var testTaskDefinition2 = &ecs.TaskDefinition{
 				Name:  aws.String("ProxyIngressPort"),
 				Value: aws.String("15000"),
 			},
+		},
+	},
+	Tags: []*ecs.Tag{
+		{
+			Key:   aws.String("Environment"),
+			Value: aws.String("Dev"),
+		}, {
+			Key:   aws.String("AppVersion"),
+			Value: aws.String("v1"),
 		},
 	},
 }

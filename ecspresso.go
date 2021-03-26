@@ -32,7 +32,11 @@ var TerminalWidth = 90
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
 
-func taskDefinitionName(t *ecs.TaskDefinition) string {
+type TaskDefinition = ecs.TaskDefinition
+
+type TaskDefinitionInput = ecs.RegisterTaskDefinitionInput
+
+func taskDefinitionName(t *TaskDefinition) string {
 	return fmt.Sprintf("%s:%d", *t.Family, *t.Revision)
 }
 
@@ -226,14 +230,15 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchConta
 	return nil
 }
 
-func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*ecs.TaskDefinition, error) {
+func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDefinitionInput, error) {
 	out, err := d.ecs.DescribeTaskDefinitionWithContext(ctx, &ecs.DescribeTaskDefinitionInput{
 		TaskDefinition: &tdArn,
+		Include:        []*string{aws.String("TAGS")},
 	})
 	if err != nil {
 		return nil, err
 	}
-	return out.TaskDefinition, nil
+	return tdToTaskDefinitionInput(out.TaskDefinition, out.Tags), nil
 }
 
 func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream string, startedAt time.Time) (int, error) {
@@ -405,7 +410,7 @@ func (d *App) Delete(opt DeleteOption) error {
 	return nil
 }
 
-func containerOf(td *ecs.TaskDefinition, name *string) *ecs.ContainerDefinition {
+func containerOf(td *TaskDefinitionInput, name *string) *ecs.ContainerDefinition {
 	if name == nil || *name == "" {
 		return td.ContainerDefinitions[0]
 	}
@@ -550,12 +555,12 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	)
 }
 
-func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition) (*ecs.TaskDefinition, error) {
+func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInput) (*TaskDefinition, error) {
 	d.Log("Registering a new task definition...")
 
 	out, err := d.ecs.RegisterTaskDefinitionWithContext(
 		ctx,
-		tdToRegisterTaskDefinitionInput(td),
+		td,
 	)
 	if err != nil {
 		return nil, err
@@ -564,9 +569,9 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *ecs.TaskDefinition
 	return out.TaskDefinition, nil
 }
 
-func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
+func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 	c := struct {
-		TaskDefinition *ecs.TaskDefinition
+		TaskDefinition *TaskDefinitionInput
 	}{}
 	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
 		return nil, err
@@ -574,7 +579,7 @@ func (d *App) LoadTaskDefinition(path string) (*ecs.TaskDefinition, error) {
 	if c.TaskDefinition != nil {
 		return c.TaskDefinition, nil
 	}
-	var td ecs.TaskDefinition
+	var td TaskDefinitionInput
 	if err := d.loader.LoadWithEnvJSON(&td, path); err != nil {
 		return nil, err
 	}
