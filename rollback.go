@@ -19,7 +19,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 	}
 
 	if isCodeDeploy(sv.DeploymentController) {
-		return errors.New("could not rollback service using deployment controller CODE_DEPLOY")
+		return d.RollbackByCodeDeploy(ctx)
 	}
 
 	currentArn := *sv.TaskDefinition
