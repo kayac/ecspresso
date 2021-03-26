@@ -143,6 +143,8 @@ func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ec
 		PlacementStrategy:        sv.PlacementStrategy,
 		PlatformVersion:          sv.PlatformVersion,
 		Tags:                     tags,
+		EnableECSManagedTags:     sv.EnableECSManagedTags,
+		EnableExecuteCommand:     sv.EnableExecuteCommand,
 	}
 
 	switch aws.StringValue(opt.PropagateTags) {
