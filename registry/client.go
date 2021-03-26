@@ -94,7 +94,9 @@ func (c *Repositry) getManifests(tag string) (*http.Response, error) {
 	} else {
 		// even if the token is empty, always set an Authorization header.
 		// because public ghcr.io repositories reject requests without the header.
-		req.Header.Set("Authorization", "Bearer "+c.token)
+		if c.token != "" || c.host == "ghcr.io" {
+			req.Header.Set("Authorization", "Bearer "+c.token)
+		}
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
