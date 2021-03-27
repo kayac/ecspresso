@@ -222,6 +222,16 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 				TargetGroupArns: []*string{lb.TargetGroupArn},
 			})
 			if err != nil {
+				fmt.Println(
+					color.YellowString(
+						"WARNING: verifying the target group using the task execution role has been DEPRECATED and will be removed in the future. " +
+						"Allow `elasticloadbalancing: DescribeTargetGroups` to the role that executes ecspresso."),
+				)
+				out, err = d.verifier.elbv2.DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
+					TargetGroupArns: []*string{lb.TargetGroupArn},
+				})
+			}
+			if err != nil {
 				return err
 			} else if len(out.TargetGroups) == 0 {
 				return errors.Errorf("target group %s is not found", *lb.TargetGroupArn)
