@@ -147,6 +147,12 @@ func _main() int {
 		ConfigFile:        render.Flag("config-file", "render config file").Bool(),
 	}
 
+	tasks := kingpin.Command("tasks", "list tasks in the cluster")
+	tasksOption := ecspresso.TasksOption{
+		ID:     tasks.Flag("id", "task ID").Default("").String(),
+		Format: tasks.Flag("format", "output format").Default("table").Enum("table", "json", "tsv"),
+	}
+
 	sub := kingpin.Parse()
 	if sub == "version" {
 		fmt.Println("ecspresso", Version)
@@ -226,6 +232,8 @@ func _main() int {
 		err = app.Verify(verifyOption)
 	case "render":
 		err = app.Render(renderOption)
+	case "tasks":
+		err = app.Tasks(tasksOption)
 	default:
 		kingpin.Usage()
 		return 1
