@@ -32,6 +32,7 @@ type Config struct {
 	Timeout               time.Duration    `yaml:"timeout"`
 	Plugins               []ConfigPlugin   `yaml:"plugins,omitempty"`
 	AppSpec               *appspec.AppSpec `yaml:"appspec,omitempty"`
+	FinderCommand         string           `yaml:"finder_command,omitempty"`
 
 	templateFuncs      []template.FuncMap
 	dir                string

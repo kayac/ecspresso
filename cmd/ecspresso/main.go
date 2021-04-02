@@ -153,6 +153,12 @@ func _main() int {
 		Output: tasks.Flag("output", "output format (table|json|tsv)").Default("table").Enum("table", "json", "tsv"),
 	}
 
+	exec := kingpin.Command("exec", "execute command into the task")
+	execOption := ecspresso.ExecOption{
+		ID:      exec.Flag("id", "task ID").Default("").String(),
+		Command: exec.Flag("command", "command").Default("sh").String(),
+	}
+
 	sub := kingpin.Parse()
 	if sub == "version" {
 		fmt.Println("ecspresso", Version)
@@ -234,6 +240,8 @@ func _main() int {
 		err = app.Render(renderOption)
 	case "tasks":
 		err = app.Tasks(tasksOption)
+	case "exec":
+		err = app.Exec(execOption)
 	default:
 		kingpin.Usage()
 		return 1

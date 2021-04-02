@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -14,9 +15,8 @@ import (
 )
 
 type TasksOption struct {
-	ID             *string
-	Output         *string
-	ExecuteCommand *string
+	ID     *string
+	Output *string
 }
 
 func (opt TasksOption) Formatter() taskFormatter {
@@ -29,70 +29,69 @@ func (opt TasksOption) Formatter() taskFormatter {
 	return newTaskFormatterTable(os.Stdout)
 }
 
-func (d *App) taskIDs(opt TasksOption) ([]*string, error) {
+func (d *App) tasks(ctx context.Context, id *string) ([]*ecs.Task, error) {
 	var taskIDs []*string
-	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-	if err != nil {
-		return nil, err
-	}
-	for _, desiredStatus := range []string{"RUNNING", "STOPPED"} {
-		var nextToken *string
-		for {
-			out, err := d.ecs.ListTasks(&ecs.ListTasksInput{
-				Cluster:       &d.config.Cluster,
-				Family:        td.Family,
-				DesiredStatus: aws.String(desiredStatus),
-				NextToken:     nextToken,
-			})
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to list tasks")
-			}
-			for _, id := range out.TaskArns {
-				taskIDs = append(taskIDs, aws.String(arnToName(*id)))
-			}
-			if nextToken = out.NextToken; nextToken == nil {
-				break
-			}
-		}
-	}
-	return taskIDs, nil
-}
-
-func (d *App) Tasks(opt TasksOption) error {
-	ctx, cancel := d.Start()
-	defer cancel()
-
-	var taskIDs []*string
-	if aws.StringValue(opt.ID) != "" {
-		taskIDs = []*string{opt.ID}
+	if aws.StringValue(id) != "" {
+		taskIDs = []*string{id}
 	} else {
-		var err error
-		taskIDs, err = d.taskIDs(opt)
+		sv, err := d.DescribeService(ctx)
 		if err != nil {
-			return err
+			return nil, err
+		}
+		td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
+		if err != nil {
+			return nil, err
+		}
+		for _, desiredStatus := range []string{"RUNNING", "STOPPED"} {
+			var nextToken *string
+			for {
+				out, err := d.ecs.ListTasks(&ecs.ListTasksInput{
+					Cluster:       &d.config.Cluster,
+					Family:        td.Family,
+					DesiredStatus: aws.String(desiredStatus),
+					NextToken:     nextToken,
+				})
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to list tasks")
+				}
+				for _, id := range out.TaskArns {
+					taskIDs = append(taskIDs, aws.String(arnToName(*id)))
+				}
+				if nextToken = out.NextToken; nextToken == nil {
+					break
+				}
+			}
 		}
 	}
+
 	in := &ecs.DescribeTasksInput{
 		Cluster: aws.String(d.Cluster),
 		Tasks:   taskIDs,
 	}
 	out, err := d.ecs.DescribeTasksWithContext(ctx, in)
 	if err != nil {
-		return errors.Wrap(err, "failed to describe tasks")
+		return nil, errors.Wrap(err, "failed to describe tasks")
 	}
 	if len(out.Tasks) == 0 && len(in.Tasks) != 0 {
-		return errors.Errorf("task ID %s is not found", *in.Tasks[0])
+		return nil, errors.Errorf("task ID %s is not found", *in.Tasks[0])
+	}
+	return out.Tasks, nil
+}
+
+func (d *App) Tasks(opt TasksOption) error {
+	ctx, cancel := d.Start()
+	defer cancel()
+
+	tasks, err := d.tasks(ctx, opt.ID)
+	if err != nil {
+		return err
 	}
 
 	formatter := opt.Formatter()
-	for _, task := range out.Tasks {
+	for _, task := range tasks {
 		formatter.AddTask(task)
 	}
 	formatter.Close()
-	return nil
-}
-
-func (d *App) taskSelectAction(out TasksOption, tasks []*ecs.Task) error {
 	return nil
 }
 
