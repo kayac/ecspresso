@@ -15,12 +15,12 @@ import (
 
 type TasksOption struct {
 	ID             *string
-	Format         *string
+	Output         *string
 	ExecuteCommand *string
 }
 
 func (opt TasksOption) Formatter() taskFormatter {
-	switch *opt.Format {
+	switch *opt.Output {
 	case "json":
 		return newTaskFormatterJSON(os.Stdout)
 	case "tsv":
@@ -29,41 +29,47 @@ func (opt TasksOption) Formatter() taskFormatter {
 	return newTaskFormatterTable(os.Stdout)
 }
 
+func (d *App) taskIDs(opt TasksOption) ([]*string, error) {
+	var taskIDs []*string
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, desiredStatus := range []string{"RUNNING", "STOPPED"} {
+		var nextToken *string
+		for {
+			out, err := d.ecs.ListTasks(&ecs.ListTasksInput{
+				Cluster:       &d.config.Cluster,
+				Family:        td.Family,
+				DesiredStatus: aws.String(desiredStatus),
+				NextToken:     nextToken,
+			})
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to list tasks")
+			}
+			for _, id := range out.TaskArns {
+				taskIDs = append(taskIDs, aws.String(arnToName(*id)))
+			}
+			if nextToken = out.NextToken; nextToken == nil {
+				break
+			}
+		}
+	}
+	return taskIDs, nil
+}
+
 func (d *App) Tasks(opt TasksOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-	if err != nil {
-		return err
-	}
 	var taskIDs []*string
-
 	if aws.StringValue(opt.ID) != "" {
 		taskIDs = []*string{opt.ID}
 	} else {
-		for _, desiredStatus := range []string{"RUNNING", "STOPPED"} {
-			var nextToken *string
-			for {
-				out, err := d.ecs.ListTasks(&ecs.ListTasksInput{
-					Cluster:       &d.config.Cluster,
-					Family:        td.Family,
-					DesiredStatus: aws.String(desiredStatus),
-					NextToken:     nextToken,
-				})
-				if err != nil {
-					return errors.Wrap(err, "failed to list tasks")
-				}
-				for _, id := range out.TaskArns {
-					taskIDs = append(taskIDs, aws.String(arnToName(*id)))
-				}
-				if nextToken = out.NextToken; nextToken == nil {
-					break
-				}
-			}
-		}
-		if len(taskIDs) == 0 {
-			return nil
+		var err error
+		taskIDs, err = d.taskIDs(opt)
+		if err != nil {
+			return err
 		}
 	}
 	in := &ecs.DescribeTasksInput{
@@ -77,11 +83,16 @@ func (d *App) Tasks(opt TasksOption) error {
 	if len(out.Tasks) == 0 && len(in.Tasks) != 0 {
 		return errors.Errorf("task ID %s is not found", *in.Tasks[0])
 	}
+
 	formatter := opt.Formatter()
 	for _, task := range out.Tasks {
 		formatter.AddTask(task)
 	}
 	formatter.Close()
+	return nil
+}
+
+func (d *App) taskSelectAction(out TasksOption, tasks []*ecs.Task) error {
 	return nil
 }
 

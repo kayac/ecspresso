@@ -150,7 +150,7 @@ func _main() int {
 	tasks := kingpin.Command("tasks", "list tasks in the cluster")
 	tasksOption := ecspresso.TasksOption{
 		ID:     tasks.Flag("id", "task ID").Default("").String(),
-		Format: tasks.Flag("format", "output format").Default("table").Enum("table", "json", "tsv"),
+		Output: tasks.Flag("output", "output format (table|json|tsv)").Default("table").Enum("table", "json", "tsv"),
 	}
 
 	sub := kingpin.Parse()
