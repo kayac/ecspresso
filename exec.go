@@ -38,9 +38,9 @@ func (d *App) Exec(opt ExecOption) error {
 		formatter.AddTask(task)
 	}
 	formatter.Close()
-	result, err := d.runFinderCommand(buf, "task ID")
+	result, err := d.runFinder(buf, "task ID")
 	if err != nil {
-		return errors.Wrap(err, "failed to exucute finder")
+		return err
 	}
 	taskID := strings.Fields(string(result))[0]
 	var targetTask *ecs.Task
@@ -64,7 +64,7 @@ func (d *App) Exec(opt ExecOption) error {
 		for _, container := range targetTask.Containers {
 			fmt.Fprintln(buf, string(*container.Name))
 		}
-		result, err := d.runFinderCommand(buf, "container name")
+		result, err := d.runFinder(buf, "container name")
 		if err != nil {
 			return errors.Wrap(err, "failed to exucute finder")
 		}
@@ -79,7 +79,7 @@ func (d *App) Exec(opt ExecOption) error {
 		Container:   targetContainer,
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to execute command")
 	}
 	sess, _ := json.Marshal(out.Session)
 	cmd := exec.Command("session-manager-plugin", string(sess), d.config.Region, "StartSession")
@@ -91,10 +91,10 @@ func (d *App) Exec(opt ExecOption) error {
 	return cmd.Run()
 }
 
-func (d *App) runFinderCommand(src io.Reader, title string) ([]byte, error) {
+func (d *App) runFinder(src io.Reader, title string) (string, error) {
 	command := d.config.FinderCommand
 	if command == "" {
-		return internalFinder(src, title)
+		return runInternalFinder(src, title)
 	}
 	finder := exec.Command(command)
 	finder.Stderr = os.Stderr
@@ -103,10 +103,14 @@ func (d *App) runFinderCommand(src io.Reader, title string) ([]byte, error) {
 		io.Copy(p, src)
 		p.Close()
 	}()
-	return finder.Output()
+	b, err := finder.Output()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to execute finder command")
+	}
+	return string(b), nil
 }
 
-func internalFinder(src io.Reader, title string) ([]byte, error) {
+func runInternalFinder(src io.Reader, title string) (string, error) {
 	var items []string
 	s := bufio.NewScanner(src)
 	for s.Scan() {
@@ -133,7 +137,7 @@ func internalFinder(src io.Reader, title string) ([]byte, error) {
 			fmt.Printf("no such item %s\n", input)
 		case 1:
 			fmt.Printf("%s=%s\n", title, found[0])
-			return []byte(found[0]), nil
+			return found[0], nil
 		default:
 			fmt.Printf("%s is ambiguous\n", input)
 		}

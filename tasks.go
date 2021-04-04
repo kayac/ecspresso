@@ -110,9 +110,9 @@ func (d *App) Tasks(opt TasksOption) error {
 		tasksDict[arnToName(*task.TaskArn)] = task
 	}
 	formatter.Close()
-	result, err := d.runFinderCommand(buf, "task ID")
+	result, err := d.runFinder(buf, "task ID")
 	if err != nil {
-		return errors.Wrap(err, "failed to exucute finder")
+		return err
 	}
 	taskID := strings.Fields(string(result))[0]
 
