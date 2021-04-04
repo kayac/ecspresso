@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 type TasksOption struct {
 	ID     *string
 	Output *string
+	Find   *bool
 }
 
 func (opt TasksOption) Formatter() taskFormatter {
@@ -24,12 +26,15 @@ func (opt TasksOption) Formatter() taskFormatter {
 	case "json":
 		return newTaskFormatterJSON(os.Stdout)
 	case "tsv":
-		return newTaskFormatterTSV(os.Stdout)
+		return newTaskFormatterTSV(os.Stdout, true)
 	}
 	return newTaskFormatterTable(os.Stdout)
 }
 
-func (d *App) tasks(ctx context.Context, id *string) ([]*ecs.Task, error) {
+func (d *App) tasks(ctx context.Context, id *string, desiredStatuses ...string) ([]*ecs.Task, error) {
+	if len(desiredStatuses) == 0 {
+		desiredStatuses = []string{"RUNNING", "STOPPED"}
+	}
 	var taskIDs []*string
 	if aws.StringValue(id) != "" {
 		taskIDs = []*string{id}
@@ -42,7 +47,7 @@ func (d *App) tasks(ctx context.Context, id *string) ([]*ecs.Task, error) {
 		if err != nil {
 			return nil, err
 		}
-		for _, desiredStatus := range []string{"RUNNING", "STOPPED"} {
+		for _, desiredStatus := range desiredStatuses {
 			var nextToken *string
 			for {
 				out, err := d.ecs.ListTasks(&ecs.ListTasksInput{
@@ -87,11 +92,33 @@ func (d *App) Tasks(opt TasksOption) error {
 		return err
 	}
 
-	formatter := opt.Formatter()
+	if !aws.BoolValue(opt.Find) {
+		formatter := opt.Formatter()
+		for _, task := range tasks {
+			formatter.AddTask(task)
+		}
+		formatter.Close()
+		return nil
+	}
+
+	buf := new(bytes.Buffer)
+	tasksDict := make(map[string]*ecs.Task)
+	formatter := newTaskFormatterTSV(buf, false)
 	for _, task := range tasks {
+		task := task
 		formatter.AddTask(task)
+		tasksDict[arnToName(*task.TaskArn)] = task
 	}
 	formatter.Close()
+	result, err := d.runFinderCommand(buf, "task ID")
+	if err != nil {
+		return errors.Wrap(err, "failed to exucute finder")
+	}
+	taskID := strings.Fields(string(result))[0]
+
+	f := newTaskFormatterJSON(os.Stdout)
+	f.AddTask(tasksDict[taskID])
+	f.Close()
 	return nil
 }
 
@@ -149,9 +176,11 @@ type taskFormatterTSV struct {
 	w io.Writer
 }
 
-func newTaskFormatterTSV(w io.Writer) *taskFormatterTSV {
+func newTaskFormatterTSV(w io.Writer, header bool) *taskFormatterTSV {
 	t := &taskFormatterTSV{w: w}
-	fmt.Fprintln(t.w, strings.Join(taskFormatterColumns, "\t"))
+	if header {
+		fmt.Fprintln(t.w, strings.Join(taskFormatterColumns, "\t"))
+	}
 	return t
 }
 

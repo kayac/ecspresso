@@ -151,12 +151,14 @@ func _main() int {
 	tasksOption := ecspresso.TasksOption{
 		ID:     tasks.Flag("id", "task ID").Default("").String(),
 		Output: tasks.Flag("output", "output format (table|json|tsv)").Default("table").Enum("table", "json", "tsv"),
+		Find:   tasks.Flag("find", "find a task from tasks list and dump it as JSON").Bool(),
 	}
 
 	exec := kingpin.Command("exec", "execute command into the task")
 	execOption := ecspresso.ExecOption{
-		ID:      exec.Flag("id", "task ID").Default("").String(),
-		Command: exec.Flag("command", "command").Default("sh").String(),
+		ID:        exec.Flag("id", "task ID").Default("").String(),
+		Command:   exec.Flag("command", "command").Default("sh").String(),
+		Container: exec.Flag("container", "container name").String(),
 	}
 
 	sub := kingpin.Parse()
