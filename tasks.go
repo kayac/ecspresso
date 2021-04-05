@@ -110,7 +110,7 @@ func (d *App) Tasks(opt TasksOption) error {
 		tasksDict[arnToName(*task.TaskArn)] = task
 	}
 	formatter.Close()
-	result, err := d.runFinder(buf, "task ID")
+	result, err := d.runFilter(buf, "task ID")
 	if err != nil {
 		return err
 	}

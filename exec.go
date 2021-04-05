@@ -38,7 +38,7 @@ func (d *App) Exec(opt ExecOption) error {
 		formatter.AddTask(task)
 	}
 	formatter.Close()
-	result, err := d.runFinder(buf, "task ID")
+	result, err := d.runFilter(buf, "task ID")
 	if err != nil {
 		return err
 	}
@@ -64,9 +64,9 @@ func (d *App) Exec(opt ExecOption) error {
 		for _, container := range targetTask.Containers {
 			fmt.Fprintln(buf, string(*container.Name))
 		}
-		result, err := d.runFinder(buf, "container name")
+		result, err := d.runFilter(buf, "container name")
 		if err != nil {
-			return errors.Wrap(err, "failed to exucute finder")
+			return errors.Wrap(err, "failed to exucute filter")
 		}
 		targetContainer = aws.String(strings.Fields(string(result))[0])
 	}
@@ -91,26 +91,26 @@ func (d *App) Exec(opt ExecOption) error {
 	return cmd.Run()
 }
 
-func (d *App) runFinder(src io.Reader, title string) (string, error) {
-	command := d.config.FinderCommand
+func (d *App) runFilter(src io.Reader, title string) (string, error) {
+	command := d.config.FilterCommand
 	if command == "" {
-		return runInternalFinder(src, title)
+		return runInternalFilter(src, title)
 	}
-	finder := exec.Command(command)
-	finder.Stderr = os.Stderr
-	p, _ := finder.StdinPipe()
+	f := exec.Command(command)
+	f.Stderr = os.Stderr
+	p, _ := f.StdinPipe()
 	go func() {
 		io.Copy(p, src)
 		p.Close()
 	}()
-	b, err := finder.Output()
+	b, err := f.Output()
 	if err != nil {
-		return "", errors.Wrap(err, "failed to execute finder command")
+		return "", errors.Wrap(err, "failed to execute filter command")
 	}
 	return string(b), nil
 }
 
-func runInternalFinder(src io.Reader, title string) (string, error) {
+func runInternalFilter(src io.Reader, title string) (string, error) {
 	var items []string
 	s := bufio.NewScanner(src)
 	for s.Scan() {
