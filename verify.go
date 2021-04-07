@@ -28,21 +28,23 @@ import (
 
 type verifier struct {
 	cwl            *cloudwatchlogs.CloudWatchLogs
-	elbv2          *elbv2.ELBV2
+	elbv2          []*elbv2.ELBV2 // fallback to executionRole until v1.6
 	ssm            *ssm.SSM
 	secretsmanager *secretsmanager.SecretsManager
 	ecr            *ecr.ECR
 	opt            *VerifyOption
+	isAssumed      bool
 }
 
-func newVerifier(sess *session.Session, opt *VerifyOption) *verifier {
+func newVerifier(execSess, appSess *session.Session, opt *VerifyOption) *verifier {
 	return &verifier{
-		cwl:            cloudwatchlogs.New(sess),
-		elbv2:          elbv2.New(sess),
-		ssm:            ssm.New(sess),
-		secretsmanager: secretsmanager.New(sess),
-		ecr:            ecr.New(sess),
+		cwl:            cloudwatchlogs.New(execSess),
+		elbv2:          []*elbv2.ELBV2{elbv2.New(appSess), elbv2.New(execSess)},
+		ssm:            ssm.New(execSess),
+		secretsmanager: secretsmanager.New(execSess),
+		ecr:            ecr.New(execSess),
 		opt:            opt,
+		isAssumed:      execSess != appSess,
 	}
 }
 
@@ -81,17 +83,20 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 	return err
 }
 
-func (d *App) newAssumedVerifier(sess *session.Session, executionRole string, opt *VerifyOption) (*verifier, error) {
+func (d *App) newAssumedVerifier(sess *session.Session, executionRole *string, opt *VerifyOption) (*verifier, error) {
+	if executionRole == nil {
+		return newVerifier(sess, sess, opt), nil
+	}
 	svc := sts.New(sess)
 	out, err := svc.AssumeRole(&sts.AssumeRoleInput{
-		RoleArn:         &executionRole,
+		RoleArn:         executionRole,
 		RoleSessionName: aws.String("ecspresso-verifier"),
 	})
 	if err != nil {
 		fmt.Println(
 			color.CyanString("INFO: failed to assume role to taskExecutuionRole. Continue to verifiy with current session. %s", err.Error()),
 		)
-		return newVerifier(sess, opt), nil
+		return newVerifier(sess, sess, opt), nil
 	}
 	assumedSess := session.New(&aws.Config{
 		Region: sess.Config.Region,
@@ -101,7 +106,7 @@ func (d *App) newAssumedVerifier(sess *session.Session, executionRole string, op
 			*out.Credentials.SessionToken,
 		),
 	})
-	return newVerifier(assumedSess, opt), nil
+	return newVerifier(assumedSess, sess, opt), nil
 }
 
 // VerifyOption represents options for Verify()
@@ -124,13 +129,9 @@ func (d *App) Verify(opt VerifyOption) error {
 	if err != nil {
 		return err
 	}
-	if td.ExecutionRoleArn != nil {
-		d.verifier, err = d.newAssumedVerifier(d.sess, *td.ExecutionRoleArn, &opt)
-		if err != nil {
-			return err
-		}
-	} else {
-		d.verifier = newVerifier(d.sess, &opt)
+	d.verifier, err = d.newAssumedVerifier(d.sess, td.ExecutionRoleArn, &opt)
+	if err != nil {
+		return err
 	}
 
 	ctx, cancel := d.Start()
@@ -218,16 +219,16 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 	for i, lb := range sv.LoadBalancers {
 		name := fmt.Sprintf("LoadBalancer[%d]", i)
 		err := d.verifyResource(ctx, name, func(context.Context) error {
-			out, err := d.elbv2.DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
+			out, err := d.verifier.elbv2[0].DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
 				TargetGroupArns: []*string{lb.TargetGroupArn},
 			})
-			if err != nil {
+			if err != nil && d.verifier.isAssumed {
 				fmt.Println(
 					color.YellowString(
 						"WARNING: verifying the target group using the task execution role has been DEPRECATED and will be removed in the future. " +
-						"Allow `elasticloadbalancing: DescribeTargetGroups` to the role that executes ecspresso."),
+							"Allow `elasticloadbalancing: DescribeTargetGroups` to the role that executes ecspresso."),
 				)
-				out, err = d.verifier.elbv2.DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
+				out, err = d.verifier.elbv2[1].DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
 					TargetGroupArns: []*string{lb.TargetGroupArn},
 				})
 			}
