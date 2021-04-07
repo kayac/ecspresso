@@ -218,9 +218,19 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 	for i, lb := range sv.LoadBalancers {
 		name := fmt.Sprintf("LoadBalancer[%d]", i)
 		err := d.verifyResource(ctx, name, func(context.Context) error {
-			out, err := d.verifier.elbv2.DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
+			out, err := d.elbv2.DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
 				TargetGroupArns: []*string{lb.TargetGroupArn},
 			})
+			if err != nil {
+				fmt.Println(
+					color.YellowString(
+						"WARNING: verifying the target group using the task execution role has been DEPRECATED and will be removed in the future. " +
+						"Allow `elasticloadbalancing: DescribeTargetGroups` to the role that executes ecspresso."),
+				)
+				out, err = d.verifier.elbv2.DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
+					TargetGroupArns: []*string{lb.TargetGroupArn},
+				})
+			}
 			if err != nil {
 				return err
 			} else if len(out.TargetGroups) == 0 {
