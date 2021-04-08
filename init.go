@@ -80,7 +80,6 @@ func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
 	sv.Deployments = nil
 	sv.Events = nil
 	sv.PendingCount = nil
-	sv.PropagateTags = nil
 	sv.RunningCount = nil
 	sv.Status = nil
 	sv.TaskDefinition = nil
