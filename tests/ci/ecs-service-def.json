@@ -41,5 +41,12 @@
   "placementStrategy": [],
   "platformVersion": "LATEST",
   "schedulingStrategy": "REPLICA",
-  "serviceRegistries": []
+  "serviceRegistries": [],
+  "propagateTags": "SERVICE",
+  "tags": [
+    {
+      "key": "cluster",
+      "value": "ecspresso-test"
+    }
+  ]
 }

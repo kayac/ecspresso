@@ -21,5 +21,12 @@
       ],
       "assignPublicIp": "ENABLED"
     }
-  }
+  },
+  "propagateTags": "SERVICE",
+  "tags": [
+    {
+      "key": "cluster",
+      "value": "default2"
+    }
+  ]
 }
