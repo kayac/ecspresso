@@ -31,6 +31,13 @@ func (d *App) Init(opt InitOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
+	lt, err := d.ecs.ListTagsForResourceWithContext(ctx, &ecs.ListTagsForResourceInput{
+		ResourceArn: sv.ServiceArn,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to list tags for service")
+	}
+	sv.Tags = lt.Tags
 
 	// service-def
 	treatmentServiceDefinition(sv)
@@ -73,7 +80,6 @@ func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
 	sv.Deployments = nil
 	sv.Events = nil
 	sv.PendingCount = nil
-	sv.PropagateTags = nil
 	sv.RunningCount = nil
 	sv.Status = nil
 	sv.TaskDefinition = nil
@@ -81,6 +87,11 @@ func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
 	sv.ServiceArn = nil
 	sv.RoleArn = nil
 	sv.ServiceName = nil
+
+	if *sv.PropagateTags != "SERVICE" && *sv.PropagateTags != "TASK_DEFINITION" {
+		sv.PropagateTags = nil
+	}
+
 	return sv
 }
 
