@@ -96,7 +96,12 @@ func (d *App) runFilter(src io.Reader, title string) (string, error) {
 	if command == "" {
 		return runInternalFilter(src, title)
 	}
-	f := exec.Command(command)
+	var f *exec.Cmd
+	if strings.Contains(command, " ") {
+		f = exec.Command("sh", "-c", command)
+	} else {
+		f = exec.Command(command)
+	}
 	f.Stderr = os.Stderr
 	p, _ := f.StdinPipe()
 	go func() {

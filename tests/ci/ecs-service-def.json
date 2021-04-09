@@ -22,7 +22,13 @@
   "desiredCount": 1,
   "enableECSManagedTags": false,
   "enableExecuteCommand": true,
-  "loadBalancers": [],
+  "loadBalancers": [
+    {
+      "containerName": "nginx",
+      "containerPort": 80,
+      "targetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-1:{{must_env `AWS_ACCOUNT_ID`}}:targetgroup/alpha/6a301850702273d9"
+    }
+  ],
   "networkConfiguration": {
     "awsvpcConfiguration": {
       "assignPublicIp": "ENABLED",
