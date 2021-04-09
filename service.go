@@ -10,8 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
-var timezone, _ = time.LoadLocation("Local")
-
 func arnToName(s string) string {
 	ns := strings.Split(s, "/")
 	return ns[len(ns)-1]
@@ -37,7 +35,7 @@ func formatTaskSet(d *ecs.TaskSet) string {
 
 func formatEvent(e *ecs.ServiceEvent, chars int) []string {
 	line := fmt.Sprintf("%s %s",
-		e.CreatedAt.In(timezone).Format("2006/01/02 15:04:05"),
+		e.CreatedAt.In(time.Local).Format("2006/01/02 15:04:05"),
 		*e.Message,
 	)
 	lines := []string{}
@@ -55,7 +53,7 @@ func formatEvent(e *ecs.ServiceEvent, chars int) []string {
 func formatLogEvent(e *cloudwatchlogs.OutputLogEvent, chars int) []string {
 	t := time.Unix((*e.Timestamp / int64(1000)), 0)
 	line := fmt.Sprintf("%s %s",
-		t.In(timezone).Format("2006/01/02 15:04:05"),
+		t.In(time.Local).Format("2006/01/02 15:04:05"),
 		*e.Message,
 	)
 	lines := []string{}

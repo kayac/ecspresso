@@ -64,11 +64,12 @@ jobs:
 usage: ecspresso [<flags>] <command> [<args> ...]
 
 Flags:
-  --help                 Show context-sensitive help (also try --help-long and --help-man).
+  --help                 Show context-sensitive help (also try --help-long and
+                         --help-man).
   --config=CONFIG        config file
   --debug                enable debug log
   --envfile=ENVFILE ...  environment files
-  --color                enalble colored output
+  --color                enable colored output
 
 Commands:
   help [<command>...]
@@ -80,12 +81,13 @@ Commands:
   deploy [<flags>]
     deploy service
 
-  refresh [<flags>]
-    refresh service. equivalent to deploy --skip-task-definition --force-new-deployment
+  scale --tasks=TASKS [<flags>]
+    scale service. equivalent to deploy --skip-task-definition
     --no-update-service
 
-  scale --tasks=TASKS [<flags>]
-    scale service. equivalent to deploy --skip-task-definition --no-update-service
+  refresh [<flags>]
+    refresh service. equivalent to deploy --skip-task-definition
+    --force-new-deployment --no-update-service
 
   create [<flags>]
     create service
@@ -108,7 +110,7 @@ Commands:
   wait
     wait until service stable
 
-  init --region=REGION --service=SERVICE [<flags>]
+  init --service=SERVICE [<flags>]
     create service/task definition files by existing ECS service
 
   diff
@@ -122,6 +124,12 @@ Commands:
 
   render [<flags>]
     render config, service definition or task definition file to stdout
+
+  tasks [<flags>]
+    list tasks that are in a service or having the same family
+
+  exec [<flags>]
+    execute command in a task
 ```
 
 For more options for sub-commands, See `ecspresso sub-command --help`.
@@ -514,6 +522,42 @@ $ ecspresso --config config.yaml verify
   --> [OK]
 2020/12/08 11:43:14 nginx-local/ecspresso-test Verify OK!
 ```
+
+### tasks
+
+task command lists tasks that run by a service or having the same family to a task definition.
+
+```
+Flags:
+  --id=""                task ID
+  --output=table         output format (table|json|tsv)
+  --find                 find a task from tasks list and dump it as JSON
+```
+
+When `--find` option is set, you can select a task in a list of tasks and show the task as JSON.
+
+`filter_command` in config.yaml can define a command to filter tasks. For example [peco](https://github.com/peco/peco), [fzf](https://github.com/junegunn/fzf) and etc.
+
+```yaml
+filter_command: peco
+```
+
+### exec
+
+exec command executes a command on task.
+
+```
+Flags:
+  --id=""                task ID
+  --command="sh"         command
+  --container=CONTAINER  container name
+```
+
+If `--id` is not set, the command shows a list of tasks to select a task to execute.
+
+`filter_command` in config.yaml works ths same as tasks command.
+
+See also the official document [Using Amazon ECS Exec for debugging](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html).
 
 # Plugins
 
