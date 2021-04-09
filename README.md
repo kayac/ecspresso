@@ -126,7 +126,7 @@ Commands:
     render config, service definition or task definition file to stdout
 
   tasks [<flags>]
-    list tasks in a cluster
+    list tasks that are in a service or having the same family
 
   exec [<flags>]
     execute command in a task

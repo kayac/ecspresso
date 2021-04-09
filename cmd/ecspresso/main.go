@@ -147,14 +147,14 @@ func _main() int {
 		ConfigFile:        render.Flag("config-file", "render config file").Bool(),
 	}
 
-	tasks := kingpin.Command("tasks", "list tasks in the cluster")
+	tasks := kingpin.Command("tasks", "list tasks that are in a service or having the same family")
 	tasksOption := ecspresso.TasksOption{
 		ID:     tasks.Flag("id", "task ID").Default("").String(),
 		Output: tasks.Flag("output", "output format (table|json|tsv)").Default("table").Enum("table", "json", "tsv"),
 		Find:   tasks.Flag("find", "find a task from tasks list and dump it as JSON").Bool(),
 	}
 
-	exec := kingpin.Command("exec", "execute command into the task")
+	exec := kingpin.Command("exec", "execute command in a task")
 	execOption := ecspresso.ExecOption{
 		ID:        exec.Flag("id", "task ID").Default("").String(),
 		Command:   exec.Flag("command", "command").Default("sh").String(),
