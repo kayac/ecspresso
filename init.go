@@ -88,7 +88,7 @@ func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
 	sv.RoleArn = nil
 	sv.ServiceName = nil
 
-	if *sv.PropagateTags == "NONE" {
+	if *sv.PropagateTags != "SERVICE" && *sv.PropagateTags != "TASK_DEFINITION" {
 		sv.PropagateTags = nil
 	}
 
