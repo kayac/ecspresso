@@ -523,6 +523,42 @@ $ ecspresso --config config.yaml verify
 2020/12/08 11:43:14 nginx-local/ecspresso-test Verify OK!
 ```
 
+### tasks
+
+task command lists tasks that run by a service or having the same family to a task definition.
+
+```
+Flags:
+  --id=""                task ID
+  --output=table         output format (table|json|tsv)
+  --find                 find a task from tasks list and dump it as JSON
+```
+
+When `--find` option is set, you can select a task in a list of tasks and show the task as JSON.
+
+`filter_command` in config.yaml can define a command to filter tasks. For example [peco](https://github.com/peco/peco), [fzf](https://github.com/junegunn/fzf) and etc.
+
+```yaml
+filter_command: peco
+```
+
+### exec
+
+exec command executes a command on task.
+
+```
+Flags:
+  --id=""                task ID
+  --command="sh"         command
+  --container=CONTAINER  container name
+```
+
+If `--id` is not set, the command shows a list of tasks to select a task to execute.
+
+`filter_command` in config.yaml works ths same as tasks command.
+
+See also the official document [Using Amazon ECS Exec for debugging](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html).
+
 # Plugins
 
 ## tfstate
