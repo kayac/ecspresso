@@ -64,11 +64,12 @@ jobs:
 usage: ecspresso [<flags>] <command> [<args> ...]
 
 Flags:
-  --help                 Show context-sensitive help (also try --help-long and --help-man).
+  --help                 Show context-sensitive help (also try --help-long and
+                         --help-man).
   --config=CONFIG        config file
   --debug                enable debug log
   --envfile=ENVFILE ...  environment files
-  --color                enalble colored output
+  --color                enable colored output
 
 Commands:
   help [<command>...]
@@ -80,12 +81,13 @@ Commands:
   deploy [<flags>]
     deploy service
 
-  refresh [<flags>]
-    refresh service. equivalent to deploy --skip-task-definition --force-new-deployment
+  scale --tasks=TASKS [<flags>]
+    scale service. equivalent to deploy --skip-task-definition
     --no-update-service
 
-  scale --tasks=TASKS [<flags>]
-    scale service. equivalent to deploy --skip-task-definition --no-update-service
+  refresh [<flags>]
+    refresh service. equivalent to deploy --skip-task-definition
+    --force-new-deployment --no-update-service
 
   create [<flags>]
     create service
@@ -108,7 +110,7 @@ Commands:
   wait
     wait until service stable
 
-  init --region=REGION --service=SERVICE [<flags>]
+  init --service=SERVICE [<flags>]
     create service/task definition files by existing ECS service
 
   diff
@@ -122,6 +124,12 @@ Commands:
 
   render [<flags>]
     render config, service definition or task definition file to stdout
+
+  tasks [<flags>]
+    list tasks in a cluster
+
+  exec [<flags>]
+    execute command in a task
 ```
 
 For more options for sub-commands, See `ecspresso sub-command --help`.
