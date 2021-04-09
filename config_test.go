@@ -28,7 +28,10 @@ func TestLoadServiceDefinition(t *testing.T) {
 		*sv.DesiredCount != 2 ||
 		*sv.LoadBalancers[0].TargetGroupArn != "arn:aws:elasticloadbalancing:us-east-1:1111111111:targetgroup/test/12345678" ||
 		*sv.LaunchType != "EC2" ||
-		*sv.SchedulingStrategy != "REPLICA" {
+		*sv.SchedulingStrategy != "REPLICA" ||
+		*sv.PropagateTags != "SERVICE" ||
+		*sv.Tags[0].Key != "cluster" ||
+		*sv.Tags[0].Value != "default2" {
 		t.Errorf("unexpected service definition %s", sv.String())
 	}
 }
