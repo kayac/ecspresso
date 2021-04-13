@@ -8,4 +8,5 @@ var (
 	ToNumberMemory               = toNumberMemory
 	CalcDesiredCount             = calcDesiredCount
 	ParseTags                    = parseTags
+	ParseRoleArn                 = parseRoleArn
 )
