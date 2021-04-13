@@ -546,6 +546,8 @@ filter_command: peco
 
 exec command executes a command on task.
 
+[session-manager-plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) is required in PATH.
+
 ```
 Flags:
   --id=""                task ID
