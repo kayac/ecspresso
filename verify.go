@@ -426,12 +426,25 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *ecs.ContainerDefini
 	return nil
 }
 
-func (d *App) verifyRole(ctx context.Context, name string) error {
-	rn := strings.Split(name, "/")
-	if len(rn) < 2 {
-		return errors.New("invalid role syntax")
+func parseRoleArn(arn string) (roleName string, err error) {
+	if !strings.HasPrefix(arn, "arn:aws:iam::") {
+		return "", errors.Errorf("not a valid role arn")
 	}
-	roleName := rn[1]
+	rn := strings.Split(arn, "/")
+	if len(rn) < 2 {
+		return "", errors.New("invalid role syntax")
+	}
+	if !strings.HasSuffix(rn[0], ":role") {
+		return "", errors.Errorf("not a valid role arn")
+	}
+	return rn[1], nil
+}
+
+func (d *App) verifyRole(ctx context.Context, arn string) error {
+	roleName, err := parseRoleArn(arn)
+	if err != nil {
+		return err
+	}
 	out, err := d.iam.GetRoleWithContext(ctx, &iam.GetRoleInput{
 		RoleName: aws.String(roleName),
 	})
