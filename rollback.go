@@ -19,7 +19,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 	}
 
 	if isCodeDeploy(sv.DeploymentController) {
-		return d.RollbackByCodeDeploy(ctx)
+		return d.RollbackByCodeDeploy(ctx, opt)
 	}
 
 	currentArn := *sv.TaskDefinition
