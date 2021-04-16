@@ -714,7 +714,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *ecs.Service) error {
 	)
 }
 
-func (d *App) RollbackByCodeDeploy(ctx context.Context) error {
+func (d *App) RollbackByCodeDeploy(ctx context.Context, opt RollbackOption) error {
 	dp, err := d.findDeploymentInfo()
 	if err != nil {
 		return err
@@ -732,6 +732,13 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context) error {
 	}
 
 	dpID := ld.Deployments[0] // latest deployment id
+
+	if *opt.DryRun {
+		d.Log("deployment id:", *dpID)
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
 	_, err = d.codedeploy.StopDeploymentWithContext(ctx, &codedeploy.StopDeploymentInput{
 		DeploymentId:        dpID,
 		AutoRollbackEnabled: aws.Bool(true),
