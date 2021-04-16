@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/olekukonko/tablewriter"
@@ -19,6 +20,8 @@ type TasksOption struct {
 	ID     *string
 	Output *string
 	Find   *bool
+	Stop   *bool
+	Force  *bool
 }
 
 func (opt TasksOption) Formatter() taskFormatter {
@@ -92,7 +95,8 @@ func (d *App) Tasks(opt TasksOption) error {
 		return err
 	}
 
-	if !aws.BoolValue(opt.Find) {
+	if !aws.BoolValue(opt.Find) && !aws.BoolValue(opt.Stop) {
+		// show list
 		formatter := opt.Formatter()
 		for _, task := range tasks {
 			formatter.AddTask(task)
@@ -101,24 +105,49 @@ func (d *App) Tasks(opt TasksOption) error {
 		return nil
 	}
 
-	buf := new(bytes.Buffer)
-	tasksDict := make(map[string]*ecs.Task)
-	formatter := newTaskFormatterTSV(buf, false)
-	for _, task := range tasks {
-		task := task
-		formatter.AddTask(task)
-		tasksDict[arnToName(*task.TaskArn)] = task
+	var foundTask *ecs.Task
+	if opt.ID == nil || len(tasks) > 1 {
+		buf := new(bytes.Buffer)
+		tasksDict := make(map[string]*ecs.Task)
+		formatter := newTaskFormatterTSV(buf, false)
+		for _, task := range tasks {
+			task := task
+			formatter.AddTask(task)
+			tasksDict[arnToName(*task.TaskArn)] = task
+		}
+		formatter.Close()
+		result, err := d.runFilter(buf, "task ID")
+		if err != nil {
+			return err
+		}
+		taskID := strings.Fields(string(result))[0]
+		foundTask = tasksDict[taskID]
+	} else {
+		foundTask = tasks[0]
 	}
-	formatter.Close()
-	result, err := d.runFilter(buf, "task ID")
-	if err != nil {
-		return err
-	}
-	taskID := strings.Fields(string(result))[0]
 
-	f := newTaskFormatterJSON(os.Stdout)
-	f.AddTask(tasksDict[taskID])
-	f.Close()
+	if aws.BoolValue(opt.Find) {
+		f := newTaskFormatterJSON(os.Stdout)
+		f.AddTask(foundTask)
+		f.Close()
+	} else if aws.BoolValue(opt.Stop) {
+		stop := aws.BoolValue(opt.Force)
+		if !stop {
+			stop = prompter.YN(fmt.Sprintf("Stop task %s?", *foundTask.TaskArn), false)
+		}
+		if !stop {
+			return nil
+		}
+		d.Log("Request stop task ID " + *foundTask.TaskArn)
+		_, err := d.ecs.StopTask(&ecs.StopTaskInput{
+			Cluster: foundTask.ClusterArn,
+			Task:    foundTask.TaskArn,
+			Reason:  aws.String("Request stop task by user action."),
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to stop task")
+		}
+	}
 	return nil
 }
 

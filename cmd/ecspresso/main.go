@@ -152,6 +152,8 @@ func _main() int {
 		ID:     tasks.Flag("id", "task ID").Default("").String(),
 		Output: tasks.Flag("output", "output format (table|json|tsv)").Default("table").Enum("table", "json", "tsv"),
 		Find:   tasks.Flag("find", "find a task from tasks list and dump it as JSON").Bool(),
+		Stop:   tasks.Flag("stop", "stop a task").Bool(),
+		Force:  tasks.Flag("force", "stop a task without confirmation prompt").Bool(),
 	}
 
 	exec := kingpin.Command("exec", "execute command in a task")
