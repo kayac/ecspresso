@@ -96,49 +96,28 @@ func (d *App) Tasks(opt TasksOption) error {
 	}
 
 	if !aws.BoolValue(opt.Find) && !aws.BoolValue(opt.Stop) {
-		// show list
-		formatter := opt.Formatter()
-		for _, task := range tasks {
-			formatter.AddTask(task)
-		}
-		formatter.Close()
-		return nil
+		return d.tasksList(opt, tasks)
 	}
 
-	var foundTask *ecs.Task
-	if opt.ID == nil || len(tasks) > 1 {
-		buf := new(bytes.Buffer)
-		tasksDict := make(map[string]*ecs.Task)
-		formatter := newTaskFormatterTSV(buf, false)
-		for _, task := range tasks {
-			task := task
-			formatter.AddTask(task)
-			tasksDict[arnToName(*task.TaskArn)] = task
-		}
-		formatter.Close()
-		result, err := d.runFilter(buf, "task ID")
-		if err != nil {
-			return err
-		}
-		taskID := strings.Fields(string(result))[0]
-		foundTask = tasksDict[taskID]
-	} else {
-		foundTask = tasks[0]
+	foundTask, err := d.tasksFind(opt, tasks)
+	if err != nil {
+		return err
 	}
 
 	if aws.BoolValue(opt.Find) {
 		f := newTaskFormatterJSON(os.Stdout)
 		f.AddTask(foundTask)
 		f.Close()
+		return nil
 	} else if aws.BoolValue(opt.Stop) {
 		stop := aws.BoolValue(opt.Force)
 		if !stop {
-			stop = prompter.YN(fmt.Sprintf("Stop task %s?", *foundTask.TaskArn), false)
+			stop = prompter.YN(fmt.Sprintf("Stop task %s?", arnToName(*foundTask.TaskArn)), false)
 		}
 		if !stop {
 			return nil
 		}
-		d.Log("Request stop task ID " + *foundTask.TaskArn)
+		d.Log("Request stop task ID " + arnToName(*foundTask.TaskArn))
 		_, err := d.ecs.StopTask(&ecs.StopTaskInput{
 			Cluster: foundTask.ClusterArn,
 			Task:    foundTask.TaskArn,
@@ -149,6 +128,37 @@ func (d *App) Tasks(opt TasksOption) error {
 		}
 	}
 	return nil
+}
+
+func (d *App) tasksList(opt TasksOption, tasks []*ecs.Task) error {
+	// show list
+	formatter := opt.Formatter()
+	for _, task := range tasks {
+		formatter.AddTask(task)
+	}
+	formatter.Close()
+	return nil
+}
+
+func (d *App) tasksFind(opt TasksOption, tasks []*ecs.Task) (*ecs.Task, error) {
+	if opt.ID != nil && len(tasks) == 1 {
+		return tasks[0], nil
+	}
+	buf := new(bytes.Buffer)
+	tasksDict := make(map[string]*ecs.Task)
+	formatter := newTaskFormatterTSV(buf, false)
+	for _, task := range tasks {
+		task := task
+		formatter.AddTask(task)
+		tasksDict[arnToName(*task.TaskArn)] = task
+	}
+	formatter.Close()
+	result, err := d.runFilter(buf, "task ID")
+	if err != nil {
+		return nil, err
+	}
+	taskID := strings.Fields(string(result))[0]
+	return tasksDict[taskID], nil
 }
 
 type taskFormatter interface {
