@@ -110,10 +110,8 @@ func (d *App) Tasks(opt TasksOption) error {
 		f.Close()
 		return nil
 	} else if aws.BoolValue(opt.Stop) {
-		stop := aws.BoolValue(opt.Force)
-		if !stop {
-			stop = prompter.YN(fmt.Sprintf("Stop task %s?", arnToName(*foundTask.TaskArn)), false)
-		}
+		stop := aws.BoolValue(opt.Force) ||
+			prompter.YN(fmt.Sprintf("Stop task %s?", arnToName(*foundTask.TaskArn)), false)
 		if !stop {
 			return nil
 		}
