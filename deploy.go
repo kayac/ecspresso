@@ -168,6 +168,7 @@ func svToUpdateServiceInput(sv *ecs.Service) *ecs.UpdateServiceInput {
 	in := &ecs.UpdateServiceInput{
 		CapacityProviderStrategy:      sv.CapacityProviderStrategy,
 		DeploymentConfiguration:       sv.DeploymentConfiguration,
+		DesiredCount:                  sv.DesiredCount,
 		EnableExecuteCommand:          sv.EnableExecuteCommand,
 		HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
 		NetworkConfiguration:          sv.NetworkConfiguration,
