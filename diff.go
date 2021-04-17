@@ -22,7 +22,10 @@ func diffServices(local, remote *ecs.Service) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal new service definition")
 	}
-
+	if local.DesiredCount == nil {
+		// ignore DesiredCount when it in local is not defined.
+		remote.DesiredCount = nil
+	}
 	remoteSvBytes, err := MarshalJSON(svToUpdateServiceInput(remote))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal remote service definition")
