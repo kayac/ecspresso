@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/olekukonko/tablewriter"
@@ -19,9 +20,15 @@ type TasksOption struct {
 	ID     *string
 	Output *string
 	Find   *bool
+	Stop   *bool
+	Force  *bool
 }
 
-func (opt TasksOption) Formatter() taskFormatter {
+func (o TasksOption) taskID() string {
+	return aws.StringValue(o.ID)
+}
+
+func (opt TasksOption) newFormatter() taskFormatter {
 	switch *opt.Output {
 	case "json":
 		return newTaskFormatterJSON(os.Stdout)
@@ -31,7 +38,7 @@ func (opt TasksOption) Formatter() taskFormatter {
 	return newTaskFormatterTable(os.Stdout)
 }
 
-func (d *App) tasks(ctx context.Context, id *string, desiredStatuses ...string) ([]*ecs.Task, error) {
+func (d *App) listTasks(ctx context.Context, id *string, desiredStatuses ...string) ([]*ecs.Task, error) {
 	if len(desiredStatuses) == 0 {
 		desiredStatuses = []string{"RUNNING", "STOPPED"}
 	}
@@ -68,6 +75,9 @@ func (d *App) tasks(ctx context.Context, id *string, desiredStatuses ...string) 
 			}
 		}
 	}
+	if len(taskIDs) == 0 {
+		return []*ecs.Task{}, nil
+	}
 
 	in := &ecs.DescribeTasksInput{
 		Cluster: aws.String(d.Cluster),
@@ -87,13 +97,17 @@ func (d *App) Tasks(opt TasksOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	tasks, err := d.tasks(ctx, opt.ID)
+	tasks, err := d.listTasks(ctx, opt.ID)
 	if err != nil {
 		return err
 	}
+	if len(tasks) == 0 {
+		d.Log("tasks not found")
+		return nil
+	}
 
-	if !aws.BoolValue(opt.Find) {
-		formatter := opt.Formatter()
+	if !aws.BoolValue(opt.Find) && !aws.BoolValue(opt.Stop) {
+		formatter := opt.newFormatter()
 		for _, task := range tasks {
 			formatter.AddTask(task)
 		}
@@ -101,6 +115,39 @@ func (d *App) Tasks(opt TasksOption) error {
 		return nil
 	}
 
+	task, err := d.findTask(opt, tasks)
+	if err != nil {
+		return err
+	}
+
+	if aws.BoolValue(opt.Find) {
+		f := newTaskFormatterJSON(os.Stdout)
+		f.AddTask(task)
+		f.Close()
+		return nil
+	} else if aws.BoolValue(opt.Stop) {
+		stop := aws.BoolValue(opt.Force) ||
+			prompter.YN(fmt.Sprintf("Stop task %s?", arnToName(*task.TaskArn)), false)
+		if !stop {
+			return nil
+		}
+		d.Log("Request stop task ID " + arnToName(*task.TaskArn))
+		_, err := d.ecs.StopTask(&ecs.StopTaskInput{
+			Cluster: task.ClusterArn,
+			Task:    task.TaskArn,
+			Reason:  aws.String("Request stop task by user action."),
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to stop task")
+		}
+	}
+	return nil
+}
+
+func (d *App) findTask(opt taskFinderOption, tasks []*ecs.Task) (*ecs.Task, error) {
+	if len(tasks) == 1 && opt.taskID() == arnToName(*tasks[0].TaskArn) {
+		return tasks[0], nil
+	}
 	buf := new(bytes.Buffer)
 	tasksDict := make(map[string]*ecs.Task)
 	formatter := newTaskFormatterTSV(buf, false)
@@ -112,14 +159,13 @@ func (d *App) Tasks(opt TasksOption) error {
 	formatter.Close()
 	result, err := d.runFilter(buf, "task ID")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	taskID := strings.Fields(string(result))[0]
-
-	f := newTaskFormatterJSON(os.Stdout)
-	f.AddTask(tasksDict[taskID])
-	f.Close()
-	return nil
+	if task, found := tasksDict[taskID]; found {
+		return task, nil
+	}
+	return nil, errors.Errorf("task ID %s is not found", taskID)
 }
 
 type taskFormatter interface {

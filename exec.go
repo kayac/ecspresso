@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"sort"
 	"strings"
 
 	"github.com/Songmu/prompter"
@@ -17,10 +18,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+type taskFinderOption interface {
+	taskID() string
+}
+
 type ExecOption struct {
 	ID        *string
 	Command   *string
 	Container *string
+}
+
+func (o ExecOption) taskID() string {
+	return aws.StringValue(o.ID)
 }
 
 func (d *App) Exec(opt ExecOption) error {
@@ -28,40 +37,33 @@ func (d *App) Exec(opt ExecOption) error {
 	defer cancel()
 
 	// find a task to exec
-	tasks, err := d.tasks(ctx, opt.ID, "RUNNING")
+	tasks, err := d.listTasks(ctx, opt.ID, "RUNNING")
 	if err != nil {
 		return err
 	}
-	buf := new(bytes.Buffer)
-	formatter := newTaskFormatterTSV(buf, false)
-	for _, task := range tasks {
-		formatter.AddTask(task)
+	if len(tasks) == 0 {
+		d.Log("tasks not found")
+		return nil
 	}
-	formatter.Close()
-	result, err := d.runFilter(buf, "task ID")
+
+	task, err := d.findTask(opt, tasks)
 	if err != nil {
 		return err
-	}
-	taskID := strings.Fields(string(result))[0]
-	var targetTask *ecs.Task
-	for _, task := range tasks {
-		task := task
-		if arnToName(*task.TaskArn) == taskID {
-			targetTask = task
-			break
-		}
 	}
 
 	// find a container to exec
 	var targetContainer *string
-	if len(targetTask.Containers) == 1 {
-		targetContainer = targetTask.Containers[0].Name
+	if len(task.Containers) == 1 {
+		targetContainer = task.Containers[0].Name
 	} else if aws.StringValue(opt.Container) != "" {
 		targetContainer = opt.Container
 	} else {
 		// select a container to execute
 		buf := new(bytes.Buffer)
-		for _, container := range targetTask.Containers {
+		sort.SliceStable(task.Containers, func(i, j int) bool {
+			return aws.StringValue(task.Containers[i].Name) < aws.StringValue(task.Containers[j].Name)
+		})
+		for _, container := range task.Containers {
 			fmt.Fprintln(buf, string(*container.Name))
 		}
 		result, err := d.runFilter(buf, "container name")
@@ -72,9 +74,9 @@ func (d *App) Exec(opt ExecOption) error {
 	}
 
 	out, err := d.ecs.ExecuteCommand(&ecs.ExecuteCommandInput{
-		Cluster:     aws.String(d.Cluster),
+		Cluster:     task.ClusterArn,
 		Interactive: aws.Bool(true),
-		Task:        aws.String(taskID),
+		Task:        task.TaskArn,
 		Command:     opt.Command,
 		Container:   targetContainer,
 	})
