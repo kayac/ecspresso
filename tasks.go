@@ -96,10 +96,10 @@ func (d *App) Tasks(opt TasksOption) error {
 	}
 
 	if !aws.BoolValue(opt.Find) && !aws.BoolValue(opt.Stop) {
-		return d.tasksList(opt, tasks)
+		return d.outputTasks(opt, tasks)
 	}
 
-	foundTask, err := d.tasksFind(opt, tasks)
+	foundTask, err := d.findTask(opt, tasks)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (d *App) Tasks(opt TasksOption) error {
 	return nil
 }
 
-func (d *App) tasksList(opt TasksOption, tasks []*ecs.Task) error {
+func (d *App) outputTasks(opt TasksOption, tasks []*ecs.Task) error {
 	// show list
 	formatter := opt.Formatter()
 	for _, task := range tasks {
@@ -138,7 +138,7 @@ func (d *App) tasksList(opt TasksOption, tasks []*ecs.Task) error {
 	return nil
 }
 
-func (d *App) tasksFind(opt TasksOption, tasks []*ecs.Task) (*ecs.Task, error) {
+func (d *App) findTask(opt TasksOption, tasks []*ecs.Task) (*ecs.Task, error) {
 	if opt.ID != nil && len(tasks) == 1 {
 		return tasks[0], nil
 	}
