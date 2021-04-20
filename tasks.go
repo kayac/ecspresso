@@ -75,6 +75,9 @@ func (d *App) listTasks(ctx context.Context, id *string, desiredStatuses ...stri
 			}
 		}
 	}
+	if len(taskIDs) == 0 {
+		return []*ecs.Task{}, nil
+	}
 
 	in := &ecs.DescribeTasksInput{
 		Cluster: aws.String(d.Cluster),
@@ -97,6 +100,10 @@ func (d *App) Tasks(opt TasksOption) error {
 	tasks, err := d.listTasks(ctx, opt.ID)
 	if err != nil {
 		return err
+	}
+	if len(tasks) == 0 {
+		d.Log("tasks not found")
+		return nil
 	}
 
 	if !aws.BoolValue(opt.Find) && !aws.BoolValue(opt.Stop) {
@@ -155,7 +162,10 @@ func (d *App) findTask(opt taskFinderOption, tasks []*ecs.Task) (*ecs.Task, erro
 		return nil, err
 	}
 	taskID := strings.Fields(string(result))[0]
-	return tasksDict[taskID], nil
+	if task, found := tasksDict[taskID]; found {
+		return task, nil
+	}
+	return nil, errors.Errorf("task ID %s is not found", taskID)
 }
 
 type taskFormatter interface {

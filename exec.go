@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"sort"
 	"strings"
 
 	"github.com/Songmu/prompter"
@@ -40,6 +41,11 @@ func (d *App) Exec(opt ExecOption) error {
 	if err != nil {
 		return err
 	}
+	if len(tasks) == 0 {
+		d.Log("tasks not found")
+		return nil
+	}
+
 	task, err := d.findTask(opt, tasks)
 	if err != nil {
 		return err
@@ -54,6 +60,9 @@ func (d *App) Exec(opt ExecOption) error {
 	} else {
 		// select a container to execute
 		buf := new(bytes.Buffer)
+		sort.SliceStable(task.Containers, func(i, j int) bool {
+			return aws.StringValue(task.Containers[i].Name) < aws.StringValue(task.Containers[j].Name)
+		})
 		for _, container := range task.Containers {
 			fmt.Fprintln(buf, string(*container.Name))
 		}
