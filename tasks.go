@@ -24,6 +24,10 @@ type TasksOption struct {
 	Force  *bool
 }
 
+func (o TasksOption) taskID() string {
+	return aws.StringValue(o.ID)
+}
+
 func (opt TasksOption) newFormatter() taskFormatter {
 	switch *opt.Output {
 	case "json":
@@ -34,7 +38,7 @@ func (opt TasksOption) newFormatter() taskFormatter {
 	return newTaskFormatterTable(os.Stdout)
 }
 
-func (d *App) tasks(ctx context.Context, id *string, desiredStatuses ...string) ([]*ecs.Task, error) {
+func (d *App) listTasks(ctx context.Context, id *string, desiredStatuses ...string) ([]*ecs.Task, error) {
 	if len(desiredStatuses) == 0 {
 		desiredStatuses = []string{"RUNNING", "STOPPED"}
 	}
@@ -90,7 +94,7 @@ func (d *App) Tasks(opt TasksOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	tasks, err := d.tasks(ctx, opt.ID)
+	tasks, err := d.listTasks(ctx, opt.ID)
 	if err != nil {
 		return err
 	}
@@ -104,26 +108,26 @@ func (d *App) Tasks(opt TasksOption) error {
 		return nil
 	}
 
-	foundTask, err := d.findTask(opt, tasks)
+	task, err := d.findTask(opt, tasks)
 	if err != nil {
 		return err
 	}
 
 	if aws.BoolValue(opt.Find) {
 		f := newTaskFormatterJSON(os.Stdout)
-		f.AddTask(foundTask)
+		f.AddTask(task)
 		f.Close()
 		return nil
 	} else if aws.BoolValue(opt.Stop) {
 		stop := aws.BoolValue(opt.Force) ||
-			prompter.YN(fmt.Sprintf("Stop task %s?", arnToName(*foundTask.TaskArn)), false)
+			prompter.YN(fmt.Sprintf("Stop task %s?", arnToName(*task.TaskArn)), false)
 		if !stop {
 			return nil
 		}
-		d.Log("Request stop task ID " + arnToName(*foundTask.TaskArn))
+		d.Log("Request stop task ID " + arnToName(*task.TaskArn))
 		_, err := d.ecs.StopTask(&ecs.StopTaskInput{
-			Cluster: foundTask.ClusterArn,
-			Task:    foundTask.TaskArn,
+			Cluster: task.ClusterArn,
+			Task:    task.TaskArn,
 			Reason:  aws.String("Request stop task by user action."),
 		})
 		if err != nil {
@@ -133,8 +137,8 @@ func (d *App) Tasks(opt TasksOption) error {
 	return nil
 }
 
-func (d *App) findTask(opt TasksOption, tasks []*ecs.Task) (*ecs.Task, error) {
-	if opt.ID != nil && len(tasks) == 1 {
+func (d *App) findTask(opt taskFinderOption, tasks []*ecs.Task) (*ecs.Task, error) {
+	if len(tasks) == 1 && opt.taskID() == arnToName(*tasks[0].TaskArn) {
 		return tasks[0], nil
 	}
 	buf := new(bytes.Buffer)
