@@ -24,7 +24,7 @@ type TasksOption struct {
 	Force  *bool
 }
 
-func (opt TasksOption) Formatter() taskFormatter {
+func (opt TasksOption) newFormatter() taskFormatter {
 	switch *opt.Output {
 	case "json":
 		return newTaskFormatterJSON(os.Stdout)
@@ -96,7 +96,12 @@ func (d *App) Tasks(opt TasksOption) error {
 	}
 
 	if !aws.BoolValue(opt.Find) && !aws.BoolValue(opt.Stop) {
-		return d.outputTasks(opt, tasks)
+		formatter := opt.newFormatter()
+		for _, task := range tasks {
+			formatter.AddTask(task)
+		}
+		formatter.Close()
+		return nil
 	}
 
 	foundTask, err := d.findTask(opt, tasks)
@@ -125,16 +130,6 @@ func (d *App) Tasks(opt TasksOption) error {
 			return errors.Wrap(err, "failed to stop task")
 		}
 	}
-	return nil
-}
-
-func (d *App) outputTasks(opt TasksOption, tasks []*ecs.Task) error {
-	// show list
-	formatter := opt.Formatter()
-	for _, task := range tasks {
-		formatter.AddTask(task)
-	}
-	formatter.Close()
 	return nil
 }
 
