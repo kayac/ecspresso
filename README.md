@@ -532,6 +532,8 @@ Flags:
   --id=""                task ID
   --output=table         output format (table|json|tsv)
   --find                 find a task from tasks list and dump it as JSON
+  --stop                 stop a task
+  --force                stop a task without confirmation prompt
 ```
 
 When `--find` option is set, you can select a task in a list of tasks and show the task as JSON.
@@ -541,6 +543,8 @@ When `--find` option is set, you can select a task in a list of tasks and show t
 ```yaml
 filter_command: peco
 ```
+
+When `--stop` option is set, you can select a task in a list of tasks and stop the task.
 
 ### exec
 
