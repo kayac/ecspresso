@@ -714,7 +714,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *ecs.Service) error {
 	)
 }
 
-func (d *App) RollbackByCodeDeploy(ctx context.Context, opt RollbackOption) error {
+func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *ecs.Service, tdArn string, opt RollbackOption) error {
 	dp, err := d.findDeploymentInfo()
 	if err != nil {
 		return err
@@ -733,21 +733,29 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, opt RollbackOption) erro
 
 	dpID := ld.Deployments[0] // latest deployment id
 
+	dep, _ := d.codedeploy.GetDeploymentWithContext(ctx, &codedeploy.GetDeploymentInput{
+		DeploymentId: dpID,
+	})
+
 	if *opt.DryRun {
 		d.Log("deployment id:", *dpID)
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	_, err = d.codedeploy.StopDeploymentWithContext(ctx, &codedeploy.StopDeploymentInput{
-		DeploymentId:        dpID,
-		AutoRollbackEnabled: aws.Bool(true),
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to rollback deployment")
+	// If the deployment is not yet complete
+	if *dep.DeploymentInfo.Status != "Succeeded" && *dep.DeploymentInfo.Status != "Failed" && *dep.DeploymentInfo.Status != "Stopped" {
+		_, err = d.codedeploy.StopDeploymentWithContext(ctx, &codedeploy.StopDeploymentInput{
+			DeploymentId:        dpID,
+			AutoRollbackEnabled: aws.Bool(true),
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to rollback deployment")
+		}
+
+		d.Log(fmt.Sprintf("Deployment %s is rollbacked on CodeDeploy:", *dpID))
+		return nil
 	}
 
-	d.Log(fmt.Sprintf("Deployment %s is rollbacked on CodeDeploy:", *dpID))
-
-	return nil
+	return d.createDeployment(ctx, sv, tdArn, opt.RollbackEvents)
 }
