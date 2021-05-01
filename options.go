@@ -66,6 +66,7 @@ type RollbackOption struct {
 	DryRun                   *bool
 	DeregisterTaskDefinition *bool
 	NoWait                   *bool
+	RollbackEvents           *string
 }
 
 func (opt RollbackOption) DryRunString() string {
