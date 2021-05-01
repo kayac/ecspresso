@@ -644,7 +644,7 @@ func (d *App) Register(opt RegisterOption) error {
 	return nil
 }
 
-func (d *App) suspendAutoScaling(suspend bool) error {
+func (d *App) suspendAutoScaling(suspendState bool) error {
 	resouceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
 
 	out, err := d.autoScaling.DescribeScalableTargets(
@@ -662,21 +662,21 @@ func (d *App) suspendAutoScaling(suspend bool) error {
 		return nil
 	}
 	for _, target := range out.ScalableTargets {
-		d.Log(fmt.Sprintf("Register scalable target %s set suspend to %t", *target.ResourceId, suspend))
+		d.Log(fmt.Sprintf("Register scalable target %s set suspend state to %t", *target.ResourceId, suspendState))
 		_, err := d.autoScaling.RegisterScalableTarget(
 			&applicationautoscaling.RegisterScalableTargetInput{
 				ServiceNamespace:  target.ServiceNamespace,
 				ScalableDimension: target.ScalableDimension,
 				ResourceId:        target.ResourceId,
 				SuspendedState: &applicationautoscaling.SuspendedState{
-					DynamicScalingInSuspended:  &suspend,
-					DynamicScalingOutSuspended: &suspend,
-					ScheduledScalingSuspended:  &suspend,
+					DynamicScalingInSuspended:  &suspendState,
+					DynamicScalingOutSuspended: &suspendState,
+					ScheduledScalingSuspended:  &suspendState,
 				},
 			},
 		)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to register scalable target %s set suspend to %t", *target.ResourceId, suspend))
+			return errors.Wrap(err, fmt.Sprintf("failed to register scalable target %s set suspend state to %t", *target.ResourceId, suspendState))
 		}
 	}
 	return nil
