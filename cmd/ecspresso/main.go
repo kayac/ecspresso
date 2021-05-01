@@ -49,6 +49,7 @@ func _main() int {
 		DryRun:               scale.Flag("dry-run", "dry-run").Bool(),
 		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Required().Int64(),
 		SkipTaskDefinition:   boolp(true),
+		SuspendAutoScaling:   scale.Flag("suspend-auto-scaling", "set suspend to auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
 		ForceNewDeployment:   boolp(false),
 		NoWait:               scale.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
 		UpdateService:        boolp(false),
@@ -217,6 +218,9 @@ func _main() int {
 	case "refresh":
 		err = app.Deploy(refreshOption)
 	case "scale":
+		if !isSetSuspendAutoScaling {
+			scaleOption.SuspendAutoScaling = nil
+		}
 		err = app.Deploy(scaleOption)
 	case "status":
 		err = app.Status(statusOption)
