@@ -733,9 +733,12 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *ecs.Service, tdArn s
 
 	dpID := ld.Deployments[0] // latest deployment id
 
-	dep, _ := d.codedeploy.GetDeploymentWithContext(ctx, &codedeploy.GetDeploymentInput{
+	dep, err := d.codedeploy.GetDeploymentWithContext(ctx, &codedeploy.GetDeploymentInput{
 		DeploymentId: dpID,
 	})
+	if err != nil {
+		return errors.Wrap(err, "failed to get deployment")
+	}
 
 	if *opt.DryRun {
 		d.Log("deployment id:", *dpID)
