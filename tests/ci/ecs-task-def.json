@@ -58,13 +58,15 @@
     }
   ],
   "cpu": "256",
+  "ephemeralStorage": {
+    "sizeInGiB": 50
+  },
   "executionRoleArn": "arn:aws:iam::{{must_env `AWS_ACCOUNT_ID`}}:role/ecsTaskRole",
   "family": "ecspresso-test",
   "memory": "512",
   "networkMode": "awsvpc",
   "placementConstraints": [],
   "requiresCompatibilities": [
-    "EC2",
     "FARGATE"
   ],
   "tags": [

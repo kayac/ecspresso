@@ -112,6 +112,7 @@ func tdToTaskDefinitionInput(td *TaskDefinition, tdTags []*ecs.Tag) *TaskDefinit
 	return &TaskDefinitionInput{
 		ContainerDefinitions:    td.ContainerDefinitions,
 		Cpu:                     td.Cpu,
+		EphemeralStorage:        td.EphemeralStorage,
 		ExecutionRoleArn:        td.ExecutionRoleArn,
 		Family:                  td.Family,
 		Memory:                  td.Memory,

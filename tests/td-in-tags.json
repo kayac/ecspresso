@@ -10,6 +10,9 @@
     "volumes": [],
     "taskRoleArn": "arn:aws:iam::999999999999:role/ecsTaskRole",
     "executionRoleArn": "arn:aws:iam::999999999999:role/ecsTaskRole",
+    "ephemeralStorage": {
+      "sizeInGiB": 25
+    },
     "containerDefinitions": [
       {
         "environment": [
