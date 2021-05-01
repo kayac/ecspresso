@@ -746,8 +746,10 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *ecs.Service, tdArn s
 		return nil
 	}
 
-	// If the deployment is not yet complete
-	if *dep.DeploymentInfo.Status != "Succeeded" && *dep.DeploymentInfo.Status != "Failed" && *dep.DeploymentInfo.Status != "Stopped" {
+	switch *dep.DeploymentInfo.Status {
+	case "Succeeded", "Failed", "Stopped":
+		return d.createDeployment(ctx, sv, tdArn, opt.RollbackEvents)
+	default: // If the deployment is not yet complete
 		_, err = d.codedeploy.StopDeploymentWithContext(ctx, &codedeploy.StopDeploymentInput{
 			DeploymentId:        dpID,
 			AutoRollbackEnabled: aws.Bool(true),
@@ -759,6 +761,4 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *ecs.Service, tdArn s
 		d.Log(fmt.Sprintf("Deployment %s is rollbacked on CodeDeploy:", *dpID))
 		return nil
 	}
-
-	return d.createDeployment(ctx, sv, tdArn, opt.RollbackEvents)
 }
