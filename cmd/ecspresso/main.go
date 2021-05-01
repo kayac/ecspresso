@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/fatih/color"
 	"github.com/kayac/ecspresso"
 	"github.com/mattn/go-isatty"
@@ -30,26 +31,28 @@ func _main() int {
 	}
 	colorOpt := kingpin.Flag("color", "enable colored output").Default(colorDefault).Bool()
 
-	var isSetSuspendAutoScaling bool
+	var isSetSuspendAutoScaling, isSetResumeAutoScaling bool
 	deploy := kingpin.Command("deploy", "deploy service")
+	deploy.Flag("resume-auto-scaling", "resume application auto-scaling attached with the ECS service").IsSetByUser(&isSetResumeAutoScaling).Bool()
 	deployOption := ecspresso.DeployOption{
 		DryRun:               deploy.Flag("dry-run", "dry-run").Bool(),
 		DesiredCount:         deploy.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
 		SkipTaskDefinition:   deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
 		ForceNewDeployment:   deploy.Flag("force-new-deployment", "force a new deployment of the service").Bool(),
 		NoWait:               deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		SuspendAutoScaling:   deploy.Flag("suspend-auto-scaling", "set suspend to auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
+		SuspendAutoScaling:   deploy.Flag("suspend-auto-scaling", "suspend application auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
 		RollbackEvents:       deploy.Flag("rollback-events", " rollback when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only.").String(),
 		UpdateService:        deploy.Flag("update-service", "update service attributes by service definition").Default("true").Bool(),
 		LatestTaskDefinition: deploy.Flag("latest-task-definition", "deploy with latest task definition without registering new task definition").Default("false").Bool(),
 	}
 
 	scale := kingpin.Command("scale", "scale service. equivalent to deploy --skip-task-definition --no-update-service")
+	scale.Flag("resume-auto-scaling", "resume application auto-scaling attached with the ECS service").IsSetByUser(&isSetResumeAutoScaling).Bool()
 	scaleOption := ecspresso.DeployOption{
 		DryRun:               scale.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Required().Int64(),
+		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
 		SkipTaskDefinition:   boolp(true),
-		SuspendAutoScaling:   scale.Flag("suspend-auto-scaling", "set suspend to auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
+		SuspendAutoScaling:   scale.Flag("suspend-auto-scaling", "suspend application auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
 		ForceNewDeployment:   boolp(false),
 		NoWait:               scale.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
 		UpdateService:        boolp(false),
@@ -214,12 +217,18 @@ func _main() int {
 		if !isSetSuspendAutoScaling {
 			deployOption.SuspendAutoScaling = nil
 		}
+		if isSetResumeAutoScaling {
+			deployOption.SuspendAutoScaling = aws.Bool(false)
+		}
 		err = app.Deploy(deployOption)
 	case "refresh":
 		err = app.Deploy(refreshOption)
 	case "scale":
 		if !isSetSuspendAutoScaling {
 			scaleOption.SuspendAutoScaling = nil
+		}
+		if isSetResumeAutoScaling {
+			scaleOption.SuspendAutoScaling = aws.Bool(false)
 		}
 		err = app.Deploy(scaleOption)
 	case "status":
