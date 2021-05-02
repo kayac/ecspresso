@@ -230,63 +230,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 		return nil
 	}
 
-	spec, err := appspec.NewWithService(sv, taskDefinitionArn)
-	if err != nil {
-		return errors.Wrap(err, "failed to create appspec")
-	}
-	if d.config.AppSpec != nil {
-		spec.Hooks = d.config.AppSpec.Hooks
-	}
-	d.DebugLog("appSpecContent:", spec.String())
-
-	// deployment
-	dp, err := d.findDeploymentInfo()
-	if err != nil {
-		return err
-	}
-	dd := &codedeploy.CreateDeploymentInput{
-		ApplicationName:      dp.ApplicationName,
-		DeploymentGroupName:  dp.DeploymentGroupName,
-		DeploymentConfigName: dp.DeploymentConfigName,
-		Revision: &codedeploy.RevisionLocation{
-			RevisionType: aws.String("AppSpecContent"),
-			AppSpecContent: &codedeploy.AppSpecContent{
-				Content: aws.String(spec.String()),
-			},
-		},
-	}
-	if ev := aws.StringValue(opt.RollbackEvents); ev != "" {
-		var events []*string
-		for _, ev := range strings.Split(ev, ",") {
-			events = append(events, aws.String(ev))
-		}
-		dd.AutoRollbackConfiguration = &codedeploy.AutoRollbackConfiguration{
-			Enabled: aws.Bool(true),
-			Events:  events,
-		}
-	}
-	d.DebugLog("creating a deployment to CodeDeploy", dd.String())
-
-	res, err := d.codedeploy.CreateDeploymentWithContext(ctx, dd)
-	if err != nil {
-		return errors.Wrap(err, "failed to create deployment")
-	}
-	id := *res.DeploymentId
-	u := fmt.Sprintf(
-		CodeDeployConsoleURLFmt,
-		d.config.Region,
-		id,
-		d.config.Region,
-	)
-	d.Log(fmt.Sprintf("Deployment %s is created on CodeDeploy:", id))
-	d.Log(u)
-
-	if isatty.IsTerminal(os.Stdout.Fd()) {
-		if err := exec.Command("open", u).Start(); err != nil {
-			d.Log("Couldn't open URL", u)
-		}
-	}
-	return nil
+	return d.createDeployment(ctx, sv, taskDefinitionArn, opt.RollbackEvents)
 }
 
 func (d *App) findDeploymentInfo() (*codedeploy.DeploymentInfo, error) {
@@ -353,4 +297,66 @@ func isCodeDeploy(dc *ecs.DeploymentController) bool {
 		return true
 	}
 	return false
+}
+
+func (d *App) createDeployment(ctx context.Context, sv *ecs.Service, taskDefinitionArn string, rollbackEvents *string) error {
+
+	spec, err := appspec.NewWithService(sv, taskDefinitionArn)
+	if err != nil {
+		return errors.Wrap(err, "failed to create appspec")
+	}
+	if d.config.AppSpec != nil {
+		spec.Hooks = d.config.AppSpec.Hooks
+	}
+	d.DebugLog("appSpecContent:", spec.String())
+
+	// deployment
+	dp, err := d.findDeploymentInfo()
+	if err != nil {
+		return err
+	}
+	dd := &codedeploy.CreateDeploymentInput{
+		ApplicationName:      dp.ApplicationName,
+		DeploymentGroupName:  dp.DeploymentGroupName,
+		DeploymentConfigName: dp.DeploymentConfigName,
+		Revision: &codedeploy.RevisionLocation{
+			RevisionType: aws.String("AppSpecContent"),
+			AppSpecContent: &codedeploy.AppSpecContent{
+				Content: aws.String(spec.String()),
+			},
+		},
+	}
+	if ev := aws.StringValue(rollbackEvents); ev != "" {
+		var events []*string
+		for _, ev := range strings.Split(ev, ",") {
+			events = append(events, aws.String(ev))
+		}
+		dd.AutoRollbackConfiguration = &codedeploy.AutoRollbackConfiguration{
+			Enabled: aws.Bool(true),
+			Events:  events,
+		}
+	}
+
+	d.DebugLog("creating a deployment to CodeDeploy", dd.String())
+
+	res, err := d.codedeploy.CreateDeploymentWithContext(ctx, dd)
+	if err != nil {
+		return errors.Wrap(err, "failed to create deployment")
+	}
+	id := *res.DeploymentId
+	u := fmt.Sprintf(
+		CodeDeployConsoleURLFmt,
+		d.config.Region,
+		id,
+		d.config.Region,
+	)
+	d.Log(fmt.Sprintf("Deployment %s is created on CodeDeploy:", id))
+	d.Log(u)
+
+	if isatty.IsTerminal(os.Stdout.Fd()) {
+		if err := exec.Command("open", u).Start(); err != nil {
+			d.Log("Couldn't open URL", u)
+		}
+	}
+	return nil
 }

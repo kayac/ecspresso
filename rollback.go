@@ -18,15 +18,16 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return errors.Wrap(err, "failed to describe service status")
 	}
 
-	if isCodeDeploy(sv.DeploymentController) {
-		return d.RollbackByCodeDeploy(ctx, opt)
-	}
-
 	currentArn := *sv.TaskDefinition
 	targetArn, err := d.FindRollbackTarget(ctx, currentArn)
 	if err != nil {
 		return errors.Wrap(err, "failed to find rollback target")
 	}
+
+	if isCodeDeploy(sv.DeploymentController) {
+		return d.RollbackByCodeDeploy(ctx, sv, targetArn, opt)
+	}
+
 	d.Log("Rollbacking to", arnToName(targetArn))
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
