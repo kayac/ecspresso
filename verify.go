@@ -437,7 +437,7 @@ func parseRoleArn(arn string) (roleName string, err error) {
 	if !strings.HasSuffix(rn[0], ":role") {
 		return "", errors.Errorf("not a valid role arn")
 	}
-	return rn[1], nil
+	return rn[len(rn)-1], nil
 }
 
 func (d *App) verifyRole(ctx context.Context, arn string) error {

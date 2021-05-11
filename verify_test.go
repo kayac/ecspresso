@@ -17,6 +17,11 @@ var testRoleArns = []struct {
 		isValid:  true,
 	},
 	{
+		arn:      "arn:aws:iam::123456789012:role/path/to/ecsTaskRole",
+		roleName: "ecsTaskRole",
+		isValid:  true,
+	},
+	{
 		arn: "arn:aws:iam::123456789012:foo",
 	},
 	{
