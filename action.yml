@@ -11,7 +11,7 @@ runs:
         if [ "${VERSION}" = "latest" ]; then
           DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases/latest|jq -r '.assets[].browser_download_url|select(test("linux-amd64.zip$"))')
         else
-          DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/${FILENAME}.zip
+          DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/ecspresso-${VERSION}-linux-amd64.zip
         fi
         cd /tmp
         curl -sfLO ${DOWNLOAD_URL}
