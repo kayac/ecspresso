@@ -6,10 +6,17 @@ runs:
   using: "composite"
   steps:
     - run: |
-        FILENAME=ecspresso-${{ inputs.version }}-linux-amd64
+        if [ ${{ inputs.version }} = "latest" ]; then
+          FILENAME=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases/latest|jq -r '.assets[].name|select(test("linux-amd64$"))')
+          DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/latest/download/${FILENAME}.zip
+        else
+          FILENAME=ecspresso-${{ inputs.version }}-linux-amd64
+          DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${{ github.event.inputs.version }}/${FILENAME}.zip
+        fi
         cd /tmp
-        curl -sLO https://github.com/kayac/ecspresso/releases/download/${{ inputs.version }}/${FILENAME}.zip
-        unzip ${FILENAME}.zip
+        curl -sLO ${DOWNLOAD_URL}
+        unzip ${FILENAME}
         sudo install ${FILENAME} /usr/local/bin/ecspresso
         rm -f ${FILENAME} ${FILENAME}.zip
+        /usr/local/bin/ecspresso version
       shell: bash
