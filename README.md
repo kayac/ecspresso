@@ -29,13 +29,13 @@ https://circleci.com/orbs/registry/orb/fujiwara/ecspresso
 ```yaml
 version: 2.1
 orbs:
-  ecspresso: fujiwara/ecspresso@0.0.12
+  ecspresso: fujiwara/ecspresso@0.0.14
 jobs:
   install:
     steps:
       - checkout
       - ecspresso/install:
-          version: v1.1.3
+          version: v1.5.4 # or latest
       - run:
           command: |
             ecspresso version
@@ -43,7 +43,7 @@ jobs:
 
 ### GitHub Actions
 
-Action kayac/ecspresso@v0 installs ecspresso binary for Linux into /usr/local/bin. This action runs install only.
+Action kayac/ecspresso@v1 installs ecspresso binary for Linux into /usr/local/bin. This action runs install only.
 
 ```yml
 jobs:
@@ -51,14 +51,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: kayac/ecspresso@v0
+      - uses: kayac/ecspresso@v1
         with:
-          version: v1.1.3
+          version: v1.5.4
       - run: |
           ecspresso deploy --config config.yaml
 ```
 
-And, pass the parameter "latest" to use the latest version of ecspresso.
+Pass the parameter "latest" to use the latest version of ecspresso.
+
+```yaml
+      - uses: kayac/ecspresso@v1
+        with:
+          version: latest
+```
 
 ## Usage
 
