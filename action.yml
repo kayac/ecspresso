@@ -6,7 +6,7 @@ runs:
   using: "composite"
   steps:
     - run: |
-        set -ex
+        set -e
         VERSION="${{ inputs.version }}"
         if [ "${VERSION}" = "latest" ]; then
           DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases/latest|jq -r '.assets[].browser_download_url|select(test("linux-amd64.zip$"))')
