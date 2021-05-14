@@ -58,6 +58,8 @@ jobs:
           ecspresso deploy --config config.yaml
 ```
 
+And, pass the parameter "latest" to use the latest version of ecspresso.
+
 ## Usage
 
 ```
