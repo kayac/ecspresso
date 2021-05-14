@@ -14,12 +14,19 @@ commands:
       - run:
           name: "Install ecspresso"
           command: |
-            FILENAME=ecspresso-<< parameters.version >>-linux-amd64
+            VERSION="<< parameters.version >>"
+            if [ "${VERSION}" = "latest" ]; then
+              DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases/latest|jq -r '.assets[].browser_download_url|select(test("linux-amd64.zip$"))')
+            else
+              DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/${FILENAME}.zip
+            fi
             cd /tmp
-            curl -sLO https://github.com/kayac/ecspresso/releases/download/<< parameters.version >>/${FILENAME}.zip
+            curl -sLfO ${DOWNLOAD_URL}
+            FILENAME=$(basename $DOWNLOAD_URL .zip)
             unzip ${FILENAME}.zip
             sudo install ${FILENAME} /usr/local/bin/ecspresso
             rm -f ${FILENAME} ${FILENAME}.zip
+            /usr/local/bin/ecspresso version
 
 examples:
   install_ecspresso:
