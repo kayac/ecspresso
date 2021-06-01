@@ -109,7 +109,7 @@ func coloredDiff(src string) string {
 }
 
 func tdToTaskDefinitionInput(td *TaskDefinition, tdTags []*ecs.Tag) *TaskDefinitionInput {
-	return &TaskDefinitionInput{
+	tdi := &TaskDefinitionInput{
 		ContainerDefinitions:    td.ContainerDefinitions,
 		Cpu:                     td.Cpu,
 		EphemeralStorage:        td.EphemeralStorage,
@@ -122,24 +122,11 @@ func tdToTaskDefinitionInput(td *TaskDefinition, tdTags []*ecs.Tag) *TaskDefinit
 		TaskRoleArn:             td.TaskRoleArn,
 		ProxyConfiguration:      td.ProxyConfiguration,
 		Volumes:                 td.Volumes,
-		Tags:                    tdTags,
 	}
-}
-
-func tdInputToTaskDefinitionWithTags(td *TaskDefinitionInput) (*TaskDefinition, []*ecs.Tag) {
-	return &ecs.TaskDefinition{
-		ContainerDefinitions:    td.ContainerDefinitions,
-		Cpu:                     td.Cpu,
-		ExecutionRoleArn:        td.ExecutionRoleArn,
-		Family:                  td.Family,
-		Memory:                  td.Memory,
-		NetworkMode:             td.NetworkMode,
-		PlacementConstraints:    td.PlacementConstraints,
-		RequiresCompatibilities: td.RequiresCompatibilities,
-		TaskRoleArn:             td.TaskRoleArn,
-		ProxyConfiguration:      td.ProxyConfiguration,
-		Volumes:                 td.Volumes,
-	}, td.Tags
+	if len(tdTags) > 0 {
+		tdi.Tags = tdTags
+	}
+	return tdi
 }
 
 var stringerType = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
