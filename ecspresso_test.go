@@ -50,9 +50,12 @@ func TestLoadTaskDefinitionTags(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		_, err = app.LoadTaskDefinition(path)
+		td, err := app.LoadTaskDefinition(path)
 		if err != nil {
 			t.Errorf("%s load failed: %s", path, err)
+		}
+		if td.Tags != nil {
+			t.Errorf("%s tags must be null %v", path, td.Tags)
 		}
 	}
 

@@ -558,7 +558,9 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 
 func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInput) (*TaskDefinition, error) {
 	d.Log("Registering a new task definition...")
-
+	if len(td.Tags) == 0 {
+		td.Tags = nil // Tags can not be empty.
+	}
 	out, err := d.ecs.RegisterTaskDefinitionWithContext(
 		ctx,
 		td,
@@ -578,11 +580,17 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 		return nil, err
 	}
 	if c.TaskDefinition != nil {
+		if len(c.TaskDefinition.Tags) == 0 {
+			c.TaskDefinition.Tags = nil
+		}
 		return c.TaskDefinition, nil
 	}
 	var td TaskDefinitionInput
 	if err := d.loader.LoadWithEnvJSON(&td, path); err != nil {
 		return nil, err
+	}
+	if len(td.Tags) == 0 {
+		td.Tags = nil
 	}
 	return &td, nil
 }
