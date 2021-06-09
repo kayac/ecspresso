@@ -9,4 +9,5 @@ var (
 	CalcDesiredCount             = calcDesiredCount
 	ParseTags                    = parseTags
 	ParseRoleArn                 = parseRoleArn
+	IsLongArnFormat              = isLongArnFormat
 )

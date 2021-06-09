@@ -31,13 +31,17 @@ func (d *App) Init(opt InitOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
-	lt, err := d.ecs.ListTagsForResourceWithContext(ctx, &ecs.ListTagsForResourceInput{
-		ResourceArn: sv.ServiceArn,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to list tags for service")
+
+	if long, _ := isLongArnFormat(*sv.ServiceArn); long {
+		// Long arn format must be used for tagging operations
+		lt, err := d.ecs.ListTagsForResourceWithContext(ctx, &ecs.ListTagsForResourceInput{
+			ResourceArn: sv.ServiceArn,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to list tags for service")
+		}
+		sv.Tags = lt.Tags
 	}
-	sv.Tags = lt.Tags
 
 	// service-def
 	treatmentServiceDefinition(sv)
