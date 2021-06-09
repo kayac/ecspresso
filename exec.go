@@ -134,7 +134,10 @@ func runInternalFilter(src io.Reader, title string) (string, error) {
 		var found []string
 		for _, item := range items {
 			item := item
-			if strings.HasPrefix(item, input) {
+			if item == input {
+				found = []string{item}
+				break
+			} else if strings.HasPrefix(item, input) {
 				found = append(found, item)
 			}
 		}
