@@ -3,7 +3,9 @@ package ecspresso
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/private/protocol/json/jsonutil"
 )
 
@@ -29,4 +31,18 @@ func MarshalJSON(s interface{}) ([]byte, error) {
 func MarshalJSONString(s interface{}) string {
 	b, _ := marshalJSON(s)
 	return b.String()
+}
+
+func isLongArnFormat(a string) (bool, error) {
+	an, err := arn.Parse(a)
+	if err != nil {
+		return false, err
+	}
+	rs := strings.Split(an.Resource, "/")
+	switch rs[0] {
+	case "container-instance", "service", "task":
+		return len(rs) >= 3, nil
+	default:
+		return false, nil
+	}
 }
