@@ -161,10 +161,11 @@ func (d *App) findTask(opt taskFinderOption, tasks []*ecs.Task) (*ecs.Task, erro
 	if err != nil {
 		return nil, err
 	}
-	if result == "" {
+	ts := strings.Fields(string(result))
+	if len(ts) == 0 || ts[0] == "" {
 		return nil, errors.New("no any selected task")
 	}
-	taskID := strings.Fields(string(result))[0]
+	taskID := ts[0]
 	if task, found := tasksDict[taskID]; found {
 		return task, nil
 	}
