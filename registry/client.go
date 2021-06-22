@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const dockerHubHost = "registry.hub.docker.com"
+const dockerHubHost = "registry-1.docker.io"
 
 // Repositry represents a repositry using Docker Registry API v2.
 type Repositry struct {
