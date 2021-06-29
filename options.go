@@ -100,6 +100,11 @@ type RunOption struct {
 	LatestTaskDefinition *bool
 	PropagateTags        *string
 	Tags                 *string
+	WaitUntil            *string
+}
+
+func (opt RunOption) waitUntilRunning() bool {
+	return aws.StringValue(opt.WaitUntil) == "running"
 }
 
 func (opt RunOption) DryRunString() string {

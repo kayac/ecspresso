@@ -101,6 +101,7 @@ func _main() int {
 		DryRun:               run.Flag("dry-run", "dry-run").Bool(),
 		TaskDefinition:       run.Flag("task-def", "task definition json for run task").String(),
 		NoWait:               run.Flag("no-wait", "exit ecspresso after task run").Bool(),
+		WaitUntil:            run.Flag("wait-until", "wait until invoked tasks status reached to (running or stopped)").Default("stopped").Enum("running", "stopped"),
 		TaskOverrideStr:      run.Flag("overrides", "task overrides JSON string").Default("").String(),
 		TaskOverrideFile:     run.Flag("overrides-file", "task overrides JSON file path").Default("").String(),
 		SkipTaskDefinition:   run.Flag("skip-task-definition", "skip register a new task definition").Bool(),

@@ -111,8 +111,7 @@ func (d *App) Run(opt RunOption) error {
 		d.Log("Run task invoked")
 		return nil
 	}
-	d.Log(fmt.Sprintf("Watching container: %s", *watchContainer.Name))
-	if err := d.WaitRunTask(ctx, task, watchContainer, time.Now()); err != nil {
+	if err := d.WaitRunTask(ctx, task, watchContainer, time.Now(), opt.waitUntilRunning()); err != nil {
 		return errors.Wrap(err, "failed to run task")
 	}
 	if err := d.DescribeTaskStatus(ctx, task, watchContainer); err != nil {
@@ -181,7 +180,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ec
 	return task, nil
 }
 
-func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *ecs.ContainerDefinition, startedAt time.Time) error {
+func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *ecs.ContainerDefinition, startedAt time.Time, untilRunning bool) error {
 	d.Log("Waiting for run task...(it may take a while)")
 	waitCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -189,12 +188,13 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *e
 	lc := watchContainer.LogConfiguration
 	if lc == nil || *lc.LogDriver != "awslogs" || lc.Options["awslogs-stream-prefix"] == nil {
 		d.Log("awslogs not configured")
-		if err := d.WaitUntilTaskStopped(ctx, task); err != nil {
+		if err := d.waitTask(ctx, task, untilRunning); err != nil {
 			return errors.Wrap(err, "failed to run task")
 		}
 		return nil
 	}
 
+	d.Log(fmt.Sprintf("Watching container: %s", *watchContainer.Name))
 	logGroup, logStream := d.GetLogInfo(task, watchContainer)
 	time.Sleep(3 * time.Second) // wait for log stream
 
@@ -205,7 +205,7 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *e
 			select {
 			case <-waitCtx.Done():
 				return
-			case <-tick:
+			case <-ticker.C:
 				if isTerminal {
 					for i := 0; i < lines; i++ {
 						fmt.Print(aec.EraseLine(aec.EraseModes.All), aec.PreviousLine(1))
@@ -216,13 +216,13 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *e
 		}
 	}()
 
-	if err := d.WaitUntilTaskStopped(ctx, task); err != nil {
+	if err := d.waitTask(ctx, task, untilRunning); err != nil {
 		return errors.Wrap(err, "failed to run task")
 	}
 	return nil
 }
 
-func (d *App) WaitUntilTaskStopped(ctx context.Context, task *ecs.Task) error {
+func (d *App) waitTask(ctx context.Context, task *ecs.Task, untilRunning bool) error {
 	// Add an option WithWaiterDelay and request.WithWaiterMaxAttempts for a long timeout.
 	// SDK Default is 10 min (MaxAttempts=100 * Delay=6sec) at now.
 	const delay = 6 * time.Second
@@ -230,6 +230,23 @@ func (d *App) WaitUntilTaskStopped(ctx context.Context, task *ecs.Task) error {
 	if (d.config.Timeout % delay) > 0 {
 		attempts++
 	}
+
+	id := arnToName(*task.TaskArn)
+	d.Log(fmt.Sprintf("Waiting for task ID %s running", id))
+	if err := d.ecs.WaitUntilTasksRunningWithContext(
+		ctx,
+		d.DescribeTasksInput(task),
+		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
+		request.WithWaiterMaxAttempts(attempts),
+	); err != nil {
+		return err
+	}
+	d.Log(fmt.Sprintf("Task ID %s is running", id))
+	if untilRunning {
+		return nil
+	}
+
+	d.Log(fmt.Sprintf("Waiting for task ID %s stopped", id))
 	return d.ecs.WaitUntilTasksStoppedWithContext(
 		ctx, d.DescribeTasksInput(task),
 		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
