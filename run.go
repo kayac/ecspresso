@@ -199,7 +199,7 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *e
 	time.Sleep(3 * time.Second) // wait for log stream
 
 	go func() {
-		tick := time.Tick(5 * time.Second)
+		ticker := time.NewTicker(5 * time.Second)
 		var lines int
 		for {
 			select {
