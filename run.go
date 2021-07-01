@@ -232,7 +232,7 @@ func (d *App) waitTask(ctx context.Context, task *ecs.Task, untilRunning bool) e
 	}
 
 	id := arnToName(*task.TaskArn)
-	d.Log(fmt.Sprintf("Waiting for task ID %s running", id))
+	d.Log(fmt.Sprintf("Waiting for task ID %s until running", id))
 	if err := d.ecs.WaitUntilTasksRunningWithContext(
 		ctx,
 		d.DescribeTasksInput(task),
@@ -241,7 +241,7 @@ func (d *App) waitTask(ctx context.Context, task *ecs.Task, untilRunning bool) e
 	); err != nil {
 		return err
 	}
-	d.Log(fmt.Sprintf("Task ID %s is until running", id))
+	d.Log(fmt.Sprintf("Task ID %s is running", id))
 	if untilRunning {
 		return nil
 	}
