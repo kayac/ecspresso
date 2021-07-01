@@ -241,12 +241,12 @@ func (d *App) waitTask(ctx context.Context, task *ecs.Task, untilRunning bool) e
 	); err != nil {
 		return err
 	}
-	d.Log(fmt.Sprintf("Task ID %s is running", id))
+	d.Log(fmt.Sprintf("Task ID %s is until running", id))
 	if untilRunning {
 		return nil
 	}
 
-	d.Log(fmt.Sprintf("Waiting for task ID %s stopped", id))
+	d.Log(fmt.Sprintf("Waiting for task ID %s until stopped", id))
 	return d.ecs.WaitUntilTasksStoppedWithContext(
 		ctx, d.DescribeTasksInput(task),
 		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
