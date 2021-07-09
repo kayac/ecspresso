@@ -10,7 +10,7 @@ builds:
     binary: ecspresso
     ldflags:
       - -s -w
-      - -X main.Version={{.Version}}
+      - -X main.Version=v{{.Version}}
     goos:
       - darwin
       - linux
