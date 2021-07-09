@@ -21,7 +21,7 @@ jobs:
 
       - name: Set env
         run: |
-          echo "NIGHTLY_VERSION=$(git describe --abbrev --tags)" >> $GITHUB_ENV
+          echo "NIGHTLY_VERSION=$(git describe --abbrev --tags --always)" >> $GITHUB_ENV
 
       - name: Check for same revision exists
         env:
