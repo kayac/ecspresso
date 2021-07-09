@@ -60,6 +60,11 @@ run-task:
 		--dry-run
 	OPTION=-v $(ECSPRESSO) --envfile envfile.override run \
 		--overrides-file=overrides.json \
+		--wait-until=running \
+		--debug
+	OPTION=-v $(ECSPRESSO) --envfile envfile.override run \
+		--overrides-file=overrides.json \
+		--wait-until=stopped \
 		--debug
 
 wait:
