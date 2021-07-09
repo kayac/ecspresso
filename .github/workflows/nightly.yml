@@ -21,19 +21,16 @@ jobs:
 
       - name: Set env
         run: |
-          rev=$(git rev-parse --short HEAD)
-          today=$(date +%Y%m%d)
-          echo "NIGHTLY_REV=${rev}" >> $GITHUB_ENV
-          echo "NIGHTLY_VERSION=v${today}-${rev}" >> $GITHUB_ENV
+          echo "NIGHTLY_VERSION=$(git describe --abbrev --tags)" >> $GITHUB_ENV
 
       - name: Check for same revision exists
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set +e
-          gh release list | grep -E "^v[0-9]{8}-${{ env.NIGHTLY_REV }}"
+          gh release list | grep "${{ env.NIGHTLY_VERSION }}"
           if [ $? -eq 0 ]; then
-            echo "${{ env.NIGHTLY_REV }} already exists"
+            echo "${{ env.NIGHTLY_VERSION }} already exists"
           else
             echo "DO_RELEASE=true" >> $GITHUB_ENV
           fi

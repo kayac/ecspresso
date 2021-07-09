@@ -18,6 +18,8 @@ builds:
     goarch:
       - amd64
       - arm64
+release:
+  prerelease: true
 archives:
 checksum:
   name_template: "checksums.txt"
