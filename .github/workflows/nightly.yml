@@ -38,24 +38,11 @@ jobs:
             echo "DO_RELEASE=true" >> $GITHUB_ENV
           fi
 
-      - name: setup tools
-        env:
-          GO111MODULE: off
-        run: |
-          go get github.com/mitchellh/gox
-          go get github.com/tcnksm/ghr
-        if: ${{ env.DO_RELEASE }}
-
-      - name: packages
-        run: |
-          PATH=~/go/bin:$PATH make packages GIT_VER=${{ env.NIGHTLY_VERSION }}
-        env:
-          CGO_ENABLED: 0
-        if: ${{ env.DO_RELEASE }}
-
-      - name: release
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v1
+        with:
+          version: latest
+          args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PATH=~/go/bin:$PATH make release GIT_VER=${{ env.NIGHTLY_VERSION }}
         if: ${{ env.DO_RELEASE }}
