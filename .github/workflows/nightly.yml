@@ -33,13 +33,14 @@ jobs:
             echo "${{ env.NIGHTLY_VERSION }} already exists"
           else
             echo "DO_RELEASE=true" >> $GITHUB_ENV
+            git tag "${{ env.NIGHTLY_VERSION }}"
           fi
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
           version: latest
-          args: release --rm-dist --snapshot
+          args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ env.DO_RELEASE }}
