@@ -16,9 +16,12 @@ test:
 packages:
 	goreleaser build --skip-validate --rm-dist
 
+packages-snapshot:
+	goreleaser build --skip-validate --rm-dist --snapshot
+
 clean:
 	rm -f cmd/ecspresso/ecspresso
-	rm -f dist/*
+	rm -rf dist/*
 
 ci-test:
 	$(MAKE) install

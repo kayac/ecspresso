@@ -7,6 +7,10 @@ builds:
   - env:
       - CGO_ENABLED=0
     main: ./cmd/ecspresso/main.go
+    binary: ecspresso
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
     goos:
       - darwin
       - linux
@@ -18,7 +22,7 @@ archives:
 checksum:
   name_template: "checksums.txt"
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  name_template: "{{ .Tag }}-{{ .Env.NIGHTLY_VERSION }}"
 changelog:
   sort: asc
   filters:
