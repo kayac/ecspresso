@@ -14,15 +14,11 @@ test:
 	go test -race ./...
 
 packages:
-	cd cmd/ecspresso && gox -os="linux darwin windows" -arch="amd64 arm64" -output "../../pkg/{{.Dir}}-${GIT_VER}-{{.OS}}-{{.Arch}}" -ldflags "-w -s -X main.Version=${GIT_VER} -X main.buildDate=${DATE}"
-	cd pkg && find . -name "*${GIT_VER}*" -type f -exec zip {}.zip {} \;
+	goreleaser build --skip-validate --rm-dist
 
 clean:
 	rm -f cmd/ecspresso/ecspresso
-	rm -f pkg/*
-
-release:
-	ghr -prerelease -u kayac -r ecspresso -n "$(GIT_VER)" $(GIT_VER) pkg/
+	rm -f dist/*
 
 ci-test:
 	$(MAKE) install
