@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/go-version v1.3.0
 	github.com/kayac/go-config v0.5.1
 	github.com/kylelemons/godebug v1.1.0
-	github.com/mattn/go-isatty v0.0.12
+	github.com/mattn/go-isatty v0.0.13
 	github.com/morikuni/aec v1.0.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pkg/errors v0.9.1
