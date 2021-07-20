@@ -243,44 +243,50 @@ func (d *App) findDeploymentInfo() (*codedeploy.DeploymentInfo, error) {
 	if len(la.Applications) == 0 {
 		return nil, errors.New("no any applications in CodeDeploy")
 	}
-
-	apps, err := d.codedeploy.BatchGetApplications(&codedeploy.BatchGetApplicationsInput{
-		ApplicationNames: la.Applications,
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, info := range apps.ApplicationsInfo {
-		d.DebugLog("application", info.String())
-		if *info.ComputePlatform != "ECS" {
-			continue
+	// BatchGetApplications accepts applications less than 100
+	for i := 0; i < len(la.Applications); i += 100 {
+		end := i + 100
+		if end > len(la.Applications) {
+			end = len(la.Applications)
 		}
-		lg, err := d.codedeploy.ListDeploymentGroups(&codedeploy.ListDeploymentGroupsInput{
-			ApplicationName: info.ApplicationName,
+		apps, err := d.codedeploy.BatchGetApplications(&codedeploy.BatchGetApplicationsInput{
+			ApplicationNames: la.Applications[i:end],
 		})
 		if err != nil {
 			return nil, err
 		}
-		if len(lg.DeploymentGroups) == 0 {
-			d.DebugLog("no deploymentGroups in application", *info.ApplicationName)
-			continue
-		}
-		groups, err := d.codedeploy.BatchGetDeploymentGroups(&codedeploy.BatchGetDeploymentGroupsInput{
-			ApplicationName:      info.ApplicationName,
-			DeploymentGroupNames: lg.DeploymentGroups,
-		})
-		if err != nil {
-			return nil, err
-		}
-		for _, dg := range groups.DeploymentGroupsInfo {
-			d.DebugLog("deploymentGroup", dg.String())
-			for _, ecsService := range dg.EcsServices {
-				if *ecsService.ClusterName == d.config.Cluster && *ecsService.ServiceName == d.config.Service {
-					return &codedeploy.DeploymentInfo{
-						ApplicationName:      aws.String(*info.ApplicationName),
-						DeploymentGroupName:  aws.String(*dg.DeploymentGroupName),
-						DeploymentConfigName: aws.String(*dg.DeploymentConfigName),
-					}, nil
+		for _, info := range apps.ApplicationsInfo {
+			d.DebugLog("application", info.String())
+			if *info.ComputePlatform != "ECS" {
+				continue
+			}
+			lg, err := d.codedeploy.ListDeploymentGroups(&codedeploy.ListDeploymentGroupsInput{
+				ApplicationName: info.ApplicationName,
+			})
+			if err != nil {
+				return nil, err
+			}
+			if len(lg.DeploymentGroups) == 0 {
+				d.DebugLog("no deploymentGroups in application", *info.ApplicationName)
+				continue
+			}
+			groups, err := d.codedeploy.BatchGetDeploymentGroups(&codedeploy.BatchGetDeploymentGroupsInput{
+				ApplicationName:      info.ApplicationName,
+				DeploymentGroupNames: lg.DeploymentGroups,
+			})
+			if err != nil {
+				return nil, err
+			}
+			for _, dg := range groups.DeploymentGroupsInfo {
+				d.DebugLog("deploymentGroup", dg.String())
+				for _, ecsService := range dg.EcsServices {
+					if *ecsService.ClusterName == d.config.Cluster && *ecsService.ServiceName == d.config.Service {
+						return &codedeploy.DeploymentInfo{
+							ApplicationName:      aws.String(*info.ApplicationName),
+							DeploymentGroupName:  aws.String(*dg.DeploymentGroupName),
+							DeploymentConfigName: aws.String(*dg.DeploymentConfigName),
+						}, nil
+					}
 				}
 			}
 		}
