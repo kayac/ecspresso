@@ -21,7 +21,7 @@ func main() {
 func _main() int {
 	kingpin.Command("version", "show version")
 
-	conf := kingpin.Flag("config", "config file").String()
+	conf := kingpin.Flag("config", "config file").Default("ecspresso.yml").String()
 	debug := kingpin.Flag("debug", "enable debug log").Bool()
 	envFiles := kingpin.Flag("envfile", "environment files").Strings()
 
