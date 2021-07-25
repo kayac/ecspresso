@@ -68,7 +68,7 @@ func (d *App) Exec(opt ExecOption) error {
 		}
 		result, err := d.runFilter(buf, "container name")
 		if err != nil {
-			return errors.Wrap(err, "failed to exucute filter")
+			return errors.Wrap(err, "failed to execute filter")
 		}
 		targetContainer = aws.String(strings.Fields(string(result))[0])
 	}

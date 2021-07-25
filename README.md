@@ -403,7 +403,7 @@ ecspresso supports `diff` and `verify` subcommands.
 
 ### diff
 
-Shows defferencies between local task/service definitions and remote (on ECS) definitions.
+Shows differences between local task/service definitions and remote (on ECS) definitions.
 
 ```diff
 $ ecspresso --config config.yaml diff
@@ -507,7 +507,7 @@ For example,
 - Secrets in task definition exist and be readable.
 - Can create log streams, can put messages to the streams in specified CloudWatch log groups.
 
-ecspresso verify tries to assume role to task execution role defined in task definition to verify these items. If faild to assume role, continue to verify with the current sessions.
+ecspresso verify tries to assume role to task execution role defined in task definition to verify these items. If failed to assume role, continue to verify with the current sessions.
 
 ```console
 $ ecspresso --config config.yaml verify
@@ -569,7 +569,7 @@ Flags:
 
 If `--id` is not set, the command shows a list of tasks to select a task to execute.
 
-`filter_command` in config.yaml works ths same as tasks command.
+`filter_command` in config.yaml works the same as tasks command.
 
 See also the official document [Using Amazon ECS Exec for debugging](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html).
 

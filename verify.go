@@ -94,7 +94,7 @@ func (d *App) newAssumedVerifier(sess *session.Session, executionRole *string, o
 	})
 	if err != nil {
 		fmt.Println(
-			color.CyanString("INFO: failed to assume role to taskExecutuionRole. Continue to verifiy with current session. %s", err.Error()),
+			color.CyanString("INFO: failed to assume role to taskExecutionRole. Continue to verify with current session. %s", err.Error()),
 		)
 		return newVerifier(sess, sess, opt), nil
 	}
