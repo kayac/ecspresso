@@ -13,8 +13,8 @@ import (
 
 const dockerHubHost = "registry-1.docker.io"
 
-// Repositry represents a repositry using Docker Registry API v2.
-type Repositry struct {
+// Repository represents a repository using Docker Registry API v2.
+type Repository struct {
 	client   *http.Client
 	host     string
 	repo     string
@@ -23,9 +23,9 @@ type Repositry struct {
 	token    string
 }
 
-// New creates a client for a repositry.
-func New(image, user, password string) *Repositry {
-	c := &Repositry{
+// New creates a client for a repository.
+func New(image, user, password string) *Repository {
+	c := &Repository{
 		client:   &http.Client{},
 		user:     user,
 		password: password,
@@ -46,7 +46,7 @@ func New(image, user, password string) *Repositry {
 	return c
 }
 
-func (c *Repositry) login(endpoint, service, scope string) error {
+func (c *Repository) login(endpoint, service, scope string) error {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (c *Repositry) login(endpoint, service, scope string) error {
 	return nil
 }
 
-func (c *Repositry) getManifests(tag string) (*http.Response, error) {
+func (c *Repository) getManifests(tag string) (*http.Response, error) {
 	u := fmt.Sprintf("https://%s/v2/%s/manifests/%s", c.host, c.repo, tag)
 	req, _ := http.NewRequest(http.MethodHead, u, nil)
 	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
@@ -107,7 +107,7 @@ func (c *Repositry) getManifests(tag string) (*http.Response, error) {
 }
 
 // HasImage returns an image tag exists or not in the repository.
-func (c *Repositry) HasImage(tag string) (bool, error) {
+func (c *Repository) HasImage(tag string) (bool, error) {
 	tries := 2
 	for tries > 0 {
 		tries--
