@@ -763,10 +763,10 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *ecs.Service, tdArn s
 			AutoRollbackEnabled: aws.Bool(true),
 		})
 		if err != nil {
-			return errors.Wrap(err, "failed to rollback deployment")
+			return errors.Wrap(err, "failed to roll back the deployment")
 		}
 
-		d.Log(fmt.Sprintf("Deployment %s is rollbacked on CodeDeploy:", *dpID))
+		d.Log(fmt.Sprintf("Deployment %s is rolled back on CodeDeploy:", *dpID))
 		return nil
 	}
 }

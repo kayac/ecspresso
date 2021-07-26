@@ -28,7 +28,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return d.RollbackByCodeDeploy(ctx, sv, targetArn, opt)
 	}
 
-	d.Log("Rollbacking to", arnToName(targetArn))
+	d.Log("Rolling back to", arnToName(targetArn))
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
@@ -47,7 +47,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 	}
 
 	if *opt.NoWait {
-		d.Log("Service is rollbacked.")
+		d.Log("Service is rolled back.")
 		return nil
 	}
 
@@ -59,7 +59,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 	d.Log("Service is stable now. Completed!")
 
 	if *opt.DeregisterTaskDefinition {
-		d.Log("Deregistering rolled back task definition", arnToName(currentArn))
+		d.Log("Deregistering the rolled-back task definition", arnToName(currentArn))
 		_, err := d.ecs.DeregisterTaskDefinitionWithContext(
 			ctx,
 			&ecs.DeregisterTaskDefinitionInput{
