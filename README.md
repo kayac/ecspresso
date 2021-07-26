@@ -144,7 +144,7 @@ For more options for sub-commands, See `ecspresso sub-command --help`.
 
 ## Quick Start
 
-ecspresso can easily manage for your existing/running ECS service by codes.
+ecspresso can easily manage your existing/running ECS service by codes.
 
 Try `ecspresso init` for your ECS service with option `--region`, `--cluster` and `--service`.
 
@@ -178,16 +178,16 @@ timeout: 5m
 ecspresso deploy works as below.
 
 - Register a new task definition from JSON file.
-  - JSON file is allowed both of formats as below.
+  - JSON file is allowed in both formats as below.
     - `aws ecs describe-task-definition` output.
     - `aws ecs register-task-definition --cli-input-json` input.
   - Replace ```{{ env `FOO` `bar` }}``` syntax in the JSON file to environment variable "FOO".
     - If "FOO" is not defined, replaced by "bar"
   - Replace ```{{ must_env `FOO` }}``` syntax in the JSON file to environment variable "FOO".
     - If "FOO" is not defined, abort immediately.
-- Update a service tasks.
+- Update service tasks.
   - When `--update-service` option set, update service attributes by service definition.
-- Wait a service stable.
+- Wait for a service to be stable.
 
 Configuration files and task/service definition files are read by [go-config](https://github.com/kayac/go-config). go-config has template functions `env`, `must_env` and `json_escape`.
 
@@ -303,7 +303,7 @@ example of service.json below.
 }
 ```
 
-Keys are same format as `aws ecs describe-services` output.
+Keys are in the same format as `aws ecs describe-services` output.
 
 - deploymentConfiguration
 - launchType
@@ -328,9 +328,9 @@ Other options for RunTask API are set by service attributes(CapacityProviderStra
 
 ## Deploy to Fargate
 
-If you want to deploy services to Fargate, task-definition and service-definition requires some settings.
+If you want to deploy services to Fargate, task definitions and service definitions require some settings.
 
-For task definition,
+For task definitions,
 
 - requiresCompatibilities (required "FARGATE")
 - networkMode (required "awsvpc")
@@ -403,7 +403,7 @@ ecspresso supports `diff` and `verify` subcommands.
 
 ### diff
 
-Shows defferencies between local task/service definitions and remote (on ECS) definitions.
+Shows differences between local task/service definitions and remote (on ECS) definitions.
 
 ```diff
 $ ecspresso --config config.yaml diff
@@ -497,17 +497,17 @@ $ ecspresso --config config.yaml diff
 
 ### verify
 
-Verify resources which related with service/task definitions.
+Verify resources related with service/task definitions.
 
 For example,
 - An ECS cluster exists.
-- The target groups in service definitions matches container name and port defined in task definition.
+- The target groups in service definitions match the container name and port defined in the definitions.
 - A task role and a task execution role exist and can be assumed by ecs-tasks.amazonaws.com.
-- Container images exist at URL defined in task definition. (Checks only for ECR or DockerHub public images.)
-- Secrets in task definition exist and be readable.
+- Container images exist at the URL defined in task definitions. (Checks only for ECR or DockerHub public images.)
+- Secrets in task definitions exist and be readable.
 - Can create log streams, can put messages to the streams in specified CloudWatch log groups.
 
-ecspresso verify tries to assume role to task execution role defined in task definition to verify these items. If faild to assume role, continue to verify with the current sessions.
+ecspresso verify tries to assume the task execution role defined in task definitions to verify these items. If failed to assume the role, it continues to verify with the current sessions.
 
 ```console
 $ ecspresso --config config.yaml verify
@@ -533,7 +533,7 @@ $ ecspresso --config config.yaml verify
 
 ### tasks
 
-task command lists tasks that run by a service or having the same family to a task definition.
+task command lists tasks run by a service or having the same family to a task definition.
 
 ```
 Flags:
@@ -569,7 +569,7 @@ Flags:
 
 If `--id` is not set, the command shows a list of tasks to select a task to execute.
 
-`filter_command` in config.yaml works ths same as tasks command.
+`filter_command` in config.yaml works the same as tasks command.
 
 See also the official document [Using Amazon ECS Exec for debugging](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html).
 

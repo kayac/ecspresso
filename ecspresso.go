@@ -129,10 +129,10 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 }
 
 func (d *App) describeAutoScaling(s *ecs.Service) error {
-	resouceId := fmt.Sprintf("service/%s/%s", arnToName(*s.ClusterArn), *s.ServiceName)
+	resourceId := fmt.Sprintf("service/%s/%s", arnToName(*s.ClusterArn), *s.ServiceName)
 	tout, err := d.autoScaling.DescribeScalableTargets(
 		&applicationautoscaling.DescribeScalableTargetsInput{
-			ResourceIds:       []*string{&resouceId},
+			ResourceIds:       []*string{&resourceId},
 			ServiceNamespace:  aws.String("ecs"),
 			ScalableDimension: aws.String("ecs:service:DesiredCount"),
 		},
@@ -157,7 +157,7 @@ func (d *App) describeAutoScaling(s *ecs.Service) error {
 
 	pout, err := d.autoScaling.DescribeScalingPolicies(
 		&applicationautoscaling.DescribeScalingPoliciesInput{
-			ResourceId:        &resouceId,
+			ResourceId:        &resourceId,
 			ServiceNamespace:  aws.String("ecs"),
 			ScalableDimension: aws.String("ecs:service:DesiredCount"),
 		},
@@ -653,11 +653,11 @@ func (d *App) Register(opt RegisterOption) error {
 }
 
 func (d *App) suspendAutoScaling(suspendState bool) error {
-	resouceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
+	resourceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
 
 	out, err := d.autoScaling.DescribeScalableTargets(
 		&applicationautoscaling.DescribeScalableTargetsInput{
-			ResourceIds:       []*string{&resouceId},
+			ResourceIds:       []*string{&resourceId},
 			ServiceNamespace:  aws.String("ecs"),
 			ScalableDimension: aws.String("ecs:service:DesiredCount"),
 		},
@@ -666,7 +666,7 @@ func (d *App) suspendAutoScaling(suspendState bool) error {
 		return errors.Wrap(err, "failed to describe scalable targets")
 	}
 	if len(out.ScalableTargets) == 0 {
-		d.Log(fmt.Sprintf("No scalable target for %s", resouceId))
+		d.Log(fmt.Sprintf("No scalable target for %s", resourceId))
 		return nil
 	}
 	for _, target := range out.ScalableTargets {
