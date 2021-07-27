@@ -34,6 +34,18 @@ var expected = &appspec.AppSpec{
 							AssignPublicIp: aws.String("ENABLED"),
 						},
 					},
+					CapacityProviderStrategy: []*appspec.CapacityProviderStrategy{
+						{
+							CapacityProvider: aws.String("FARGATE_SPOT"),
+							Base: aws.Int64(1),
+							Weight: aws.Int64(2),
+						},
+						{
+							CapacityProvider: aws.String("FARGATE"),
+							Base: aws.Int64(0),
+							Weight: aws.Int64(1),
+						},
+					},
 				},
 			},
 		},

@@ -58,6 +58,15 @@ func NewWithService(sv *ecs.Service, tdArn string) (*AppSpec, error) {
 			},
 		}
 	}
+	if sv.CapacityProviderStrategy != nil {
+		for _, strategy := range sv.CapacityProviderStrategy {
+			resource.TargetService.Properties.CapacityProviderStrategy = append(resource.TargetService.Properties.CapacityProviderStrategy, &CapacityProviderStrategy{
+				CapacityProvider: strategy.CapacityProvider,
+				Base:             strategy.Base,
+				Weight:           strategy.Weight,
+			})
+		}
+	}
 	spec.Resources = append(spec.Resources, resource)
 	return spec, nil
 }
@@ -72,10 +81,11 @@ type TargetService struct {
 }
 
 type Properties struct {
-	TaskDefinition       *string               `yaml:"TaskDefinition,omitempty"`
-	LoadBalancerInfo     *LoadBalancerInfo     `yaml:"LoadBalancerInfo,omitempty"`
-	PlatformVersion      *string               `yaml:"PlatformVersion,omitempty"`
-	NetworkConfiguration *NetworkConfiguration `yaml:"NetworkConfiguration,omitempty"`
+	TaskDefinition           *string                     `yaml:"TaskDefinition,omitempty"`
+	LoadBalancerInfo         *LoadBalancerInfo           `yaml:"LoadBalancerInfo,omitempty"`
+	PlatformVersion          *string                     `yaml:"PlatformVersion,omitempty"`
+	NetworkConfiguration     *NetworkConfiguration       `yaml:"NetworkConfiguration,omitempty"`
+	CapacityProviderStrategy []*CapacityProviderStrategy `yaml:"CapacityProviderStrategy,omitempty"`
 }
 
 type LoadBalancerInfo struct {
@@ -91,6 +101,12 @@ type AwsVpcConfiguration struct {
 	AssignPublicIp *string   `yaml:"AssignPublicIp,omitempty"`
 	SecurityGroups []*string `yaml:"SecurityGroups,omitempty"`
 	Subnets        []*string `yaml:"Subnets,omitempty"`
+}
+
+type CapacityProviderStrategy struct {
+	CapacityProvider *string `yaml:"CapacityProvider,omitempty""`
+	Base             *int64  `yaml:"Base,omitempty"`
+	Weight           *int64  `yaml:"Weight,omitempty"`
 }
 
 type Hook struct {
