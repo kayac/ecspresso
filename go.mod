@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.38.49
 	github.com/fatih/color v1.10.0
 	github.com/fujiwara/cfn-lookup v0.0.2
-	github.com/fujiwara/tfstate-lookup v0.2.3
+	github.com/fujiwara/tfstate-lookup v0.2.4
 	github.com/google/go-cmp v0.5.5
 	github.com/hashicorp/go-envparse v0.0.0-20200406174449-d9cfd743a15e
 	github.com/hashicorp/go-version v1.3.0
