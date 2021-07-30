@@ -18,6 +18,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const SessionManagerPluginBinary = "session-manager-plugin"
+
 type taskFinderOption interface {
 	taskID() string
 }
@@ -35,6 +37,10 @@ func (o ExecOption) taskID() string {
 func (d *App) Exec(opt ExecOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
+
+	if _, err := exec.LookPath(SessionManagerPluginBinary); err != nil {
+		return errors.Wrapf(err, "%s is not installed.\nSee also https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html\n", SessionManagerPluginBinary)
+	}
 
 	// find a task to exec
 	tasks, err := d.listTasks(ctx, opt.ID, "RUNNING")
@@ -84,7 +90,7 @@ func (d *App) Exec(opt ExecOption) error {
 		return errors.Wrap(err, "failed to execute command")
 	}
 	sess, _ := json.Marshal(out.Session)
-	cmd := exec.Command("session-manager-plugin", string(sess), d.config.Region, "StartSession")
+	cmd := exec.Command(SessionManagerPluginBinary, string(sess), d.config.Region, "StartSession")
 	signal.Ignore(os.Interrupt)
 	defer signal.Reset(os.Interrupt)
 	cmd.Stdout = os.Stdout
