@@ -46,11 +46,7 @@ func (d *App) listTasks(ctx context.Context, id *string, desiredStatuses ...stri
 	if aws.StringValue(id) != "" {
 		taskIDs = []*string{id}
 	} else {
-		sv, err := d.DescribeService(ctx)
-		if err != nil {
-			return nil, err
-		}
-		td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
+		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
 			return nil, err
 		}
