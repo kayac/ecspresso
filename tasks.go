@@ -82,6 +82,7 @@ func (d *App) listTasks(ctx context.Context, id *string, desiredStatuses ...stri
 	in := &ecs.DescribeTasksInput{
 		Cluster: aws.String(d.Cluster),
 		Tasks:   taskIDs,
+		Include: []*string{aws.String("TAGS")},
 	}
 	out, err := d.ecs.DescribeTasksWithContext(ctx, in)
 	if err != nil {
