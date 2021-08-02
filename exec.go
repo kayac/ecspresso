@@ -90,7 +90,15 @@ func (d *App) Exec(opt ExecOption) error {
 		return errors.Wrap(err, "failed to execute command")
 	}
 	sess, _ := json.Marshal(out.Session)
-	cmd := exec.Command(SessionManagerPluginBinary, string(sess), d.config.Region, "StartSession")
+	ssmRequestParams, err := d.buildSsmRequestParameters(task, targetContainer)
+	if err != nil {
+		return err
+	}
+	params, err := ssmRequestParams.ToJSON()
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(SessionManagerPluginBinary, string(sess), d.config.Region, "StartSession", "", string(params), d.ecs.Endpoint)
 	signal.Ignore(os.Interrupt)
 	defer signal.Reset(os.Interrupt)
 	cmd.Stdout = os.Stdout
@@ -121,6 +129,56 @@ func (d *App) runFilter(src io.Reader, title string) (string, error) {
 		return "", errors.Wrap(err, "failed to execute filter command")
 	}
 	return string(b), nil
+}
+
+type SSMRequestParameters struct {
+	ClusterName string
+	TaskID      string
+	RuntimeID   string
+}
+
+func (p *SSMRequestParameters) ToJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Target string
+	}{
+		Target: fmt.Sprintf("ecs:%s_%s_%s", p.ClusterName, p.TaskID, p.RuntimeID),
+	})
+}
+
+func (d *App) buildSsmRequestParameters(task *ecs.Task, targetContainer *string) (*SSMRequestParameters, error) {
+	values := strings.Split(*task.TaskArn, "/")
+	clusterName := values[1]
+	taskID := values[2]
+	runtimeID, err := d.getContainerRuntimeID(task, targetContainer)
+	if err != nil {
+		return nil, err
+	}
+	return &SSMRequestParameters{
+		ClusterName: clusterName,
+		TaskID:      taskID,
+		RuntimeID:   *runtimeID,
+	}, nil
+}
+
+func (d *App) getContainerRuntimeID(task *ecs.Task, targetContainer *string) (*string, error) {
+	output, err := d.ecs.DescribeTasks(&ecs.DescribeTasksInput{
+		Cluster: task.ClusterArn,
+		Include: aws.StringSlice([]string{}),
+		Tasks: aws.StringSlice([]string{
+			*task.TaskArn,
+		}),
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, t := range output.Tasks {
+		for _, c := range t.Containers {
+			if aws.StringValue(c.Name) == aws.StringValue(targetContainer) {
+				return c.RuntimeId, nil
+			}
+		}
+	}
+	return nil, errors.New("container is not found")
 }
 
 func runInternalFilter(src io.Reader, title string) (string, error) {
