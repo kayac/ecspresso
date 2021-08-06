@@ -29,13 +29,13 @@ https://circleci.com/orbs/registry/orb/fujiwara/ecspresso
 ```yaml
 version: 2.1
 orbs:
-  ecspresso: fujiwara/ecspresso@0.0.14
+  ecspresso: fujiwara/ecspresso@0.0.15
 jobs:
   install:
     steps:
       - checkout
       - ecspresso/install:
-          version: v1.5.4 # or latest
+          version: v1.6.0 # or latest
       - run:
           command: |
             ecspresso version
@@ -53,7 +53,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: kayac/ecspresso@v1
         with:
-          version: v1.5.4
+          version: v1.6.0
       - run: |
           ecspresso deploy --config config.yaml
 ```
