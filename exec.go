@@ -90,7 +90,11 @@ func (d *App) Exec(opt ExecOption) error {
 		return errors.Wrap(err, "failed to execute command")
 	}
 	sess, _ := json.Marshal(out.Session)
-	cmd := exec.Command(SessionManagerPluginBinary, string(sess), d.config.Region, "StartSession")
+	ssmRequestParams, err := d.buildSsmRequestParameters(task, targetContainer)
+	if err != nil {
+		return errors.Wrap(err, "failed to build ssm request parameters")
+	}
+	cmd := exec.Command(SessionManagerPluginBinary, string(sess), d.config.Region, "StartSession", "", string(ssmRequestParams), d.ecs.Endpoint)
 	signal.Ignore(os.Interrupt)
 	defer signal.Reset(os.Interrupt)
 	cmd.Stdout = os.Stdout
@@ -121,6 +125,56 @@ func (d *App) runFilter(src io.Reader, title string) (string, error) {
 		return "", errors.Wrap(err, "failed to execute filter command")
 	}
 	return string(b), nil
+}
+
+/* buildSsmRequestParameters and getContainerRuntimeID are ported from aws-cli.
+https://github.com/aws/aws-cli/blob/054e0f194cfe9cf3642994b583fe438c56a97dfc/awscli/customizations/ecs/executecommand.py#L45
+
+# Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"). You
+# may not use this file except in compliance with the License. A copy of
+# the License is located at
+#
+#     http://aws.amazon.com/apache2.0/
+#
+# or in the "license" file accompanying this file. This file is
+# distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+# ANY KIND, either express or implied. See the License for the specific
+# language governing permissions and limitations under the License.
+*/
+
+func (d *App) buildSsmRequestParameters(task *ecs.Task, targetContainer *string) ([]byte, error) {
+	values := strings.Split(*task.TaskArn, "/")
+	clusterName := values[1]
+	taskID := values[2]
+	runtimeID, err := d.getContainerRuntimeID(task, targetContainer)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get container runtime ID")
+	}
+	return json.Marshal(struct {
+		Target string
+	}{
+		Target: fmt.Sprintf("ecs:%s_%s_%s", clusterName, taskID, *runtimeID),
+	})
+}
+
+func (d *App) getContainerRuntimeID(task *ecs.Task, targetContainer *string) (*string, error) {
+	output, err := d.ecs.DescribeTasks(&ecs.DescribeTasksInput{
+		Cluster: task.ClusterArn,
+		Tasks:   []*string{task.TaskArn},
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to describe tasks")
+	}
+	for _, t := range output.Tasks {
+		for _, c := range t.Containers {
+			if aws.StringValue(c.Name) == aws.StringValue(targetContainer) {
+				return c.RuntimeId, nil
+			}
+		}
+	}
+	return nil, errors.Errorf("container %s is not found in task %s", *targetContainer, *task.TaskArn)
 }
 
 func runInternalFilter(src io.Reader, title string) (string, error) {
