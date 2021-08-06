@@ -31,17 +31,16 @@ func (d *App) Run(opt RunOption) error {
 	}
 	d.DebugLog("Overrides:", ov.String())
 
-	sv, err := d.DescribeServiceStatus(ctx, 0)
-	if err != nil {
-		return errors.Wrap(err, "failed to describe service status")
-	}
-
 	var tdArn string
 	var watchContainer *ecs.ContainerDefinition
-
+	var err error
+	var sv *ecs.Service
 	if *opt.LatestTaskDefinition {
+		sv, err = d.DescribeServiceStatus(ctx, 0)
+		if err != nil {
+			return errors.Wrap(err, "failed to describe service status")
+		}
 		family := strings.Split(arnToName(*sv.TaskDefinition), ":")[0]
-		var err error
 		tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
 		if err != nil {
 			return errors.Wrap(err, "failed to load latest task definition")
@@ -57,6 +56,10 @@ func (d *App) Run(opt RunOption) error {
 			d.LogJSON(td)
 		}
 	} else if *opt.SkipTaskDefinition {
+		sv, err = d.DescribeServiceStatus(ctx, 0)
+		if err != nil {
+			return errors.Wrap(err, "failed to describe service status")
+		}
 		td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
 		if err != nil {
 			return errors.Wrap(err, "failed to describe task definition")
@@ -68,6 +71,10 @@ func (d *App) Run(opt RunOption) error {
 			d.LogJSON(td)
 		}
 	} else {
+		sv, err = d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+		if err != nil {
+			return errors.Wrap(err, "failed to load service definition")
+		}
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
 			return errors.Wrap(err, "failed to load task definition")

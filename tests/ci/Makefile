@@ -2,8 +2,7 @@
 
 export CLUSTER := ecspresso-test
 export SERVICE := nginx-$(CIRCLE_BRANCH)
-CONFIG ?= config.yaml
-ECSPRESSO := ecspresso --config $(CONFIG) --envfile envfile
+ECSPRESSO := ecspresso --envfile envfile
 
 help:
 
