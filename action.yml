@@ -1,23 +1,29 @@
 inputs:
   version:
     description: "A version to install ecspresso"
-    default: "v1.3.2"
+    default: latest
+    required: false
 runs:
   using: "composite"
   steps:
-    - run: |
+    - shell: bash
+      working-directory: /tmp
+      run: |
         set -e
         VERSION="${{ inputs.version }}"
         if [ "${VERSION}" = "latest" ]; then
-          DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases/latest|jq -r '.assets[].browser_download_url|select(test("linux-amd64.zip$"))')
+          DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases/latest|jq -r '.assets[].browser_download_url|select(test("linux-amd64."))')
         else
-          DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/ecspresso-${VERSION}-linux-amd64.zip
+          DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases/tags/${VERSION}|jq -r '.assets[].browser_download_url|select(test("linux_amd64."))')
         fi
         cd /tmp
         curl -sfLO ${DOWNLOAD_URL}
-        FILENAME=$(basename $DOWNLOAD_URL .zip)
-        unzip ${FILENAME}.zip
-        sudo install ${FILENAME} /usr/local/bin/ecspresso
-        rm -f ${FILENAME} ${FILENAME}.zip
-        /usr/local/bin/ecspresso version
-      shell: bash
+        if [[ "${DOWNLOAD_URL}" =~ \.tar\.gz$ ]]; then
+          FILENAME=$(basename $DOWNLOAD_URL .tar.gz)
+          tar xzvf ${FILENAME}.tar.gz
+          sudo install ecspresso /usr/local/bin/ecspresso
+        elif [[ "${DOWNLOAD_URL}" =~ \.zip$ ]]; then
+          FILENAME=$(basename $DOWNLOAD_URL .zip)
+          unzip ${FILENAME}.zip
+          sudo install ${FILENAME} /usr/local/bin/ecspresso
+        fi
