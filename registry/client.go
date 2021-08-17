@@ -91,12 +91,8 @@ func (c *Repository) getManifests(tag string) (*http.Response, error) {
 	if c.user == "AWS" && c.password != "" {
 		// ECR
 		req.Header.Set("Authorization", "Basic "+c.password)
-	} else {
-		// even if the token is empty, always set an Authorization header.
-		// because public ghcr.io repositories reject requests without the header.
-		if c.token != "" || c.host == "ghcr.io" {
-			req.Header.Set("Authorization", "Bearer "+c.token)
-		}
+	} else if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
