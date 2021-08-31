@@ -35,39 +35,42 @@ func _main() int {
 	deploy := kingpin.Command("deploy", "deploy service")
 	deploy.Flag("resume-auto-scaling", "resume application auto-scaling attached with the ECS service").IsSetByUser(&isSetResumeAutoScaling).Bool()
 	deployOption := ecspresso.DeployOption{
-		DryRun:               deploy.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:         deploy.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
-		SkipTaskDefinition:   deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
-		ForceNewDeployment:   deploy.Flag("force-new-deployment", "force a new deployment of the service").Bool(),
-		NoWait:               deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		SuspendAutoScaling:   deploy.Flag("suspend-auto-scaling", "suspend application auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
-		RollbackEvents:       deploy.Flag("rollback-events", " roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only.").String(),
-		UpdateService:        deploy.Flag("update-service", "update service attributes by service definition").Default("true").Bool(),
-		LatestTaskDefinition: deploy.Flag("latest-task-definition", "deploy with latest task definition without registering new task definition").Default("false").Bool(),
+		DryRun:                   deploy.Flag("dry-run", "dry-run").Bool(),
+		DesiredCount:             deploy.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
+		SkipTaskDefinition:       deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
+		DeregisterTaskDefinition: deploy.Flag("latest-task-definition", "deregister the old revision of task definitions after the deployment").Default("false").Bool(),
+		ForceNewDeployment:       deploy.Flag("force-new-deployment", "force a new deployment of the service").Bool(),
+		NoWait:                   deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
+		SuspendAutoScaling:       deploy.Flag("suspend-auto-scaling", "suspend application auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
+		RollbackEvents:           deploy.Flag("rollback-events", " roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only.").String(),
+		UpdateService:            deploy.Flag("update-service", "update service attributes by service definition").Default("true").Bool(),
+		LatestTaskDefinition:     deploy.Flag("latest-task-definition", "deploy with latest task definition without registering new task definition").Default("false").Bool(),
 	}
 
 	scale := kingpin.Command("scale", "scale service. equivalent to deploy --skip-task-definition --no-update-service")
 	scale.Flag("resume-auto-scaling", "resume application auto-scaling attached with the ECS service").IsSetByUser(&isSetResumeAutoScaling).Bool()
 	scaleOption := ecspresso.DeployOption{
-		DryRun:               scale.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
-		SkipTaskDefinition:   boolp(true),
-		SuspendAutoScaling:   scale.Flag("suspend-auto-scaling", "suspend application auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
-		ForceNewDeployment:   boolp(false),
-		NoWait:               scale.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		UpdateService:        boolp(false),
-		LatestTaskDefinition: boolp(false),
+		DryRun:                   scale.Flag("dry-run", "dry-run").Bool(),
+		DesiredCount:             scale.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
+		SkipTaskDefinition:       boolp(true),
+		DeregisterTaskDefinition: boolp(false),
+		SuspendAutoScaling:       scale.Flag("suspend-auto-scaling", "suspend application auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
+		ForceNewDeployment:       boolp(false),
+		NoWait:                   scale.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
+		UpdateService:            boolp(false),
+		LatestTaskDefinition:     boolp(false),
 	}
 
 	refresh := kingpin.Command("refresh", "refresh service. equivalent to deploy --skip-task-definition --force-new-deployment --no-update-service")
 	refreshOption := ecspresso.DeployOption{
-		DryRun:               refresh.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:         nil,
-		SkipTaskDefinition:   boolp(true),
-		ForceNewDeployment:   boolp(true),
-		NoWait:               refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		UpdateService:        boolp(false),
-		LatestTaskDefinition: boolp(false),
+		DryRun:                   refresh.Flag("dry-run", "dry-run").Bool(),
+		DesiredCount:             nil,
+		SkipTaskDefinition:       boolp(true),
+		DeregisterTaskDefinition: boolp(false),
+		ForceNewDeployment:       boolp(true),
+		NoWait:                   refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
+		UpdateService:            boolp(false),
+		LatestTaskDefinition:     boolp(false),
 	}
 
 	create := kingpin.Command("create", "create service")

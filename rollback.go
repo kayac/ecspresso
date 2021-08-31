@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/pkg/errors"
 )
 
@@ -58,19 +57,8 @@ func (d *App) Rollback(opt RollbackOption) error {
 
 	d.Log("Service is stable now. Completed!")
 
-	if *opt.DeregisterTaskDefinition {
-		d.Log("Deregistering the rolled-back task definition", arnToName(currentArn))
-		_, err := d.ecs.DeregisterTaskDefinitionWithContext(
-			ctx,
-			&ecs.DeregisterTaskDefinitionInput{
-				TaskDefinition: &currentArn,
-			},
-		)
-		if err != nil {
-			return errors.Wrap(err, "failed to deregister task definition")
-		}
-		d.Log(arnToName(currentArn), "was deregistered successfully")
-	}
-
-	return nil
+	return d.deregisterTaskDefinition(ctx, currentArn, DeployOption{
+		DeregisterTaskDefinition: opt.DeregisterTaskDefinition,
+		SkipTaskDefinition:       aws.Bool(false),
+	})
 }

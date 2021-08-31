@@ -34,7 +34,7 @@ func calcDesiredCount(sv *ecs.Service, opt optWithDesiredCount) *int64 {
 	return nil
 }
 
-func (d *App) Deploy(opt DeployOption) error {
+func (d *App) Deploy(opt DeployOption) (rerror error) {
 	ctx, cancel := d.Start()
 	defer cancel()
 
@@ -45,6 +45,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		return errors.Wrap(err, "failed to describe current service status")
 	}
 
+	currentArn := *sv.TaskDefinition
 	var tdArn string
 	if *opt.LatestTaskDefinition {
 		family := strings.Split(arnToName(*sv.TaskDefinition), ":")[0]
@@ -126,6 +127,13 @@ func (d *App) Deploy(opt DeployOption) error {
 	if err := d.UpdateServiceTasks(ctx, tdArn, count, opt); err != nil {
 		return errors.Wrap(err, "failed to update service tasks")
 	}
+
+	defer func() {
+		// deregister the previous revision of task definitions (if the main process exited without errors)
+		if rerror == nil {
+			rerror = d.deregisterTaskDefinition(ctx, currentArn, opt)
+		}
+	}()
 
 	if *opt.NoWait {
 		d.Log("Service is deployed.")
@@ -364,5 +372,22 @@ func (d *App) createDeployment(ctx context.Context, sv *ecs.Service, taskDefinit
 			d.Log("Couldn't open URL", u)
 		}
 	}
+	return nil
+}
+
+func (d *App) deregisterTaskDefinition(ctx context.Context, taskDefinitionArn string, opt DeployOption) error {
+	if *opt.DeregisterTaskDefinition && !*opt.SkipTaskDefinition {
+		d.Log("Deregistering the previous revision of task definitions", arnToName(taskDefinitionArn))
+		if _, err := d.ecs.DeregisterTaskDefinitionWithContext(
+			ctx,
+			&ecs.DeregisterTaskDefinitionInput{
+				TaskDefinition: &taskDefinitionArn,
+			},
+		); err != nil {
+			return errors.Wrap(err, "failed to deregister the task definition")
+		}
+		d.Log(arnToName(taskDefinitionArn), "was deregistered successfully")
+	}
+
 	return nil
 }
