@@ -87,7 +87,7 @@ func (d *App) Exec(opt ExecOption) error {
 		Container:   targetContainer,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to execute command")
+		return errors.Wrap(err, "failed to execute command. See also https://github.com/aws-containers/amazon-ecs-exec-checker")
 	}
 	sess, _ := json.Marshal(out.Session)
 	ssmRequestParams, err := d.buildSsmRequestParameters(task, targetContainer)
