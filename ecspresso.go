@@ -1,7 +1,9 @@
 package ecspresso
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -19,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/fatih/color"
 	gc "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
@@ -573,20 +576,22 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInpu
 }
 
 func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
+	src, err := d.loader.ReadWithEnv(path)
+	if err != nil {
+		return nil, err
+	}
 	c := struct {
-		TaskDefinition *TaskDefinitionInput
+		TaskDefinition json.RawMessage `json:"taskDefinition"`
 	}{}
-	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(src))
+	if err := dec.Decode(&c); err != nil {
 		return nil, err
 	}
 	if c.TaskDefinition != nil {
-		if len(c.TaskDefinition.Tags) == 0 {
-			c.TaskDefinition.Tags = nil
-		}
-		return c.TaskDefinition, nil
+		src = c.TaskDefinition
 	}
 	var td TaskDefinitionInput
-	if err := d.loader.LoadWithEnvJSON(&td, path); err != nil {
+	if err := d.unmarshalJSON(src, &td, path); err != nil {
 		return nil, err
 	}
 	if len(td.Tags) == 0 {
@@ -595,19 +600,41 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 	return &td, nil
 }
 
+func (d *App) unmarshalJSON(src []byte, v interface{}, path string) error {
+	strict := json.NewDecoder(bytes.NewReader(src))
+	strict.DisallowUnknownFields()
+	if err := strict.Decode(&v); err != nil {
+		if !strings.Contains(err.Error(), "unknown field") {
+			return err
+		}
+		fmt.Println(
+			color.YellowString("WARNING: %s in %s", err, path),
+		)
+		// unknown field -> try lax decoder
+		lax := json.NewDecoder(bytes.NewReader(src))
+		if err := lax.Decode(&v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
 	if path == "" {
 		return nil, errors.New("service_definition is not defined")
 	}
 
-	c := ecs.Service{}
-	if err := d.loader.LoadWithEnvJSON(&c, path); err != nil {
+	sv := ecs.Service{}
+	src, err := d.loader.ReadWithEnv(path)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.unmarshalJSON(src, &sv, path); err != nil {
 		return nil, err
 	}
 
-	c.ServiceName = aws.String(d.config.Service)
-
-	return &c, nil
+	sv.ServiceName = aws.String(d.config.Service)
+	return &sv, nil
 }
 
 func (d *App) GetLogInfo(task *ecs.Task, c *ecs.ContainerDefinition) (string, string) {
