@@ -33,6 +33,16 @@ func (d *App) Deregister(opt DeregisterOption) error {
 	d.Log("Starting deregister task definition", opt.DryRunString())
 	inUse := make(map[string]string)
 
+	tasks, err := d.listTasks(ctx, nil)
+	if err != nil {
+		return err
+	}
+	for _, task := range tasks {
+		name, _ := taskDefinitionToName(*task.TaskDefinitionArn)
+		inUse[name] = fmt.Sprintf("%s task", *task.LastStatus)
+		d.DebugLog(fmt.Sprintf("%s is in use by tasks", name))
+	}
+
 	if d.config.Service != "" {
 		sv, err := d.DescribeService(ctx)
 		if err != nil {
@@ -43,16 +53,6 @@ func (d *App) Deregister(opt DeregisterOption) error {
 			inUse[name] = fmt.Sprintf("%s deployment", *dp.Status)
 			d.DebugLog(fmt.Sprintf("%s is in use by deployments", name))
 		}
-	}
-
-	tasks, err := d.listTasks(ctx, nil)
-	if err != nil {
-		return err
-	}
-	for _, task := range tasks {
-		name, _ := taskDefinitionToName(*task.TaskDefinitionArn)
-		inUse[name] = fmt.Sprintf("%s task", *task.LastStatus)
-		d.DebugLog(fmt.Sprintf("%s is in use by tasks", name))
 	}
 
 	if aws.Int64Value(opt.Revision) > 0 {
