@@ -31,7 +31,7 @@ func (d *App) Deregister(opt DeregisterOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 	d.Log("Starting deregister task definition", opt.DryRunString())
-	inUse := make(map[string]bool)
+	inUse := make(map[string]string)
 
 	if d.config.Service != "" {
 		sv, err := d.DescribeService(ctx)
@@ -40,7 +40,7 @@ func (d *App) Deregister(opt DeregisterOption) error {
 		}
 		for _, dp := range sv.Deployments {
 			name, _ := taskDefinitionToName(*dp.TaskDefinition)
-			inUse[name] = true
+			inUse[name] = fmt.Sprintf("%s deployment", *dp.Status)
 			d.DebugLog(fmt.Sprintf("%s is in use by deployments", name))
 		}
 	}
@@ -51,7 +51,7 @@ func (d *App) Deregister(opt DeregisterOption) error {
 	}
 	for _, task := range tasks {
 		name, _ := taskDefinitionToName(*task.TaskDefinitionArn)
-		inUse[name] = true
+		inUse[name] = fmt.Sprintf("%s task", *task.LastStatus)
 		d.DebugLog(fmt.Sprintf("%s is in use by tasks", name))
 	}
 
@@ -63,15 +63,15 @@ func (d *App) Deregister(opt DeregisterOption) error {
 	return nil
 }
 
-func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse map[string]bool) error {
+func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse map[string]string) error {
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
 	name := fmt.Sprintf("%s:%d", aws.StringValue(td.Family), aws.Int64Value(opt.Revision))
 
-	if inUse[name] {
-		return errors.Errorf("%s is in use", name)
+	if s := inUse[name]; s != "" {
+		return errors.Errorf("%s is in use by %s", name, s)
 	}
 
 	if aws.BoolValue(opt.DryRun) {
@@ -94,7 +94,7 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 	return nil
 }
 
-func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse map[string]bool) error {
+func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse map[string]string) error {
 	keeps := aws.IntValue(opt.Keeps)
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
@@ -115,10 +115,10 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 			if err != nil {
 				continue
 			}
-			if inUse[name] {
-				d.Log(fmt.Sprintf("%s is in use. skip", name))
+			if s := inUse[name]; s != "" {
+				d.Log(fmt.Sprintf("%s is in use by %s. skip", name, s))
 			} else {
-				d.DebugLog(fmt.Sprintf("%s mark to deregister", name))
+				d.DebugLog(fmt.Sprintf("%s is marked to deregister", name))
 				names = append(names, name)
 			}
 		}
