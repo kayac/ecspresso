@@ -60,7 +60,7 @@ func (d *App) Deregister(opt DeregisterOption) error {
 	} else if aws.IntValue(opt.Keeps) > 0 {
 		return d.deregisterKeeps(ctx, opt, inUse)
 	}
-	return nil
+	return errors.New("--revision or --keeps required")
 }
 
 func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse map[string]string) error {
