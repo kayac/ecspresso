@@ -42,52 +42,60 @@ func (d *App) listTasks(ctx context.Context, id *string, desiredStatuses ...stri
 	if len(desiredStatuses) == 0 {
 		desiredStatuses = []string{"RUNNING", "STOPPED"}
 	}
-	var taskIDs []*string
 	if aws.StringValue(id) != "" {
-		taskIDs = []*string{id}
-	} else {
-		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-		if err != nil {
-			return nil, err
+		in := &ecs.DescribeTasksInput{
+			Cluster: aws.String(d.Cluster),
+			Tasks:   []*string{id},
+			Include: []*string{aws.String("TAGS")},
 		}
-		for _, desiredStatus := range desiredStatuses {
-			var nextToken *string
-			for {
-				out, err := d.ecs.ListTasks(&ecs.ListTasksInput{
-					Cluster:       &d.config.Cluster,
-					Family:        td.Family,
-					DesiredStatus: aws.String(desiredStatus),
-					NextToken:     nextToken,
-				})
-				if err != nil {
-					return nil, errors.Wrap(err, "failed to list tasks")
-				}
-				for _, id := range out.TaskArns {
-					taskIDs = append(taskIDs, aws.String(arnToName(*id)))
-				}
-				if nextToken = out.NextToken; nextToken == nil {
-					break
-				}
+		out, err := d.ecs.DescribeTasksWithContext(ctx, in)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to describe tasks")
+		}
+		if len(out.Tasks) == 0 && len(in.Tasks) != 0 {
+			return nil, errors.Errorf("task ID %s is not found", *id)
+		}
+		return out.Tasks, nil
+	}
+
+	var tasks []*ecs.Task
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, desiredStatus := range desiredStatuses {
+		var nextToken *string
+		for {
+			out, err := d.ecs.ListTasks(&ecs.ListTasksInput{
+				Cluster:       &d.config.Cluster,
+				Family:        td.Family,
+				DesiredStatus: aws.String(desiredStatus),
+				NextToken:     nextToken,
+			})
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to list tasks")
+			}
+			if len(out.TaskArns) == 0 {
+				break
+			}
+			in := &ecs.DescribeTasksInput{
+				Cluster: aws.String(d.Cluster),
+				Tasks:   out.TaskArns,
+				Include: []*string{aws.String("TAGS")},
+			}
+			taskOut, err := d.ecs.DescribeTasksWithContext(ctx, in)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to describe tasks")
+			}
+			for _, task := range taskOut.Tasks {
+				tasks = append(tasks, task)
+			}
+			if nextToken = out.NextToken; nextToken == nil {
+				break
 			}
 		}
 	}
-	if len(taskIDs) == 0 {
-		return []*ecs.Task{}, nil
-	}
-
-	in := &ecs.DescribeTasksInput{
-		Cluster: aws.String(d.Cluster),
-		Tasks:   taskIDs,
-		Include: []*string{aws.String("TAGS")},
-	}
-	out, err := d.ecs.DescribeTasksWithContext(ctx, in)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to describe tasks")
-	}
-	if len(out.Tasks) == 0 && len(in.Tasks) != 0 {
-		return nil, errors.Errorf("task ID %s is not found", *in.Tasks[0])
-	}
-	return out.Tasks, nil
+	return tasks, nil
 }
 
 func (d *App) Tasks(opt TasksOption) error {
