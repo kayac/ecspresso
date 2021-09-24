@@ -612,9 +612,7 @@ func (d *App) unmarshalJSON(src []byte, v interface{}, path string) error {
 		)
 		// unknown field -> try lax decoder
 		lax := json.NewDecoder(bytes.NewReader(src))
-		if err := lax.Decode(&v); err != nil {
-			return err
-		}
+		return lax.Decode(&v)
 	}
 	return nil
 }
