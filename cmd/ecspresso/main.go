@@ -93,7 +93,7 @@ func _main() int {
 	delete := kingpin.Command("delete", "delete service")
 	deleteOption := ecspresso.DeleteOption{
 		DryRun: delete.Flag("dry-run", "dry-run").Bool(),
-		Force:  delete.Flag("force", "force delete. not confirm").Bool(),
+		Force:  delete.Flag("force", "delete without confirmation").Bool(),
 	}
 
 	run := kingpin.Command("run", "run task")
@@ -121,7 +121,9 @@ func _main() int {
 	deregister := kingpin.Command("deregister", "deregister task definition")
 	deregisterOption := ecspresso.DeregisterOption{
 		DryRun:   deregister.Flag("dry-run", "dry-run").Bool(),
-		Revision: deregister.Flag("revision", "revision").Required().Int64(),
+		Revision: deregister.Flag("revision", "revision").Int64(),
+		Keeps:    deregister.Flag("keeps", "numbers to keep latest revisions").Int(),
+		Force:    deregister.Flag("force", "deregister without confirmation").Bool(),
 	}
 
 	_ = kingpin.Command("wait", "wait until service stable")
@@ -165,7 +167,7 @@ func _main() int {
 		Output: tasks.Flag("output", "output format (table|json|tsv)").Default("table").Enum("table", "json", "tsv"),
 		Find:   tasks.Flag("find", "find a task from tasks list and dump it as JSON").Bool(),
 		Stop:   tasks.Flag("stop", "stop a task").Bool(),
-		Force:  tasks.Flag("force", "stop a task without confirmation prompt").Bool(),
+		Force:  tasks.Flag("force", "stop a task without confirmation").Bool(),
 	}
 
 	exec := kingpin.Command("exec", "execute command in a task")
