@@ -650,33 +650,6 @@ func (d *App) GetLogInfo(task *ecs.Task, c *ecs.ContainerDefinition) (string, st
 	return logGroup, logStream
 }
 
-func (d *App) Register(opt RegisterOption) error {
-	ctx, cancel := d.Start()
-	defer cancel()
-
-	d.Log("Starting register task definition", opt.DryRunString())
-	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to load task definition")
-	}
-	if *opt.DryRun {
-		d.Log("task definition:")
-		d.LogJSON(td)
-		d.Log("DRY RUN OK")
-		return nil
-	}
-
-	newTd, err := d.RegisterTaskDefinition(ctx, td)
-	if err != nil {
-		return errors.Wrap(err, "failed to register task definition")
-	}
-
-	if *opt.Output {
-		d.LogJSON(newTd)
-	}
-	return nil
-}
-
 func (d *App) suspendAutoScaling(suspendState bool) error {
 	resourceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
 
