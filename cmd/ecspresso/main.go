@@ -118,6 +118,12 @@ func _main() int {
 		Output: register.Flag("output", "output registered task definition").Bool(),
 	}
 
+	deregister := kingpin.Command("deregister", "deregister task definition")
+	deregisterOption := ecspresso.DeregisterOption{
+		DryRun:   deregister.Flag("dry-run", "dry-run").Bool(),
+		Revision: deregister.Flag("revision", "revision").Required().Int64(),
+	}
+
 	_ = kingpin.Command("wait", "wait until service stable")
 	waitOption := ecspresso.WaitOption{}
 
@@ -247,6 +253,8 @@ func _main() int {
 		err = app.Wait(waitOption)
 	case "register":
 		err = app.Register(registerOption)
+	case "deregister":
+		err = app.Deregister(deregisterOption)
 	case "init":
 		err = app.Init(initOption)
 	case "diff":
