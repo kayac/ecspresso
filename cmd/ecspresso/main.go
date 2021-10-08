@@ -122,7 +122,7 @@ func _main() int {
 	deregisterOption := ecspresso.DeregisterOption{
 		DryRun:   deregister.Flag("dry-run", "dry-run").Bool(),
 		Revision: deregister.Flag("revision", "revision").Int64(),
-		Keeps:    deregister.Flag("keeps", "numbers to keep latest revisions").Int(),
+		Keeps:    deregister.Flag("keeps", "numbers to keep latest revisions except in-use revisions").Int(),
 		Force:    deregister.Flag("force", "deregister without confirmation").Bool(),
 	}
 
