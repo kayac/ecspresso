@@ -31,28 +31,10 @@ func (d *App) Deregister(opt DeregisterOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 	d.Log("Starting deregister task definition", opt.DryRunString())
-	inUse := make(map[string]string)
 
-	tasks, err := d.listTasks(ctx, nil)
+	inUse, err := d.inUseRevisions(ctx)
 	if err != nil {
 		return err
-	}
-	for _, task := range tasks {
-		name, _ := taskDefinitionToName(*task.TaskDefinitionArn)
-		inUse[name] = fmt.Sprintf("%s task", *task.LastStatus)
-		d.DebugLog(fmt.Sprintf("%s is in use by tasks", name))
-	}
-
-	if d.config.Service != "" {
-		sv, err := d.DescribeService(ctx)
-		if err != nil {
-			return err
-		}
-		for _, dp := range sv.Deployments {
-			name, _ := taskDefinitionToName(*dp.TaskDefinition)
-			inUse[name] = fmt.Sprintf("%s deployment", *dp.Status)
-			d.DebugLog(fmt.Sprintf("%s is in use by deployments", name))
-		}
 	}
 
 	if aws.Int64Value(opt.Revision) > 0 {
@@ -164,6 +146,39 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 	d.Log(fmt.Sprintf("%d task definitions were deregistered", deregistered))
 
 	return nil
+}
+
+func (d *App) inUseRevisions(ctx context.Context) (map[string]string, error) {
+	inUse := make(map[string]string)
+	tasks, err := d.listTasks(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	for _, task := range tasks {
+		name, _ := taskDefinitionToName(*task.TaskDefinitionArn)
+		st := aws.StringValue(task.LastStatus)
+		if st == "" {
+			st = aws.StringValue(task.DesiredStatus)
+		}
+		if st != "STOPPED" {
+			// ignore STOPPED tasks for in use
+			inUse[name] = st + " task"
+		}
+		d.DebugLog(fmt.Sprintf("%s is in use by tasks", name))
+	}
+
+	if d.config.Service != "" {
+		sv, err := d.DescribeService(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, dp := range sv.Deployments {
+			name, _ := taskDefinitionToName(*dp.TaskDefinition)
+			inUse[name] = fmt.Sprintf("%s deployment", *dp.Status)
+			d.DebugLog(fmt.Sprintf("%s is in use by deployments", name))
+		}
+	}
+	return inUse, nil
 }
 
 func taskDefinitionToName(a string) (string, error) {
