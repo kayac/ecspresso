@@ -122,8 +122,14 @@ func _main() int {
 	deregisterOption := ecspresso.DeregisterOption{
 		DryRun:   deregister.Flag("dry-run", "dry-run").Bool(),
 		Revision: deregister.Flag("revision", "revision").Int64(),
-		Keeps:    deregister.Flag("keeps", "numbers to keep latest revisions except in-use revisions").Int(),
+		Keeps:    deregister.Flag("keeps", "numbers of keep latest revisions except in-use").Int(),
 		Force:    deregister.Flag("force", "deregister without confirmation").Bool(),
+	}
+
+	revisions := kingpin.Command("revisions", "show revisions of task definitions")
+	revisionsOption := ecspresso.RevisionsOption{
+		Output:   revisions.Flag("output", "output format (table|json|tsv)").Default("table").Enum("table", "json", "tsv"),
+		Revision: revisions.Flag("revision", "revision number to output task definition as JSON").Int64(),
 	}
 
 	_ = kingpin.Command("wait", "wait until service stable")
@@ -257,6 +263,8 @@ func _main() int {
 		err = app.Register(registerOption)
 	case "deregister":
 		err = app.Deregister(deregisterOption)
+	case "revisions":
+		err = app.Revesions(revisionsOption)
 	case "init":
 		err = app.Init(initOption)
 	case "diff":
