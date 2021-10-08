@@ -18,23 +18,6 @@ type optWithDesiredCount interface {
 	getDesiredCount() *int64
 }
 
-type CreateOption struct {
-	DryRun       *bool
-	DesiredCount *int64
-	NoWait       *bool
-}
-
-func (opt CreateOption) getDesiredCount() *int64 {
-	return opt.DesiredCount
-}
-
-func (opt CreateOption) DryRunString() string {
-	if *opt.DryRun {
-		return dryRunStr
-	}
-	return ""
-}
-
 type DeployOption struct {
 	DryRun               *bool
 	DesiredCount         *int64
