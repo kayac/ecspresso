@@ -41,7 +41,7 @@ func (d *App) Create(opt CreateOption) error {
 
 	count := calcDesiredCount(svd, opt)
 	if count == nil && (svd.SchedulingStrategy != nil && *svd.SchedulingStrategy == "REPLICA") {
-		count = aws.Int64(1) // Must provide desired count for replica scheduling strategy
+		count = aws.Int64(0) // Must provide desired count for replica scheduling strategy
 	}
 
 	if *opt.DryRun {
