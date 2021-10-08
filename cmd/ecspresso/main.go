@@ -121,7 +121,7 @@ func _main() int {
 	deregister := kingpin.Command("deregister", "deregister task definition")
 	deregisterOption := ecspresso.DeregisterOption{
 		DryRun:   deregister.Flag("dry-run", "dry-run").Bool(),
-		Revision: deregister.Flag("revision", "revision").Int64(),
+		Revision: deregister.Flag("revision", "revision number to deregister").Int64(),
 		Keeps:    deregister.Flag("keeps", "numbers of keep latest revisions except in-use").Int(),
 		Force:    deregister.Flag("force", "deregister without confirmation").Bool(),
 	}
