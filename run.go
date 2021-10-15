@@ -25,7 +25,11 @@ func (d *App) Run(opt RunOption) error {
 			return errors.Wrap(err, "invalid overrides")
 		}
 	} else if ovFile := aws.StringValue(opt.TaskOverrideFile); ovFile != "" {
-		if err := d.loader.LoadWithEnvJSON(&ov, ovFile); err != nil {
+		src, err := d.readDefinitionFile(ovFile)
+		if err != nil {
+			return errors.Wrap(err, "failed to read overrides-file")
+		}
+		if err := d.unmarshalJSON(src, &ov, ovFile); err != nil {
 			return errors.Wrap(err, "failed to read overrides-file")
 		}
 	}

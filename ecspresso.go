@@ -22,6 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fatih/color"
+	"github.com/google/go-jsonnet"
 	gc "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
@@ -34,6 +35,7 @@ var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
 var TerminalWidth = 90
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
+var jsonnetVM = jsonnet.MakeVM()
 
 type TaskDefinition = ecs.TaskDefinition
 
@@ -503,9 +505,9 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInpu
 }
 
 func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
-	src, err := d.loader.ReadWithEnv(path)
+	src, err := d.readDefinitionFile(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to load task definition")
 	}
 	c := struct {
 		TaskDefinition json.RawMessage `json:"taskDefinition"`
@@ -550,12 +552,12 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
 	}
 
 	sv := ecs.Service{}
-	src, err := d.loader.ReadWithEnv(path)
+	src, err := d.readDefinitionFile(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to load service definition")
 	}
 	if err := d.unmarshalJSON(src, &sv, path); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to load service definition")
 	}
 
 	sv.ServiceName = aws.String(d.config.Service)
