@@ -126,18 +126,6 @@ func parseTags(s string) ([]*ecs.Tag, error) {
 type WaitOption struct {
 }
 
-type RegisterOption struct {
-	DryRun *bool
-	Output *bool
-}
-
-func (opt RegisterOption) DryRunString() string {
-	if *opt.DryRun {
-		return dryRunStr
-	}
-	return ""
-}
-
 type InitOption struct {
 	Region                *string
 	Cluster               *string
