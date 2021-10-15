@@ -3,6 +3,7 @@ package ecspresso
 import (
 	"bytes"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -45,4 +46,16 @@ func isLongArnFormat(a string) (bool, error) {
 	default:
 		return false, nil
 	}
+}
+
+func (d *App) readDefinitionFile(path string) ([]byte, error) {
+	switch filepath.Ext(path) {
+	case ".jsonnet":
+		jsonStr, err := jsonnetVM.EvaluateFile(path)
+		if err != nil {
+			return nil, err
+		}
+		return d.loader.ReadWithEnvBytes([]byte(jsonStr))
+	}
+	return d.loader.ReadWithEnv(path)
 }

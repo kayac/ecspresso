@@ -19,20 +19,22 @@ func TestLoadServiceDefinition(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sv, err := app.LoadServiceDefinition(c.ServiceDefinitionPath)
-	if err != nil || sv == nil {
-		t.Errorf("%s load failed: %s", c.ServiceDefinitionPath, err)
-	}
+	for _, ext := range []string{"", "net"} {
+		sv, err := app.LoadServiceDefinition(c.ServiceDefinitionPath + ext)
+		if err != nil || sv == nil {
+			t.Errorf("%s load failed: %s", c.ServiceDefinitionPath, err)
+		}
 
-	if *sv.ServiceName != "test" ||
-		*sv.DesiredCount != 2 ||
-		*sv.LoadBalancers[0].TargetGroupArn != "arn:aws:elasticloadbalancing:us-east-1:1111111111:targetgroup/test/12345678" ||
-		*sv.LaunchType != "EC2" ||
-		*sv.SchedulingStrategy != "REPLICA" ||
-		*sv.PropagateTags != "SERVICE" ||
-		*sv.Tags[0].Key != "cluster" ||
-		*sv.Tags[0].Value != "default2" {
-		t.Errorf("unexpected service definition %s", sv.String())
+		if *sv.ServiceName != "test" ||
+			*sv.DesiredCount != 2 ||
+			*sv.LoadBalancers[0].TargetGroupArn != "arn:aws:elasticloadbalancing:us-east-1:1111111111:targetgroup/test/12345678" ||
+			*sv.LaunchType != "EC2" ||
+			*sv.SchedulingStrategy != "REPLICA" ||
+			*sv.PropagateTags != "SERVICE" ||
+			*sv.Tags[0].Key != "cluster" ||
+			*sv.Tags[0].Value != "default2" {
+			t.Errorf("unexpected service definition %s", sv.String())
+		}
 	}
 }
 
