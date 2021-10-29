@@ -4,13 +4,14 @@
       cpu: 1024,
       environment: [],
       essential: true,
-      image: 'nginx:{{ env `NGINX_VERSION` `latest` }}',
+#      image: 'nginx:{{ env `NGINX_VERSION` `latest` }}',
+      image: 'mcr.microsoft.com/windows/servercore/iis:windowsservercore-ltsc2019',
       logConfiguration: {
         logDriver: 'awslogs',
         options: {
           'awslogs-group': 'ecspresso-test',
           'awslogs-region': 'ap-northeast-1',
-          'awslogs-stream-prefix': 'nginx',
+          'awslogs-stream-prefix': 'windows',
         },
       },
       mountPoints: [],
@@ -38,34 +39,16 @@
       ],
       volumesFrom: [],
     },
-    {
-      essential: true,
-      image: 'debian:buster-slim',
-      logConfiguration: {
-        logDriver: 'awslogs',
-        options: {
-          'awslogs-group': 'ecspresso-test',
-          'awslogs-region': 'ap-northeast-1',
-          'awslogs-stream-prefix': 'bash',
-        },
-      },
-      name: 'bash',
-      command: [
-        'tail',
-        '-f',
-        '/dev/null',
-      ],
-    },
   ],
-  cpu: '256',
-  ephemeralStorage: {
-    sizeInGiB: 50,
-  },
+  cpu: '1024',
   executionRoleArn: 'arn:aws:iam::{{must_env `AWS_ACCOUNT_ID`}}:role/ecsTaskRole',
   family: 'ecspresso-test',
-  memory: '512',
+  memory: '2048',
   networkMode: 'awsvpc',
   placementConstraints: [],
+  runtimePlatform: {
+    operatingSystemFamily: 'WINDOWS_SERVER_2019_CORE',
+  },
   requiresCompatibilities: [
     'FARGATE',
   ],
