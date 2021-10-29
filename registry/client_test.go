@@ -15,6 +15,7 @@ var testImages = []struct {
 	{image: "public.ecr.aws/mackerel/mackerel-container-agent", tag: "plugins"},
 	{image: "gcr.io/kaniko-project/executor", tag: "v0.10.0"},
 	{image: "ghcr.io/github/super-linter", tag: "v3"},
+	{image: "mcr.microsoft.com/windows/servercore/iis", tag: "windowsservercore-ltsc2019"},
 }
 
 func TestImages(t *testing.T) {
