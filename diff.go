@@ -119,6 +119,7 @@ func tdToTaskDefinitionInput(td *TaskDefinition, tdTags []*ecs.Tag) *TaskDefinit
 		NetworkMode:             td.NetworkMode,
 		PlacementConstraints:    td.PlacementConstraints,
 		RequiresCompatibilities: td.RequiresCompatibilities,
+		RuntimePlatform:         td.RuntimePlatform,
 		TaskRoleArn:             td.TaskRoleArn,
 		ProxyConfiguration:      td.ProxyConfiguration,
 		Volumes:                 td.Volumes,
