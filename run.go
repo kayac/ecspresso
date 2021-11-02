@@ -234,7 +234,7 @@ func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn st
 			return
 		} else {
 			d.Log("Revision is not specified. Use latest task definition")
-			d.findLatestTaskDefinitionArn(ctx, family)
+			tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
 			return
 		}
 	} else {
