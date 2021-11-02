@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -35,86 +34,16 @@ func (d *App) Run(opt RunOption) error {
 	}
 	d.DebugLog("Overrides:", ov.String())
 
-	var tdArn string
-	var watchContainer *ecs.ContainerDefinition
-	var err error
-	var sv *ecs.Service
-	if *opt.LatestTaskDefinition {
-		sv, err = d.DescribeServiceStatus(ctx, 0)
-		if err != nil {
-			return errors.Wrap(err, "failed to describe service status")
-		}
-		family := strings.Split(arnToName(*sv.TaskDefinition), ":")[0]
-		tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
-		if err != nil {
-			return errors.Wrap(err, "failed to load latest task definition")
-		}
-
-		td, err := d.DescribeTaskDefinition(ctx, tdArn)
-		if err != nil {
-			return errors.Wrap(err, "failed to describe task definition")
-		}
-		watchContainer = containerOf(td, opt.WatchContainer)
-		if *opt.DryRun {
-			d.Log("task definition:")
-			d.LogJSON(td)
-		}
-	} else if *opt.SkipTaskDefinition {
-		sv, err = d.DescribeServiceStatus(ctx, 0)
-		if err != nil {
-			return errors.Wrap(err, "failed to describe service status")
-		}
-		td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
-		if err != nil {
-			return errors.Wrap(err, "failed to describe task definition")
-		}
-		tdArn = *sv.TaskDefinition
-		watchContainer = containerOf(td, opt.WatchContainer)
-		if *opt.DryRun {
-			d.Log("task definition:")
-			d.LogJSON(td)
-		}
-	} else {
-		sv, err = d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
-		if err != nil {
-			return errors.Wrap(err, "failed to load service definition")
-		}
-		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-		if err != nil {
-			return errors.Wrap(err, "failed to load task definition")
-		}
-
-		if len(*opt.TaskDefinition) > 0 {
-			d.Log("Loading task definition")
-			runTd, err := d.LoadTaskDefinition(*opt.TaskDefinition)
-			if err != nil {
-				return errors.Wrap(err, "failed to load task definition")
-			}
-			td = runTd
-		}
-		watchContainer = containerOf(td, opt.WatchContainer)
-
-		var newTd *TaskDefinition
-		if *opt.DryRun {
-			d.Log("task definition:")
-			d.LogJSON(td)
-		} else {
-			newTd, err = d.RegisterTaskDefinition(ctx, td)
-			if err != nil {
-				return errors.Wrap(err, "failed to register task definition")
-			}
-			tdArn = *newTd.TaskDefinitionArn
-		}
-	}
-	if watchContainer == nil {
-		return fmt.Errorf("container %s is not found in task definition", *opt.WatchContainer)
+	tdArn, watchContainer, err := d.taskDefinitionForRun(ctx, opt)
+	if err != nil {
+		return err
 	}
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	task, err := d.RunTask(ctx, tdArn, sv, &ov, &opt)
+	task, err := d.RunTask(ctx, tdArn, &ov, &opt)
 	if err != nil {
 		return errors.Wrap(err, "failed to run task")
 	}
@@ -133,8 +62,13 @@ func (d *App) Run(opt RunOption) error {
 	return nil
 }
 
-func (d *App) RunTask(ctx context.Context, tdArn string, sv *ecs.Service, ov *ecs.TaskOverride, opt *RunOption) (*ecs.Task, error) {
-	d.Log("Running task")
+func (d *App) RunTask(ctx context.Context, tdArn string, ov *ecs.TaskOverride, opt *RunOption) (*ecs.Task, error) {
+	d.Log("Running task with", tdArn)
+
+	sv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+	if err != nil {
+		return nil, err
+	}
 
 	tags, err := parseTags(*opt.Tags)
 	if err != nil {
@@ -263,4 +197,60 @@ func (d *App) waitTask(ctx context.Context, task *ecs.Task, untilRunning bool) e
 		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
 		request.WithWaiterMaxAttempts(attempts),
 	)
+}
+
+func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn string, watchContainer *ecs.ContainerDefinition, err error) {
+	tdPath := aws.StringValue(opt.TaskDefinition)
+	if tdPath == "" {
+		tdPath = d.config.TaskDefinitionPath
+	}
+	var td *TaskDefinitionInput
+	td, err = d.LoadTaskDefinition(tdPath)
+	if err != nil {
+		return
+	}
+	family := *td.Family
+	defer func() {
+		watchContainer = containerOf(td, opt.WatchContainer)
+		d.Log("Task definition ARN:", tdArn)
+		d.Log("Watch container:", *watchContainer.Name)
+	}()
+
+	if *opt.LatestTaskDefinition {
+		tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
+		return
+	} else if *opt.SkipTaskDefinition {
+		if aws.Int64Value(opt.Revision) != 0 {
+			tdArn = fmt.Sprintf("%s:%d", family, aws.Int64Value(opt.Revision))
+			return
+		}
+		if d.config.Service != "" {
+			if sv, _err := d.DescribeServiceStatus(ctx, 0); _err != nil {
+				err = _err
+			} else {
+				tdArn = *sv.TaskDefinition
+				td, err = d.DescribeTaskDefinition(ctx, tdArn)
+			}
+			return
+		} else {
+			d.Log("Revision is not specified. Use latest task definition")
+			d.findLatestTaskDefinitionArn(ctx, family)
+			return
+		}
+	} else {
+		// register
+		if *opt.DryRun {
+			err = nil
+			return
+		}
+		if newTd, _err := d.RegisterTaskDefinition(ctx, td); _err != nil {
+			err = _err
+			return
+		} else {
+			tdArn = *newTd.TaskDefinitionArn
+			td, err = d.DescribeTaskDefinition(ctx, tdArn)
+			return
+		}
+	}
+	return
 }
