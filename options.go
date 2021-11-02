@@ -84,6 +84,7 @@ type RunOption struct {
 	PropagateTags        *string
 	Tags                 *string
 	WaitUntil            *string
+	Revision             *int64
 }
 
 func (opt RunOption) waitUntilRunning() bool {
