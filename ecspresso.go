@@ -22,7 +22,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fatih/color"
-	"github.com/google/go-jsonnet"
 	gc "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
@@ -35,7 +34,6 @@ var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
 var TerminalWidth = 90
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
-var jsonnetVM = jsonnet.MakeVM()
 
 type TaskDefinition = ecs.TaskDefinition
 
@@ -59,6 +57,9 @@ type App struct {
 	Cluster string
 	config  *Config
 	Debug   bool
+
+	ExtStr  map[string]string
+	ExtCode map[string]string
 
 	loader *gc.Loader
 }

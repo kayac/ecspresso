@@ -24,6 +24,8 @@ func _main() int {
 	conf := kingpin.Flag("config", "config file").Default("ecspresso.yml").String()
 	debug := kingpin.Flag("debug", "enable debug log").Bool()
 	envFiles := kingpin.Flag("envfile", "environment files").Strings()
+	extStr := kingpin.Flag("ext-str", "external string values for Jsonnet").StringMap()
+	extCode := kingpin.Flag("ext-code", "external code values for Jsonnet").StringMap()
 
 	colorDefault := "false"
 	if isatty.IsTerminal(os.Stdout.Fd()) {
@@ -228,6 +230,8 @@ func _main() int {
 		return 1
 	}
 	app.Debug = *debug
+	app.ExtStr = *extStr
+	app.ExtCode = *extCode
 
 	switch sub {
 	case "deploy":

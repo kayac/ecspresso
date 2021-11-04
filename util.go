@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/private/protocol/json/jsonutil"
+	"github.com/google/go-jsonnet"
 )
 
 func marshalJSON(s interface{}) (*bytes.Buffer, error) {
@@ -51,7 +52,14 @@ func isLongArnFormat(a string) (bool, error) {
 func (d *App) readDefinitionFile(path string) ([]byte, error) {
 	switch filepath.Ext(path) {
 	case ".jsonnet":
-		jsonStr, err := jsonnetVM.EvaluateFile(path)
+		vm := jsonnet.MakeVM()
+		for k, v := range d.ExtStr {
+			vm.ExtVar(k, v)
+		}
+		for k, v := range d.ExtCode {
+			vm.ExtCode(k, v)
+		}
+		jsonStr, err := vm.EvaluateFile(path)
 		if err != nil {
 			return nil, err
 		}
