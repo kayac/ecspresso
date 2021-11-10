@@ -78,11 +78,12 @@ func (d *App) DescribeTasksInput(task *ecs.Task) *ecs.DescribeTasksInput {
 	}
 }
 
-func (d *App) GetLogEventsInput(logGroup string, logStream string, startAt int64) *cloudwatchlogs.GetLogEventsInput {
+func (d *App) GetLogEventsInput(logGroup string, logStream string, startAt int64, nextToken *string) *cloudwatchlogs.GetLogEventsInput {
 	return &cloudwatchlogs.GetLogEventsInput{
 		LogGroupName:  aws.String(logGroup),
 		LogStreamName: aws.String(logStream),
 		StartTime:     aws.Int64(startAt),
+		NextToken:     nextToken,
 	}
 }
 
@@ -247,23 +248,21 @@ func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDe
 	return tdToTaskDefinitionInput(out.TaskDefinition, out.Tags), nil
 }
 
-func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream string, startedAt time.Time) (int, error) {
+func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream string, startedAt time.Time, nextToken *string) (*string, error) {
 	ms := startedAt.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
-	out, err := d.cwl.GetLogEventsWithContext(ctx, d.GetLogEventsInput(logGroup, logStream, ms))
+	out, err := d.cwl.GetLogEventsWithContext(ctx, d.GetLogEventsInput(logGroup, logStream, ms, nextToken))
 	if err != nil {
-		return 0, err
+		return nextToken, err
 	}
 	if len(out.Events) == 0 {
-		return 0, nil
+		return nextToken, nil
 	}
-	lines := 0
 	for _, event := range out.Events {
 		for _, line := range formatLogEvent(event, TerminalWidth) {
 			fmt.Println(line)
-			lines++
 		}
 	}
-	return lines, nil
+	return out.NextForwardToken, nil
 }
 
 func NewApp(conf *Config) (*App, error) {
