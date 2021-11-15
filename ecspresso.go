@@ -508,14 +508,14 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInpu
 func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 	src, err := d.readDefinitionFile(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to load task definition")
+		return nil, errors.Wrapf(err, "failed to load task definition %s", path)
 	}
 	c := struct {
 		TaskDefinition json.RawMessage `json:"taskDefinition"`
 	}{}
 	dec := json.NewDecoder(bytes.NewReader(src))
 	if err := dec.Decode(&c); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to load task definition %s", path)
 	}
 	if c.TaskDefinition != nil {
 		src = c.TaskDefinition
@@ -555,10 +555,10 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
 	sv := ecs.Service{}
 	src, err := d.readDefinitionFile(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to load service definition")
+		return nil, errors.Wrapf(err, "failed to load service definition %s", path)
 	}
 	if err := d.unmarshalJSON(src, &sv, path); err != nil {
-		return nil, errors.Wrap(err, "failed to load service definition")
+		return nil, errors.Wrapf(err, "failed to load service definition %s", path)
 	}
 
 	sv.ServiceName = aws.String(d.config.Service)
