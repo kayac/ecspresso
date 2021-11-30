@@ -339,6 +339,19 @@ task_definition: ecs-task-def.jsonnet
 
 ecspresso includes [github.com/google/go-jsonnet](go-jsonnet) as a library, we don't need the jsonnet command.
 
+`--ext-var` and `--ext-code` flag sets [Jsonnet External Variables](https://jsonnet.org/ref/stdlib.html#ext_vars).
+
+```console
+$ ecspresso --ext-var Foo=foo --ext-code "Bar=1+1" ...
+```
+
+```jsonnet
+{
+  foo: std.ExtVar('Foo'), // = "foo"
+  bar: std.ExtVar('Bar'), // = 2
+}
+```
+
 ## Deploy to Fargate
 
 If you want to deploy services to Fargate, task definitions and service definitions require some settings.
