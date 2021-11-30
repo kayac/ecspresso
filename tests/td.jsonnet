@@ -10,14 +10,14 @@ local container = import 'libs/container.libsonnet';
   taskRoleArn: 'arn:aws:iam::999999999999:role/ecsTaskRole',
   executionRoleArn: 'arn:aws:iam::999999999999:role/ecsTaskRole',
   ephemeralStorage: {
-    sizeInGiB: 25,
+    sizeInGiB: std.extVar('EphemeralStorage'),
   },
   containerDefinitions: [
     container + {
       environment: [
         {
           name: 'worker_id',
-          value: '3',
+          value: std.extVar('WorkerID'),
         },
       ],
     }
