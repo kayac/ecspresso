@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/morikuni/aec"
 	"github.com/pkg/errors"
 )
 
@@ -147,18 +146,13 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *e
 
 	go func() {
 		ticker := time.NewTicker(5 * time.Second)
-		var lines int
+		var nextToken *string
 		for {
 			select {
 			case <-waitCtx.Done():
 				return
 			case <-ticker.C:
-				if isTerminal {
-					for i := 0; i < lines; i++ {
-						fmt.Print(aec.EraseLine(aec.EraseModes.All), aec.PreviousLine(1))
-					}
-				}
-				lines, _ = d.GetLogEvents(waitCtx, logGroup, logStream, startedAt)
+				nextToken, _ = d.GetLogEvents(waitCtx, logGroup, logStream, startedAt, nextToken)
 			}
 		}
 	}()
