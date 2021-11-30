@@ -177,6 +177,7 @@ func _main() int {
 		Find:   tasks.Flag("find", "find a task from tasks list and dump it as JSON").Bool(),
 		Stop:   tasks.Flag("stop", "stop a task").Bool(),
 		Force:  tasks.Flag("force", "stop a task without confirmation").Bool(),
+		Trace:  tasks.Flag("trace", "trace a task").Bool(),
 	}
 
 	exec := kingpin.Command("exec", "execute command in a task")
