@@ -18,7 +18,7 @@ func (d *App) Run(opt RunOption) error {
 	defer cancel()
 
 	d.Log("Running task", opt.DryRunString())
-	var ov ecs.TaskOverride
+	ov := ecs.TaskOverride{}
 	if ovStr := aws.StringValue(opt.TaskOverrideStr); ovStr != "" {
 		if err := json.Unmarshal([]byte(ovStr), &ov); err != nil {
 			return errors.Wrap(err, "invalid overrides")
@@ -116,7 +116,9 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *ecs.TaskOverride, o
 	}
 	if len(out.Failures) > 0 {
 		f := out.Failures[0]
-		d.Log("Task ARN: " + *f.Arn)
+		if f.Arn != nil {
+			d.Log("Task ARN: " + *f.Arn)
+		}
 		return nil, errors.New(*f.Reason)
 	}
 
