@@ -9,7 +9,7 @@ require (
 	github.com/fatih/color v1.12.0
 	github.com/fujiwara/cfn-lookup v0.0.2
 	github.com/fujiwara/tfstate-lookup v0.4.0
-	github.com/fujiwara/tracer v0.0.3 // indirect
+	github.com/fujiwara/tracer v0.0.3
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-jsonnet v0.17.0
 	github.com/hashicorp/go-envparse v0.0.0-20200406174449-d9cfd743a15e
