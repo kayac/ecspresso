@@ -339,10 +339,10 @@ task_definition: ecs-task-def.jsonnet
 
 ecspresso includes [github.com/google/go-jsonnet](go-jsonnet) as a library, we don't need the jsonnet command.
 
-`--ext-var` and `--ext-code` flag sets [Jsonnet External Variables](https://jsonnet.org/ref/stdlib.html#ext_vars).
+`--ext-str` and `--ext-code` flag sets [Jsonnet External Variables](https://jsonnet.org/ref/stdlib.html#ext_vars).
 
 ```console
-$ ecspresso --ext-var Foo=foo --ext-code "Bar=1+1" ...
+$ ecspresso --ext-str Foo=foo --ext-code "Bar=1+1" ...
 ```
 
 ```jsonnet
