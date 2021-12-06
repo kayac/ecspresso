@@ -12,6 +12,7 @@ import (
 	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/fujiwara/tracer"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 )
@@ -22,6 +23,7 @@ type TasksOption struct {
 	Find   *bool
 	Stop   *bool
 	Force  *bool
+	Trace  *bool
 }
 
 func (o TasksOption) taskID() string {
@@ -111,7 +113,7 @@ func (d *App) Tasks(opt TasksOption) error {
 		return nil
 	}
 
-	if !aws.BoolValue(opt.Find) && !aws.BoolValue(opt.Stop) {
+	if !aws.BoolValue(opt.Find) && !aws.BoolValue(opt.Stop) && !aws.BoolValue(opt.Trace) {
 		formatter := opt.newFormatter()
 		for _, task := range tasks {
 			formatter.AddTask(task)
@@ -145,7 +147,16 @@ func (d *App) Tasks(opt TasksOption) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to stop task")
 		}
+	} else if aws.BoolValue(opt.Trace) {
+		tr, err := tracer.New(ctx, d.ecs, d.cwl)
+		if err != nil {
+			return errors.Wrap(err, "failed to new tracer")
+		}
+		if err := tr.Run(*task.ClusterArn, *task.TaskArn); err != nil {
+			return errors.Wrap(err, "failed to run tracer")
+		}
 	}
+
 	return nil
 }
 
