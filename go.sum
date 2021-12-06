@@ -125,8 +125,8 @@ github.com/fujiwara/cfn-lookup v0.0.2 h1:1l0HNyPMO5yzXacVi6LWbyahs6uW+faBPd8CwFO
 github.com/fujiwara/cfn-lookup v0.0.2/go.mod h1:if7hlqDFCHxOy2TnH/GWKpD6j5Bp3UwFl+jfj9WZYis=
 github.com/fujiwara/tfstate-lookup v0.4.0 h1:AaubXvolethCndWpZ+c/Sibm6J4SCIlSxcxvn6cYon4=
 github.com/fujiwara/tfstate-lookup v0.4.0/go.mod h1:F56Bz3W497ZJA0ijFLVgcYeAVuhtbzvV6/hMtu6f2Ek=
-github.com/fujiwara/tracer v0.0.3 h1:JZ26YWTC2MroTuGDkikFWByF0DCUFbBWaUcRWnFF258=
-github.com/fujiwara/tracer v0.0.3/go.mod h1:lwW3eh3+hy5EHqzE0iy/U0MpGJWpdZz4w7SpR+jYla4=
+github.com/fujiwara/tracer v0.0.4 h1:Z/2PCynU8a1VqbmJtW6khHMiSOzXUBH+URk5m+N5TRI=
+github.com/fujiwara/tracer v0.0.4/go.mod h1:lwW3eh3+hy5EHqzE0iy/U0MpGJWpdZz4w7SpR+jYla4=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
