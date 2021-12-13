@@ -326,7 +326,7 @@ Other options for RunTask API are set by service attributes(CapacityProviderStra
 
 # Notes
 
-## Use Jsonnet instad of JSON
+## Use Jsonnet instead of JSON
 
 ecspresso v1.7 or later can use [Jsonnet](https://jsonnet.org/) file format for service and task definition.
 
