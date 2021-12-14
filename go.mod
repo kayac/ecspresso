@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.42.12
 	github.com/fatih/color v1.12.0
 	github.com/fujiwara/cfn-lookup v0.0.2
-	github.com/fujiwara/tfstate-lookup v0.4.0
+	github.com/fujiwara/tfstate-lookup v0.4.2
 	github.com/fujiwara/tracer v0.0.4
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-jsonnet v0.17.0

@@ -123,8 +123,8 @@ github.com/form3tech-oss/jwt-go v3.2.2+incompatible h1:TcekIExNqud5crz4xD2pavyTg
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/fujiwara/cfn-lookup v0.0.2 h1:1l0HNyPMO5yzXacVi6LWbyahs6uW+faBPd8CwFOiaFw=
 github.com/fujiwara/cfn-lookup v0.0.2/go.mod h1:if7hlqDFCHxOy2TnH/GWKpD6j5Bp3UwFl+jfj9WZYis=
-github.com/fujiwara/tfstate-lookup v0.4.0 h1:AaubXvolethCndWpZ+c/Sibm6J4SCIlSxcxvn6cYon4=
-github.com/fujiwara/tfstate-lookup v0.4.0/go.mod h1:F56Bz3W497ZJA0ijFLVgcYeAVuhtbzvV6/hMtu6f2Ek=
+github.com/fujiwara/tfstate-lookup v0.4.2 h1:RmhlHIMLVqNWHxaBasap+L5LO7pKorAbpIVQrktYCzY=
+github.com/fujiwara/tfstate-lookup v0.4.2/go.mod h1:F56Bz3W497ZJA0ijFLVgcYeAVuhtbzvV6/hMtu6f2Ek=
 github.com/fujiwara/tracer v0.0.4 h1:Z/2PCynU8a1VqbmJtW6khHMiSOzXUBH+URk5m+N5TRI=
 github.com/fujiwara/tracer v0.0.4/go.mod h1:lwW3eh3+hy5EHqzE0iy/U0MpGJWpdZz4w7SpR+jYla4=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
