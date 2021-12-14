@@ -68,8 +68,8 @@ func (d *App) Diff(opt DiffOption) error {
 	if ds, err := diffServices(newSv, remoteSv); err != nil {
 		return err
 	} else if ds != "" {
-		fmt.Println(color.RedString("--- %s", *remoteSv.ServiceArn))
-		fmt.Println(color.GreenString("+++ %s", d.config.ServiceDefinitionPath))
+		fmt.Println(color.RedString("--- " + *remoteSv.ServiceArn))
+		fmt.Println(color.GreenString("+++ " + d.config.ServiceDefinitionPath))
 		fmt.Print(coloredDiff(ds))
 	}
 
