@@ -182,9 +182,12 @@ func _main() int {
 
 	exec := kingpin.Command("exec", "execute command in a task")
 	execOption := ecspresso.ExecOption{
-		ID:        exec.Flag("id", "task ID").Default("").String(),
-		Command:   exec.Flag("command", "command").Default("sh").String(),
-		Container: exec.Flag("container", "container name").String(),
+		ID:          exec.Flag("id", "task ID").Default("").String(),
+		Command:     exec.Flag("command", "command").Default("sh").String(),
+		Container:   exec.Flag("container", "container name").String(),
+		LocalPort:   exec.Flag("local-port", "local port number").Default("0").Int(),
+		Port:        exec.Flag("port", "remote port number").Default("0").Int(),
+		PortForward: exec.Flag("port-forward", "enable port forward").Default("false").Bool(),
 	}
 
 	sub := kingpin.Parse()
