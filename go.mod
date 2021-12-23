@@ -14,6 +14,7 @@ require (
 	github.com/google/go-jsonnet v0.17.0
 	github.com/hashicorp/go-envparse v0.0.0-20200406174449-d9cfd743a15e
 	github.com/hashicorp/go-version v1.3.0
+	github.com/hexops/gotextdiff v1.0.3
 	github.com/kayac/go-config v0.6.0
 	github.com/kylelemons/godebug v1.1.0
 	github.com/mattn/go-isatty v0.0.13

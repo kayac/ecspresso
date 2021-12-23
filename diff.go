@@ -10,11 +10,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/fatih/color"
+	"github.com/hexops/gotextdiff"
+	"github.com/hexops/gotextdiff/myers"
+	"github.com/hexops/gotextdiff/span"
 	"github.com/kylelemons/godebug/diff"
 	"github.com/pkg/errors"
 )
 
-func diffServices(local, remote *ecs.Service) (string, error) {
+func diffServices(local, remote *ecs.Service, remoteArn string, localPath string, unified bool) (string, error) {
 	sortServiceDefinitionForDiff(local)
 	sortServiceDefinitionForDiff(remote)
 
@@ -31,10 +34,21 @@ func diffServices(local, remote *ecs.Service) (string, error) {
 		return "", errors.Wrap(err, "failed to marshal remote service definition")
 	}
 
-	return diff.Diff(string(remoteSvBytes), string(newSvBytes)), nil
+	remoteSv := string(remoteSvBytes)
+	newSv := string(newSvBytes)
+	if unified {
+		edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteSv, newSv)
+		return fmt.Sprint(gotextdiff.ToUnified(remoteArn, localPath, remoteSv, edits)), nil
+	} else {
+		ds := diff.Diff(remoteSv, newSv)
+		if ds == "" {
+			return ds, nil
+		}
+		return fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds), nil
+	}
 }
 
-func diffTaskDefs(local, remote *TaskDefinitionInput) (string, error) {
+func diffTaskDefs(local, remote *TaskDefinitionInput, remoteArn string, localPath string, unified bool) (string, error) {
 	sortTaskDefinitionForDiff(local)
 	sortTaskDefinitionForDiff(remote)
 
@@ -48,7 +62,18 @@ func diffTaskDefs(local, remote *TaskDefinitionInput) (string, error) {
 		return "", errors.Wrap(err, "failed to marshal remote task definition")
 	}
 
-	return diff.Diff(string(remoteTdBytes), string(newTdBytes)), nil
+	remoteTd := string(remoteTdBytes)
+	newTd := string(newTdBytes)
+	if unified {
+		edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteTd, newTd)
+		return fmt.Sprint(gotextdiff.ToUnified(remoteArn, localPath, remoteTd, edits)), nil
+	} else {
+		ds := diff.Diff(remoteTd, newTd)
+		if ds == "" {
+			return ds, nil
+		}
+		return fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds), nil
+	}
 }
 
 func (d *App) Diff(opt DiffOption) error {
@@ -65,11 +90,9 @@ func (d *App) Diff(opt DiffOption) error {
 		return errors.Wrap(err, "failed to describe service")
 	}
 
-	if ds, err := diffServices(newSv, remoteSv); err != nil {
+	if ds, err := diffServices(newSv, remoteSv, *remoteSv.ServiceArn, d.config.ServiceDefinitionPath, *opt.Unified); err != nil {
 		return err
 	} else if ds != "" {
-		fmt.Println(color.RedString("--- " + *remoteSv.ServiceArn))
-		fmt.Println(color.GreenString("+++ " + d.config.ServiceDefinitionPath))
 		fmt.Print(coloredDiff(ds))
 	}
 
@@ -83,11 +106,9 @@ func (d *App) Diff(opt DiffOption) error {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
 
-	if ds, err := diffTaskDefs(newTd, remoteTd); err != nil {
+	if ds, err := diffTaskDefs(newTd, remoteTd, *remoteSv.TaskDefinition, d.config.TaskDefinitionPath, *opt.Unified); err != nil {
 		return err
 	} else if ds != "" {
-		fmt.Println(color.RedString("--- %s", *remoteSv.TaskDefinition))
-		fmt.Println(color.GreenString("+++ %s", d.config.TaskDefinitionPath))
 		fmt.Print(coloredDiff(ds))
 	}
 

@@ -148,8 +148,10 @@ func _main() int {
 		ForceOverwrite:        init.Flag("force-overwrite", "force overwrite files").Bool(),
 	}
 
-	_ = kingpin.Command("diff", "display diff for task definition compared with latest one on ECS")
-	diffOption := ecspresso.DiffOption{}
+	diff := kingpin.Command("diff", "display diff for task definition compared with latest one on ECS")
+	diffOption := ecspresso.DiffOption{
+		Unified: diff.Flag("unified", "display diff in unified format").Bool(),
+	}
 
 	appspec := kingpin.Command("appspec", "output AppSpec YAML for CodeDeploy to STDOUT")
 	appspecOption := ecspresso.AppSpecOption{
