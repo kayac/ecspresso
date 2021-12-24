@@ -138,6 +138,7 @@ type InitOption struct {
 }
 
 type DiffOption struct {
+	Unified *bool
 }
 
 type AppSpecOption struct {
