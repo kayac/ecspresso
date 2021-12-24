@@ -432,42 +432,10 @@ ecspresso supports `diff` and `verify` subcommands.
 Shows differences between local task/service definitions and remote (on ECS) definitions.
 
 ```diff
-$ ecspresso --config config.yaml diff
+$ ecspresso --config config.yaml diff --unified
 --- arn:aws:ecs:ap-northeast-1:123456789012:service/ecspresso-test/nginx-local
 +++ ecs-service-def.json
- {
-   "capacityProviderStrategy": [
-     {
-       "base": 1,
-       "capacityProvider": "FARGATE",
-       "weight": 1
-     },
-     {
-       "base": 0,
-       "capacityProvider": "FARGATE_SPOT",
-       "weight": 2
-     }
-   ],
-   "deploymentConfiguration": {
-     "deploymentCircuitBreaker": {
-       "enable": true,
-       "rollback": true
-     },
-     "maximumPercent": 200,
-     "minimumHealthyPercent": 100
-   },
-   "networkConfiguration": {
-     "awsvpcConfiguration": {
-       "assignPublicIp": "ENABLED",
-       "securityGroups": [
-         "sg-0a69199a34e15147a"
-       ],
-       "subnets": [
-         "subnet-0376f113bbbc25742",
-         "subnet-04b750544ddd71274",
-         "subnet-0623adfcb3093f18f"
-       ]
-     }
+@@ -38,5 +38,5 @@
    },
    "placementConstraints": [],
    "placementStrategy": [],
@@ -477,6 +445,7 @@ $ ecspresso --config config.yaml diff
  
 --- arn:aws:ecs:ap-northeast-1:123456789012:task-definition/ecspresso-test:202
 +++ ecs-task-def.json
+@@ -1,6 +1,10 @@
  {
    "containerDefinitions": [
      {
@@ -488,37 +457,6 @@ $ ecspresso --config config.yaml diff
        "logConfiguration": {
          "logDriver": "awslogs",
          "options": {
-           "awslogs-group": "ecspresso-test",
-           "awslogs-region": "ap-northeast-1",
-           "awslogs-stream-prefix": "nginx"
-         }
-       },
-       "mountPoints": [],
-       "name": "nginx",
-       "portMappings": [
-         {
-           "containerPort": 80,
-           "hostPort": 80,
-           "protocol": "tcp"
-         }
-       ],
-       "secrets": [],
-       "volumesFrom": []
-     }
-   ],
-   "cpu": "256",
-   "executionRoleArn": "arn:aws:iam::123456789012:role/ecsTaskRole",
-   "family": "ecspresso-test",
-   "memory": "512",
-   "networkMode": "awsvpc",
-   "placementConstraints": [],
-   "requiresCompatibilities": [
-     "EC2",
-     "FARGATE"
-   ],
-   "taskRoleArn": "arn:aws:iam::123456789012:role/ecsTaskRole",
-   "volumes": []
- }
 ```
 
 ### verify
@@ -598,6 +536,19 @@ If `--id` is not set, the command shows a list of tasks to select a task to exec
 `filter_command` in config.yaml works the same as tasks command.
 
 See also the official document [Using Amazon ECS Exec for debugging](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html).
+
+### port forwarding
+
+`ecspresso exec --port-forward` forwards local port to ECS tasks port.
+
+```
+$ ecspresso exec --port-forward --port 80 --local-port 8080
+...
+```
+
+If `--id` is not set, the command shows a list of tasks to select a task to forward port.
+
+When `--local-port` is not specified, use the ephemeral port for local port.
 
 ### suspend / resume application auto scaling
 
