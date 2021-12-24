@@ -36,16 +36,17 @@ func diffServices(local, remote *ecs.Service, remoteArn string, localPath string
 
 	remoteSv := string(remoteSvBytes)
 	newSv := string(newSvBytes)
+
 	if unified {
 		edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteSv, newSv)
 		return fmt.Sprint(gotextdiff.ToUnified(remoteArn, localPath, remoteSv, edits)), nil
-	} else {
-		ds := diff.Diff(remoteSv, newSv)
-		if ds == "" {
-			return ds, nil
-		}
-		return fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds), nil
 	}
+
+	ds := diff.Diff(remoteSv, newSv)
+	if ds == "" {
+		return ds, nil
+	}
+	return fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds), nil
 }
 
 func diffTaskDefs(local, remote *TaskDefinitionInput, remoteArn string, localPath string, unified bool) (string, error) {
@@ -64,16 +65,17 @@ func diffTaskDefs(local, remote *TaskDefinitionInput, remoteArn string, localPat
 
 	remoteTd := string(remoteTdBytes)
 	newTd := string(newTdBytes)
+
 	if unified {
 		edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteTd, newTd)
 		return fmt.Sprint(gotextdiff.ToUnified(remoteArn, localPath, remoteTd, edits)), nil
-	} else {
-		ds := diff.Diff(remoteTd, newTd)
-		if ds == "" {
-			return ds, nil
-		}
-		return fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds), nil
 	}
+
+	ds := diff.Diff(remoteTd, newTd)
+	if ds == "" {
+		return ds, nil
+	}
+	return fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds), nil
 }
 
 func (d *App) Diff(opt DiffOption) error {
