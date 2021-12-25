@@ -78,7 +78,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to load service definition")
 		}
-		ds, err := diffServices(sv, newSv, *newSv.ServiceArn, d.config.ServiceDefinitionPath, false)
+		ds, err := diffServices(sv, newSv, "", d.config.ServiceDefinitionPath, false)
 		if err != nil {
 			return errors.Wrap(err, "failed to diff of service definitions")
 		}
