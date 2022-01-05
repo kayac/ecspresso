@@ -12,6 +12,10 @@ func (d *App) Rollback(opt RollbackOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
+	if aws.BoolValue(opt.DeregisterTaskDefinition) && aws.BoolValue(opt.NoWait) {
+		return errors.New("cannot set --deregister-task-definition and --no-wait together")
+	}
+
 	d.Log("Starting rollback", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
