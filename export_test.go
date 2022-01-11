@@ -10,4 +10,5 @@ var (
 	ParseTags                    = parseTags
 	ParseRoleArn                 = parseRoleArn
 	IsLongArnFormat              = isLongArnFormat
+	ECRImageURLRegex             = ecrImageURLRegex
 )

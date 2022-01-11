@@ -306,7 +306,7 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 }
 
 var (
-	ecrImageURLRegex = regexp.MustCompile(`dkr\.ecr\..+.amazonaws\.com/.*:.*`)
+	ecrImageURLRegex = regexp.MustCompile(`dkr\.ecr\..+.amazonaws\.com/.*`)
 )
 
 func (d *App) verifyECRImage(ctx context.Context, image string) error {

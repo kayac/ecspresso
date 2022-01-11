@@ -35,6 +35,24 @@ var testRoleArns = []struct {
 	},
 }
 
+var testImagesIsECR = []struct {
+	image string
+	isECR bool
+}{
+	{
+		image: "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/myimage",
+		isECR: true,
+	},
+	{
+		image: "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/myimage:latest",
+		isECR: true,
+	},
+	{
+		image: "ubuntu:latest",
+		isECR: false,
+	},
+}
+
 func TestParseRoleArn(t *testing.T) {
 	for _, s := range testRoleArns {
 		name, err := ecspresso.ParseRoleArn(s.arn)
@@ -47,6 +65,15 @@ func TestParseRoleArn(t *testing.T) {
 			}
 		} else if err == nil {
 			t.Errorf("must be failed valdation for %s", s.arn)
+		}
+	}
+}
+
+func TestIsECRImage(t *testing.T) {
+	for _, s := range testImagesIsECR {
+		isECR := ecspresso.ECRImageURLRegex.MatchString(s.image)
+		if isECR != s.isECR {
+			t.Errorf("invalid detect ECR image %s got:%t expected:%t", s.image, isECR, s.isECR)
 		}
 	}
 }
