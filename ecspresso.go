@@ -472,19 +472,9 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 		}
 	}()
 
-	// Add an option WithWaiterDelay and request.WithWaiterMaxAttempts for a long timeout.
-	// SDK Default is 10 min (MaxAttempts=40 * Delay=15sec) at now.
-	// ref. https://github.com/aws/aws-sdk-go/blob/d57c8d96f72d9475194ccf18d2ba70ac294b0cb3/service/ecs/waiters.go#L82-L83
-	// Explicitly set these options so not being affected by the default setting.
-	const delay = 15 * time.Second
-	attempts := int((d.config.Timeout / delay)) + 1
-	if (d.config.Timeout % delay) > 0 {
-		attempts++
-	}
 	return d.ecs.WaitUntilServicesStableWithContext(
 		ctx, d.DescribeServicesInput(),
-		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
-		request.WithWaiterMaxAttempts(attempts),
+		d.waiterOptions()...,
 	)
 }
 
@@ -646,6 +636,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *ecs.Service) error {
 	return d.codedeploy.WaitUntilDeploymentSuccessfulWithContext(
 		ctx,
 		&codedeploy.GetDeploymentInput{DeploymentId: dpID},
+		d.waiterOptions()...,
 	)
 }
 
@@ -695,5 +686,21 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *ecs.Service, tdArn s
 
 		d.Log(fmt.Sprintf("Deployment %s is rolled back on CodeDeploy:", *dpID))
 		return nil
+	}
+}
+
+// Build an option WithWaiterDelay and request.WithWaiterMaxAttempts for a long timeout.
+// SDK Default is 10 min (MaxAttempts=40 * Delay=15sec) at now.
+// ref. https://github.com/aws/aws-sdk-go/blob/d57c8d96f72d9475194ccf18d2ba70ac294b0cb3/service/ecs/waiters.go#L82-L83
+// Explicitly set these options so not being affected by the default setting.
+func (d *App) waiterOptions() []request.WaiterOption {
+	const delay = 15 * time.Second
+	attempts := int((d.config.Timeout / delay)) + 1
+	if (d.config.Timeout % delay) > 0 {
+		attempts++
+	}
+	return []request.WaiterOption{
+		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
+		request.WithWaiterMaxAttempts(attempts),
 	}
 }
