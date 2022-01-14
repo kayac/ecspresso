@@ -5,18 +5,46 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/google/go-jsonnet/formatter"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
 var CreateFileMode = os.FileMode(0644)
 
+type InitOption struct {
+	Region                *string
+	Cluster               *string
+	Service               *string
+	TaskDefinitionPath    *string
+	ServiceDefinitionPath *string
+	ConfigFilePath        *string
+	ForceOverwrite        *bool
+	Jsonnet               *bool
+}
+
+var (
+	jsonnetExt = ".jsonnet"
+	jsonExt    = ".json"
+)
+
 func (d *App) Init(opt InitOption) error {
 	config := d.config
 	ctx := context.Background()
+
+	if *opt.Jsonnet {
+		if ext := filepath.Ext(config.ServiceDefinitionPath); ext == jsonExt {
+			config.ServiceDefinitionPath = strings.TrimSuffix(config.ServiceDefinitionPath, ext) + jsonnetExt
+		}
+		if ext := filepath.Ext(config.TaskDefinitionPath); ext == jsonExt {
+			config.TaskDefinitionPath = strings.TrimSuffix(config.TaskDefinitionPath, ext) + jsonnetExt
+		}
+	}
 
 	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
 	if err != nil {
@@ -48,6 +76,13 @@ func (d *App) Init(opt InitOption) error {
 	if b, err := MarshalJSON(sv); err != nil {
 		return errors.Wrap(err, "unable to marshal service definition to JSON")
 	} else {
+		if *opt.Jsonnet {
+			out, err := formatter.Format(config.ServiceDefinitionPath, string(b), formatter.DefaultOptions())
+			if err != nil {
+				return errors.Wrap(err, "unable to format service definition as Jsonnet")
+			}
+			b = []byte(out)
+		}
 		d.Log("save service definition to", config.ServiceDefinitionPath)
 		if err := d.saveFile(config.ServiceDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
 			return errors.Wrap(err, "failed to write file")
@@ -58,6 +93,13 @@ func (d *App) Init(opt InitOption) error {
 	if b, err := MarshalJSON(td); err != nil {
 		return errors.Wrap(err, "unable to marshal task definition to JSON")
 	} else {
+		if *opt.Jsonnet {
+			out, err := formatter.Format(config.TaskDefinitionPath, string(b), formatter.DefaultOptions())
+			if err != nil {
+				return errors.Wrap(err, "unable to format task definition as Jsonnet")
+			}
+			b = []byte(out)
+		}
 		d.Log("save task definition to", config.TaskDefinitionPath)
 		if err := d.saveFile(config.TaskDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
 			return errors.Wrap(err, "failed to write file")
