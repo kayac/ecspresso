@@ -1,10 +1,12 @@
 package ecspresso
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/fatih/color"
 	"github.com/pkg/errors"
 )
 
@@ -13,7 +15,9 @@ func (d *App) Rollback(opt RollbackOption) error {
 	defer cancel()
 
 	if aws.BoolValue(opt.DeregisterTaskDefinition) && aws.BoolValue(opt.NoWait) {
-		return errors.New("cannot set --deregister-task-definition and --no-wait together")
+		fmt.Println(
+			color.YellowString("WARNING: --deregister-task-definition not works with --no-wait together"),
+		)
 	}
 
 	d.Log("Starting rollback", opt.DryRunString())
