@@ -127,16 +127,6 @@ func parseTags(s string) ([]*ecs.Tag, error) {
 type WaitOption struct {
 }
 
-type InitOption struct {
-	Region                *string
-	Cluster               *string
-	Service               *string
-	TaskDefinitionPath    *string
-	ServiceDefinitionPath *string
-	ConfigFilePath        *string
-	ForceOverwrite        *bool
-}
-
 type DiffOption struct {
 	Unified *bool
 }
