@@ -51,7 +51,7 @@ func isLongArnFormat(a string) (bool, error) {
 
 func (d *App) readDefinitionFile(path string) ([]byte, error) {
 	switch filepath.Ext(path) {
-	case ".jsonnet":
+	case jsonnetExt:
 		vm := jsonnet.MakeVM()
 		for k, v := range d.ExtStr {
 			vm.ExtVar(k, v)
