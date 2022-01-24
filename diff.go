@@ -82,20 +82,24 @@ func (d *App) Diff(opt DiffOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
+	var taskDefArn string
 	// service definition
-	newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to load service definition")
-	}
-	remoteSv, err := d.DescribeService(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to describe service")
-	}
+	if d.config.ServiceDefinitionPath != "" {
+		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+		if err != nil {
+			return errors.Wrap(err, "failed to load service definition")
+		}
+		remoteSv, err := d.DescribeService(ctx)
+		if err != nil {
+			return errors.Wrap(err, "failed to describe service")
+		}
 
-	if ds, err := diffServices(newSv, remoteSv, *remoteSv.ServiceArn, d.config.ServiceDefinitionPath, *opt.Unified); err != nil {
-		return err
-	} else if ds != "" {
-		fmt.Print(coloredDiff(ds))
+		if ds, err := diffServices(newSv, remoteSv, *remoteSv.ServiceArn, d.config.ServiceDefinitionPath, *opt.Unified); err != nil {
+			return err
+		} else if ds != "" {
+			fmt.Print(coloredDiff(ds))
+		}
+		taskDefArn = *remoteSv.TaskDefinition
 	}
 
 	// task definition
@@ -103,12 +107,19 @@ func (d *App) Diff(opt DiffOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
-	remoteTd, err := d.DescribeTaskDefinition(ctx, *remoteSv.TaskDefinition)
+	if taskDefArn == "" {
+		arn, err := d.findLatestTaskDefinitionArn(ctx, *newTd.Family)
+		if err != nil {
+			return errors.Wrap(err, "failed to find latest task definition from family")
+		}
+		taskDefArn = arn
+	}
+	remoteTd, err := d.DescribeTaskDefinition(ctx, taskDefArn)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe task definition")
 	}
 
-	if ds, err := diffTaskDefs(newTd, remoteTd, *remoteSv.TaskDefinition, d.config.TaskDefinitionPath, *opt.Unified); err != nil {
+	if ds, err := diffTaskDefs(newTd, remoteTd, taskDefArn, d.config.TaskDefinitionPath, *opt.Unified); err != nil {
 		return err
 	} else if ds != "" {
 		fmt.Print(coloredDiff(ds))
