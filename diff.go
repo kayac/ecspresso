@@ -83,8 +83,8 @@ func (d *App) Diff(opt DiffOption) error {
 	defer cancel()
 
 	var taskDefArn string
-	// service definition
-	if d.config.ServiceDefinitionPath != "" {
+	// diff for services only when service defined
+	if d.config.Service != "" {
 		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 		if err != nil {
 			return errors.Wrap(err, "failed to load service definition")
