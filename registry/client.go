@@ -3,15 +3,21 @@ package registry
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
-const dockerHubHost = "registry-1.docker.io"
+const (
+	dockerHubHost                      = "registry-1.docker.io"
+	mediaTypeDockerSchema2ManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
+	mediaTypeDockerSchema2Manifest     = "application/vnd.docker.distribution.manifest.v2+json"
+)
 
 // Repository represents a repository using Docker Registry API v2.
 type Repository struct {
@@ -84,22 +90,150 @@ func (c *Repository) login(endpoint, service, scope string) error {
 	return nil
 }
 
-func (c *Repository) getManifests(tag string) (*http.Response, error) {
+func (c *Repository) fetchManifests(method, tag string) (*http.Response, error) {
 	u := fmt.Sprintf("https://%s/v2/%s/manifests/%s", c.host, c.repo, tag)
-	req, _ := http.NewRequest(http.MethodHead, u, nil)
-	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	req, err := http.NewRequest(method, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", strings.Join([]string{
+		mediaTypeDockerSchema2ManifestList,
+		ocispec.MediaTypeImageIndex,
+		mediaTypeDockerSchema2Manifest,
+		ocispec.MediaTypeImageManifest}, ", "))
+	c.setAuthHeader(req)
+	return c.client.Do(req)
+}
+
+func (c *Repository) getAvailability(tag string) (*http.Response, error) {
+	resp, err := c.fetchManifests(http.MethodHead, tag)
+	if err != nil {
+		return nil, err
+	}
+	resp.Body.Close()
+	return resp, nil
+}
+
+func (c *Repository) getManifests(tag string) (mediaType string, _ io.ReadCloser, _ error) {
+	resp, err := c.fetchManifests(http.MethodGet, tag)
+	if err != nil {
+		return "", nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return "", nil, errors.New(resp.Status)
+	}
+	mediaType = parseContentType(resp.Header.Get("Content-Type"))
+	return mediaType, resp.Body, nil
+}
+
+func (c *Repository) getImageConfig(digest string) (io.ReadCloser, error) {
+	u := fmt.Sprintf("https://%s/v2/%s/blobs/%s", c.host, c.repo, digest)
+	req, _ := http.NewRequest(http.MethodGet, u, nil)
+	req.Header.Set("Accept", strings.Join([]string{
+		"application/vnd.docker.container.image.v1+json",
+		ocispec.MediaTypeImageConfig,
+	}, ", "))
+	c.setAuthHeader(req)
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, errors.New(resp.Status)
+	}
+	return resp.Body, err
+}
+
+func (c *Repository) setAuthHeader(req *http.Request) {
 	if c.user == "AWS" && c.password != "" {
 		// ECR
 		req.Header.Set("Authorization", "Basic "+c.password)
 	} else if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil, err
+}
+
+func parseContentType(contentType string) (mediaType string) {
+	mediaType = contentType
+	if i := strings.IndexByte(contentType, ';'); i != -1 {
+		mediaType = contentType[0:i]
 	}
-	defer resp.Body.Close()
-	return resp, err
+	return
+}
+
+func match(want, got string) bool {
+	// if want is empty, skip verify
+	return want == "" || want == got
+}
+
+var ErrDeprecatedManifest = errors.New("deprecated manifest")
+
+// HasPlatformImage returns an image tag for arch/os exists or not in the repository.
+func (c *Repository) HasPlatformImage(tag, arch, os string) error {
+	mediaType, rc, err := c.getManifests(tag)
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+	dec := json.NewDecoder(rc)
+	switch mediaType {
+	case
+		ocispec.MediaTypeImageIndex,
+		mediaTypeDockerSchema2ManifestList:
+		var manifestList ocispec.Index
+		if err := dec.Decode(&manifestList); err != nil {
+			return fmt.Errorf("manifest list decode error: %w", err)
+		}
+		// https://github.com/opencontainers/image-spec/blob/main/image-index.md#image-index-property-descriptions
+		for _, desc := range manifestList.Manifests {
+			p := desc.Platform
+			if p == nil {
+				// regard as non platform-specific image
+				return nil
+			}
+			if match(arch, p.Architecture) && match(os, p.OS) {
+				return nil
+			}
+		}
+	case
+		mediaTypeDockerSchema2Manifest,
+		ocispec.MediaTypeImageManifest:
+		var manifest ocispec.Manifest
+		if err := dec.Decode(&manifest); err != nil {
+			return fmt.Errorf("manifest decode error: %w", err)
+		}
+		if p := manifest.Config.Platform; p != nil {
+			if match(arch, p.OS) && match(os, p.Architecture) {
+				return nil
+			}
+		}
+
+		// fallback to image config
+		// https://github.com/opencontainers/image-spec/blob/main/config.md#properties
+		rc, err := c.getImageConfig(manifest.Config.Digest.String())
+		if err != nil {
+			return err
+		}
+		defer rc.Close()
+		var image ocispec.Image
+		if err := json.NewDecoder(rc).Decode(&image); err != nil {
+			return fmt.Errorf("image config decode error: %w", err)
+		}
+		if match(arch, image.Architecture) && match(os, image.OS) {
+			return nil
+		}
+	case
+		// https://docs.docker.com/registry/spec/deprecated-schema-v1/
+		"application/vnd.docker.distribution.manifest.v1+prettyjws",
+		"application/vnd.docker.distribution.manifest.v1+json":
+		return ErrDeprecatedManifest
+	default:
+		return fmt.Errorf("unknown MediaType %s", mediaType)
+	}
+
+	return fmt.Errorf("no image for %s/%s", arch, os)
 }
 
 // HasImage returns an image tag exists or not in the repository.
@@ -107,7 +241,7 @@ func (c *Repository) HasImage(tag string) (bool, error) {
 	tries := 2
 	for tries > 0 {
 		tries--
-		resp, err := c.getManifests(tag)
+		resp, err := c.getAvailability(tag)
 		if err != nil {
 			return false, err
 		}

@@ -338,10 +338,57 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	if err != nil {
 		return err
 	}
-	if ok {
+	if !ok {
+		return errors.Errorf("%s:%s is not found in Registry", image, tag)
+	}
+
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return err
+	}
+	arch, os := NormalizePlatform(td.RuntimePlatform, td.RequiresCompatibilities)
+	if arch == "" && os == "" {
 		return nil
 	}
-	return errors.Errorf("%s:%s is not found in Registry", image, tag)
+	err = repo.HasPlatformImage(tag, arch, os)
+	if errors.Is(err, registry.ErrDeprecatedManifest) {
+		return verifySkipErr(fmt.Sprintf("deprecated image manifest"))
+	}
+	return err
+}
+
+func NormalizePlatform(p *ecs.RuntimePlatform, requiredCompatibilities []*string) (arch, os string) {
+	if len(requiredCompatibilities) == 0 {
+		return
+	}
+	// when requiredCompatibilities contain fargate, set fargate default platform.
+	// otherwise, default arch/os are empty due to not determined without RuntimePlatform.
+	for _, c := range requiredCompatibilities {
+		if *c == ecs.CompatibilityFargate {
+			arch = "amd64"
+			os = "linux"
+		}
+	}
+	if p == nil {
+		return
+	}
+
+	// https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RuntimePlatform.html
+	if p.CpuArchitecture != nil {
+		if *p.CpuArchitecture == ecs.CPUArchitectureArm64 {
+			arch = "arm64"
+		} else {
+			arch = "amd64"
+		}
+	}
+	if p.OperatingSystemFamily != nil {
+		if *p.OperatingSystemFamily == ecs.OSFamilyLinux {
+			os = "linux"
+		} else {
+			os = "windows"
+		}
+	}
+	return
 }
 
 func (d *App) verifyImage(ctx context.Context, image string) error {
