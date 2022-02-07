@@ -346,28 +346,53 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	if err != nil {
 		return err
 	}
-	arch, os := NormalizePlatform(td.RuntimePlatform, td.RequiresCompatibilities)
+	// when requiredCompatibilities contain only fargate, regard as fargate task definition
+	isFargateTask := len(td.RequiresCompatibilities) == 1 && *td.RequiresCompatibilities[0] == ecs.CompatibilityFargate
+	isFargateService, err := d.isFargateService()
+	if err != nil {
+		return err
+	}
+	arch, os := NormalizePlatform(td.RuntimePlatform, isFargateTask || isFargateService)
 	if arch == "" && os == "" {
 		return nil
 	}
 	err = repo.HasPlatformImage(tag, arch, os)
 	if errors.Is(err, registry.ErrDeprecatedManifest) {
-		return verifySkipErr(fmt.Sprintf("deprecated image manifest"))
+		return verifySkipErr("deprecated image manifest")
 	}
 	return err
 }
 
-func NormalizePlatform(p *ecs.RuntimePlatform, requiredCompatibilities []*string) (arch, os string) {
-	if len(requiredCompatibilities) == 0 {
-		return
+func (d *App) isFargateService() (bool, error) {
+	p := d.config.ServiceDefinitionPath
+	if p == "" {
+		return false, nil
 	}
-	// when requiredCompatibilities contain fargate, set fargate default platform.
-	// otherwise, default arch/os are empty due to not determined without RuntimePlatform.
-	for _, c := range requiredCompatibilities {
-		if *c == ecs.CompatibilityFargate {
-			arch = "amd64"
-			os = "linux"
+	sv, err := d.LoadServiceDefinition(p)
+	if err != nil {
+		return false, err
+	}
+	if sv.PlatformVersion != nil && *sv.PlatformVersion != "" {
+		return true, nil
+	}
+	if sv.LaunchType != nil && *sv.LaunchType == ecs.LaunchTypeFargate {
+		return true, nil
+	}
+	for _, s := range sv.CapacityProviderStrategy {
+		name := *s.CapacityProvider
+		if name == "FARGATE_SPOT" || name == "FARGATE" {
+			return true, nil
 		}
+	}
+	return false, nil
+}
+
+func NormalizePlatform(p *ecs.RuntimePlatform, isFargate bool) (arch, os string) {
+	// if it is able to determine a fargate resource, set fargate default platform.
+	// otherwise, default arch/os are empty as platform is not determined without RuntimePlatform.
+	if isFargate {
+		arch = "amd64"
+		os = "linux"
 	}
 	if p == nil {
 		return
