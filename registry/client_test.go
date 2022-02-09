@@ -29,8 +29,10 @@ func TestImages(t *testing.T) {
 		} else if !ok {
 			t.Errorf("%s:%s not found", c.image, c.tag)
 		}
-		if err := client.HasPlatformImage(c.tag, c.arch, c.os); err != nil {
+		if ok, err := client.HasPlatformImage(c.tag, c.arch, c.os); err != nil {
 			t.Errorf("%s:%s %s/%s error %s", c.image, c.tag, c.arch, c.os, err)
+		} else if !ok {
+			t.Errorf("%s:%s %s/%s not found", c.image, c.tag, c.arch, c.os)
 		}
 	}
 }

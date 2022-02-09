@@ -356,11 +356,17 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	if arch == "" && os == "" {
 		return nil
 	}
-	err = repo.HasPlatformImage(tag, arch, os)
-	if errors.Is(err, registry.ErrDeprecatedManifest) {
-		return verifySkipErr("deprecated image manifest")
+	ok, err = repo.HasPlatformImage(tag, arch, os)
+	if err != nil {
+		if errors.Is(err, registry.ErrDeprecatedManifest) || errors.Is(err, registry.ErrPullRateLimitExceeded) {
+			return verifySkipErr(err.Error())
+		}
+		return err
 	}
-	return err
+	if ok {
+		return nil
+	}
+	return errors.Errorf("%s:%s for arch=%s os=%s is not found in Registry", image, tag, arch, os)
 }
 
 func (d *App) isFargateService() (bool, error) {

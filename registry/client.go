@@ -19,6 +19,11 @@ const (
 	mediaTypeDockerSchema2Manifest     = "application/vnd.docker.distribution.manifest.v2+json"
 )
 
+var (
+	ErrDeprecatedManifest    = errors.New("deprecated image manifest")
+	ErrPullRateLimitExceeded = errors.New("image pull rate limit exceeded")
+)
+
 // Repository represents a repository using Docker Registry API v2.
 type Repository struct {
 	client   *http.Client
@@ -119,8 +124,9 @@ func (c *Repository) getManifests(tag string) (mediaType string, _ io.ReadCloser
 	if err != nil {
 		return "", nil, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return "", nil, ErrPullRateLimitExceeded
+	} else if resp.StatusCode != http.StatusOK {
 		return "", nil, errors.New(resp.Status)
 	}
 	mediaType = parseContentType(resp.Header.Get("Content-Type"))
@@ -168,13 +174,11 @@ func match(want, got string) bool {
 	return want == "" || want == got
 }
 
-var ErrDeprecatedManifest = errors.New("deprecated manifest")
-
 // HasPlatformImage returns an image tag for arch/os exists or not in the repository.
-func (c *Repository) HasPlatformImage(tag, arch, os string) error {
+func (c *Repository) HasPlatformImage(tag, arch, os string) (bool, error) {
 	mediaType, rc, err := c.getManifests(tag)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer rc.Close()
 	dec := json.NewDecoder(rc)
@@ -184,17 +188,17 @@ func (c *Repository) HasPlatformImage(tag, arch, os string) error {
 		mediaTypeDockerSchema2ManifestList:
 		var manifestList ocispec.Index
 		if err := dec.Decode(&manifestList); err != nil {
-			return fmt.Errorf("manifest list decode error: %w", err)
+			return false, fmt.Errorf("manifest list decode error: %w", err)
 		}
 		// https://github.com/opencontainers/image-spec/blob/main/image-index.md#image-index-property-descriptions
 		for _, desc := range manifestList.Manifests {
 			p := desc.Platform
 			if p == nil {
 				// regard as non platform-specific image
-				return nil
+				return true, nil
 			}
 			if match(arch, p.Architecture) && match(os, p.OS) {
-				return nil
+				return true, nil
 			}
 		}
 	case
@@ -202,11 +206,11 @@ func (c *Repository) HasPlatformImage(tag, arch, os string) error {
 		ocispec.MediaTypeImageManifest:
 		var manifest ocispec.Manifest
 		if err := dec.Decode(&manifest); err != nil {
-			return fmt.Errorf("manifest decode error: %w", err)
+			return false, fmt.Errorf("manifest decode error: %w", err)
 		}
 		if p := manifest.Config.Platform; p != nil {
 			if match(arch, p.OS) && match(os, p.Architecture) {
-				return nil
+				return true, nil
 			}
 		}
 
@@ -214,26 +218,26 @@ func (c *Repository) HasPlatformImage(tag, arch, os string) error {
 		// https://github.com/opencontainers/image-spec/blob/main/config.md#properties
 		rc, err := c.getImageConfig(manifest.Config.Digest.String())
 		if err != nil {
-			return err
+			return false, err
 		}
 		defer rc.Close()
 		var image ocispec.Image
 		if err := json.NewDecoder(rc).Decode(&image); err != nil {
-			return fmt.Errorf("image config decode error: %w", err)
+			return false, fmt.Errorf("image config decode error: %w", err)
 		}
 		if match(arch, image.Architecture) && match(os, image.OS) {
-			return nil
+			return true, nil
 		}
 	case
 		// https://docs.docker.com/registry/spec/deprecated-schema-v1/
 		"application/vnd.docker.distribution.manifest.v1+prettyjws",
 		"application/vnd.docker.distribution.manifest.v1+json":
-		return ErrDeprecatedManifest
+		return false, ErrDeprecatedManifest
 	default:
-		return fmt.Errorf("unknown MediaType %s", mediaType)
+		return false, fmt.Errorf("unknown MediaType %s", mediaType)
 	}
-
-	return fmt.Errorf("no image for %s/%s", arch, os)
+	// not found
+	return false, nil
 }
 
 // HasImage returns an image tag exists or not in the repository.
@@ -254,6 +258,8 @@ func (c *Repository) HasImage(tag string) (bool, error) {
 					return false, err
 				}
 			}
+		case http.StatusNotFound:
+			return false, nil
 		case http.StatusOK:
 			return true, nil
 		default:
