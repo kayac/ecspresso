@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -57,7 +58,7 @@ func New(image, user, password string) *Repository {
 	return c
 }
 
-func (c *Repository) login(endpoint, service, scope string) error {
+func (c *Repository) login(ctx context.Context, endpoint, service, scope string) error {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return err
@@ -66,7 +67,7 @@ func (c *Repository) login(endpoint, service, scope string) error {
 		"service=" + url.QueryEscape(service),
 		"scope=" + url.QueryEscape(scope),
 	}, "&")
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return err
 	}
@@ -95,9 +96,9 @@ func (c *Repository) login(endpoint, service, scope string) error {
 	return nil
 }
 
-func (c *Repository) fetchManifests(method, tag string) (*http.Response, error) {
+func (c *Repository) fetchManifests(ctx context.Context, method, tag string) (*http.Response, error) {
 	u := fmt.Sprintf("https://%s/v2/%s/manifests/%s", c.host, c.repo, tag)
-	req, err := http.NewRequest(method, u, nil)
+	req, err := http.NewRequestWithContext(ctx, method, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -110,8 +111,8 @@ func (c *Repository) fetchManifests(method, tag string) (*http.Response, error) 
 	return c.client.Do(req)
 }
 
-func (c *Repository) getAvailability(tag string) (*http.Response, error) {
-	resp, err := c.fetchManifests(http.MethodHead, tag)
+func (c *Repository) getAvailability(ctx context.Context, tag string) (*http.Response, error) {
+	resp, err := c.fetchManifests(ctx, http.MethodHead, tag)
 	if err != nil {
 		return nil, err
 	}
@@ -119,8 +120,8 @@ func (c *Repository) getAvailability(tag string) (*http.Response, error) {
 	return resp, nil
 }
 
-func (c *Repository) getManifests(tag string) (mediaType string, _ io.ReadCloser, _ error) {
-	resp, err := c.fetchManifests(http.MethodGet, tag)
+func (c *Repository) getManifests(ctx context.Context, tag string) (mediaType string, _ io.ReadCloser, _ error) {
+	resp, err := c.fetchManifests(ctx, http.MethodGet, tag)
 	if err != nil {
 		return "", nil, err
 	}
@@ -133,9 +134,9 @@ func (c *Repository) getManifests(tag string) (mediaType string, _ io.ReadCloser
 	return mediaType, resp.Body, nil
 }
 
-func (c *Repository) getImageConfig(digest string) (io.ReadCloser, error) {
+func (c *Repository) getImageConfig(ctx context.Context, digest string) (io.ReadCloser, error) {
 	u := fmt.Sprintf("https://%s/v2/%s/blobs/%s", c.host, c.repo, digest)
-	req, _ := http.NewRequest(http.MethodGet, u, nil)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	req.Header.Set("Accept", strings.Join([]string{
 		"application/vnd.docker.container.image.v1+json",
 		ocispec.MediaTypeImageConfig,
@@ -175,8 +176,8 @@ func match(want, got string) bool {
 }
 
 // HasPlatformImage returns an image tag for arch/os exists or not in the repository.
-func (c *Repository) HasPlatformImage(tag, arch, os string) (bool, error) {
-	mediaType, rc, err := c.getManifests(tag)
+func (c *Repository) HasPlatformImage(ctx context.Context, tag, arch, os string) (bool, error) {
+	mediaType, rc, err := c.getManifests(ctx, tag)
 	if err != nil {
 		return false, err
 	}
@@ -216,7 +217,7 @@ func (c *Repository) HasPlatformImage(tag, arch, os string) (bool, error) {
 
 		// fallback to image config
 		// https://github.com/opencontainers/image-spec/blob/main/config.md#properties
-		rc, err := c.getImageConfig(manifest.Config.Digest.String())
+		rc, err := c.getImageConfig(ctx, manifest.Config.Digest.String())
 		if err != nil {
 			return false, err
 		}
@@ -241,11 +242,11 @@ func (c *Repository) HasPlatformImage(tag, arch, os string) (bool, error) {
 }
 
 // HasImage returns an image tag exists or not in the repository.
-func (c *Repository) HasImage(tag string) (bool, error) {
+func (c *Repository) HasImage(ctx context.Context, tag string) (bool, error) {
 	tries := 2
 	for tries > 0 {
 		tries--
-		resp, err := c.getAvailability(tag)
+		resp, err := c.getAvailability(ctx, tag)
 		if err != nil {
 			return false, err
 		}
@@ -254,7 +255,8 @@ func (c *Repository) HasImage(tag string) (bool, error) {
 			h := resp.Header.Get("Www-Authenticate")
 			if strings.HasPrefix(h, "Bearer ") {
 				auth := strings.SplitN(h, " ", 2)[1]
-				if err := c.login(parseAuthHeader(auth)); err != nil {
+				e, svc, scope := parseAuthHeader(auth)
+				if err := c.login(ctx, e, svc, scope); err != nil {
 					return false, err
 				}
 			}

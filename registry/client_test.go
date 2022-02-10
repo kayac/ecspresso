@@ -1,6 +1,7 @@
 package registry_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/kayac/ecspresso/registry"
@@ -24,12 +25,13 @@ func TestImages(t *testing.T) {
 	for _, c := range testImages {
 		t.Logf("testing %s:%s", c.image, c.tag)
 		client := registry.New(c.image, "", "")
-		if ok, err := client.HasImage(c.tag); err != nil {
+		ctx := context.Background()
+		if ok, err := client.HasImage(ctx, c.tag); err != nil {
 			t.Errorf("%s:%s error %s", c.image, c.tag, err)
 		} else if !ok {
 			t.Errorf("%s:%s not found", c.image, c.tag)
 		}
-		if ok, err := client.HasPlatformImage(c.tag, c.arch, c.os); err != nil {
+		if ok, err := client.HasPlatformImage(ctx, c.tag, c.arch, c.os); err != nil {
 			t.Errorf("%s:%s %s/%s error %s", c.image, c.tag, c.arch, c.os, err)
 		} else if !ok {
 			t.Errorf("%s:%s %s/%s not found", c.image, c.tag, c.arch, c.os)

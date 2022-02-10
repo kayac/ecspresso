@@ -334,7 +334,7 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	d.DebugLog(fmt.Sprintf("image=%s tag=%s", image, tag))
 
 	repo := registry.New(image, user, password)
-	ok, err := repo.HasImage(tag)
+	ok, err := repo.HasImage(ctx, tag)
 	if err != nil {
 		return err
 	}
@@ -356,7 +356,7 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	if arch == "" && os == "" {
 		return nil
 	}
-	ok, err = repo.HasPlatformImage(tag, arch, os)
+	ok, err = repo.HasPlatformImage(ctx, tag, arch, os)
 	if err != nil {
 		if errors.Is(err, registry.ErrDeprecatedManifest) || errors.Is(err, registry.ErrPullRateLimitExceeded) {
 			return verifySkipErr(err.Error())
