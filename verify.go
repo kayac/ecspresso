@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -319,7 +320,15 @@ func (d *App) verifyECRImage(ctx context.Context, image string) error {
 		return err
 	}
 	token := out.AuthorizationData[0].AuthorizationToken
-	return d.verifyRegistryImage(ctx, image, "AWS", aws.StringValue(token))
+	dec, err := base64.StdEncoding.DecodeString(*token)
+	if err != nil {
+		return err
+	}
+	p := strings.SplitN(string(dec), ":", 2)
+	if len(p) != 2 {
+		return fmt.Errorf("invalid token format: %s", *token)
+	}
+	return d.verifyRegistryImage(ctx, image, p[0], p[1])
 }
 
 func (d *App) verifyRegistryImage(ctx context.Context, image, user, password string) error {
