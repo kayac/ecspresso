@@ -35,6 +35,7 @@ type ExecOption struct {
 	PortForward *bool
 	LocalPort   *int
 	Port        *int
+	NoEnvfile   *bool
 }
 
 func (o ExecOption) taskID() string {
@@ -50,7 +51,7 @@ func (d *App) Exec(opt ExecOption) error {
 	}
 
 	// find a task to exec
-	tasks, err := d.listTasks(ctx, opt.ID, "RUNNING")
+	tasks, err := d.listTasks(ctx, opt.ID, *opt.NoEnvfile, "RUNNING")
 	if err != nil {
 		return err
 	}

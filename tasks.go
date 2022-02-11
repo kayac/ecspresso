@@ -40,7 +40,7 @@ func (opt TasksOption) newFormatter() taskFormatter {
 	return newTaskFormatterTable(os.Stdout)
 }
 
-func (d *App) listTasks(ctx context.Context, id *string, desiredStatuses ...string) ([]*ecs.Task, error) {
+func (d *App) listTasks(ctx context.Context, id *string, noEnvfile bool, desiredStatuses ...string) ([]*ecs.Task, error) {
 	if len(desiredStatuses) == 0 {
 		desiredStatuses = []string{"RUNNING", "STOPPED"}
 	}
@@ -61,21 +61,39 @@ func (d *App) listTasks(ctx context.Context, id *string, desiredStatuses ...stri
 	}
 
 	var tasks []*ecs.Task
-	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-	if err != nil {
-		return nil, err
+	var td *ecs.RegisterTaskDefinitionInput
+	if !noEnvfile {
+		tdIn, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+		if err != nil {
+			return nil, err
+		}
+		td = tdIn
 	}
 	for _, desiredStatus := range desiredStatuses {
 		var nextToken *string
 		for {
-			out, err := d.ecs.ListTasks(&ecs.ListTasksInput{
-				Cluster:       &d.config.Cluster,
-				Family:        td.Family,
-				DesiredStatus: aws.String(desiredStatus),
-				NextToken:     nextToken,
-			})
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to list tasks")
+			var out *ecs.ListTasksOutput
+			if td == nil {
+				tdOut, err := d.ecs.ListTasks(&ecs.ListTasksInput{
+					Cluster:       &d.config.Cluster,
+					DesiredStatus: aws.String(desiredStatus),
+					NextToken:     nextToken,
+				})
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to list tasks")
+				}
+				out = tdOut
+			} else {
+				tdOut, err := d.ecs.ListTasks(&ecs.ListTasksInput{
+					Cluster:       &d.config.Cluster,
+					Family:        td.Family,
+					DesiredStatus: aws.String(desiredStatus),
+					NextToken:     nextToken,
+				})
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to list tasks")
+				}
+				out = tdOut
 			}
 			if len(out.TaskArns) == 0 {
 				break
@@ -104,7 +122,7 @@ func (d *App) Tasks(opt TasksOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	tasks, err := d.listTasks(ctx, opt.ID)
+	tasks, err := d.listTasks(ctx, opt.ID, false)
 	if err != nil {
 		return err
 	}
