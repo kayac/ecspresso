@@ -191,7 +191,6 @@ func _main() int {
 		LocalPort:   exec.Flag("local-port", "local port number").Default("0").Int(),
 		Port:        exec.Flag("port", "remote port number (required for --port-forward)").Default("0").Int(),
 		PortForward: exec.Flag("port-forward", "enable port forward").Default("false").Bool(),
-		NoEnvfile:   exec.Flag("no-envfile", "without envfile").Default("false").Bool(),
 	}
 
 	sub := kingpin.Parse()
@@ -291,6 +290,9 @@ func _main() int {
 	case "tasks":
 		err = app.Tasks(tasksOption)
 	case "exec":
+		if len(*envFiles) == 0 {
+			execOption.NoEnvfile = aws.Bool(true)
+		}
 		err = app.Exec(execOption)
 	default:
 		kingpin.Usage()
