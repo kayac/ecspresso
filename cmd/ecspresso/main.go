@@ -290,9 +290,7 @@ func _main() int {
 	case "tasks":
 		err = app.Tasks(tasksOption)
 	case "exec":
-		if len(*envFiles) == 0 {
-			execOption.NoEnvfile = aws.Bool(true)
-		}
+		execOption.NoEnvfile = aws.Bool(len(*envFiles) == 0)
 		err = app.Exec(execOption)
 	default:
 		kingpin.Usage()
