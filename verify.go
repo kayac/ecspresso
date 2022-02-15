@@ -320,9 +320,12 @@ func (d *App) verifyECRImage(ctx context.Context, image string) error {
 		return err
 	}
 	token := out.AuthorizationData[0].AuthorizationToken
+
+	// This token is a string of "{user}:{password}" encoded as base64.
+	// So we need to decode and split it into {user} and {password}.
 	dec, err := base64.StdEncoding.DecodeString(*token)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to decode an AuthorizationToken")
 	}
 	p := strings.SplitN(string(dec), ":", 2)
 	if len(p) != 2 {

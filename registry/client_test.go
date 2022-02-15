@@ -9,23 +9,36 @@ import (
 var testImages = []struct {
 	image string
 	tag   string
+	os    string
+	arch  string
 }{
-	{image: "debian", tag: "latest"},
-	{image: "katsubushi/katsubushi", tag: "v1.6.0"},
-	{image: "public.ecr.aws/mackerel/mackerel-container-agent", tag: "plugins"},
-	{image: "gcr.io/kaniko-project/executor", tag: "v0.10.0"},
-	{image: "ghcr.io/github/super-linter", tag: "v3"},
-	{image: "mcr.microsoft.com/windows/servercore/iis", tag: "windowsservercore-ltsc2019"},
+	{image: "debian", tag: "latest", os: "linux", arch: "amd64"},
+	{image: "ubuntu", tag: "latest", os: "linux", arch: "arm64"},
+	{image: "katsubushi/katsubushi", tag: "v1.6.0", os: "linux", arch: "amd64"},
+	{image: "ghcr.io/kayac/go-katsubushi", tag: "v1.6.2", os: "linux", arch: "arm64"},
+	{image: "public.ecr.aws/mackerel/mackerel-container-agent", tag: "plugins", os: "linux", arch: "arm64"},
+	{image: "gcr.io/kaniko-project/executor", tag: "v1.7.0", os: "linux", arch: "amd64"},
+	{image: "ghcr.io/github/super-linter", tag: "v4", os: "linux", arch: "amd64"},
+	{image: "mcr.microsoft.com/windows/servercore/iis", tag: "windowsservercore-ltsc2019", os: "windows", arch: "amd64"},
 }
 
 func TestImages(t *testing.T) {
 	for _, c := range testImages {
-		t.Logf("testing %s:%s", c.image, c.tag)
 		client := registry.New(c.image, "", "")
 		if ok, err := client.HasImage(c.tag); err != nil {
-			t.Errorf("%s:%s error %s", c.image, c.tag, err)
+			t.Errorf("NG %s:%s error %s", c.image, c.tag, err)
 		} else if !ok {
-			t.Errorf("%s:%s not found", c.image, c.tag)
+			t.Errorf("NG %s:%s not found", c.image, c.tag)
+		} else {
+			t.Logf("OK %s:%s", c.image, c.tag)
+		}
+
+		if ok, err := client.HasImageFor(c.tag, c.os, c.arch); err != nil {
+			t.Errorf("NG %s:%s for %s/%s error %s", c.image, c.tag, c.os, c.arch, err)
+		} else if !ok {
+			t.Errorf("NG %s:%s for %s/%s not found", c.image, c.tag, c.os, c.arch)
+		} else {
+			t.Logf("OK %s:%s for %s/%s", c.image, c.tag, c.os, c.arch)
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -26,10 +27,10 @@ func New(name, user, password string) *Repository {
 	}
 }
 
-func (c *Repository) HasImage(tag string) (bool, error) {
+func (c *Repository) ref(tag string) (name.Reference, []remote.Option, error) {
 	ref, err := name.ParseReference(c.name + ":" + tag)
 	if err != nil {
-		return false, err
+		return nil, nil, err
 	}
 	options := []remote.Option{}
 	if c.user != "" || c.password != "" {
@@ -39,8 +40,49 @@ func (c *Repository) HasImage(tag string) (bool, error) {
 		}
 		options = append(options, remote.WithAuth(basic))
 	}
-	if _, err := remote.Image(ref, options...); err != nil {
+	return ref, options, nil
+}
+
+func (c *Repository) HasImage(tag string) (bool, error) {
+	ref, opt, err := c.ref(tag)
+	if err != nil {
+		return false, err
+	}
+	if _, err := remote.Image(ref, opt...); err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+func (c *Repository) HasImageFor(tag, os, arch string) (bool, error) {
+	ref, opt, err := c.ref(tag)
+	if err != nil {
+		return false, err
+	}
+	idx, err := remote.Index(ref, opt...)
+	if err != nil {
+		log.Println("index failed fallback to image")
+		if img, err := remote.Image(ref, opt...); err == nil {
+			log.Println("image also errored")
+			return false, err
+		} else {
+			m, err := img.Manifest()
+			if err != nil {
+				return false, err
+			}
+			if m.Config.Platform.OS == os || m.Config.Platform.Architecture == arch {
+				return true, nil
+			}
+		}
+	}
+	im, err := idx.IndexManifest()
+	if err != nil {
+		return false, err
+	}
+	for _, m := range im.Manifests {
+		if m.Platform.OS == os && m.Platform.Architecture == arch {
+			return true, nil
+		}
+	}
+	return false, nil
 }
