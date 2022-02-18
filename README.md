@@ -347,8 +347,8 @@ $ ecspresso --ext-str Foo=foo --ext-code "Bar=1+1" ...
 
 ```jsonnet
 {
-  foo: std.ExtVar('Foo'), // = "foo"
-  bar: std.ExtVar('Bar'), // = 2
+  foo: std.extVar('Foo'), // = "foo"
+  bar: std.extVar('Bar'), // = 2
 }
 ```
 
