@@ -3,6 +3,8 @@ package ecspresso_test
 import (
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/kayac/ecspresso"
 )
 
@@ -51,6 +53,74 @@ var testImagesIsECR = []struct {
 		image: "ubuntu:latest",
 		isECR: false,
 	},
+}
+
+type goPlatform struct {
+	arch string
+	os   string
+}
+
+var testRuntimePlatforms = []struct {
+	platform  *ecs.RuntimePlatform
+	isFargate bool
+	want      goPlatform
+}{
+	{
+		isFargate: false,
+		want: goPlatform{
+			arch: "",
+			os:   "",
+		},
+	},
+	{
+		platform: &ecs.RuntimePlatform{
+			CpuArchitecture: aws.String(ecs.CPUArchitectureArm64),
+		},
+		isFargate: true,
+		want: goPlatform{
+			arch: "arm64",
+			os:   "linux",
+		},
+	},
+	{
+		platform: &ecs.RuntimePlatform{
+			OperatingSystemFamily: aws.String(ecs.OSFamilyWindowsServer2019Core),
+		},
+		isFargate: true,
+		want: goPlatform{
+			arch: "amd64",
+			os:   "windows",
+		},
+	},
+	{
+		platform: &ecs.RuntimePlatform{
+			CpuArchitecture: aws.String(ecs.CPUArchitectureX8664),
+		},
+		isFargate: false,
+		want: goPlatform{
+			arch: "amd64",
+			os:   "",
+		},
+	},
+	{
+		platform: &ecs.RuntimePlatform{
+			OperatingSystemFamily: aws.String(ecs.OSFamilyWindowsServer2019Core),
+		},
+		isFargate: false,
+		want: goPlatform{
+			arch: "",
+			os:   "windows",
+		},
+	},
+}
+
+func TestNormalizePlatform(t *testing.T) {
+	for _, p := range testRuntimePlatforms {
+		arch, os := ecspresso.NormalizePlatform(p.platform, p.isFargate)
+		if arch != p.want.arch || os != p.want.os {
+			t.Errorf("want arch/os %s/%s but got %s/%s", p.want.arch, p.want.os, arch, os)
+		}
+	}
 }
 
 func TestParseRoleArn(t *testing.T) {

@@ -336,14 +336,92 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	d.DebugLog(fmt.Sprintf("image=%s tag=%s", image, tag))
 
 	repo := registry.New(image, user, password)
-	ok, err := repo.HasImage(tag)
+	ok, err := repo.HasImage(ctx, tag)
 	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.Errorf("%s:%s is not found in Registry", image, tag)
+	}
+
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return err
+	}
+	// when requiredCompatibilities contain only fargate, regard as fargate task definition
+	isFargateTask := len(td.RequiresCompatibilities) == 1 && *td.RequiresCompatibilities[0] == ecs.CompatibilityFargate
+	isFargateService, err := d.isFargateService()
+	if err != nil {
+		return err
+	}
+	arch, os := NormalizePlatform(td.RuntimePlatform, isFargateTask || isFargateService)
+	if arch == "" && os == "" {
+		return nil
+	}
+	ok, err = repo.HasPlatformImage(ctx, tag, arch, os)
+	if err != nil {
+		if errors.Is(err, registry.ErrDeprecatedManifest) || errors.Is(err, registry.ErrPullRateLimitExceeded) {
+			return verifySkipErr(err.Error())
+		}
 		return err
 	}
 	if ok {
 		return nil
 	}
-	return errors.Errorf("%s:%s is not found in Registry", image, tag)
+	return errors.Errorf("%s:%s for arch=%s os=%s is not found in Registry", image, tag, arch, os)
+}
+
+func (d *App) isFargateService() (bool, error) {
+	p := d.config.ServiceDefinitionPath
+	if p == "" {
+		return false, nil
+	}
+	sv, err := d.LoadServiceDefinition(p)
+	if err != nil {
+		return false, err
+	}
+	if sv.PlatformVersion != nil && *sv.PlatformVersion != "" {
+		return true, nil
+	}
+	if sv.LaunchType != nil && *sv.LaunchType == ecs.LaunchTypeFargate {
+		return true, nil
+	}
+	for _, s := range sv.CapacityProviderStrategy {
+		name := *s.CapacityProvider
+		if name == "FARGATE_SPOT" || name == "FARGATE" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func NormalizePlatform(p *ecs.RuntimePlatform, isFargate bool) (arch, os string) {
+	// if it is able to determine a fargate resource, set fargate default platform.
+	// otherwise, default arch/os are empty as platform is not determined without RuntimePlatform.
+	if isFargate {
+		arch = "amd64"
+		os = "linux"
+	}
+	if p == nil {
+		return
+	}
+
+	// https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RuntimePlatform.html
+	if p.CpuArchitecture != nil {
+		if *p.CpuArchitecture == ecs.CPUArchitectureArm64 {
+			arch = "arm64"
+		} else {
+			arch = "amd64"
+		}
+	}
+	if p.OperatingSystemFamily != nil {
+		if *p.OperatingSystemFamily == ecs.OSFamilyLinux {
+			os = "linux"
+		} else {
+			os = "windows"
+		}
+	}
+	return
 }
 
 func (d *App) verifyImage(ctx context.Context, image string) error {
