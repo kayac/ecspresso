@@ -94,7 +94,8 @@ func (c *Config) ValidateVersion(version string) error {
 	}
 	v, err := gv.NewVersion(version)
 	if err != nil {
-		fmt.Println(
+		fmt.Fprintln(
+			os.Stderr,
 			color.YellowString("WARNING: Invalid version format \"%s\". Skip checking required_version.", version),
 		)
 		// invalid version string (e.g. "current") always allowed
