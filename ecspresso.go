@@ -526,7 +526,8 @@ func (d *App) unmarshalJSON(src []byte, v interface{}, path string) error {
 		if !strings.Contains(err.Error(), "unknown field") {
 			return err
 		}
-		fmt.Println(
+		fmt.Fprintln(
+			os.Stderr,
 			color.YellowString("WARNING: %s in %s", err, path),
 		)
 		// unknown field -> try lax decoder
