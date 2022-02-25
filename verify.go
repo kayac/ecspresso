@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -223,9 +224,10 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 				TargetGroupArns: []*string{lb.TargetGroupArn},
 			})
 			if err != nil && d.verifier.isAssumed {
-				fmt.Println(
+				fmt.Fprintln(
+					os.Stderr,
 					color.YellowString(
-						"WARNING: verifying the target group using the task execution role has been DEPRECATED and will be removed in the future. " +
+						"WARNING: verifying the target group using the task execution role has been DEPRECATED and will be removed in the future. "+
 							"Allow `elasticloadbalancing: DescribeTargetGroups` to the role that executes ecspresso."),
 				)
 				out, err = d.verifier.elbv2[1].DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
