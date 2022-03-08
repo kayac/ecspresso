@@ -61,16 +61,31 @@ func (d *App) listTasks(ctx context.Context, id *string, desiredStatuses ...stri
 	}
 
 	var tasks []*ecs.Task
-	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-	if err != nil {
-		return nil, err
+	var family string
+	if d.config.Service != "" {
+		sv, err := d.DescribeService(ctx)
+		if err != nil {
+			return nil, err
+		}
+		tdArn := sv.TaskDefinition
+		td, err := d.DescribeTaskDefinition(ctx, *tdArn)
+		if err != nil {
+			return nil, err
+		}
+		family = aws.StringValue(td.Family)
+	} else {
+		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+		if err != nil {
+			return nil, err
+		}
+		family = aws.StringValue(td.Family)
 	}
 	for _, desiredStatus := range desiredStatuses {
 		var nextToken *string
 		for {
 			out, err := d.ecs.ListTasks(&ecs.ListTasksInput{
 				Cluster:       &d.config.Cluster,
-				Family:        td.Family,
+				Family:        &family,
 				DesiredStatus: aws.String(desiredStatus),
 				NextToken:     nextToken,
 			})
