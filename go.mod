@@ -6,7 +6,7 @@ require (
 	github.com/Songmu/prompter v0.5.0
 	github.com/alecthomas/kingpin v1.3.8-0.20190930021037-0a108b7f5563
 	github.com/aws/aws-sdk-go v1.43.15
-	github.com/fatih/color v1.12.0
+	github.com/fatih/color v1.13.0
 	github.com/fujiwara/cfn-lookup v0.0.2
 	github.com/fujiwara/tfstate-lookup v0.4.2
 	github.com/fujiwara/tracer v0.0.4
@@ -17,7 +17,7 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/kayac/go-config v0.6.0
 	github.com/kylelemons/godebug v1.1.0
-	github.com/mattn/go-isatty v0.0.13
+	github.com/mattn/go-isatty v0.0.14
 	github.com/morikuni/aec v1.0.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/go-digest v1.0.0 // indirect
