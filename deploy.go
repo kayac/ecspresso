@@ -193,6 +193,8 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *ecs.Service, opt 
 		in.NetworkConfiguration = nil
 		in.PlatformVersion = nil
 		in.ForceNewDeployment = nil
+		in.LoadBalancers = nil
+		in.ServiceRegistries = nil
 	} else {
 		in.ForceNewDeployment = opt.ForceNewDeployment
 	}
