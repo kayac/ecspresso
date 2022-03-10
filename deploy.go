@@ -169,12 +169,16 @@ func svToUpdateServiceInput(sv *ecs.Service) *ecs.UpdateServiceInput {
 		CapacityProviderStrategy:      sv.CapacityProviderStrategy,
 		DeploymentConfiguration:       sv.DeploymentConfiguration,
 		DesiredCount:                  sv.DesiredCount,
+		EnableECSManagedTags:          sv.EnableECSManagedTags,
 		EnableExecuteCommand:          sv.EnableExecuteCommand,
 		HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
+		LoadBalancers:                 sv.LoadBalancers,
 		NetworkConfiguration:          sv.NetworkConfiguration,
 		PlacementConstraints:          sv.PlacementConstraints,
 		PlacementStrategy:             sv.PlacementStrategy,
 		PlatformVersion:               sv.PlatformVersion,
+		PropagateTags:                 sv.PropagateTags,
+		ServiceRegistries:             sv.ServiceRegistries,
 	}
 	if aws.StringValue(sv.SchedulingStrategy) == "DAEMON" {
 		in.PlacementConstraints = nil
