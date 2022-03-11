@@ -55,7 +55,7 @@ jobs:
         with:
           version: v1.6.0
       - run: |
-          ecspresso deploy --config config.yaml
+          ecspresso deploy --config ecspresso.yml
 ```
 
 Pass the parameter "latest" to use the latest version of ecspresso.
@@ -149,18 +149,18 @@ ecspresso can easily manage your existing/running ECS service by codes.
 Try `ecspresso init` for your ECS service with option `--region`, `--cluster` and `--service`.
 
 ```console
-$ ecspresso init --region ap-northeast-1 --cluster default --service myservice --config config.yaml
+$ ecspresso init --region ap-northeast-1 --cluster default --service myservice --config ecspresso.yml
 2019/10/12 01:31:48 myservice/default save service definition to ecs-service-def.json
 2019/10/12 01:31:48 myservice/default save task definition to ecs-task-def.json
-2019/10/12 01:31:48 myservice/default save config to config.yaml
+2019/10/12 01:31:48 myservice/default save config to ecspresso.yml
 ```
 
-Let me see the generated files config.yaml, ecs-service-def.json, and ecs-task-def.json.
+Let me see the generated files ecspresso.yml, ecs-service-def.json, and ecs-task-def.json.
 
 And then, you already can deploy the service by ecspresso!
 
 ```console
-$ ecspresso deploy --config config.yaml
+$ ecspresso deploy --config ecspresso.yml
 ```
 
 ## Configuration file
@@ -196,7 +196,7 @@ Configuration files and task/service definition files are read by [go-config](ht
 ### Rolling deployment
 
 ```console
-$ ecspresso deploy --config config.yaml
+$ ecspresso deploy --config ecspresso.yml
 2017/11/09 23:20:13 myService/default Starting deploy
 Service: myService
 Cluster: default
@@ -231,7 +231,7 @@ Currently, ecspresso doesn't create any resources on CodeDeploy. You must create
 `ecspresso deploy` creates a new deployment for CodeDeploy, and it continues on CodeDeploy.
 
 ```console
-$ ecspresso deploy --config config.yaml --rollback-events DEPLOYMENT_FAILURE
+$ ecspresso deploy --config ecspresso.yml --rollback-events DEPLOYMENT_FAILURE
 2019/10/15 22:47:07 myService/default Starting deploy
 Service: myService
 Cluster: default
@@ -268,7 +268,7 @@ appspec:
 To change a desired count of the service, specify `scale --tasks`.
 
 ```console
-$ ecspresso scale --config config.yaml --tasks 10
+$ ecspresso scale --config ecspresso.yml --tasks 10
 ```
 
 `scale` command is equivalent to `deploy --skip-task-definition --no-update-service`.
@@ -278,12 +278,12 @@ $ ecspresso scale --config config.yaml --tasks 10
 escpresso can create a service by `service_definition` JSON file and `task_definition`.
 
 ```console
-$ ecspresso create --config config.yaml
+$ ecspresso create --config ecspresso.yml
 ...
 ```
 
 ```yaml
-# config.yaml
+# ecspresso.yml
 service_definition: service.json
 ```
 
@@ -317,7 +317,7 @@ Keys are in the same format as `aws ecs describe-services` output.
 ## Example of run task
 
 ```console
-$ ecspresso run --config config.yaml --task-def=db-migrate.json
+$ ecspresso run --config ecspresso.yml --task-def=db-migrate.json
 ```
 
 When `--task-def` is not set, use a task definition included in a service.
@@ -432,7 +432,7 @@ ecspresso supports `diff` and `verify` subcommands.
 Shows differences between local task/service definitions and remote (on ECS) definitions.
 
 ```diff
-$ ecspresso --config config.yaml diff --unified
+$ ecspresso --config ecspresso.yml diff --unified
 --- arn:aws:ecs:ap-northeast-1:123456789012:service/ecspresso-test/nginx-local
 +++ ecs-service-def.json
 @@ -38,5 +38,5 @@
@@ -474,7 +474,7 @@ For example,
 ecspresso verify tries to assume the task execution role defined in task definitions to verify these items. If failed to assume the role, it continues to verify with the current sessions.
 
 ```console
-$ ecspresso --config config.yaml verify
+$ ecspresso --config ecspresso.yml verify
 2020/12/08 11:43:10 nginx-local/ecspresso-test Starting verify
   TaskDefinition
     ExecutionRole[arn:aws:iam::123456789012:role/ecsTaskRole]
@@ -510,7 +510,7 @@ Flags:
 
 When `--find` option is set, you can select a task in a list of tasks and show the task as JSON.
 
-`filter_command` in config.yaml can define a command to filter tasks. For example [peco](https://github.com/peco/peco), [fzf](https://github.com/junegunn/fzf) and etc.
+`filter_command` in ecspresso.yml can define a command to filter tasks. For example [peco](https://github.com/peco/peco), [fzf](https://github.com/junegunn/fzf) and etc.
 
 ```yaml
 filter_command: peco
@@ -533,7 +533,7 @@ Flags:
 
 If `--id` is not set, the command shows a list of tasks to select a task to execute.
 
-`filter_command` in config.yaml works the same as tasks command.
+`filter_command` in ecspresso.yml works the same as tasks command.
 
 See also the official document [Using Amazon ECS Exec for debugging](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html).
 
@@ -565,7 +565,7 @@ When you want to change the suspended state simply, try `ecspresso scale --suspe
 
 tfstate plugin introduces a template function `tfstate`.
 
-config.yaml
+ecspresso.yml
 ```yaml
 region: ap-northeast-1
 cluster: default
@@ -624,7 +624,7 @@ Outputs:
 
 Load cloudformation plugin in a config file.
 
-config.yaml
+ecspresso.yml
 ```yaml
 # ...
 plugins:
