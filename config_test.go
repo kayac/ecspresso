@@ -43,7 +43,7 @@ func TestLoadConfigWithPluginAbsPath(t *testing.T) {
 }
 
 func TestLoadConfigWithPlugin(t *testing.T) {
-	testLoadConfigWithPlugin(t, "tests/config.yaml")
+	testLoadConfigWithPlugin(t, "tests/ecspresso.yml")
 }
 
 func testLoadConfigWithPlugin(t *testing.T, path string) {
