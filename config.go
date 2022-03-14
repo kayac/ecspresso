@@ -30,7 +30,7 @@ type Config struct {
 	ServiceDefinitionPath string           `yaml:"service_definition"`
 	TaskDefinitionPath    string           `yaml:"task_definition"`
 	Timeout               time.Duration    `yaml:"timeout"`
-	Plugins               ConfigPlugins    `yaml:"plugins,omitempty"`
+	Plugins               []ConfigPlugin   `yaml:"plugins,omitempty"`
 	AppSpec               *appspec.AppSpec `yaml:"appspec,omitempty"`
 	FilterCommand         string           `yaml:"filter_command,omitempty"`
 
@@ -79,7 +79,12 @@ func (c *Config) Restrict() error {
 }
 
 func (c *Config) setupPlugins() error {
-	return c.Plugins.Setup(c)
+	for _, p := range c.Plugins {
+		if err := p.Setup(c); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ValidateVersion validates a version satisfies required_version.

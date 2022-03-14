@@ -3,50 +3,13 @@ package ecspresso
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 
-	"github.com/fatih/color"
 	"github.com/fujiwara/cfn-lookup/cfn"
 	"github.com/fujiwara/tfstate-lookup/tfstate"
 )
-
-type ConfigPlugins []ConfigPlugin
-
-func (ps ConfigPlugins) Setup(c *Config) error {
-	ps.check()
-	for _, p := range ps {
-		if err := p.Setup(c); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (ps ConfigPlugins) check() {
-	indexesByID := make(map[string][]int, len(ps))
-	for i, p := range ps {
-		id := strings.Join([]string{
-			strings.ToLower(p.FuncPrefix),
-			strings.ToLower(p.Name),
-		}, ";")
-		indexesByID[id] = append(indexesByID[id], i)
-	}
-	for _, indexes := range indexesByID {
-		if len(indexes) > 1 {
-			i := indexes[0]
-			fmt.Fprintln(
-				os.Stderr,
-				color.YellowString(
-					"WARNING: plugin `%s` in %v are duplicates. Please specify `func_prefix` to avoid duplication.",
-					ps[i].Name, indexes,
-				),
-			)
-		}
-	}
-}
 
 type ConfigPlugin struct {
 	Name       string                 `yaml:"name"`
@@ -65,12 +28,19 @@ func (p ConfigPlugin) Setup(c *Config) error {
 	}
 }
 
-func (p ConfigPlugin) ModifyFuncMap(funcMap template.FuncMap) template.FuncMap {
+func (p ConfigPlugin) AppendFuncMap(c *Config, funcMap template.FuncMap) error {
 	modified := make(template.FuncMap, len(funcMap))
 	for funcName, f := range funcMap {
-		modified[strings.ToLower(p.FuncPrefix)+funcName] = f
+		name := p.FuncPrefix + funcName
+		for _, appendedFuncs := range c.templateFuncs {
+			if _, exists := appendedFuncs[name]; exists {
+				return fmt.Errorf("template function %s already exists. set func_prefix to %s plugin", name, p.Name)
+			}
+		}
+		modified[name] = f
 	}
-	return modified
+	c.templateFuncs = append(c.templateFuncs, modified)
+	return nil
 }
 
 func setupPluginTFState(p ConfigPlugin, c *Config) error {
@@ -97,9 +67,7 @@ func setupPluginTFState(p ConfigPlugin, c *Config) error {
 	if err != nil {
 		return err
 	}
-	funcs = p.ModifyFuncMap(funcs)
-	c.templateFuncs = append(c.templateFuncs, funcs)
-	return nil
+	return p.AppendFuncMap(c, funcs)
 }
 
 func setupPluginCFn(p ConfigPlugin, c *Config) error {
@@ -107,7 +75,5 @@ func setupPluginCFn(p ConfigPlugin, c *Config) error {
 	if err != nil {
 		return err
 	}
-	funcs = p.ModifyFuncMap(funcs)
-	c.templateFuncs = append(c.templateFuncs, funcs)
-	return nil
+	return p.AppendFuncMap(c, funcs)
 }
