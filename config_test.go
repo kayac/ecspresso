@@ -42,6 +42,10 @@ func TestLoadConfigWithPluginAbsPath(t *testing.T) {
 	testLoadConfigWithPlugin(t, "tests/config_abs.yaml")
 }
 
+func TestLoadConfigWithPluginMultiple(t *testing.T) {
+	testLoadConfigWithPlugin(t, "tests/config_multiple_plugins.yaml")
+}
+
 func TestLoadConfigWithPlugin(t *testing.T) {
 	testLoadConfigWithPlugin(t, "tests/ecspresso.yml")
 }
