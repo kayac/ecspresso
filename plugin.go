@@ -10,6 +10,17 @@ import (
 	"github.com/fujiwara/tfstate-lookup/tfstate"
 )
 
+type ConfigPlugins []ConfigPlugin
+
+func (ps ConfigPlugins) Setup(c *Config) error {
+	for _, p := range ps {
+		if err := p.Setup(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type ConfigPlugin struct {
 	Name   string                 `yaml:"name"`
 	Config map[string]interface{} `yaml:"config"`
