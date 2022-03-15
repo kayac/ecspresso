@@ -1,0 +1,14 @@
+region: ap-northeast-1
+cluster: default
+service: test
+service_definition: '{{ must_env "PWD" }}/tests/ecs-service-def.json'
+task_definition: '{{ must_env "PWD" }}/tests/ecs-task-def-multiple-plugins.json'
+timeout: 10m0s
+plugins:
+  - name: tfstate
+    config:
+      path: '{{ must_env "PWD" }}/tests/bucket.tfstate'
+    func_prefix: bucket_
+  - name: tfstate
+    config:
+      path: '{{ must_env "PWD" }}/tests/terraform.tfstate'
