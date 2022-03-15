@@ -42,8 +42,35 @@ func TestLoadConfigWithPluginAbsPath(t *testing.T) {
 	testLoadConfigWithPlugin(t, "tests/config_abs.yaml")
 }
 
+func TestLoadConfigWithPluginMultiple(t *testing.T) {
+	testLoadConfigWithPlugin(t, "tests/config_multiple_plugins.yaml")
+}
+
+func TestLoadConfigWithPluginDuplicate(t *testing.T) {
+	os.Setenv("TAG", "testing")
+	os.Setenv("JSON", `{"foo":"bar"}`)
+
+	conf := &ecspresso.Config{}
+	err := conf.Load("tests/config_duplicate_plugins.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = ecspresso.NewApp(conf)
+	if err == nil {
+		t.Log("expected an error to occur, but it didn't.")
+		t.FailNow()
+	}
+	expectedEnds := "already exists. set func_prefix to tfstate plugin"
+	if !strings.HasSuffix(err.Error(), expectedEnds) {
+		t.Log("unexpected error message")
+		t.Log("expected ends:", expectedEnds)
+		t.Log("actual:  ", err.Error())
+		t.FailNow()
+	}
+}
+
 func TestLoadConfigWithPlugin(t *testing.T) {
-	testLoadConfigWithPlugin(t, "tests/config.yaml")
+	testLoadConfigWithPlugin(t, "tests/ecspresso.yml")
 }
 
 func testLoadConfigWithPlugin(t *testing.T, path string) {

@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/fujiwara/cfn-lookup/cfn"
 	"github.com/fujiwara/tfstate-lookup/tfstate"
 )
 
 type ConfigPlugin struct {
-	Name   string                 `yaml:"name"`
-	Config map[string]interface{} `yaml:"config"`
+	Name       string                 `yaml:"name"`
+	Config     map[string]interface{} `yaml:"config"`
+	FuncPrefix string                 `yaml:"func_prefix"`
 }
 
 func (p ConfigPlugin) Setup(c *Config) error {
@@ -24,6 +26,21 @@ func (p ConfigPlugin) Setup(c *Config) error {
 	default:
 		return fmt.Errorf("plugin %s is not available", p.Name)
 	}
+}
+
+func (p ConfigPlugin) AppendFuncMap(c *Config, funcMap template.FuncMap) error {
+	modified := make(template.FuncMap, len(funcMap))
+	for funcName, f := range funcMap {
+		name := p.FuncPrefix + funcName
+		for _, appendedFuncs := range c.templateFuncs {
+			if _, exists := appendedFuncs[name]; exists {
+				return fmt.Errorf("template function %s already exists. set func_prefix to %s plugin", name, p.Name)
+			}
+		}
+		modified[name] = f
+	}
+	c.templateFuncs = append(c.templateFuncs, modified)
+	return nil
 }
 
 func setupPluginTFState(p ConfigPlugin, c *Config) error {
@@ -50,8 +67,7 @@ func setupPluginTFState(p ConfigPlugin, c *Config) error {
 	if err != nil {
 		return err
 	}
-	c.templateFuncs = append(c.templateFuncs, funcs)
-	return nil
+	return p.AppendFuncMap(c, funcs)
 }
 
 func setupPluginCFn(p ConfigPlugin, c *Config) error {
@@ -59,6 +75,5 @@ func setupPluginCFn(p ConfigPlugin, c *Config) error {
 	if err != nil {
 		return err
 	}
-	c.templateFuncs = append(c.templateFuncs, funcs)
-	return nil
+	return p.AppendFuncMap(c, funcs)
 }

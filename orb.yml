@@ -48,4 +48,4 @@ examples:
             - ecspresso/install
             - run:
                 command: |
-                  ecspresso deploy --config config.yaml
+                  ecspresso deploy --config ecspresso.yml
