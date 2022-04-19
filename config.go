@@ -23,16 +23,17 @@ const (
 
 // Config represents a configuration.
 type Config struct {
-	RequiredVersion       string           `yaml:"required_version,omitempty"`
-	Region                string           `yaml:"region"`
-	Cluster               string           `yaml:"cluster"`
-	Service               string           `yaml:"service"`
-	ServiceDefinitionPath string           `yaml:"service_definition"`
-	TaskDefinitionPath    string           `yaml:"task_definition"`
-	Timeout               time.Duration    `yaml:"timeout"`
-	Plugins               []ConfigPlugin   `yaml:"plugins,omitempty"`
-	AppSpec               *appspec.AppSpec `yaml:"appspec,omitempty"`
-	FilterCommand         string           `yaml:"filter_command,omitempty"`
+	RequiredVersion          string           `yaml:"required_version,omitempty"`
+	Region                   string           `yaml:"region"`
+	Cluster                  string           `yaml:"cluster"`
+	Service                  string           `yaml:"service"`
+	ServiceDefinitionPath    string           `yaml:"service_definition"`
+	TaskDefinitionPath       string           `yaml:"task_definition"`
+	DeploymentDefinitionPath string           `yaml:"deployment_definition"`
+	Timeout                  time.Duration    `yaml:"timeout"`
+	Plugins                  []ConfigPlugin   `yaml:"plugins,omitempty"`
+	AppSpec                  *appspec.AppSpec `yaml:"appspec,omitempty"`
+	FilterCommand            string           `yaml:"filter_command,omitempty"`
 
 	templateFuncs      []template.FuncMap
 	dir                string
@@ -62,6 +63,10 @@ func (c *Config) Restrict() error {
 	}
 	if c.TaskDefinitionPath != "" && !filepath.IsAbs(c.TaskDefinitionPath) {
 		c.TaskDefinitionPath = filepath.Join(c.dir, c.TaskDefinitionPath)
+	}
+
+	if c.DeploymentDefinitionPath != "" && !filepath.IsAbs(c.DeploymentDefinitionPath) {
+		c.DeploymentDefinitionPath = filepath.Join(c.dir, c.DeploymentDefinitionPath)
 	}
 	if c.RequiredVersion != "" {
 		constraints, err := gv.NewConstraint(c.RequiredVersion)

@@ -39,6 +39,8 @@ type TaskDefinition = ecs.TaskDefinition
 
 type TaskDefinitionInput = ecs.RegisterTaskDefinitionInput
 
+type DeploymentDefinitionInput = codedeploy.CreateDeploymentInput
+
 func taskDefinitionName(t *TaskDefinition) string {
 	return fmt.Sprintf("%s:%d", *t.Family, *t.Revision)
 }
@@ -519,6 +521,28 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 	return &td, nil
 }
 
+func (d *App) LoadDeploymentDefinition(path string) (*DeploymentDefinitionInput, error) {
+	src, err := d.readDefinitionFile(path)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to load deployment definition %s", path)
+	}
+	c := struct {
+		DeploymentDefinition json.RawMessage `json:"deploymentDefinition"`
+	}{}
+	dec := json.NewDecoder(bytes.NewReader(src))
+	if err := dec.Decode(&c); err != nil {
+		return nil, errors.Wrapf(err, "failed to load deployment definition %s", path)
+	}
+	if c.DeploymentDefinition != nil {
+		src = c.DeploymentDefinition
+	}
+	var dd DeploymentDefinitionInput
+	if err := d.unmarshalJSON(src, &dd, path); err != nil {
+		return nil, err
+	}
+	return &dd, nil
+}
+
 func (d *App) unmarshalJSON(src []byte, v interface{}, path string) error {
 	strict := json.NewDecoder(bytes.NewReader(src))
 	strict.DisallowUnknownFields()
@@ -675,7 +699,9 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *ecs.Service, tdArn s
 
 	switch *dep.DeploymentInfo.Status {
 	case "Succeeded", "Failed", "Stopped":
-		return d.createDeployment(ctx, sv, tdArn, opt.RollbackEvents)
+		// Add default value
+		ddi := &DeploymentDefinitionInput{}
+		return d.createDeployment(ctx, sv, tdArn, ddi, opt.RollbackEvents)
 	default: // If the deployment is not yet complete
 		_, err = d.codedeploy.StopDeploymentWithContext(ctx, &codedeploy.StopDeploymentInput{
 			DeploymentId:        dpID,

@@ -247,6 +247,25 @@ Events:
 2019/10/15 22:47:09 myService/default https://ap-northeast-1.console.aws.amazon.com/codesuite/codedeploy/deployments/d-XXXXXXXXX?region=ap-northeast-1
 ```
 
+Generally, it works all right. But your environment rarely happend `Rate exceeded`.
+In this case, try below config.
+
+```yaml
+cluster: default
+service: test
+service_definition: ecs-service-def.json
+task_definition: ecs-task-def.json
+deployment_definition: ecs-deployment-def.json
+```
+
+```json5
+{
+  "applicationName": "test-app",
+  "deploymentConfigName": "CodeDeployDefault.ECSAllAtOnce",
+  "deploymentGroupName": "test-deployment-group"
+}
+```
+
 CodeDeploy appspec hooks can be defined in a config file. ecspresso creates `Resources` and `version` elements in appspec on deploy automatically.
 
 ```yaml
@@ -442,7 +461,7 @@ $ ecspresso --config ecspresso.yml diff --unified
 -  "platformVersion": "1.3.0"
 +  "platformVersion": "LATEST"
  }
- 
+
 --- arn:aws:ecs:ap-northeast-1:123456789012:task-definition/ecspresso-test:202
 +++ ecs-task-def.json
 @@ -1,6 +1,10 @@

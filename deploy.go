@@ -100,6 +100,15 @@ func (d *App) Deploy(opt DeployOption) error {
 		d.Log("desired count: unchanged")
 	}
 
+	var ddi *DeploymentDefinitionInput
+	if d.config.DeploymentDefinitionPath != "" {
+		var err error
+		ddi, err = d.LoadDeploymentDefinition(d.config.DeploymentDefinitionPath)
+		if err != nil {
+			return errors.Wrap(err, "failed to load deployment definition")
+		}
+	}
+
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
@@ -116,7 +125,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	if dc := sv.DeploymentController; dc != nil {
 		switch t := *dc.Type; t {
 		case "CODE_DEPLOY":
-			return d.DeployByCodeDeploy(ctx, tdArn, count, sv, opt)
+			return d.DeployByCodeDeploy(ctx, tdArn, count, sv, ddi, opt)
 		default:
 			return fmt.Errorf("could not deploy a service using deployment controller type %s", t)
 		}
@@ -216,7 +225,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *ecs.Service, opt 
 	return nil
 }
 
-func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int64, sv *ecs.Service, opt DeployOption) error {
+func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int64, sv *ecs.Service, ddi *DeploymentDefinitionInput, opt DeployOption) error {
 	if count != nil {
 		d.Log("updating desired count to", *count)
 	}
@@ -236,7 +245,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 		return nil
 	}
 
-	return d.createDeployment(ctx, sv, taskDefinitionArn, opt.RollbackEvents)
+	return d.createDeployment(ctx, sv, taskDefinitionArn, ddi, opt.RollbackEvents)
 }
 
 func (d *App) findDeploymentInfo() (*codedeploy.DeploymentInfo, error) {
@@ -311,7 +320,7 @@ func isCodeDeploy(dc *ecs.DeploymentController) bool {
 	return false
 }
 
-func (d *App) createDeployment(ctx context.Context, sv *ecs.Service, taskDefinitionArn string, rollbackEvents *string) error {
+func (d *App) createDeployment(ctx context.Context, sv *ecs.Service, taskDefinitionArn string, ddi *DeploymentDefinitionInput, rollbackEvents *string) error {
 
 	spec, err := appspec.NewWithService(sv, taskDefinitionArn)
 	if err != nil {
@@ -323,21 +332,37 @@ func (d *App) createDeployment(ctx context.Context, sv *ecs.Service, taskDefinit
 	d.DebugLog("appSpecContent:", spec.String())
 
 	// deployment
-	dp, err := d.findDeploymentInfo()
-	if err != nil {
-		return err
-	}
-	dd := &codedeploy.CreateDeploymentInput{
-		ApplicationName:      dp.ApplicationName,
-		DeploymentGroupName:  dp.DeploymentGroupName,
-		DeploymentConfigName: dp.DeploymentConfigName,
-		Revision: &codedeploy.RevisionLocation{
-			RevisionType: aws.String("AppSpecContent"),
-			AppSpecContent: &codedeploy.AppSpecContent{
-				Content: aws.String(spec.String()),
+	var dd *codedeploy.CreateDeploymentInput
+	if ddi == nil {
+		dp, err := d.findDeploymentInfo()
+		if err != nil {
+			return err
+		}
+		dd = &codedeploy.CreateDeploymentInput{
+			ApplicationName:      dp.ApplicationName,
+			DeploymentGroupName:  dp.DeploymentGroupName,
+			DeploymentConfigName: dp.DeploymentConfigName,
+			Revision: &codedeploy.RevisionLocation{
+				RevisionType: aws.String("AppSpecContent"),
+				AppSpecContent: &codedeploy.AppSpecContent{
+					Content: aws.String(spec.String()),
+				},
 			},
-		},
+		}
+	} else {
+		dd = &codedeploy.CreateDeploymentInput{
+			ApplicationName:      ddi.ApplicationName,
+			DeploymentGroupName:  ddi.DeploymentGroupName,
+			DeploymentConfigName: ddi.DeploymentConfigName,
+			Revision: &codedeploy.RevisionLocation{
+				RevisionType: aws.String("AppSpecContent"),
+				AppSpecContent: &codedeploy.AppSpecContent{
+					Content: aws.String(spec.String()),
+				},
+			},
+		}
 	}
+
 	if ev := aws.StringValue(rollbackEvents); ev != "" {
 		var events []*string
 		for _, ev := range strings.Split(ev, ",") {

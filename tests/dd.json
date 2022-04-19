@@ -1,0 +1,5 @@
+{
+    "applicationName": "ecs-test-app",
+    "deploymentConfigName": "CodeDeployDefault.ECSAllAtOnce",
+    "deploymentGroupName": "ecs-test-deployment-group"
+}

@@ -4,3 +4,4 @@ service: test
 cluster: default2
 service_definition: sv.json
 task_definition: td.json
+deployment_definition: dd.json

@@ -38,6 +38,30 @@ func TestLoadServiceDefinition(t *testing.T) {
 	}
 }
 
+func TestLoadDeploymentDefinition(t *testing.T) {
+	c := &ecspresso.Config{}
+	err := c.Load("tests/test.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+	app, err := ecspresso.NewApp(c)
+	if err != nil {
+		t.Error(err)
+	}
+	for _, ext := range []string{"", "net"} {
+		dd, err := app.LoadDeploymentDefinition(c.DeploymentDefinitionPath + ext)
+		if err != nil || dd == nil {
+			t.Errorf("%s load failed: %s", c.DeploymentDefinitionPath, err)
+		}
+
+		if *dd.ApplicationName != "ecs-test-app" ||
+			*dd.DeploymentConfigName != "CodeDeployDefault.ECSAllAtOnce" ||
+			*dd.DeploymentGroupName != "ecs-test-deployment-group" {
+			t.Errorf("unexpected deployment definition")
+		}
+	}
+}
+
 func TestLoadConfigWithPluginAbsPath(t *testing.T) {
 	testLoadConfigWithPlugin(t, "tests/config_abs.yaml")
 }
