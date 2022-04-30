@@ -337,7 +337,7 @@ service_definition: ecs-service-def.jsonnet
 task_definition: ecs-task-def.jsonnet
 ```
 
-ecspresso includes [github.com/google/go-jsonnet](go-jsonnet) as a library, we don't need the jsonnet command.
+ecspresso includes [github.com/google/go-jsonnet](https://github.com/google/go-jsonnet) as a library, we don't need the jsonnet command.
 
 `--ext-str` and `--ext-code` flag sets [Jsonnet External Variables](https://jsonnet.org/ref/stdlib.html#ext_vars).
 
