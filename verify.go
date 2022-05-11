@@ -66,7 +66,7 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 		_, err := v.secretsmanager.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{
 			SecretId: &secretArn,
 		})
-		return err
+		return errors.Wrapf(err, "failed to get secret value from %s secret id %s", from, secretArn)
 	}
 
 	// ssm
@@ -81,7 +81,7 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 		Name:           &name,
 		WithDecryption: aws.Bool(true),
 	})
-	return err
+	return errors.Wrapf(err, "failed to get ssm parameter %s", name)
 }
 
 func (d *App) newAssumedVerifier(sess *session.Session, executionRole *string, opt *VerifyOption) (*verifier, error) {
@@ -185,7 +185,7 @@ func (d *App) verifyCluster(ctx context.Context) error {
 		Clusters: aws.StringSlice([]string{cluster}),
 	})
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to describe cluster %s", cluster)
 	} else if len(out.Clusters) == 0 {
 		return errors.Errorf("cluster %s is not found", cluster)
 	} else {
@@ -489,7 +489,7 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *ecs.ContainerDefini
 		LogGroupName:  group,
 		LogStreamName: aws.String(stream),
 	}); err != nil {
-		return err
+		return errors.Wrapf(err, "failed to create log stream %s in %s", stream, *group)
 	}
 	if _, err := d.verifier.cwl.PutLogEventsWithContext(ctx, &cloudwatchlogs.PutLogEventsInput{
 		LogGroupName:  group,
@@ -501,7 +501,7 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *ecs.ContainerDefini
 			},
 		},
 	}); err != nil {
-		return err
+		return errors.Wrapf(err, "failed to put log events to %s stream %s", *group, stream)
 	}
 	return nil
 }
