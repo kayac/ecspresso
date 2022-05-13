@@ -181,7 +181,7 @@ func svToUpdateServiceInput(sv *ecs.Service) *ecs.UpdateServiceInput {
 		ServiceRegistries:             sv.ServiceRegistries,
 	}
 	if aws.StringValue(sv.SchedulingStrategy) == "DAEMON" {
-		in.PlacementConstraints = nil
+		in.PlacementStrategy = nil
 	}
 	return in
 }
