@@ -717,6 +717,8 @@ func (d *App) codeDeployProgressBar() error {
 	bar := progressbar.NewOptions(100,
 		progressbar.OptionSetDescription("Deployment Progress"),
 		progressbar.OptionSetWidth(20),
+		progressbar.OptionSetVisibility(true),
+		progressbar.OptionSetRenderBlankState(true),
 	)
 	
 	for ok := true; ok; ok = (*dep.EcsTarget.Status == "InProgress") {
