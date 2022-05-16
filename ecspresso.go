@@ -26,6 +26,7 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
 	"github.com/pkg/errors"
+	"github.com/schollz/progressbar/v3"
 )
 
 const DefaultDesiredCount = -1
@@ -634,6 +635,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *ecs.Service) error {
 	}
 	dpID := out.Deployments[0]
 	d.Log("Waiting for a deployment successful ID: " + *dpID)
+	go d.codeDeployProgressBar()
 	return d.codedeploy.WaitUntilDeploymentSuccessfulWithContext(
 		ctx,
 		&codedeploy.GetDeploymentInput{DeploymentId: dpID},
@@ -704,4 +706,60 @@ func (d *App) waiterOptions() []request.WaiterOption {
 		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
 		request.WithWaiterMaxAttempts(attempts),
 	}
+}
+
+func (d *App) codeDeployProgressBar() error {
+	dep, err := d.getCodeDeployDeploymentTarget()
+	if(err != nil) {
+		return err
+	}
+
+	bar := progressbar.NewOptions(100,
+		progressbar.OptionSetDescription("Deployment Progress"),
+		progressbar.OptionSetWidth(20),
+	)
+	
+	for ok := true; ok; ok = (*dep.EcsTarget.Status == "InProgress") {
+		for _, element := range dep.EcsTarget.TaskSetsInfo {
+			if(*element.Status == "ACTIVE") {
+				bar.Set(int(*element.TrafficWeight))
+			}
+		}
+
+		time.Sleep(10 * time.Second)
+
+		dep, err = d.getCodeDeployDeploymentTarget()
+		if(err != nil) {
+			return err
+		}
+	}
+	bar.Set(100)
+	return nil
+}
+
+func (d *App) getCodeDeployDeploymentTarget() (*codedeploy.DeploymentTarget, error) {
+	dp, err := d.findDeploymentInfo()
+	if(err != nil) {
+		return nil, err
+	}
+
+	ld, err := d.codedeploy.ListDeployments(&codedeploy.ListDeploymentsInput{
+		ApplicationName:     dp.ApplicationName,
+		DeploymentGroupName: dp.DeploymentGroupName,
+	})
+	if(err != nil) {
+		return nil, err
+	}
+
+	dpID := ld.Deployments[0]
+
+	dep, err := d.codedeploy.GetDeploymentTarget(&codedeploy.GetDeploymentTargetInput{
+		DeploymentId: dpID,
+		TargetId: aws.String(d.Cluster+":"+d.Service),
+	})
+	if(err != nil) {
+		return nil, err
+	}
+
+	return dep.DeploymentTarget, nil
 }
