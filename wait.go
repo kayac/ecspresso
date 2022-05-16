@@ -83,6 +83,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 				cdTypes.DeploymentStatusCreated,
 				cdTypes.DeploymentStatusQueued,
 				cdTypes.DeploymentStatusInProgress,
+				cdTypes.DeploymentStatusReady,
 			},
 		},
 	)
@@ -92,6 +93,9 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 	if len(out.Deployments) == 0 {
 		return ErrNotFound("no deployments found in progress")
 	}
+
+	go d.codeDeployProgressBar(ctx)
+
 	dpID := out.Deployments[0]
 	d.Log("Waiting for a deployment successful ID: " + dpID)
 	waiter := codedeploy.NewDeploymentSuccessfulWaiter(d.codedeploy)
