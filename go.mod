@@ -17,7 +17,7 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/kayac/go-config v0.6.0
 	github.com/kylelemons/godebug v1.1.0
-	github.com/mattn/go-isatty v0.0.13
+	github.com/mattn/go-isatty v0.0.14
 	github.com/morikuni/aec v1.0.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pkg/errors v0.9.1
