@@ -9,6 +9,8 @@ import (
 
 	"github.com/fujiwara/cfn-lookup/cfn"
 	"github.com/fujiwara/tfstate-lookup/tfstate"
+
+	"github.com/kayac/ecspresso/ssm"
 )
 
 type ConfigPlugin struct {
@@ -23,6 +25,8 @@ func (p ConfigPlugin) Setup(c *Config) error {
 		return setupPluginTFState(p, c)
 	case "cloudformation":
 		return setupPluginCFn(p, c)
+	case "ssm":
+		return setupPluginSSM(p, c)
 	default:
 		return fmt.Errorf("plugin %s is not available", p.Name)
 	}
@@ -72,6 +76,14 @@ func setupPluginTFState(p ConfigPlugin, c *Config) error {
 
 func setupPluginCFn(p ConfigPlugin, c *Config) error {
 	funcs, err := cfn.FuncMap(c.sess)
+	if err != nil {
+		return err
+	}
+	return p.AppendFuncMap(c, funcs)
+}
+
+func setupPluginSSM(p ConfigPlugin, c *Config) error {
+	funcs, err := ssm.FuncMap(c.sess)
 	if err != nil {
 		return err
 	}
