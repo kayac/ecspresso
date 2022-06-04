@@ -117,6 +117,8 @@ func (d *App) Deploy(opt DeployOption) error {
 		switch t := *dc.Type; t {
 		case "CODE_DEPLOY":
 			return d.DeployByCodeDeploy(ctx, tdArn, count, sv, opt)
+		case "ECS":
+			// fallthrough to "rolling deploy (ECS internal)"
 		default:
 			return fmt.Errorf("could not deploy a service using deployment controller type %s", t)
 		}
