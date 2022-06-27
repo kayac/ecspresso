@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
@@ -19,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -33,6 +35,7 @@ type verifier struct {
 	ssm            *ssm.SSM
 	secretsmanager *secretsmanager.SecretsManager
 	ecr            *ecr.ECR
+	s3             *s3.S3
 	opt            *VerifyOption
 	isAssumed      bool
 }
@@ -44,6 +47,7 @@ func newVerifier(execSess, appSess *session.Session, opt *VerifyOption) *verifie
 		ssm:            ssm.New(execSess),
 		secretsmanager: secretsmanager.New(execSess),
 		ecr:            ecr.New(execSess),
+		s3:             s3.New(execSess),
 		opt:            opt,
 		isAssumed:      execSess != appSess,
 	}
@@ -82,6 +86,29 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 		WithDecryption: aws.Bool(true),
 	})
 	return errors.Wrapf(err, "failed to get ssm parameter %s", name)
+}
+
+func (v *verifier) existsS3Value(ctx context.Context, s3ARN string) error {
+	a, err := arn.Parse(s3ARN)
+	if err != nil {
+		return errors.New("invalid arn format")
+	}
+	if a.Service != "s3" {
+		return errors.Errorf("arn %s is not s3 arn", s3ARN)
+	}
+
+	rs := strings.Split(a.Resource, "/")
+	bucket := rs[0]
+	key := strings.Join(rs[1:], "/")
+
+	_, err = v.s3.GetObjectWithContext(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to get s3 object from %s", s3ARN)
+	}
+	return nil
 }
 
 func (d *App) newAssumedVerifier(sess *session.Session, executionRole *string, opt *VerifyOption) (*verifier, error) {
@@ -382,6 +409,15 @@ func (d *App) verifyContainer(ctx context.Context, c *ecs.ContainerDefinition) e
 			return err
 		}
 	}
+	for _, envFile := range c.EnvironmentFiles {
+		name := fmt.Sprintf("EnvironmentFile [%s]", *envFile.Value)
+		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+			return d.verifyEnvironmentFile(ctx, envFile)
+		})
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -463,6 +499,21 @@ func (d *App) verifyRole(ctx context.Context, arn string) error {
 		}
 	}
 	return errors.Errorf("executionRole %s has not a valid policy document", roleName)
+}
+
+func (d *App) verifyEnvironmentFile(ctx context.Context, envFile *ecs.EnvironmentFile) error {
+	if envFile.Type == nil {
+		return errors.New("env file type is not defined")
+	}
+	t := aws.StringValue(envFile.Type)
+	if t != "s3" {
+		return errors.Errorf("env file type %s is not supported, only supported type is s3", t)
+	}
+	a := aws.StringValue(envFile.Value)
+	if envFile.Value == nil {
+		return errors.New("env file arn is not defined")
+	}
+	return d.verifier.existsS3Value(ctx, a)
 }
 
 type iamPolicyDocument struct {
