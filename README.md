@@ -144,7 +144,7 @@ For more options for sub-commands, See `ecspresso sub-command --help`.
 
 ## Quick Start
 
-Using ecspress, you can easily manage your existing/running ECS service by codes.
+Using ecspresso, you can easily manage your existing/running ECS service by codes.
 
 Try `ecspresso init` for your ECS service with option `--region`, `--cluster` and `--service`.
 
