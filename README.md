@@ -354,14 +354,14 @@ $ ecspresso --ext-str Foo=foo --ext-code "Bar=1+1" ...
 
 ## Deploy to Fargate
 
-When deploying to Fargate, there are some mandatory fields for task definitions and service definitions.
+When deploying to Fargate, there are some required fields for task definitions and service definitions.
 
 For task definitions,
 
 - requiresCompatibilities (must be "FARGATE")
 - networkMode (must be "awsvpc")
-- cpu (mandatory)
-- memory (mandatory)
+- cpu (required)
+- memory (required)
 - executionRoleArn (optional)
 
 ```json5
