@@ -27,7 +27,7 @@ func (d *App) Render(opt RenderOption) error {
 		if err != nil {
 			return err
 		}
-		b, err := MarshalJSON(sv)
+		b, _ := MarshalJSONForAPI(sv)
 		_, err = out.Write(b)
 		return err
 	}
@@ -37,7 +37,7 @@ func (d *App) Render(opt RenderOption) error {
 		if err != nil {
 			return err
 		}
-		b, err := MarshalJSON(td)
+		b, _ := MarshalJSONForAPI(td)
 		_, err = out.Write(b)
 		return err
 	}

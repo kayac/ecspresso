@@ -414,7 +414,7 @@ func NormalizePlatform(p *types.RuntimePlatform, isFargate bool) (arch, os strin
 	} else {
 		arch = "amd64"
 	}
-	if p.OperatingSystemFamily == types.OSFamilyLinux {
+	if p.OperatingSystemFamily == "" || p.OperatingSystemFamily == types.OSFamilyLinux {
 		os = "linux"
 	} else {
 		os = "windows"
@@ -463,6 +463,7 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition)
 
 func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefinition) error {
 	options := c.LogConfiguration.Options
+	d.Log(fmt.Sprintf("LogConfiguration[awslogs] options=%v", options))
 	group, region, prefix := options["awslogs-group"], options["awslogs-region"], options["awslogs-stream-prefix"]
 	if group == "" {
 		return errors.New("awslogs-group is required")

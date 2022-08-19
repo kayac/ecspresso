@@ -15,7 +15,12 @@ func MarshalJSONForAPI(v interface{}) ([]byte, error) {
 		return nil, err
 	}
 	walkMap(m, jsonKeyForAPI)
-	return json.MarshalIndent(m, "", "  ")
+	bs, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	bs = append(bs, '\n')
+	return bs, nil
 }
 
 func (d *App) UnmarshalJSONForStruct(src []byte, v interface{}, path string) error {
@@ -48,12 +53,18 @@ func jsonKeyForStruct(s string) string {
 func walkMap(m map[string]interface{}, fn func(string) string) {
 	for key, value := range m {
 		delete(m, key)
-		m[fn(key)] = value
+		if value != nil {
+			m[fn(key)] = value
+		}
 		switch value := value.(type) {
 		case map[string]interface{}:
 			walkMap(value, fn)
 		case []interface{}:
-			walkArray(value, fn)
+			if len(value) > 0 {
+				walkArray(value, fn)
+			} else {
+				delete(m, fn(key))
+			}
 		default:
 		}
 	}

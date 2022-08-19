@@ -21,7 +21,7 @@ func diffServices(local, remote *types.Service, remoteArn string, localPath stri
 	sortServiceDefinitionForDiff(local)
 	sortServiceDefinitionForDiff(remote)
 
-	newSvBytes, err := MarshalJSON(svToUpdateServiceInput(local))
+	newSvBytes, err := MarshalJSONForAPI(svToUpdateServiceInput(local))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal new service definition")
 	}
@@ -29,7 +29,7 @@ func diffServices(local, remote *types.Service, remoteArn string, localPath stri
 		// ignore DesiredCount when it in local is not defined.
 		remote.DesiredCount = 0
 	}
-	remoteSvBytes, err := MarshalJSON(svToUpdateServiceInput(remote))
+	remoteSvBytes, err := MarshalJSONForAPI(svToUpdateServiceInput(remote))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal remote service definition")
 	}
@@ -53,12 +53,12 @@ func diffTaskDefs(local, remote *TaskDefinitionInput, remoteArn string, localPat
 	sortTaskDefinitionForDiff(local)
 	sortTaskDefinitionForDiff(remote)
 
-	newTdBytes, err := MarshalJSON(local)
+	newTdBytes, err := MarshalJSONForAPI(local)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal new task definition")
 	}
 
-	remoteTdBytes, err := MarshalJSON(remote)
+	remoteTdBytes, err := MarshalJSONForAPI(remote)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal remote task definition")
 	}
