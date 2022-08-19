@@ -6,8 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 )
@@ -76,11 +77,11 @@ func (d *App) Revesions(opt RevisionsOption) error {
 		return errors.Wrap(err, "failed to load task definition")
 	}
 
-	if r := aws.Int64Value(opt.Revision); r > 0 {
-		name := fmt.Sprintf("%s:%d", aws.StringValue(td.Family), r)
-		res, err := d.ecs.DescribeTaskDefinitionWithContext(ctx, &ecs.DescribeTaskDefinitionInput{
+	if r := aws.ToInt64(opt.Revision); r > 0 {
+		name := fmt.Sprintf("%s:%d", aws.ToString(td.Family), r)
+		res, err := d.ecsv2.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
 			TaskDefinition: &name,
-			Include:        []*string{aws.String("TAGS")},
+			Include:        []types.TaskDefinitionField{types.TaskDefinitionFieldTags},
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to describe task definition")
@@ -96,7 +97,7 @@ func (d *App) Revesions(opt RevisionsOption) error {
 	revs := revisions{}
 	var nextToken *string
 	for {
-		res, err := d.ecs.ListTaskDefinitionsWithContext(ctx, &ecs.ListTaskDefinitionsInput{
+		res, err := d.ecsv2.ListTaskDefinitions(ctx, &ecs.ListTaskDefinitionsInput{
 			FamilyPrefix: td.Family,
 			NextToken:    nextToken,
 		})
@@ -104,7 +105,7 @@ func (d *App) Revesions(opt RevisionsOption) error {
 			return errors.Wrap(err, "failed to list task definitions")
 		}
 		for _, a := range res.TaskDefinitionArns {
-			name, err := taskDefinitionToName(*a)
+			name, err := taskDefinitionToName(a)
 			if err != nil {
 				continue
 			}
@@ -117,7 +118,7 @@ func (d *App) Revesions(opt RevisionsOption) error {
 			break
 		}
 	}
-	switch aws.StringValue(opt.Output) {
+	switch aws.ToString(opt.Output) {
 	case "json":
 		revs.OutputJSON(os.Stdout)
 	case "table":
