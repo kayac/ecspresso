@@ -4,8 +4,10 @@ import (
 	"context"
 	"time"
 
+	ecsv2 "github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	ecsv2Types "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/fujiwara/ecsta"
 	"github.com/pkg/errors"
 )
@@ -81,76 +83,38 @@ func (d *App) taskDefinitionFamily(ctx context.Context) (string, error) {
 	return family, nil
 }
 
-func (d *App) listTasks(ctx context.Context, id *string, desiredStatuses ...string) ([]*ecs.Task, error) {
-	if len(desiredStatuses) == 0 {
-		desiredStatuses = []string{"RUNNING", "STOPPED"}
+func (d *App) listTasks(ctx context.Context) ([]ecsv2Types.Task, error) {
+	tasks := []types.Task{}
+	family, err := d.taskDefinitionFamily(ctx)
+	if err != nil {
+		return nil, err
 	}
-	if aws.StringValue(id) != "" {
-		in := &ecs.DescribeTasksInput{
-			Cluster: aws.String(d.Cluster),
-			Tasks:   []*string{id},
-			Include: []*string{aws.String("TAGS")},
-		}
-		out, err := d.ecs.DescribeTasksWithContext(ctx, in)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to describe tasks")
-		}
-		if len(out.Tasks) == 0 && len(in.Tasks) != 0 {
-			return nil, errors.Errorf("task ID %s is not found", *id)
-		}
-		return out.Tasks, nil
-	}
-
-	var tasks []*ecs.Task
-	var family string
-	if d.config.Service != "" {
-		sv, err := d.DescribeService(ctx)
-		if err != nil {
-			return nil, err
-		}
-		tdArn := sv.TaskDefinition
-		td, err := d.DescribeTaskDefinition(ctx, *tdArn)
-		if err != nil {
-			return nil, err
-		}
-		family = aws.StringValue(td.Family)
-	} else {
-		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-		if err != nil {
-			return nil, err
-		}
-		family = aws.StringValue(td.Family)
-	}
-	for _, desiredStatus := range desiredStatuses {
-		var nextToken *string
-		for {
-			out, err := d.ecs.ListTasks(&ecs.ListTasksInput{
+	for _, status := range []ecsv2Types.DesiredStatus{ecsv2Types.DesiredStatusRunning, ecsv2Types.DesiredStatusStopped} {
+		tp := ecsv2.NewListTasksPaginator(
+			d.ecsv2,
+			&ecsv2.ListTasksInput{
 				Cluster:       &d.config.Cluster,
 				Family:        &family,
-				DesiredStatus: aws.String(desiredStatus),
-				NextToken:     nextToken,
+				DesiredStatus: status,
+			},
+		)
+		for tp.HasMorePages() {
+			to, err := tp.NextPage(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if len(to.TaskArns) == 0 {
+				continue
+			}
+			out, err := d.ecsv2.DescribeTasks(ctx, &ecsv2.DescribeTasksInput{
+				Cluster: &d.config.Cluster,
+				Tasks:   to.TaskArns,
+				Include: []types.TaskField{"TAGS"},
 			})
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to list tasks")
+				return nil, err
 			}
-			if len(out.TaskArns) == 0 {
-				break
-			}
-			in := &ecs.DescribeTasksInput{
-				Cluster: aws.String(d.Cluster),
-				Tasks:   out.TaskArns,
-				Include: []*string{aws.String("TAGS")},
-			}
-			taskOut, err := d.ecs.DescribeTasksWithContext(ctx, in)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to describe tasks")
-			}
-			for _, task := range taskOut.Tasks {
-				tasks = append(tasks, task)
-			}
-			if nextToken = out.NextToken; nextToken == nil {
-				break
-			}
+			tasks = append(tasks, out.Tasks...)
 		}
 	}
 	return tasks, nil

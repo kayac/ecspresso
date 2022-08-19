@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Songmu/prompter"
+	ecsv2 "github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -45,6 +46,7 @@ func taskDefinitionName(t *TaskDefinition) string {
 
 type App struct {
 	ecs         *ecs.ECS
+	ecsv2       *ecsv2.Client
 	autoScaling *applicationautoscaling.ApplicationAutoScaling
 	codedeploy  *codedeploy.CodeDeploy
 	cwl         *cloudwatchlogs.CloudWatchLogs
@@ -279,6 +281,7 @@ func NewApp(conf *Config) (*App, error) {
 		Service:     conf.Service,
 		Cluster:     conf.Cluster,
 		ecs:         ecs.New(sess),
+		ecsv2:       ecsv2.NewFromConfig(conf.awsv2Config),
 		autoScaling: applicationautoscaling.New(sess),
 		codedeploy:  codedeploy.New(sess),
 		cwl:         cloudwatchlogs.New(sess),

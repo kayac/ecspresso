@@ -150,7 +150,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 
 func (d *App) inUseRevisions(ctx context.Context) (map[string]string, error) {
 	inUse := make(map[string]string)
-	tasks, err := d.listTasks(ctx, nil)
+	tasks, err := d.listTasks(ctx)
 	if err != nil {
 		return nil, err
 	}
