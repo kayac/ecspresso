@@ -3,8 +3,8 @@ package ecspresso_test
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/kayac/ecspresso"
 )
 
@@ -42,11 +42,11 @@ func TestToNumberMemory(t *testing.T) {
 var testTaskDefinition1 = &ecspresso.TaskDefinitionInput{
 	Cpu:    aws.String("0.25 vCPU"),
 	Memory: aws.String("1 GB"),
-	ContainerDefinitions: []*ecs.ContainerDefinition{
+	ContainerDefinitions: []types.ContainerDefinition{
 		{
 			Name:  aws.String("app"),
 			Image: aws.String("debian:buster"),
-			Environment: []*ecs.KeyValuePair{
+			Environment: []types.KeyValuePair{
 				{
 					Name:  aws.String("TZ"),
 					Value: aws.String("UTC"),
@@ -58,14 +58,14 @@ var testTaskDefinition1 = &ecspresso.TaskDefinitionInput{
 			},
 		},
 		{
-			Cpu:   aws.Int64(0),
+			Cpu:   0,
 			Name:  aws.String("web"),
 			Image: aws.String("nginx:latest"),
 		},
 	},
-	ProxyConfiguration: &ecs.ProxyConfiguration{
+	ProxyConfiguration: &types.ProxyConfiguration{
 		ContainerName: aws.String("envoy"),
-		Properties: []*ecs.KeyValuePair{
+		Properties: []types.KeyValuePair{
 			{
 				Name:  aws.String("ProxyIngressPort"),
 				Value: aws.String("15000"),
@@ -76,7 +76,7 @@ var testTaskDefinition1 = &ecspresso.TaskDefinitionInput{
 			},
 		},
 	},
-	Tags: []*ecs.Tag{
+	Tags: []types.Tag{
 		{
 			Key:   aws.String("AppVersion"),
 			Value: aws.String("v1"),
@@ -90,7 +90,7 @@ var testTaskDefinition1 = &ecspresso.TaskDefinitionInput{
 var testTaskDefinition2 = &ecspresso.TaskDefinitionInput{
 	Cpu:    aws.String("256"),
 	Memory: aws.String("1024"),
-	ContainerDefinitions: []*ecs.ContainerDefinition{
+	ContainerDefinitions: []types.ContainerDefinition{
 		{
 			Name:  aws.String("web"),
 			Image: aws.String("nginx:latest"),
@@ -98,7 +98,7 @@ var testTaskDefinition2 = &ecspresso.TaskDefinitionInput{
 		{
 			Name:  aws.String("app"),
 			Image: aws.String("debian:buster"),
-			Environment: []*ecs.KeyValuePair{
+			Environment: []types.KeyValuePair{
 				{
 					Name:  aws.String("LANG"),
 					Value: aws.String("en_US"),
@@ -110,10 +110,10 @@ var testTaskDefinition2 = &ecspresso.TaskDefinitionInput{
 			},
 		},
 	},
-	Volumes: []*ecs.Volume{},
-	ProxyConfiguration: &ecs.ProxyConfiguration{
+	Volumes: []types.Volume{},
+	ProxyConfiguration: &types.ProxyConfiguration{
 		ContainerName: aws.String("envoy"),
-		Properties: []*ecs.KeyValuePair{
+		Properties: []types.KeyValuePair{
 			{
 				Name:  aws.String("ProxyEgressPort"),
 				Value: aws.String("15001"),
@@ -124,7 +124,7 @@ var testTaskDefinition2 = &ecspresso.TaskDefinitionInput{
 			},
 		},
 	},
-	Tags: []*ecs.Tag{
+	Tags: []types.Tag{
 		{
 			Key:   aws.String("Environment"),
 			Value: aws.String("Dev"),
@@ -140,46 +140,46 @@ func TestTaskDefinitionDiffer(t *testing.T) {
 	ecspresso.SortTaskDefinitionForDiff(testTaskDefinition2)
 	if ecspresso.MarshalJSONString(testTaskDefinition1) != ecspresso.MarshalJSONString(testTaskDefinition2) {
 		t.Error("failed to sortTaskDefinitionForDiff")
-		t.Log(testTaskDefinition1.String())
-		t.Log(testTaskDefinition2.String())
+		t.Log(testTaskDefinition1)
+		t.Log(testTaskDefinition2)
 	}
 }
 
-var testServiceDefinition1 = &ecs.Service{
-	LaunchType: aws.String("FARGATE"),
-	NetworkConfiguration: &ecs.NetworkConfiguration{
-		AwsvpcConfiguration: &ecs.AwsVpcConfiguration{
-			Subnets: []*string{
-				aws.String("subnet-876543210"),
-				aws.String("subnet-012345678"),
+var testServiceDefinition1 = &types.Service{
+	LaunchType: types.LaunchTypeFargate,
+	NetworkConfiguration: &types.NetworkConfiguration{
+		AwsvpcConfiguration: &types.AwsVpcConfiguration{
+			Subnets: []string{
+				"subnet-876543210",
+				"subnet-012345678",
 			},
-			SecurityGroups: []*string{
-				aws.String("sg-99999999"),
-				aws.String("sg-11111111"),
+			SecurityGroups: []string{
+				"sg-99999999",
+				"sg-11111111",
 			},
 		},
 	},
 }
 
-var testServiceDefinition2 = &ecs.Service{
-	DeploymentConfiguration: &ecs.DeploymentConfiguration{
-		MaximumPercent:        aws.Int64(200),
-		MinimumHealthyPercent: aws.Int64(100),
+var testServiceDefinition2 = &types.Service{
+	DeploymentConfiguration: &types.DeploymentConfiguration{
+		MaximumPercent:        aws.Int32(200),
+		MinimumHealthyPercent: aws.Int32(100),
 	},
-	NetworkConfiguration: &ecs.NetworkConfiguration{
-		AwsvpcConfiguration: &ecs.AwsVpcConfiguration{
-			Subnets: []*string{
-				aws.String("subnet-012345678"),
-				aws.String("subnet-876543210"),
+	NetworkConfiguration: &types.NetworkConfiguration{
+		AwsvpcConfiguration: &types.AwsVpcConfiguration{
+			Subnets: []string{
+				"subnet-012345678",
+				"subnet-876543210",
 			},
-			SecurityGroups: []*string{
-				aws.String("sg-11111111"),
-				aws.String("sg-99999999"),
+			SecurityGroups: []string{
+				"sg-11111111",
+				"sg-99999999",
 			},
-			AssignPublicIp: aws.String("DISABLED"),
+			AssignPublicIp: types.AssignPublicIpDisabled,
 		},
 	},
-	LaunchType:      aws.String("FARGATE"),
+	LaunchType:      types.LaunchTypeFargate,
 	PlatformVersion: aws.String("LATEST"),
 }
 
@@ -188,7 +188,7 @@ func TestServiceDefinitionDiffer(t *testing.T) {
 	ecspresso.SortServiceDefinitionForDiff(testServiceDefinition2)
 	if ecspresso.MarshalJSONString(testServiceDefinition1) != ecspresso.MarshalJSONString(testServiceDefinition2) {
 		t.Error("failed to SortTaskDefinitionForDiff")
-		t.Log(testServiceDefinition1.String())
-		t.Log(testServiceDefinition2.String())
+		t.Log(testServiceDefinition1)
+		t.Log(testServiceDefinition2)
 	}
 }

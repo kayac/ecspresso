@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/kayac/ecspresso"
 )
 
@@ -37,7 +36,7 @@ func TestLoadTaskDefinition(t *testing.T) {
 		if err != nil || td == nil {
 			t.Errorf("%s load failed: %s", path, err)
 		}
-		if s := aws.Int64Value(td.EphemeralStorage.SizeInGiB); s != 25 {
+		if s := td.EphemeralStorage.SizeInGiB; s != 25 {
 			t.Errorf("EphemeralStorage.SizeInGiB expected %d got %d", 25, s)
 		}
 	}

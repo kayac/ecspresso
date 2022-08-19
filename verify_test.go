@@ -3,8 +3,7 @@ package ecspresso_test
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/kayac/ecspresso"
 )
 
@@ -61,7 +60,7 @@ type goPlatform struct {
 }
 
 var testRuntimePlatforms = []struct {
-	platform  *ecs.RuntimePlatform
+	platform  types.RuntimePlatform
 	isFargate bool
 	want      goPlatform
 }{
@@ -73,8 +72,8 @@ var testRuntimePlatforms = []struct {
 		},
 	},
 	{
-		platform: &ecs.RuntimePlatform{
-			CpuArchitecture: aws.String(ecs.CPUArchitectureArm64),
+		platform: types.RuntimePlatform{
+			CpuArchitecture: types.CPUArchitectureArm64,
 		},
 		isFargate: true,
 		want: goPlatform{
@@ -83,8 +82,8 @@ var testRuntimePlatforms = []struct {
 		},
 	},
 	{
-		platform: &ecs.RuntimePlatform{
-			OperatingSystemFamily: aws.String(ecs.OSFamilyWindowsServer2019Core),
+		platform: types.RuntimePlatform{
+			OperatingSystemFamily: types.OSFamilyWindowsServer2019Core,
 		},
 		isFargate: true,
 		want: goPlatform{
@@ -93,8 +92,8 @@ var testRuntimePlatforms = []struct {
 		},
 	},
 	{
-		platform: &ecs.RuntimePlatform{
-			CpuArchitecture: aws.String(ecs.CPUArchitectureX8664),
+		platform: types.RuntimePlatform{
+			CpuArchitecture: types.CPUArchitectureX8664,
 		},
 		isFargate: false,
 		want: goPlatform{
@@ -103,8 +102,8 @@ var testRuntimePlatforms = []struct {
 		},
 	},
 	{
-		platform: &ecs.RuntimePlatform{
-			OperatingSystemFamily: aws.String(ecs.OSFamilyWindowsServer2019Core),
+		platform: types.RuntimePlatform{
+			OperatingSystemFamily: types.OSFamilyWindowsServer2019Core,
 		},
 		isFargate: false,
 		want: goPlatform{
@@ -116,7 +115,7 @@ var testRuntimePlatforms = []struct {
 
 func TestNormalizePlatform(t *testing.T) {
 	for _, p := range testRuntimePlatforms {
-		arch, os := ecspresso.NormalizePlatform(p.platform, p.isFargate)
+		arch, os := ecspresso.NormalizePlatform(&p.platform, p.isFargate)
 		if arch != p.want.arch || os != p.want.os {
 			t.Errorf("want arch/os %s/%s but got %s/%s", p.want.arch, p.want.os, arch, os)
 		}

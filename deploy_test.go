@@ -3,51 +3,51 @@ package ecspresso_test
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/kayac/ecspresso"
 )
 
 type desiredCountTestCase struct {
-	sv       *ecs.Service
+	sv       *types.Service
 	opt      ecspresso.DeployOption
-	expected *int64
+	expected *int32
 }
 
 var desiredCountTestSuite = []desiredCountTestCase{
 	{
-		sv:       &ecs.Service{DesiredCount: nil},
+		sv:       &types.Service{DesiredCount: 0},
 		opt:      ecspresso.DeployOption{DesiredCount: nil},
 		expected: nil,
 	},
 	{
-		sv:       &ecs.Service{DesiredCount: nil, SchedulingStrategy: aws.String("DAEMON")},
-		opt:      ecspresso.DeployOption{DesiredCount: aws.Int64(10)},
+		sv:       &types.Service{DesiredCount: 0, SchedulingStrategy: types.SchedulingStrategyDaemon},
+		opt:      ecspresso.DeployOption{DesiredCount: aws.Int32(10)},
 		expected: nil,
 	},
 	{
-		sv:       &ecs.Service{DesiredCount: aws.Int64(2)},
+		sv:       &types.Service{DesiredCount: 2},
 		opt:      ecspresso.DeployOption{DesiredCount: nil},
 		expected: nil,
 	},
 	{
-		sv:       &ecs.Service{DesiredCount: aws.Int64(1)},
-		opt:      ecspresso.DeployOption{DesiredCount: aws.Int64(3)},
-		expected: aws.Int64(3),
+		sv:       &types.Service{DesiredCount: 1},
+		opt:      ecspresso.DeployOption{DesiredCount: aws.Int32(3)},
+		expected: aws.Int32(3),
 	},
 	{
-		sv:       &ecs.Service{DesiredCount: aws.Int64(1)},
-		opt:      ecspresso.DeployOption{DesiredCount: aws.Int64(ecspresso.DefaultDesiredCount)},
-		expected: aws.Int64(1),
+		sv:       &types.Service{DesiredCount: 1},
+		opt:      ecspresso.DeployOption{DesiredCount: aws.Int32(ecspresso.DefaultDesiredCount)},
+		expected: aws.Int32(1),
 	},
 	{
-		sv:       &ecs.Service{DesiredCount: nil},
-		opt:      ecspresso.DeployOption{DesiredCount: aws.Int64(5)},
-		expected: aws.Int64(5),
+		sv:       &types.Service{DesiredCount: 0},
+		opt:      ecspresso.DeployOption{DesiredCount: aws.Int32(5)},
+		expected: aws.Int32(5),
 	},
 	{
-		sv:       &ecs.Service{DesiredCount: nil},
-		opt:      ecspresso.DeployOption{DesiredCount: aws.Int64(ecspresso.DefaultDesiredCount)},
+		sv:       &types.Service{DesiredCount: 0},
+		opt:      ecspresso.DeployOption{DesiredCount: aws.Int32(ecspresso.DefaultDesiredCount)},
 		expected: nil,
 	},
 }

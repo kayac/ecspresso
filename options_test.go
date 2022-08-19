@@ -3,34 +3,35 @@ package ecspresso_test
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kayac/ecspresso"
 )
 
 type tagsTestSuite struct {
 	src  string
-	tags []*ecs.Tag
+	tags []types.Tag
 	ok   bool
 }
 
 var tagsTestSuites = []tagsTestSuite{
 	{
 		src:  "",
-		tags: []*ecs.Tag{},
+		tags: []types.Tag{},
 		ok:   true,
 	},
 	{
 		src: "Foo=FOO",
-		tags: []*ecs.Tag{
+		tags: []types.Tag{
 			{Key: aws.String("Foo"), Value: aws.String("FOO")},
 		},
 		ok: true,
 	},
 	{
 		src: "Foo=FOO,Bar=BAR",
-		tags: []*ecs.Tag{
+		tags: []types.Tag{
 			{Key: aws.String("Foo"), Value: aws.String("FOO")},
 			{Key: aws.String("Bar"), Value: aws.String("BAR")},
 		},
@@ -38,7 +39,7 @@ var tagsTestSuites = []tagsTestSuite{
 	},
 	{
 		src: "Foo=,Bar=",
-		tags: []*ecs.Tag{
+		tags: []types.Tag{
 			{Key: aws.String("Foo"), Value: aws.String("")},
 			{Key: aws.String("Bar"), Value: aws.String("")},
 		},
@@ -46,7 +47,7 @@ var tagsTestSuites = []tagsTestSuite{
 	},
 	{
 		src: "Foo=FOO,Bar=BAR,Baz=BAZ,",
-		tags: []*ecs.Tag{
+		tags: []types.Tag{
 			{Key: aws.String("Foo"), Value: aws.String("FOO")},
 			{Key: aws.String("Bar"), Value: aws.String("BAR")},
 			{Key: aws.String("Baz"), Value: aws.String("BAZ")},
@@ -66,7 +67,8 @@ func TestParseTags(t *testing.T) {
 				t.Error(err)
 				continue
 			}
-			if d := cmp.Diff(tags, ts.tags); d != "" {
+			opt := cmpopts.IgnoreUnexported(types.Tag{})
+			if d := cmp.Diff(tags, ts.tags, opt); d != "" {
 				t.Error(d)
 			}
 		} else {

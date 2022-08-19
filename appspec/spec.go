@@ -3,8 +3,8 @@ package appspec
 import (
 	"errors"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"gopkg.in/yaml.v2"
 )
 
@@ -30,7 +30,7 @@ func (a *AppSpec) String() string {
 	return string(b)
 }
 
-func NewWithService(sv *ecs.Service, tdArn string) (*AppSpec, error) {
+func NewWithService(sv *types.Service, tdArn string) (*AppSpec, error) {
 	if len(sv.LoadBalancers) == 0 {
 		return nil, errors.New("require LoadBalancers")
 	}
@@ -90,7 +90,7 @@ type Properties struct {
 
 type LoadBalancerInfo struct {
 	ContainerName *string `yaml:"ContainerName"`
-	ContainerPort *int64  `yaml:"ContainerPort"`
+	ContainerPort *int32  `yaml:"ContainerPort"`
 }
 
 type NetworkConfiguration struct {
@@ -98,15 +98,15 @@ type NetworkConfiguration struct {
 }
 
 type AwsVpcConfiguration struct {
-	AssignPublicIp *string   `yaml:"AssignPublicIp,omitempty"`
-	SecurityGroups []*string `yaml:"SecurityGroups,omitempty"`
-	Subnets        []*string `yaml:"Subnets,omitempty"`
+	AssignPublicIp types.AssignPublicIp `yaml:"AssignPublicIp,omitempty"`
+	SecurityGroups []string             `yaml:"SecurityGroups,omitempty"`
+	Subnets        []string             `yaml:"Subnets,omitempty"`
 }
 
 type CapacityProviderStrategy struct {
-	CapacityProvider *string `yaml:"CapacityProvider,omitempty""`
-	Base             *int64  `yaml:"Base,omitempty"`
-	Weight           *int64  `yaml:"Weight,omitempty"`
+	CapacityProvider *string `yaml:"CapacityProvider,omitempty"`
+	Base             int32   `yaml:"Base,omitempty"`
+	Weight           int32   `yaml:"Weight,omitempty"`
 }
 
 type Hook struct {
