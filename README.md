@@ -432,7 +432,7 @@ ecspresso supports `diff` and `verify` subcommands.
 Shows differences between local task/service definitions and remote (on ECS) definitions.
 
 ```diff
-$ ecspresso --config ecspresso.yml diff --unified
+$ ecspresso --config ecspresso.yml diff
 --- arn:aws:ecs:ap-northeast-1:123456789012:service/ecspresso-test/nginx-local
 +++ ecs-service-def.json
 @@ -38,5 +38,5 @@
