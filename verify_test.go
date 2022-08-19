@@ -67,8 +67,8 @@ var testRuntimePlatforms = []struct {
 	{
 		isFargate: false,
 		want: goPlatform{
-			arch: "",
-			os:   "",
+			arch: "amd64",
+			os:   "linux",
 		},
 	},
 	{
@@ -93,12 +93,22 @@ var testRuntimePlatforms = []struct {
 	},
 	{
 		platform: types.RuntimePlatform{
+			OperatingSystemFamily: types.OSFamilyWindowsServer2022Full,
+		},
+		isFargate: true,
+		want: goPlatform{
+			arch: "amd64",
+			os:   "windows",
+		},
+	},
+	{
+		platform: types.RuntimePlatform{
 			CpuArchitecture: types.CPUArchitectureX8664,
 		},
 		isFargate: false,
 		want: goPlatform{
 			arch: "amd64",
-			os:   "",
+			os:   "linux",
 		},
 	},
 	{
@@ -107,7 +117,7 @@ var testRuntimePlatforms = []struct {
 		},
 		isFargate: false,
 		want: goPlatform{
-			arch: "",
+			arch: "amd64",
 			os:   "windows",
 		},
 	},
