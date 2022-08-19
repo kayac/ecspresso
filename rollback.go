@@ -5,8 +5,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/fatih/color"
 	"github.com/pkg/errors"
 )
@@ -15,7 +16,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	if aws.BoolValue(opt.DeregisterTaskDefinition) && aws.BoolValue(opt.NoWait) {
+	if aws.ToBool(opt.DeregisterTaskDefinition) && aws.ToBool(opt.NoWait) {
 		fmt.Fprintln(
 			os.Stderr,
 			color.YellowString("WARNING: --deregister-task-definition not works with --no-wait together"),
@@ -34,7 +35,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return errors.Wrap(err, "failed to find rollback target")
 	}
 
-	if isCodeDeploy(sv.DeploymentController) {
+	if sv.DeploymentController != nil && sv.DeploymentController.Type != types.DeploymentControllerTypeCodeDeploy {
 		return d.RollbackByCodeDeploy(ctx, sv, targetArn, opt)
 	}
 
@@ -70,7 +71,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 
 	if *opt.DeregisterTaskDefinition {
 		d.Log("Deregistering the rolled-back task definition", arnToName(currentArn))
-		_, err := d.ecs.DeregisterTaskDefinitionWithContext(
+		_, err := d.ecsv2.DeregisterTaskDefinition(
 			ctx,
 			&ecs.DeregisterTaskDefinitionInput{
 				TaskDefinition: &currentArn,

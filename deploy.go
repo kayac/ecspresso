@@ -10,9 +10,10 @@ import (
 
 	"github.com/kayac/ecspresso/appspec"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go/service/codedeploy"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
 )
@@ -21,13 +22,13 @@ const (
 	CodeDeployConsoleURLFmt = "https://%s.console.aws.amazon.com/codesuite/codedeploy/deployments/%s?region=%s"
 )
 
-func calcDesiredCount(sv *ecs.Service, opt optWithDesiredCount) *int64 {
-	if aws.StringValue(sv.SchedulingStrategy) == "DAEMON" {
+func calcDesiredCount(sv *types.Service, opt optWithDesiredCount) *int32 {
+	if sv.SchedulingStrategy == types.SchedulingStrategyDaemon {
 		return nil
 	}
 	if oc := opt.getDesiredCount(); oc != nil {
 		if *oc == DefaultDesiredCount {
-			return sv.DesiredCount
+			return &sv.DesiredCount
 		}
 		return oc // --tasks
 	}
@@ -38,7 +39,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	var sv *ecs.Service
+	var sv *types.Service
 	d.Log("Starting deploy", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
@@ -72,8 +73,8 @@ func (d *App) Deploy(opt DeployOption) error {
 		}
 	}
 
-	var count *int64
-	if d.config.ServiceDefinitionPath != "" && aws.BoolValue(opt.UpdateService) {
+	var count *int32
+	if d.config.ServiceDefinitionPath != "" && aws.ToBool(opt.UpdateService) {
 		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 		if err != nil {
 			return errors.Wrap(err, "failed to load service definition")
@@ -114,11 +115,13 @@ func (d *App) Deploy(opt DeployOption) error {
 
 	// detect controller
 	if dc := sv.DeploymentController; dc != nil {
-		switch t := *dc.Type; t {
-		case "CODE_DEPLOY":
+		switch dc.Type {
+		case types.DeploymentControllerTypeCodeDeploy:
 			return d.DeployByCodeDeploy(ctx, tdArn, count, sv, opt)
+		case types.DeploymentControllerTypeEcs:
+			break
 		default:
-			return fmt.Errorf("could not deploy a service using deployment controller type %s", t)
+			return fmt.Errorf("could not deploy a service using deployment controller type %s", dc.Type)
 		}
 	}
 
@@ -140,13 +143,13 @@ func (d *App) Deploy(opt DeployOption) error {
 	return nil
 }
 
-func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, count *int64, opt DeployOption) error {
+func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, count *int32, opt DeployOption) error {
 	in := &ecs.UpdateServiceInput{
 		Service:            aws.String(d.Service),
 		Cluster:            aws.String(d.Cluster),
 		TaskDefinition:     aws.String(taskDefinitionArn),
 		DesiredCount:       count,
-		ForceNewDeployment: opt.ForceNewDeployment,
+		ForceNewDeployment: *opt.ForceNewDeployment,
 	}
 	msg := "Updating service tasks"
 	if *opt.ForceNewDeployment {
@@ -154,9 +157,9 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 	}
 	msg = msg + "..."
 	d.Log(msg)
-	d.DebugLog(in.String())
+	d.DebugLog(in)
 
-	_, err := d.ecs.UpdateServiceWithContext(ctx, in)
+	_, err := d.ecsv2.UpdateService(ctx, in)
 	if err != nil {
 		return err
 	}
@@ -164,13 +167,13 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 	return nil
 }
 
-func svToUpdateServiceInput(sv *ecs.Service) *ecs.UpdateServiceInput {
+func svToUpdateServiceInput(sv *types.Service) *ecs.UpdateServiceInput {
 	in := &ecs.UpdateServiceInput{
 		CapacityProviderStrategy:      sv.CapacityProviderStrategy,
 		DeploymentConfiguration:       sv.DeploymentConfiguration,
-		DesiredCount:                  sv.DesiredCount,
-		EnableECSManagedTags:          sv.EnableECSManagedTags,
-		EnableExecuteCommand:          sv.EnableExecuteCommand,
+		DesiredCount:                  &sv.DesiredCount,
+		EnableECSManagedTags:          &sv.EnableECSManagedTags,
+		EnableExecuteCommand:          &sv.EnableExecuteCommand,
 		HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
 		LoadBalancers:                 sv.LoadBalancers,
 		NetworkConfiguration:          sv.NetworkConfiguration,
@@ -180,23 +183,23 @@ func svToUpdateServiceInput(sv *ecs.Service) *ecs.UpdateServiceInput {
 		PropagateTags:                 sv.PropagateTags,
 		ServiceRegistries:             sv.ServiceRegistries,
 	}
-	if aws.StringValue(sv.SchedulingStrategy) == "DAEMON" {
+	if sv.SchedulingStrategy == types.SchedulingStrategyDaemon {
 		in.PlacementStrategy = nil
 	}
 	return in
 }
 
-func (d *App) UpdateServiceAttributes(ctx context.Context, sv *ecs.Service, opt DeployOption) error {
+func (d *App) UpdateServiceAttributes(ctx context.Context, sv *types.Service, opt DeployOption) error {
 	in := svToUpdateServiceInput(sv)
-	if isCodeDeploy(sv.DeploymentController) {
+	if sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy {
 		// unable to update attributes below with a CODE_DEPLOY deployment controller.
 		in.NetworkConfiguration = nil
 		in.PlatformVersion = nil
-		in.ForceNewDeployment = nil
+		in.ForceNewDeployment = false
 		in.LoadBalancers = nil
 		in.ServiceRegistries = nil
 	} else {
-		in.ForceNewDeployment = opt.ForceNewDeployment
+		in.ForceNewDeployment = aws.ToBool(opt.ForceNewDeployment)
 	}
 	in.Service = aws.String(d.Service)
 	in.Cluster = aws.String(d.Cluster)
@@ -207,20 +210,20 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *ecs.Service, opt 
 		return nil
 	}
 	d.Log("Updating service attributes...")
-	d.DebugLog(in.String())
+	d.DebugLog(in)
 
-	if _, err := d.ecs.UpdateServiceWithContext(ctx, in); err != nil {
+	if _, err := d.ecsv2.UpdateService(ctx, in); err != nil {
 		return err
 	}
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	return nil
 }
 
-func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int64, sv *ecs.Service, opt DeployOption) error {
+func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int32, sv *types.Service, opt DeployOption) error {
 	if count != nil {
 		d.Log("updating desired count to", *count)
 	}
-	_, err := d.ecs.UpdateServiceWithContext(
+	_, err := d.ecsv2.UpdateService(
 		ctx,
 		&ecs.UpdateServiceInput{
 			Service:      aws.String(d.Service),
@@ -231,7 +234,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	if err != nil {
 		return errors.Wrap(err, "failed to update service")
 	}
-	if aws.BoolValue(opt.SkipTaskDefinition) && !aws.BoolValue(opt.UpdateService) && !aws.BoolValue(opt.ForceNewDeployment) {
+	if aws.ToBool(opt.SkipTaskDefinition) && !aws.ToBool(opt.UpdateService) && !aws.ToBool(opt.ForceNewDeployment) {
 		// no need to create new deployment.
 		return nil
 	}
@@ -304,14 +307,7 @@ func (d *App) findDeploymentInfo() (*codedeploy.DeploymentInfo, error) {
 	)
 }
 
-func isCodeDeploy(dc *ecs.DeploymentController) bool {
-	if dc != nil && dc.Type != nil && *dc.Type == "CODE_DEPLOY" {
-		return true
-	}
-	return false
-}
-
-func (d *App) createDeployment(ctx context.Context, sv *ecs.Service, taskDefinitionArn string, rollbackEvents *string) error {
+func (d *App) createDeployment(ctx context.Context, sv *types.Service, taskDefinitionArn string, rollbackEvents *string) error {
 
 	spec, err := appspec.NewWithService(sv, taskDefinitionArn)
 	if err != nil {
@@ -338,7 +334,7 @@ func (d *App) createDeployment(ctx context.Context, sv *ecs.Service, taskDefinit
 			},
 		},
 	}
-	if ev := aws.StringValue(rollbackEvents); ev != "" {
+	if ev := aws.ToString(rollbackEvents); ev != "" {
 		var events []*string
 		for _, ev := range strings.Split(ev, ",") {
 			events = append(events, aws.String(ev))

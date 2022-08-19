@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/fatih/color"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func diffServices(local, remote *ecs.Service, remoteArn string, localPath string, unified bool) (string, error) {
+func diffServices(local, remote *types.Service, remoteArn string, localPath string, unified bool) (string, error) {
 	sortServiceDefinitionForDiff(local)
 	sortServiceDefinitionForDiff(remote)
 
@@ -25,9 +25,9 @@ func diffServices(local, remote *ecs.Service, remoteArn string, localPath string
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal new service definition")
 	}
-	if local.DesiredCount == nil {
+	if local.DesiredCount == 0 {
 		// ignore DesiredCount when it in local is not defined.
-		remote.DesiredCount = nil
+		remote.DesiredCount = 0
 	}
 	remoteSvBytes, err := MarshalJSON(svToUpdateServiceInput(remote))
 	if err != nil {
@@ -142,7 +142,7 @@ func coloredDiff(src string) string {
 	return b.String()
 }
 
-func tdToTaskDefinitionInput(td *TaskDefinition, tdTags []*ecs.Tag) *TaskDefinitionInput {
+func tdToTaskDefinitionInput(td *TaskDefinition, tdTags []types.Tag) *TaskDefinitionInput {
 	tdi := &TaskDefinitionInput{
 		ContainerDefinitions:    td.ContainerDefinitions,
 		Cpu:                     td.Cpu,
@@ -216,35 +216,35 @@ func equalString(a *string, b string) bool {
 	return *a == b
 }
 
-func sortServiceDefinitionForDiff(sv *ecs.Service) {
+func sortServiceDefinitionForDiff(sv *types.Service) {
 	sortSlicesInDefinition(
 		reflect.TypeOf(*sv), reflect.Indirect(reflect.ValueOf(sv)),
 		"PlacementConstraints",
 		"PlacementStrategy",
 		"RequiresCompatibilities",
 	)
-	if equalString(sv.LaunchType, ecs.LaunchTypeFargate) && sv.PlatformVersion == nil {
+	if sv.LaunchType == types.LaunchTypeFargate && sv.PlatformVersion == nil {
 		sv.PlatformVersion = aws.String("LATEST")
 	}
-	if sv.SchedulingStrategy == nil && sv.DeploymentConfiguration == nil {
-		sv.DeploymentConfiguration = &ecs.DeploymentConfiguration{
-			MaximumPercent:        aws.Int64(200),
-			MinimumHealthyPercent: aws.Int64(100),
+	if sv.SchedulingStrategy == "" && sv.DeploymentConfiguration == nil {
+		sv.DeploymentConfiguration = &types.DeploymentConfiguration{
+			MaximumPercent:        aws.Int32(200),
+			MinimumHealthyPercent: aws.Int32(100),
 		}
-	} else if equalString(sv.SchedulingStrategy, ecs.SchedulingStrategyDaemon) && sv.DeploymentConfiguration == nil {
-		sv.DeploymentConfiguration = &ecs.DeploymentConfiguration{
-			MaximumPercent:        aws.Int64(100),
-			MinimumHealthyPercent: aws.Int64(0),
+	} else if sv.SchedulingStrategy == types.SchedulingStrategyDaemon && sv.DeploymentConfiguration == nil {
+		sv.DeploymentConfiguration = &types.DeploymentConfiguration{
+			MaximumPercent:        aws.Int32(100),
+			MinimumHealthyPercent: aws.Int32(0),
 		}
 	}
 
 	if len(sv.LoadBalancers) > 0 && sv.HealthCheckGracePeriodSeconds == nil {
-		sv.HealthCheckGracePeriodSeconds = aws.Int64(0)
+		sv.HealthCheckGracePeriodSeconds = aws.Int32(0)
 	}
 	if nc := sv.NetworkConfiguration; nc != nil {
 		if ac := nc.AwsvpcConfiguration; ac != nil {
-			if ac.AssignPublicIp == nil {
-				ac.AssignPublicIp = aws.String(ecs.AssignPublicIpDisabled)
+			if ac.AssignPublicIp == "" {
+				ac.AssignPublicIp = types.AssignPublicIpDisabled
 			}
 			sortSlicesInDefinition(
 				reflect.TypeOf(*ac),
@@ -258,11 +258,8 @@ func sortServiceDefinitionForDiff(sv *ecs.Service) {
 
 func sortTaskDefinitionForDiff(td *TaskDefinitionInput) {
 	for _, cd := range td.ContainerDefinitions {
-		if cd.Cpu == nil {
-			cd.Cpu = aws.Int64(0)
-		}
 		sortSlicesInDefinition(
-			reflect.TypeOf(*cd), reflect.Indirect(reflect.ValueOf(cd)),
+			reflect.TypeOf(cd), reflect.Indirect(reflect.ValueOf(cd)),
 			"Environment",
 			"MountPoints",
 			"PortMappings",

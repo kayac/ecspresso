@@ -13,6 +13,8 @@ import (
 
 	"github.com/Songmu/prompter"
 	ecsv2 "github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	ecsTypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -36,12 +38,12 @@ var TerminalWidth = 90
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
 
-type TaskDefinition = ecs.TaskDefinition
+type TaskDefinition = ecsTypes.TaskDefinition
 
-type TaskDefinitionInput = ecs.RegisterTaskDefinitionInput
+type TaskDefinitionInput = ecsv2.RegisterTaskDefinitionInput
 
 func taskDefinitionName(t *TaskDefinition) string {
-	return fmt.Sprintf("%s:%d", *t.Family, *t.Revision)
+	return fmt.Sprintf("%s:%d", *t.Family, t.Revision)
 }
 
 type App struct {
@@ -66,17 +68,17 @@ type App struct {
 	loader *gc.Loader
 }
 
-func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
-	return &ecs.DescribeServicesInput{
+func (d *App) DescribeServicesInput() *ecsv2.DescribeServicesInput {
+	return &ecsv2.DescribeServicesInput{
 		Cluster:  aws.String(d.Cluster),
-		Services: []*string{aws.String(d.Service)},
+		Services: []string{d.Service},
 	}
 }
 
-func (d *App) DescribeTasksInput(task *ecs.Task) *ecs.DescribeTasksInput {
-	return &ecs.DescribeTasksInput{
+func (d *App) DescribeTasksInput(task *ecsTypes.Task) *ecsv2.DescribeTasksInput {
+	return &ecsv2.DescribeTasksInput{
 		Cluster: aws.String(d.Cluster),
-		Tasks:   []*string{task.TaskArn},
+		Tasks:   []string{*task.TaskArn},
 	}
 }
 
@@ -89,18 +91,18 @@ func (d *App) GetLogEventsInput(logGroup string, logStream string, startAt int64
 	}
 }
 
-func (d *App) DescribeService(ctx context.Context) (*ecs.Service, error) {
-	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
+func (d *App) DescribeService(ctx context.Context) (*ecsTypes.Service, error) {
+	out, err := d.ecsv2.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe service")
 	}
 	if len(out.Services) == 0 {
 		return nil, errors.New("service is not found")
 	}
-	return out.Services[0], nil
+	return &out.Services[0], nil
 }
 
-func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Service, error) {
+func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecsTypes.Service, error) {
 	s, err := d.DescribeService(ctx)
 	if err != nil {
 		return nil, err
@@ -137,7 +139,7 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 	return s, nil
 }
 
-func (d *App) describeAutoScaling(s *ecs.Service) error {
+func (d *App) describeAutoScaling(s *types.Service) error {
 	resourceId := fmt.Sprintf("service/%s/%s", arnToName(*s.ClusterArn), *s.ServiceName)
 	tout, err := d.autoScaling.DescribeScalableTargets(
 		&applicationautoscaling.DescribeScalableTargetsInput{
@@ -181,7 +183,7 @@ func (d *App) describeAutoScaling(s *ecs.Service) error {
 }
 
 func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Time) (int, error) {
-	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
+	out, err := d.ecsv2.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return 0, err
 	}
@@ -205,8 +207,8 @@ func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Tim
 	return lines, nil
 }
 
-func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchContainer *ecs.ContainerDefinition) error {
-	out, err := d.ecs.DescribeTasksWithContext(ctx, d.DescribeTasksInput(task))
+func (d *App) DescribeTaskStatus(ctx context.Context, task *ecsTypes.Task, watchContainer *ecsTypes.ContainerDefinition) error {
+	out, err := d.ecsv2.DescribeTasks(ctx, d.DescribeTasksInput(task))
 	if err != nil {
 		return err
 	}
@@ -216,19 +218,19 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchConta
 		return errors.New(*f.Reason)
 	}
 
-	var container *ecs.Container
+	var container *ecsTypes.Container
 	for _, c := range out.Tasks[0].Containers {
 		if *c.Name == *watchContainer.Name {
-			container = c
+			container = &c
 			break
 		}
 	}
 	if container == nil {
-		container = out.Tasks[0].Containers[0]
+		container = &(out.Tasks[0].Containers[0])
 	}
 
 	if container.ExitCode != nil && *container.ExitCode != 0 {
-		msg := fmt.Sprintf("Container: %s, Exit Code: %s", *container.Name, strconv.FormatInt(*container.ExitCode, 10))
+		msg := fmt.Sprintf("Container: %s, Exit Code: %s", *container.Name, strconv.FormatInt(int64(*container.ExitCode), 10))
 		if container.Reason != nil {
 			msg += ", Reason: " + *container.Reason
 		}
@@ -240,9 +242,9 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchConta
 }
 
 func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDefinitionInput, error) {
-	out, err := d.ecs.DescribeTaskDefinitionWithContext(ctx, &ecs.DescribeTaskDefinitionInput{
+	out, err := d.ecsv2.DescribeTaskDefinition(ctx, &ecsv2.DescribeTaskDefinitionInput{
 		TaskDefinition: &tdArn,
-		Include:        []*string{aws.String("TAGS")},
+		Include:        []ecsTypes.TaskDefinitionField{ecsTypes.TaskDefinitionFieldTags},
 	})
 	if err != nil {
 		return nil, err
@@ -346,14 +348,14 @@ func (d *App) Delete(opt DeleteOption) error {
 	return nil
 }
 
-func containerOf(td *TaskDefinitionInput, name *string) *ecs.ContainerDefinition {
+func containerOf(td *TaskDefinitionInput, name *string) *types.ContainerDefinition {
 	if name == nil || *name == "" {
-		return td.ContainerDefinitions[0]
+		return &td.ContainerDefinitions[0]
 	}
 	for _, c := range td.ContainerDefinitions {
 		if *c.Name == *name {
 			c := c
-			return c
+			return &c
 		}
 	}
 	return nil
@@ -369,7 +371,7 @@ func (d *App) Wait(opt WaitOption) error {
 	if err != nil {
 		return err
 	}
-	if isCodeDeploy(sv.DeploymentController) {
+	if sv.DeploymentController != nil && sv.DeploymentController.Type == ecsTypes.DeploymentControllerTypeCodeDeploy {
 		err := d.WaitForCodeDeploy(ctx, sv)
 		if err != nil {
 			return errors.Wrap(err, "failed to wait for a deployment successfully")
@@ -475,10 +477,8 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 		}
 	}()
 
-	return d.ecs.WaitUntilServicesStableWithContext(
-		ctx, d.DescribeServicesInput(),
-		d.waiterOptions()...,
-	)
+	waiter := ecsv2.NewServicesStableWaiter(d.ecsv2)
+	return waiter.Wait(ctx, d.DescribeServicesInput(), d.config.Timeout)
 }
 
 func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInput) (*TaskDefinition, error) {
@@ -486,7 +486,7 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInpu
 	if len(td.Tags) == 0 {
 		td.Tags = nil // Tags can not be empty.
 	}
-	out, err := d.ecs.RegisterTaskDefinitionWithContext(
+	out, err := d.ecsv2.RegisterTaskDefinition(
 		ctx,
 		td,
 	)
@@ -513,7 +513,7 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 		src = c.TaskDefinition
 	}
 	var td TaskDefinitionInput
-	if err := d.unmarshalJSON(src, &td, path); err != nil {
+	if err := d.UnmarshalJSONForStruct(src, &td, path); err != nil {
 		return nil, err
 	}
 	if len(td.Tags) == 0 {
@@ -540,12 +540,12 @@ func (d *App) unmarshalJSON(src []byte, v interface{}, path string) error {
 	return nil
 }
 
-func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
+func (d *App) LoadServiceDefinition(path string) (*ecsTypes.Service, error) {
 	if path == "" {
 		return nil, errors.New("service_definition is not defined")
 	}
 
-	sv := ecs.Service{}
+	sv := ecsTypes.Service{}
 	src, err := d.readDefinitionFile(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to load service definition %s", path)
@@ -558,14 +558,14 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
 	return &sv, nil
 }
 
-func (d *App) GetLogInfo(task *ecs.Task, c *ecs.ContainerDefinition) (string, string) {
+func (d *App) GetLogInfo(task *ecsTypes.Task, c *ecsTypes.ContainerDefinition) (string, string) {
 	p := strings.Split(*task.TaskArn, "/")
 	taskID := p[len(p)-1]
 	lc := c.LogConfiguration
-	logStreamPrefix := *lc.Options["awslogs-stream-prefix"]
+	logStreamPrefix := lc.Options["awslogs-stream-prefix"]
 
 	logStream := strings.Join([]string{logStreamPrefix, *c.Name, taskID}, "/")
-	logGroup := *lc.Options["awslogs-group"]
+	logGroup := lc.Options["awslogs-group"]
 
 	d.Log("logGroup:", logGroup)
 	d.Log("logStream:", logStream)
@@ -611,7 +611,7 @@ func (d *App) suspendAutoScaling(suspendState bool) error {
 	return nil
 }
 
-func (d *App) WaitForCodeDeploy(ctx context.Context, sv *ecs.Service) error {
+func (d *App) WaitForCodeDeploy(ctx context.Context, sv *types.Service) error {
 	dp, err := d.findDeploymentInfo()
 	if err != nil {
 		return err
@@ -644,7 +644,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *ecs.Service) error {
 	)
 }
 
-func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *ecs.Service, tdArn string, opt RollbackOption) error {
+func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *types.Service, tdArn string, opt RollbackOption) error {
 	dp, err := d.findDeploymentInfo()
 	if err != nil {
 		return err

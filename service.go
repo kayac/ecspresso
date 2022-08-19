@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 func arnToName(s string) string {
@@ -15,25 +15,25 @@ func arnToName(s string) string {
 	return ns[len(ns)-1]
 }
 
-func formatDeployment(d *ecs.Deployment) string {
+func formatDeployment(d types.Deployment) string {
 	return fmt.Sprintf(
 		"%8s %s desired:%d pending:%d running:%d",
 		*d.Status,
 		arnToName(*d.TaskDefinition),
-		*d.DesiredCount, *d.PendingCount, *d.RunningCount,
+		d.DesiredCount, d.PendingCount, d.RunningCount,
 	)
 }
 
-func formatTaskSet(d *ecs.TaskSet) string {
+func formatTaskSet(d types.TaskSet) string {
 	return fmt.Sprintf(
 		"%8s %s desired:%d pending:%d running:%d",
 		*d.Status,
 		arnToName(*d.TaskDefinition),
-		*d.ComputedDesiredCount, *d.PendingCount, *d.RunningCount,
+		d.ComputedDesiredCount, d.PendingCount, d.RunningCount,
 	)
 }
 
-func formatEvent(e *ecs.ServiceEvent, chars int) []string {
+func formatEvent(e types.ServiceEvent, chars int) []string {
 	line := fmt.Sprintf("%s %s",
 		e.CreatedAt.In(time.Local).Format("2006/01/02 15:04:05"),
 		*e.Message,

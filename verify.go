@@ -11,12 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go/aws"
+	awsv2 "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -99,7 +101,7 @@ func (d *App) newAssumedVerifier(sess *session.Session, executionRole *string, o
 		)
 		return newVerifier(sess, sess, opt), nil
 	}
-	assumedSess := session.New(&aws.Config{
+	assumedSess := session.New(&awsv2.Config{
 		Region: sess.Config.Region,
 		Credentials: credentials.NewStaticCredentials(
 			*out.Credentials.AccessKeyId,
@@ -181,15 +183,15 @@ func (d *App) verifyResource(ctx context.Context, resourceType string, verifyFun
 
 func (d *App) verifyCluster(ctx context.Context) error {
 	cluster := d.config.Cluster
-	out, err := d.ecs.DescribeClustersWithContext(ctx, &ecs.DescribeClustersInput{
-		Clusters: aws.StringSlice([]string{cluster}),
+	out, err := d.ecsv2.DescribeClusters(ctx, &ecs.DescribeClustersInput{
+		Clusters: []string{cluster},
 	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to describe cluster %s", cluster)
 	} else if len(out.Clusters) == 0 {
 		return errors.Errorf("cluster %s is not found", cluster)
 	} else {
-		d.DebugLog(out.Clusters[0].GoString())
+		d.DebugLog(out.Clusters[0])
 	}
 	return nil
 }
@@ -208,7 +210,7 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 	}
 
 	// networkMode
-	if aws.StringValue(td.NetworkMode) == "awsvpc" {
+	if td.NetworkMode == types.NetworkModeAwsvpc {
 		if sv.NetworkConfiguration == nil || sv.NetworkConfiguration.AwsvpcConfiguration == nil {
 			return errors.New(
 				`networkConfiguration.awsvpcConfiguration required for the taskDefinition networkMode=awsvpc`,
@@ -241,16 +243,16 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 			}
 			d.DebugLog(out.GoString())
 			tgPort := aws.Int64Value(out.TargetGroups[0].Port)
-			cPort := aws.Int64Value(lb.ContainerPort)
-			if tgPort != cPort {
+			cPort := aws.Int32Value(lb.ContainerPort)
+			if int32(tgPort) != cPort {
 				return errors.Errorf("target group's port %d and container's port %d mismatch", tgPort, cPort)
 			}
 
 			cname := aws.StringValue(lb.ContainerName)
-			var container *ecs.ContainerDefinition
+			var container *types.ContainerDefinition
 			for _, c := range td.ContainerDefinitions {
 				if aws.StringValue(c.Name) == cname {
-					container = c
+					container = &c
 					break
 				}
 			}
@@ -298,7 +300,7 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 	for _, c := range td.ContainerDefinitions {
 		name := fmt.Sprintf("ContainerDefinition[%s]", aws.StringValue(c.Name))
 		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
-			return d.verifyContainer(ctx, c)
+			return d.verifyContainer(ctx, &c)
 		})
 		if err != nil {
 			return err
@@ -349,7 +351,7 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 		return err
 	}
 	// when requiredCompatibilities contain only fargate, regard as fargate task definition
-	isFargateTask := len(td.RequiresCompatibilities) == 1 && *td.RequiresCompatibilities[0] == ecs.CompatibilityFargate
+	isFargateTask := len(td.RequiresCompatibilities) == 1 && td.RequiresCompatibilities[0] == types.CompatibilityFargate
 	isFargateService, err := d.isFargateService()
 	if err != nil {
 		return err
@@ -383,7 +385,7 @@ func (d *App) isFargateService() (bool, error) {
 	if sv.PlatformVersion != nil && *sv.PlatformVersion != "" {
 		return true, nil
 	}
-	if sv.LaunchType != nil && *sv.LaunchType == ecs.LaunchTypeFargate {
+	if sv.LaunchType == types.LaunchTypeFargate {
 		return true, nil
 	}
 	for _, s := range sv.CapacityProviderStrategy {
@@ -395,7 +397,7 @@ func (d *App) isFargateService() (bool, error) {
 	return false, nil
 }
 
-func NormalizePlatform(p *ecs.RuntimePlatform, isFargate bool) (arch, os string) {
+func NormalizePlatform(p *types.RuntimePlatform, isFargate bool) (arch, os string) {
 	// if it is able to determine a fargate resource, set fargate default platform.
 	// otherwise, default arch/os are empty as platform is not determined without RuntimePlatform.
 	if isFargate {
@@ -407,19 +409,15 @@ func NormalizePlatform(p *ecs.RuntimePlatform, isFargate bool) (arch, os string)
 	}
 
 	// https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RuntimePlatform.html
-	if p.CpuArchitecture != nil {
-		if *p.CpuArchitecture == ecs.CPUArchitectureArm64 {
-			arch = "arm64"
-		} else {
-			arch = "amd64"
-		}
+	if p.CpuArchitecture == types.CPUArchitectureArm64 {
+		arch = "arm64"
+	} else {
+		arch = "amd64"
 	}
-	if p.OperatingSystemFamily != nil {
-		if *p.OperatingSystemFamily == ecs.OSFamilyLinux {
-			os = "linux"
-		} else {
-			os = "windows"
-		}
+	if p.OperatingSystemFamily == types.OSFamilyLinux {
+		os = "linux"
+	} else {
+		os = "windows"
 	}
 	return
 }
@@ -434,7 +432,7 @@ func (d *App) verifyImage(ctx context.Context, image string) error {
 	return d.verifyRegistryImage(ctx, image, "", "")
 }
 
-func (d *App) verifyContainer(ctx context.Context, c *ecs.ContainerDefinition) error {
+func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition) error {
 	image := aws.StringValue(c.Image)
 	name := fmt.Sprintf("Image[%s]", image)
 	err := d.verifyResource(ctx, name, func(ctx context.Context) error {
@@ -452,7 +450,7 @@ func (d *App) verifyContainer(ctx context.Context, c *ecs.ContainerDefinition) e
 			return err
 		}
 	}
-	if c.LogConfiguration != nil && aws.StringValue(c.LogConfiguration.LogDriver) == "awslogs" {
+	if c.LogConfiguration != nil && c.LogConfiguration.LogDriver == types.LogDriverAwslogs {
 		err := d.verifyResource(ctx, "LogConfiguration[awslogs]", func(ctx context.Context) error {
 			return d.verifyLogConfiguration(ctx, c)
 		})
@@ -463,36 +461,36 @@ func (d *App) verifyContainer(ctx context.Context, c *ecs.ContainerDefinition) e
 	return nil
 }
 
-func (d *App) verifyLogConfiguration(ctx context.Context, c *ecs.ContainerDefinition) error {
+func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefinition) error {
 	options := c.LogConfiguration.Options
 	group, region, prefix := options["awslogs-group"], options["awslogs-region"], options["awslogs-stream-prefix"]
-	if group == nil {
+	if group == "" {
 		return errors.New("awslogs-group is required")
 	}
-	if region == nil {
+	if region == "" {
 		return errors.New("awslogs-region is required")
 	}
 
 	if !aws.BoolValue(d.verifier.opt.PutLogs) {
-		return verifySkipErr(fmt.Sprintf("putting logs to %s", *group))
+		return verifySkipErr(fmt.Sprintf("putting logs to %s", group))
 	}
 
 	var stream string
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	if prefix != nil {
-		stream = fmt.Sprintf("%s/%s/%s-%s", *prefix, *c.Name, "ecspresso-verify", suffix)
+	if prefix != "" {
+		stream = fmt.Sprintf("%s/%s/%s-%s", prefix, *c.Name, "ecspresso-verify", suffix)
 	} else {
 		stream = fmt.Sprintf("%s/%s-%s", *c.Name, "ecspresso-verify", suffix)
 	}
 
 	if _, err := d.verifier.cwl.CreateLogStreamWithContext(ctx, &cloudwatchlogs.CreateLogStreamInput{
-		LogGroupName:  group,
+		LogGroupName:  &group,
 		LogStreamName: aws.String(stream),
 	}); err != nil {
-		return errors.Wrapf(err, "failed to create log stream %s in %s", stream, *group)
+		return errors.Wrapf(err, "failed to create log stream %s in %s", stream, group)
 	}
 	if _, err := d.verifier.cwl.PutLogEventsWithContext(ctx, &cloudwatchlogs.PutLogEventsInput{
-		LogGroupName:  group,
+		LogGroupName:  &group,
 		LogStreamName: aws.String(stream),
 		LogEvents: []*cloudwatchlogs.InputLogEvent{
 			{
@@ -501,7 +499,7 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *ecs.ContainerDefini
 			},
 		},
 	}); err != nil {
-		return errors.Wrapf(err, "failed to put log events to %s stream %s", *group, stream)
+		return errors.Wrapf(err, "failed to put log events to %s stream %s", group, stream)
 	}
 	return nil
 }

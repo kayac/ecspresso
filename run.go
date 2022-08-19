@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/pkg/errors"
 )
 
@@ -17,12 +17,12 @@ func (d *App) Run(opt RunOption) error {
 	defer cancel()
 
 	d.Log("Running task", opt.DryRunString())
-	ov := ecs.TaskOverride{}
-	if ovStr := aws.StringValue(opt.TaskOverrideStr); ovStr != "" {
+	ov := types.TaskOverride{}
+	if ovStr := aws.ToString(opt.TaskOverrideStr); ovStr != "" {
 		if err := json.Unmarshal([]byte(ovStr), &ov); err != nil {
 			return errors.Wrap(err, "invalid overrides")
 		}
-	} else if ovFile := aws.StringValue(opt.TaskOverrideFile); ovFile != "" {
+	} else if ovFile := aws.ToString(opt.TaskOverrideFile); ovFile != "" {
 		src, err := d.readDefinitionFile(ovFile)
 		if err != nil {
 			return errors.Wrapf(err, "failed to read overrides-file %s", ovFile)
@@ -31,7 +31,7 @@ func (d *App) Run(opt RunOption) error {
 			return errors.Wrapf(err, "failed to read overrides-file %s", ovFile)
 		}
 	}
-	d.DebugLog("Overrides:", ov.String())
+	d.DebugLog("Overrides:", ov)
 
 	tdArn, watchContainer, err := d.taskDefinitionForRun(ctx, opt)
 	if err != nil {
@@ -61,7 +61,7 @@ func (d *App) Run(opt RunOption) error {
 	return nil
 }
 
-func (d *App) RunTask(ctx context.Context, tdArn string, ov *ecs.TaskOverride, opt *RunOption) (*ecs.Task, error) {
+func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride, opt *RunOption) (*types.Task, error) {
 	d.Log("Running task with", tdArn)
 
 	sv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
@@ -90,26 +90,24 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *ecs.TaskOverride, o
 		EnableExecuteCommand:     sv.EnableExecuteCommand,
 	}
 
-	switch aws.StringValue(opt.PropagateTags) {
+	switch aws.ToString(opt.PropagateTags) {
 	case "SERVICE":
-		out, err := d.ecs.ListTagsForResourceWithContext(ctx, &ecs.ListTagsForResourceInput{
+		out, err := d.ecsv2.ListTagsForResource(ctx, &ecs.ListTagsForResourceInput{
 			ResourceArn: sv.ServiceArn,
 		})
 		if err != nil {
 			return nil, err
 		}
-		d.DebugLog("propagate tags from service", *sv.ServiceArn, out.String())
-		for _, tag := range out.Tags {
-			in.Tags = append(in.Tags, tag)
-		}
+		d.DebugLog("propagate tags from service", *sv.ServiceArn, out)
+		in.Tags = append(in.Tags, out.Tags...)
 	case "":
-		in.PropagateTags = nil
+		in.PropagateTags = types.PropagateTagsNone
 	default:
-		in.PropagateTags = opt.PropagateTags
+		in.PropagateTags = types.PropagateTagsTaskDefinition
 	}
-	d.DebugLog("run task input", in.String())
+	d.DebugLog("run task input", in)
 
-	out, err := d.ecs.RunTaskWithContext(ctx, in)
+	out, err := d.ecsv2.RunTask(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -123,16 +121,16 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *ecs.TaskOverride, o
 
 	task := out.Tasks[0]
 	d.Log("Task ARN:", *task.TaskArn)
-	return task, nil
+	return &task, nil
 }
 
-func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *ecs.ContainerDefinition, startedAt time.Time, untilRunning bool) error {
+func (d *App) WaitRunTask(ctx context.Context, task *types.Task, watchContainer *types.ContainerDefinition, startedAt time.Time, untilRunning bool) error {
 	d.Log("Waiting for run task...(it may take a while)")
 	waitCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	lc := watchContainer.LogConfiguration
-	if lc == nil || *lc.LogDriver != "awslogs" || lc.Options["awslogs-stream-prefix"] == nil {
+	if lc == nil || lc.LogDriver != types.LogDriverAwslogs || lc.Options["awslogs-stream-prefix"] == "" {
 		d.Log("awslogs not configured")
 		if err := d.waitTask(ctx, task, untilRunning); err != nil {
 			return errors.Wrap(err, "failed to run task")
@@ -163,24 +161,12 @@ func (d *App) WaitRunTask(ctx context.Context, task *ecs.Task, watchContainer *e
 	return nil
 }
 
-func (d *App) waitTask(ctx context.Context, task *ecs.Task, untilRunning bool) error {
-	// Add an option WithWaiterDelay and request.WithWaiterMaxAttempts for a long timeout.
-	// SDK Default is 10 min (MaxAttempts=100 * Delay=6sec) at now.
-	const delay = 6 * time.Second
-	attempts := int((d.config.Timeout / delay)) + 1
-	if (d.config.Timeout % delay) > 0 {
-		attempts++
-	}
-
+func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool) error {
 	id := arnToName(*task.TaskArn)
 	if untilRunning {
 		d.Log(fmt.Sprintf("Waiting for task ID %s until running", id))
-		if err := d.ecs.WaitUntilTasksRunningWithContext(
-			ctx,
-			d.DescribeTasksInput(task),
-			request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
-			request.WithWaiterMaxAttempts(attempts),
-		); err != nil {
+		waiter := ecs.NewTasksRunningWaiter(d.ecsv2)
+		if err := waiter.Wait(ctx, d.DescribeTasksInput(task), d.config.Timeout); err != nil {
 			return err
 		}
 		d.Log(fmt.Sprintf("Task ID %s is running", id))
@@ -188,15 +174,12 @@ func (d *App) waitTask(ctx context.Context, task *ecs.Task, untilRunning bool) e
 	}
 
 	d.Log(fmt.Sprintf("Waiting for task ID %s until stopped", id))
-	return d.ecs.WaitUntilTasksStoppedWithContext(
-		ctx, d.DescribeTasksInput(task),
-		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
-		request.WithWaiterMaxAttempts(attempts),
-	)
+	waiter := ecs.NewTasksStoppedWaiter(d.ecsv2)
+	return waiter.Wait(ctx, d.DescribeTasksInput(task), d.config.Timeout)
 }
 
-func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn string, watchContainer *ecs.ContainerDefinition, err error) {
-	tdPath := aws.StringValue(opt.TaskDefinition)
+func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn string, watchContainer *types.ContainerDefinition, err error) {
+	tdPath := aws.ToString(opt.TaskDefinition)
 	if tdPath == "" {
 		tdPath = d.config.TaskDefinitionPath
 	}
@@ -216,8 +199,8 @@ func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn st
 		tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
 		return
 	} else if *opt.SkipTaskDefinition {
-		if aws.Int64Value(opt.Revision) != 0 {
-			tdArn = fmt.Sprintf("%s:%d", family, aws.Int64Value(opt.Revision))
+		if aws.ToInt64(opt.Revision) != 0 {
+			tdArn = fmt.Sprintf("%s:%d", family, aws.ToInt64(opt.Revision))
 			return
 		}
 		if d.config.Service != "" {
@@ -248,5 +231,4 @@ func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn st
 			return
 		}
 	}
-	return
 }

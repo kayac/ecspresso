@@ -9,7 +9,8 @@ import (
 	"strings"
 
 	"github.com/Songmu/prompter"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/google/go-jsonnet/formatter"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -46,7 +47,7 @@ func (d *App) Init(opt InitOption) error {
 		}
 	}
 
-	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
+	out, err := d.ecsv2.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return errors.Wrap(err, "failed to describe service")
 	}
@@ -62,7 +63,7 @@ func (d *App) Init(opt InitOption) error {
 
 	if long, _ := isLongArnFormat(*sv.ServiceArn); long {
 		// Long arn format must be used for tagging operations
-		lt, err := d.ecs.ListTagsForResourceWithContext(ctx, &ecs.ListTagsForResourceInput{
+		lt, err := d.ecsv2.ListTagsForResource(ctx, &ecs.ListTagsForResourceInput{
 			ResourceArn: sv.ServiceArn,
 		})
 		if err != nil {
@@ -72,7 +73,7 @@ func (d *App) Init(opt InitOption) error {
 	}
 
 	// service-def
-	treatmentServiceDefinition(sv)
+	treatmentServiceDefinition(&sv)
 	if b, err := MarshalJSON(sv); err != nil {
 		return errors.Wrap(err, "unable to marshal service definition to JSON")
 	} else {
@@ -119,14 +120,14 @@ func (d *App) Init(opt InitOption) error {
 	return nil
 }
 
-func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
+func treatmentServiceDefinition(sv *types.Service) *types.Service {
 	sv.ClusterArn = nil
 	sv.CreatedAt = nil
 	sv.CreatedBy = nil
 	sv.Deployments = nil
 	sv.Events = nil
-	sv.PendingCount = nil
-	sv.RunningCount = nil
+	sv.PendingCount = 0
+	sv.RunningCount = 0
 	sv.Status = nil
 	sv.TaskDefinition = nil
 	sv.TaskSets = nil
@@ -134,8 +135,8 @@ func treatmentServiceDefinition(sv *ecs.Service) *ecs.Service {
 	sv.RoleArn = nil
 	sv.ServiceName = nil
 
-	if *sv.PropagateTags != "SERVICE" && *sv.PropagateTags != "TASK_DEFINITION" {
-		sv.PropagateTags = nil
+	if sv.PropagateTags != types.PropagateTagsService && sv.PropagateTags != types.PropagateTagsTaskDefinition {
+		sv.PropagateTags = types.PropagateTagsNone
 	}
 
 	return sv
