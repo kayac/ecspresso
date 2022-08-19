@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	ecsv2 "github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	ecsv2Types "github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/fujiwara/ecsta"
 	"github.com/pkg/errors"
 )
@@ -22,7 +21,7 @@ type TasksOption struct {
 }
 
 func (o TasksOption) taskID() string {
-	return aws.StringValue(o.ID)
+	return aws.ToString(o.ID)
 }
 
 func (d *App) Tasks(opt TasksOption) error {
@@ -33,18 +32,18 @@ func (d *App) Tasks(opt TasksOption) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create ecsta")
 	}
-	ecstaApp.Config.Set("output", aws.StringValue(opt.Output))
+	ecstaApp.Config.Set("output", aws.ToString(opt.Output))
 
-	if aws.BoolValue(opt.Find) {
+	if aws.ToBool(opt.Find) {
 		return ecstaApp.RunDescribe(ctx, &ecsta.DescribeOption{
 			ID: opt.taskID(),
 		})
-	} else if aws.BoolValue(opt.Stop) {
+	} else if aws.ToBool(opt.Stop) {
 		return ecstaApp.RunStop(ctx, &ecsta.StopOption{
 			ID:    opt.taskID(),
-			Force: aws.BoolValue(opt.Force),
+			Force: aws.ToBool(opt.Force),
 		})
-	} else if aws.BoolValue(opt.Trace) {
+	} else if aws.ToBool(opt.Trace) {
 		return ecstaApp.RunTrace(ctx, &ecsta.TraceOption{
 			ID:       opt.taskID(),
 			Duration: time.Minute,
@@ -72,27 +71,27 @@ func (d *App) taskDefinitionFamily(ctx context.Context) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		family = aws.StringValue(td.Family)
+		family = aws.ToString(td.Family)
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
 			return "", err
 		}
-		family = aws.StringValue(td.Family)
+		family = aws.ToString(td.Family)
 	}
 	return family, nil
 }
 
-func (d *App) listTasks(ctx context.Context) ([]ecsv2Types.Task, error) {
+func (d *App) listTasks(ctx context.Context) ([]types.Task, error) {
 	tasks := []types.Task{}
 	family, err := d.taskDefinitionFamily(ctx)
 	if err != nil {
 		return nil, err
 	}
-	for _, status := range []ecsv2Types.DesiredStatus{ecsv2Types.DesiredStatusRunning, ecsv2Types.DesiredStatusStopped} {
-		tp := ecsv2.NewListTasksPaginator(
+	for _, status := range []types.DesiredStatus{types.DesiredStatusRunning, types.DesiredStatusStopped} {
+		tp := ecs.NewListTasksPaginator(
 			d.ecsv2,
-			&ecsv2.ListTasksInput{
+			&ecs.ListTasksInput{
 				Cluster:       &d.config.Cluster,
 				Family:        &family,
 				DesiredStatus: status,
@@ -106,7 +105,7 @@ func (d *App) listTasks(ctx context.Context) ([]ecsv2Types.Task, error) {
 			if len(to.TaskArns) == 0 {
 				continue
 			}
-			out, err := d.ecsv2.DescribeTasks(ctx, &ecsv2.DescribeTasksInput{
+			out, err := d.ecsv2.DescribeTasks(ctx, &ecs.DescribeTasksInput{
 				Cluster: &d.config.Cluster,
 				Tasks:   to.TaskArns,
 				Include: []types.TaskField{"TAGS"},
