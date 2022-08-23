@@ -39,6 +39,12 @@ func TestLoadTaskDefinition(t *testing.T) {
 		if s := td.EphemeralStorage.SizeInGiB; s != 25 {
 			t.Errorf("EphemeralStorage.SizeInGiB expected %d got %d", 25, s)
 		}
+		if td.ContainerDefinitions[0].DockerLabels["name"] != "katsubushi" {
+			t.Errorf("unexpected DockerLabels unexpected got %v", td.ContainerDefinitions[0].DockerLabels)
+		}
+		if td.ContainerDefinitions[0].LogConfiguration.Options["awslogs-group"] != "fargate" {
+			t.Errorf("unexpected LogConfiguration.Options got %v", td.ContainerDefinitions[0].LogConfiguration.Options)
+		}
 	}
 }
 

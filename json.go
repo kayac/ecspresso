@@ -53,17 +53,26 @@ func jsonKeyForStruct(s string) string {
 func walkMap(m map[string]interface{}, fn func(string) string) {
 	for key, value := range m {
 		delete(m, key)
+		newKey := key
+		if fn != nil {
+			newKey = fn(key)
+		}
 		if value != nil {
-			m[fn(key)] = value
+			m[newKey] = value
 		}
 		switch value := value.(type) {
 		case map[string]interface{}:
-			walkMap(value, fn)
+			switch strings.ToLower(key) {
+			case "dockerlabels", "options":
+				walkMap(value, nil) // do not rewrite keys for map[string]string
+			default:
+				walkMap(value, fn)
+			}
 		case []interface{}:
 			if len(value) > 0 {
 				walkArray(value, fn)
 			} else {
-				delete(m, fn(key))
+				delete(m, newKey)
 			}
 		default:
 		}
