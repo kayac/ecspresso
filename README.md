@@ -144,7 +144,7 @@ For more options for sub-commands, See `ecspresso sub-command --help`.
 
 ## Quick Start
 
-ecspresso can easily manage your existing/running ECS service by codes.
+Using ecspresso, you can easily manage your existing/running ECS service by codes.
 
 Try `ecspresso init` for your ECS service with option `--region`, `--cluster` and `--service`.
 
@@ -155,9 +155,9 @@ $ ecspresso init --region ap-northeast-1 --cluster default --service myservice -
 2019/10/12 01:31:48 myservice/default save config to ecspresso.yml
 ```
 
-Let me see the generated files ecspresso.yml, ecs-service-def.json, and ecs-task-def.json.
+You will be seeing the following files generated:  ecspresso.yml, ecs-service-def.json, and ecs-task-def.json.
 
-And then, you already can deploy the service by ecspresso!
+If you see the files, you're ready to deploy the service using ecspresso!
 
 ```console
 $ ecspresso deploy --config ecspresso.yml
@@ -179,15 +179,15 @@ ecspresso deploy works as below.
 
 - Register a new task definition from JSON file.
   - JSON file is allowed in both formats as below.
-    - `aws ecs describe-task-definition` output.
-    - `aws ecs register-task-definition --cli-input-json` input.
-  - Replace ```{{ env `FOO` `bar` }}``` syntax in the JSON file to environment variable "FOO".
-    - If "FOO" is not defined, replaced by "bar"
-  - Replace ```{{ must_env `FOO` }}``` syntax in the JSON file to environment variable "FOO".
+    - Output format of `aws ecs describe-task-definition` command.
+    - Input format of `aws ecs register-task-definition --cli-input-json` command.
+  - The ```{{ env `FOO` `bar` }}``` syntax in the JSON file will be replaced by the environment variable "FOO".
+    - If "FOO" is not defined, it will be replaced by "bar"
+  - The ```{{ must_env `FOO` }}``` syntax in the JSON file will be replaced by the environment variable "FOO".
     - If "FOO" is not defined, abort immediately.
 - Update service tasks.
-  - When `--update-service` option set, update service attributes by service definition.
-- Wait for a service to be stable.
+  - When `--update-service` option is set, service attributes are updated using the values defined in the service definition.
+- Wait for the service to be stable.
 
 Configuration files and task/service definition files are read by [go-config](https://github.com/kayac/go-config). go-config has template functions `env`, `must_env` and `json_escape`.
 
@@ -226,9 +226,9 @@ Events:
 }
 ```
 
-Currently, ecspresso doesn't create any resources on CodeDeploy. You must create an application and a deployment group for your ECS service on CodeDeploy in the other way.
+Currently, ecspresso doesn't create any resources on CodeDeploy. You must create an application and a deployment group for your ECS service on CodeDeploy in other way.
 
-`ecspresso deploy` creates a new deployment for CodeDeploy, and it continues on CodeDeploy.
+`ecspresso deploy` creates a new deployment for CodeDeploy, which starts to run on CodeDeploy.
 
 ```console
 $ ecspresso deploy --config ecspresso.yml --rollback-events DEPLOYMENT_FAILURE
@@ -247,7 +247,7 @@ Events:
 2019/10/15 22:47:09 myService/default https://ap-northeast-1.console.aws.amazon.com/codesuite/codedeploy/deployments/d-XXXXXXXXX?region=ap-northeast-1
 ```
 
-CodeDeploy appspec hooks can be defined in a config file. ecspresso creates `Resources` and `version` elements in appspec on deploy automatically.
+CodeDeploy appspec hooks can be defined in a config file. ecspresso automatically creates `Resources` and `version` elements in appspec on deploy.
 
 ```yaml
 cluster: default
@@ -265,7 +265,7 @@ appspec:
 
 ## Scale out/in
 
-To change a desired count of the service, specify `scale --tasks`.
+To change the desired count of the service, specify `scale --tasks`.
 
 ```console
 $ ecspresso scale --config ecspresso.yml --tasks 10
@@ -275,7 +275,7 @@ $ ecspresso scale --config ecspresso.yml --tasks 10
 
 ## Example of create
 
-escpresso can create a service by `service_definition` JSON file and `task_definition`.
+escpresso can create a new service using `service_definition` JSON file and `task_definition`.
 
 ```console
 $ ecspresso create --config ecspresso.yml
@@ -287,7 +287,7 @@ $ ecspresso create --config ecspresso.yml
 service_definition: service.json
 ```
 
-example of service.json below.
+example of the service.json:
 
 ```json
 {
@@ -320,7 +320,7 @@ Keys are in the same format as `aws ecs describe-services` output.
 $ ecspresso run --config ecspresso.yml --task-def=db-migrate.json
 ```
 
-When `--task-def` is not set, use a task definition included in a service.
+When `--task-def` is not set, the task definition included in the service is used.
 
 Other options for RunTask API are set by service attributes(CapacityProviderStrategy, LaunchType, PlacementConstraints, PlacementStrategy and PlatformVersion).
 
@@ -330,14 +330,14 @@ Other options for RunTask API are set by service attributes(CapacityProviderStra
 
 ecspresso v1.7 or later can use [Jsonnet](https://jsonnet.org/) file format for service and task definition.
 
-If the file extension is .jsonnet, ecspresso will process Jsonnet first, convert it to JSON, and then load it.
+If the file extension is .jsonnet, ecspresso will first process the file as Jsonnet, convert it to JSON, and then load it.
 
 ```yaml
 service_definition: ecs-service-def.jsonnet
 task_definition: ecs-task-def.jsonnet
 ```
 
-ecspresso includes [github.com/google/go-jsonnet](https://github.com/google/go-jsonnet) as a library, we don't need the jsonnet command.
+As ecspresso includes [github.com/google/go-jsonnet](https://github.com/google/go-jsonnet) as a library, jsonnet command is not required.
 
 `--ext-str` and `--ext-code` flag sets [Jsonnet External Variables](https://jsonnet.org/ref/stdlib.html#ext_vars).
 
@@ -354,12 +354,12 @@ $ ecspresso --ext-str Foo=foo --ext-code "Bar=1+1" ...
 
 ## Deploy to Fargate
 
-If you want to deploy services to Fargate, task definitions and service definitions require some settings.
+When deploying to Fargate, there are some required fields for task definitions and service definitions.
 
 For task definitions,
 
-- requiresCompatibilities (required "FARGATE")
-- networkMode (required "awsvpc")
+- requiresCompatibilities (must be "FARGATE")
+- networkMode (must be "awsvpc")
 - cpu (required)
 - memory (required)
 - executionRoleArn (optional)
@@ -379,8 +379,8 @@ For task definitions,
 
 For service-definition,
 
-- launchType (required "FARGATE")
-- networkConfiguration (required "awsvpcConfiguration")
+- launchType (must be "FARGATE")
+- networkConfiguration (must be "awsvpcConfiguration")
 
 ```json5
 {
@@ -404,7 +404,7 @@ For service-definition,
 ## Fargate Spot support
 
 1. Set capacityProviders and defaultCapacityProviderStrategy to ECS cluster.
-1. If you hope to migrate existing service to use Fargate Spot, define capacityProviderStrategy into service definition as below. `ecspresso deploy --update-service` applies the settings to the service.
+1. If you are to migrate existing service to use Fargate Spot, define capacityProviderStrategy into service definition as below. `ecspresso deploy --update-service` applies the settings to the service.
 
 ```json5
 {
@@ -461,17 +461,17 @@ $ ecspresso --config ecspresso.yml diff --unified
 
 ### verify
 
-Verify resources related with service/task definitions.
+Verify resources related to service/task definitions.
 
 For example,
-- An ECS cluster exists.
-- The target groups in service definitions match the container name and port defined in the definitions.
-- A task role and a task execution role exist and can be assumed by ecs-tasks.amazonaws.com.
-- Container images exist at the URL defined in task definitions. (Checks only for ECR or DockerHub public images.)
-- Secrets in task definitions exist and be readable.
-- Can create log streams, can put messages to the streams in specified CloudWatch log groups.
+- Whether the ECS cluster exists.
+- Whether the target groups in service definitions match the container name and port defined in the definitions.
+- Whether the task role and the task execution role exist and can be assumed by ecs-tasks.amazonaws.com.
+- Whether the container images exist at the URL defined in task definitions. (Checks only for ECR or DockerHub public images.)
+- Whether the secrets in task definitions exist and are readable.
+- Whether it can create log streams, can put messages to the streams in the specified CloudWatch log groups.
 
-ecspresso verify tries to assume the task execution role defined in task definitions to verify these items. If failed to assume the role, it continues to verify with the current sessions.
+ecspresso verify tries to assume-role the task execution role defined in task definitions to verify these items. If the assume-role fails, the verification continues using the current session.
 
 ```console
 $ ecspresso --config ecspresso.yml verify
@@ -497,7 +497,7 @@ $ ecspresso --config ecspresso.yml verify
 
 ### tasks
 
-task command lists tasks run by a service or having the same family to a task definition.
+`task` subcommand lists tasks run by a service or having the same family to a task definition.
 
 ```
 Flags:
@@ -520,7 +520,7 @@ When `--stop` option is set, you can select a task in a list of tasks and stop t
 
 ### exec
 
-exec command executes a command on task.
+`exec` subcommand executes a command on task.
 
 [session-manager-plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) is required in PATH.
 
@@ -531,9 +531,9 @@ Flags:
   --container=CONTAINER  container name
 ```
 
-If `--id` is not set, the command shows a list of tasks to select a task to execute.
+If `--id` is not set, the command shows the list of tasks, which could be used to select which task to exec on.
 
-`filter_command` in ecspresso.yml works the same as tasks command.
+`filter_command` in ecspresso.yml works the same as `tasks` subcommand.
 
 See also the official document [Using Amazon ECS Exec for debugging](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html).
 
@@ -546,9 +546,9 @@ $ ecspresso exec --port-forward --port 80 --local-port 8080
 ...
 ```
 
-If `--id` is not set, the command shows a list of tasks to select a task to forward port.
+If `--id` is not set, the command shows the list of tasks, which could be used to select which task to forward port.
 
-When `--local-port` is not specified, use the ephemeral port for local port.
+When `--local-port` is not specified, ephemeral port will be used for the local port.
 
 ### suspend / resume application auto scaling
 
@@ -557,7 +557,7 @@ When `--local-port` is not specified, use the ephemeral port for local port.
 `--suspend-auto-scaling` sets suspended state true.
 `--resume-auto-scaling` sets suspended state false.
 
-When you want to change the suspended state simply, try `ecspresso scale --suspend-auto-scaling` or `ecspresso scale --resume-auto-scaling`. That operation will change suspended state only.
+When you simply want to change the suspended state, try `ecspresso scale --suspend-auto-scaling` or `ecspresso scale --resume-auto-scaling`. That operation will only change the suspended state.
 
 # Plugins
 
@@ -595,7 +595,7 @@ ecs-service-def.json
 }
 ```
 
-`{{ tfstate "resource_type.resource_name.attr" }}` will expand to an attribute value of the resource in tfstate.
+`{{ tfstate "resource_type.resource_name.attr" }}` will be expanded to the attribute value of the resource in tfstate.
 
 `{{ tfstatef "resource_type.resource_name['%s'].attr" "index" }}` is similar to `{{ tfstatef "resource_type.resource_name['index'].attr" }}`. This function is useful to build a resource address with environment variables.
 
@@ -607,7 +607,7 @@ ecs-service-def.json
 
 cloudformation plugin introduces template functions `cfn_output` and `cfn_export`.
 
-An example of CloudFormation stack template defines Outputs and Exports.
+An example of CloudFormation stack template that defines Outputs and Exports is:
 
 ```yaml
 # StackName: ECS-ecspresso
@@ -622,7 +622,7 @@ Outputs:
       Name: !Sub ${AWS::StackName}-EcsSecurityGroupId
 ```
 
-Load cloudformation plugin in a config file.
+The cloudformation plugin needs to be loaded in the config file.
 
 ecspresso.yml
 ```yaml
