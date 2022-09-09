@@ -145,7 +145,7 @@ func TestTaskDefinitionDiffer(t *testing.T) {
 	}
 }
 
-var testServiceDefinition1 = &types.Service{
+var testServiceDefinition1 = &ecspresso.Service{
 	LaunchType: types.LaunchTypeFargate,
 	NetworkConfiguration: &types.NetworkConfiguration{
 		AwsvpcConfiguration: &types.AwsVpcConfiguration{
@@ -161,7 +161,7 @@ var testServiceDefinition1 = &types.Service{
 	},
 }
 
-var testServiceDefinition2 = &types.Service{
+var testServiceDefinition2 = &ecspresso.Service{
 	DeploymentConfiguration: &types.DeploymentConfiguration{
 		MaximumPercent:        aws.Int32(200),
 		MinimumHealthyPercent: aws.Int32(100),

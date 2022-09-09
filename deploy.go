@@ -22,7 +22,7 @@ const (
 	CodeDeployConsoleURLFmt = "https://%s.console.aws.amazon.com/codesuite/codedeploy/deployments/%s?region=%s"
 )
 
-func calcDesiredCount(sv *types.Service, opt optWithDesiredCount) *int32 {
+func calcDesiredCount(sv *Service, opt optWithDesiredCount) *int32 {
 	if sv.SchedulingStrategy == types.SchedulingStrategyDaemon {
 		return nil
 	}
@@ -39,7 +39,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	var sv *types.Service
+	var sv *Service
 	d.Log("Starting deploy", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
@@ -167,7 +167,7 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 	return nil
 }
 
-func svToUpdateServiceInput(sv *types.Service) *ecs.UpdateServiceInput {
+func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 	in := &ecs.UpdateServiceInput{
 		CapacityProviderStrategy:      sv.CapacityProviderStrategy,
 		DeploymentConfiguration:       sv.DeploymentConfiguration,
@@ -189,7 +189,7 @@ func svToUpdateServiceInput(sv *types.Service) *ecs.UpdateServiceInput {
 	return in
 }
 
-func (d *App) UpdateServiceAttributes(ctx context.Context, sv *types.Service, opt DeployOption) error {
+func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, opt DeployOption) error {
 	in := svToUpdateServiceInput(sv)
 	if sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy {
 		// unable to update attributes below with a CODE_DEPLOY deployment controller.
@@ -219,7 +219,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *types.Service, op
 	return nil
 }
 
-func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int32, sv *types.Service, opt DeployOption) error {
+func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) error {
 	if count != nil {
 		d.Log("updating desired count to", *count)
 	}
@@ -307,7 +307,7 @@ func (d *App) findDeploymentInfo() (*codedeploy.DeploymentInfo, error) {
 	)
 }
 
-func (d *App) createDeployment(ctx context.Context, sv *types.Service, taskDefinitionArn string, rollbackEvents *string) error {
+func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionArn string, rollbackEvents *string) error {
 
 	spec, err := appspec.NewWithService(sv, taskDefinitionArn)
 	if err != nil {

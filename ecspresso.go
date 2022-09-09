@@ -44,6 +44,8 @@ func taskDefinitionName(t *TaskDefinition) string {
 	return fmt.Sprintf("%s:%d", *t.Family, t.Revision)
 }
 
+type Service = types.Service
+
 type App struct {
 	ecsv2       *ecsv2.Client
 	autoScaling *applicationautoscaling.ApplicationAutoScaling
@@ -88,7 +90,7 @@ func (d *App) GetLogEventsInput(logGroup string, logStream string, startAt int64
 	}
 }
 
-func (d *App) DescribeService(ctx context.Context) (*types.Service, error) {
+func (d *App) DescribeService(ctx context.Context) (*Service, error) {
 	out, err := d.ecsv2.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe service")
@@ -99,7 +101,7 @@ func (d *App) DescribeService(ctx context.Context) (*types.Service, error) {
 	return &out.Services[0], nil
 }
 
-func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*types.Service, error) {
+func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*Service, error) {
 	s, err := d.DescribeService(ctx)
 	if err != nil {
 		return nil, err
@@ -136,7 +138,7 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*types.Ser
 	return s, nil
 }
 
-func (d *App) describeAutoScaling(s *types.Service) error {
+func (d *App) describeAutoScaling(s *Service) error {
 	resourceId := fmt.Sprintf("service/%s/%s", arnToName(*s.ClusterArn), *s.ServiceName)
 	tout, err := d.autoScaling.DescribeScalableTargets(
 		&applicationautoscaling.DescribeScalableTargetsInput{
@@ -536,12 +538,12 @@ func (d *App) unmarshalJSON(src []byte, v interface{}, path string) error {
 	return nil
 }
 
-func (d *App) LoadServiceDefinition(path string) (*types.Service, error) {
+func (d *App) LoadServiceDefinition(path string) (*Service, error) {
 	if path == "" {
 		return nil, errors.New("service_definition is not defined")
 	}
 
-	sv := types.Service{}
+	var sv Service
 	src, err := d.readDefinitionFile(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to load service definition %s", path)
@@ -607,7 +609,7 @@ func (d *App) suspendAutoScaling(suspendState bool) error {
 	return nil
 }
 
-func (d *App) WaitForCodeDeploy(ctx context.Context, sv *types.Service) error {
+func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 	dp, err := d.findDeploymentInfo()
 	if err != nil {
 		return err
@@ -640,7 +642,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *types.Service) error {
 	)
 }
 
-func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *types.Service, tdArn string, opt RollbackOption) error {
+func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) error {
 	dp, err := d.findDeploymentInfo()
 	if err != nil {
 		return err

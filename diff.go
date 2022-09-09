@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func diffServices(local, remote *types.Service, remoteArn string, localPath string, unified bool) (string, error) {
+func diffServices(local, remote *Service, remoteArn string, localPath string, unified bool) (string, error) {
 	sortServiceDefinitionForDiff(local)
 	sortServiceDefinitionForDiff(remote)
 
@@ -216,7 +216,7 @@ func equalString(a *string, b string) bool {
 	return *a == b
 }
 
-func sortServiceDefinitionForDiff(sv *types.Service) {
+func sortServiceDefinitionForDiff(sv *Service) {
 	sortSlicesInDefinition(
 		reflect.TypeOf(*sv), reflect.Indirect(reflect.ValueOf(sv)),
 		"PlacementConstraints",

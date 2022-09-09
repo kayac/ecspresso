@@ -120,7 +120,7 @@ func (d *App) Init(opt InitOption) error {
 	return nil
 }
 
-func treatmentServiceDefinition(sv *types.Service) *types.Service {
+func treatmentServiceDefinition(sv *Service) *Service {
 	sv.ClusterArn = nil
 	sv.CreatedAt = nil
 	sv.CreatedBy = nil
