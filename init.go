@@ -55,7 +55,7 @@ func (d *App) Init(opt InitOption) error {
 		return errors.New("service is not found")
 	}
 
-	sv := out.Services[0]
+	sv := newServiceFromTypes(out.Services[0])
 	td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe task definition")
@@ -73,7 +73,7 @@ func (d *App) Init(opt InitOption) error {
 	}
 
 	// service-def
-	treatmentServiceDefinition(&sv)
+	treatmentServiceDefinition(sv)
 	if b, err := MarshalJSON(sv); err != nil {
 		return errors.Wrap(err, "unable to marshal service definition to JSON")
 	} else {

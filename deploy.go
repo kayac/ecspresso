@@ -28,7 +28,7 @@ func calcDesiredCount(sv *Service, opt optWithDesiredCount) *int32 {
 	}
 	if oc := opt.getDesiredCount(); oc != nil {
 		if *oc == DefaultDesiredCount {
-			return &sv.DesiredCount
+			return sv.DesiredCount
 		}
 		return oc // --tasks
 	}
@@ -171,7 +171,7 @@ func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 	in := &ecs.UpdateServiceInput{
 		CapacityProviderStrategy:      sv.CapacityProviderStrategy,
 		DeploymentConfiguration:       sv.DeploymentConfiguration,
-		DesiredCount:                  &sv.DesiredCount,
+		DesiredCount:                  sv.DesiredCount,
 		EnableECSManagedTags:          &sv.EnableECSManagedTags,
 		EnableExecuteCommand:          &sv.EnableExecuteCommand,
 		HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
@@ -309,7 +309,7 @@ func (d *App) findDeploymentInfo() (*codedeploy.DeploymentInfo, error) {
 
 func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionArn string, rollbackEvents *string) error {
 
-	spec, err := appspec.NewWithService(sv, taskDefinitionArn)
+	spec, err := appspec.NewWithService(&sv.Service, taskDefinitionArn)
 	if err != nil {
 		return errors.Wrap(err, "failed to create appspec")
 	}

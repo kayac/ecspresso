@@ -41,7 +41,7 @@ func (d *App) AppSpec(opt AppSpecOption) error {
 		sv = newSv
 	}
 
-	spec, err := appspec.NewWithService(sv, taskDefinitionArn)
+	spec, err := appspec.NewWithService(&sv.Service, taskDefinitionArn)
 	if err != nil {
 		return errors.Wrap(err, "failed to create appspec")
 	}

@@ -27,7 +27,7 @@ func TestLoadServiceDefinition(t *testing.T) {
 		}
 
 		if *sv.ServiceName != "test" ||
-			sv.DesiredCount != 2 ||
+			aws.ToInt32(sv.DesiredCount) != 2 ||
 			aws.ToString(sv.LoadBalancers[0].TargetGroupArn) != "arn:aws:elasticloadbalancing:us-east-1:1111111111:targetgroup/test/12345678" ||
 			sv.LaunchType != types.LaunchTypeEc2 ||
 			sv.SchedulingStrategy != types.SchedulingStrategyReplica ||

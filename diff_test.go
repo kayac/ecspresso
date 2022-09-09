@@ -146,41 +146,45 @@ func TestTaskDefinitionDiffer(t *testing.T) {
 }
 
 var testServiceDefinition1 = &ecspresso.Service{
-	LaunchType: types.LaunchTypeFargate,
-	NetworkConfiguration: &types.NetworkConfiguration{
-		AwsvpcConfiguration: &types.AwsVpcConfiguration{
-			Subnets: []string{
-				"subnet-876543210",
-				"subnet-012345678",
-			},
-			SecurityGroups: []string{
-				"sg-99999999",
-				"sg-11111111",
+	Service: types.Service{
+		LaunchType: types.LaunchTypeFargate,
+		NetworkConfiguration: &types.NetworkConfiguration{
+			AwsvpcConfiguration: &types.AwsVpcConfiguration{
+				Subnets: []string{
+					"subnet-876543210",
+					"subnet-012345678",
+				},
+				SecurityGroups: []string{
+					"sg-99999999",
+					"sg-11111111",
+				},
 			},
 		},
 	},
 }
 
 var testServiceDefinition2 = &ecspresso.Service{
-	DeploymentConfiguration: &types.DeploymentConfiguration{
-		MaximumPercent:        aws.Int32(200),
-		MinimumHealthyPercent: aws.Int32(100),
-	},
-	NetworkConfiguration: &types.NetworkConfiguration{
-		AwsvpcConfiguration: &types.AwsVpcConfiguration{
-			Subnets: []string{
-				"subnet-012345678",
-				"subnet-876543210",
-			},
-			SecurityGroups: []string{
-				"sg-11111111",
-				"sg-99999999",
-			},
-			AssignPublicIp: types.AssignPublicIpDisabled,
+	Service: types.Service{
+		DeploymentConfiguration: &types.DeploymentConfiguration{
+			MaximumPercent:        aws.Int32(200),
+			MinimumHealthyPercent: aws.Int32(100),
 		},
+		NetworkConfiguration: &types.NetworkConfiguration{
+			AwsvpcConfiguration: &types.AwsVpcConfiguration{
+				Subnets: []string{
+					"subnet-012345678",
+					"subnet-876543210",
+				},
+				SecurityGroups: []string{
+					"sg-11111111",
+					"sg-99999999",
+				},
+				AssignPublicIp: types.AssignPublicIpDisabled,
+			},
+		},
+		LaunchType:      types.LaunchTypeFargate,
+		PlatformVersion: aws.String("LATEST"),
 	},
-	LaunchType:      types.LaunchTypeFargate,
-	PlatformVersion: aws.String("LATEST"),
 }
 
 func TestServiceDefinitionDiffer(t *testing.T) {

@@ -44,7 +44,17 @@ func taskDefinitionName(t *TaskDefinition) string {
 	return fmt.Sprintf("%s:%d", *t.Family, t.Revision)
 }
 
-type Service = types.Service
+type Service struct {
+	types.Service
+	DesiredCount *int32
+}
+
+func newServiceFromTypes(sv types.Service) *Service {
+	return &Service{
+		Service:      sv,
+		DesiredCount: aws.Int32(sv.DesiredCount),
+	}
+}
 
 type App struct {
 	ecsv2       *ecsv2.Client
@@ -98,7 +108,7 @@ func (d *App) DescribeService(ctx context.Context) (*Service, error) {
 	if len(out.Services) == 0 {
 		return nil, errors.New("service is not found")
 	}
-	return &out.Services[0], nil
+	return newServiceFromTypes(out.Services[0]), nil
 }
 
 func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*Service, error) {

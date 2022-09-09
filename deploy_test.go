@@ -16,39 +16,43 @@ type desiredCountTestCase struct {
 
 var desiredCountTestSuite = []desiredCountTestCase{
 	{
-		sv:       &ecspresso.Service{DesiredCount: 0},
+		sv:       &ecspresso.Service{DesiredCount: nil},
 		opt:      ecspresso.DeployOption{DesiredCount: nil},
 		expected: nil,
 	},
 	{
-		sv:       &ecspresso.Service{DesiredCount: 0, SchedulingStrategy: types.SchedulingStrategyDaemon},
+		sv: &ecspresso.Service{
+			Service: types.Service{
+				SchedulingStrategy: types.SchedulingStrategyDaemon,
+			},
+		},
 		opt:      ecspresso.DeployOption{DesiredCount: aws.Int32(10)},
 		expected: nil,
 	},
 	{
-		sv:       &ecspresso.Service{DesiredCount: 2},
+		sv:       &ecspresso.Service{DesiredCount: aws.Int32(2)},
 		opt:      ecspresso.DeployOption{DesiredCount: nil},
 		expected: nil,
 	},
 	{
-		sv:       &ecspresso.Service{DesiredCount: 1},
+		sv:       &ecspresso.Service{DesiredCount: aws.Int32(1)},
 		opt:      ecspresso.DeployOption{DesiredCount: aws.Int32(3)},
 		expected: aws.Int32(3),
 	},
 	{
-		sv:       &ecspresso.Service{DesiredCount: 1},
+		sv:       &ecspresso.Service{DesiredCount: aws.Int32(1)},
 		opt:      ecspresso.DeployOption{DesiredCount: aws.Int32(ecspresso.DefaultDesiredCount)},
 		expected: aws.Int32(1),
 	},
 	{
-		sv:       &ecspresso.Service{DesiredCount: 0},
+		sv:       &ecspresso.Service{DesiredCount: aws.Int32(0)},
 		opt:      ecspresso.DeployOption{DesiredCount: aws.Int32(5)},
 		expected: aws.Int32(5),
 	},
 	{
-		sv:       &ecspresso.Service{DesiredCount: 0},
+		sv:       &ecspresso.Service{DesiredCount: aws.Int32(0)},
 		opt:      ecspresso.DeployOption{DesiredCount: aws.Int32(ecspresso.DefaultDesiredCount)},
-		expected: nil,
+		expected: aws.Int32(0),
 	},
 }
 

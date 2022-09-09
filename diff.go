@@ -25,9 +25,9 @@ func diffServices(local, remote *Service, remoteArn string, localPath string, un
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal new service definition")
 	}
-	if local.DesiredCount == 0 {
+	if aws.ToInt32(local.DesiredCount) == 0 {
 		// ignore DesiredCount when it in local is not defined.
-		remote.DesiredCount = 0
+		remote.DesiredCount = aws.Int32(0)
 	}
 	remoteSvBytes, err := MarshalJSONForAPI(svToUpdateServiceInput(remote))
 	if err != nil {
