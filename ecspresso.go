@@ -563,6 +563,11 @@ func (d *App) LoadServiceDefinition(path string) (*Service, error) {
 	}
 
 	sv.ServiceName = aws.String(d.config.Service)
+	if sv.DesiredCount == nil {
+		d.DebugLog("Loaded DesiredCount: nil (-1)")
+	} else {
+		d.DebugLog("Loaded DesiredCount:", *sv.DesiredCount)
+	}
 	return &sv, nil
 }
 

@@ -25,7 +25,7 @@ func diffServices(local, remote *Service, remoteArn string, localPath string, un
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal new service definition")
 	}
-	if aws.ToInt32(local.DesiredCount) == 0 {
+	if local.DesiredCount == nil {
 		// ignore DesiredCount when it in local is not defined.
 		remote.DesiredCount = aws.Int32(0)
 	}
