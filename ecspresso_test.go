@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/kayac/ecspresso"
 )
 
@@ -37,8 +36,14 @@ func TestLoadTaskDefinition(t *testing.T) {
 		if err != nil || td == nil {
 			t.Errorf("%s load failed: %s", path, err)
 		}
-		if s := aws.Int64Value(td.EphemeralStorage.SizeInGiB); s != 25 {
+		if s := td.EphemeralStorage.SizeInGiB; s != 25 {
 			t.Errorf("EphemeralStorage.SizeInGiB expected %d got %d", 25, s)
+		}
+		if td.ContainerDefinitions[0].DockerLabels["name"] != "katsubushi" {
+			t.Errorf("unexpected DockerLabels unexpected got %v", td.ContainerDefinitions[0].DockerLabels)
+		}
+		if td.ContainerDefinitions[0].LogConfiguration.Options["awslogs-group"] != "fargate" {
+			t.Errorf("unexpected LogConfiguration.Options got %v", td.ContainerDefinitions[0].LogConfiguration.Options)
 		}
 	}
 }

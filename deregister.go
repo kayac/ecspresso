@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/Songmu/prompter"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/pkg/errors"
 )
 
@@ -37,9 +37,9 @@ func (d *App) Deregister(opt DeregisterOption) error {
 		return err
 	}
 
-	if aws.Int64Value(opt.Revision) > 0 {
+	if aws.ToInt64(opt.Revision) > 0 {
 		return d.deregiserRevision(ctx, opt, inUse)
-	} else if aws.IntValue(opt.Keeps) > 0 {
+	} else if aws.ToInt(opt.Keeps) > 0 {
 		return d.deregisterKeeps(ctx, opt, inUse)
 	}
 	return errors.New("--revision or --keeps required")
@@ -50,20 +50,20 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
 	}
-	name := fmt.Sprintf("%s:%d", aws.StringValue(td.Family), aws.Int64Value(opt.Revision))
+	name := fmt.Sprintf("%s:%d", aws.ToString(td.Family), aws.ToInt64(opt.Revision))
 
 	if s := inUse[name]; s != "" {
 		return errors.Errorf("%s is in use by %s", name, s)
 	}
 
-	if aws.BoolValue(opt.DryRun) {
+	if aws.ToBool(opt.DryRun) {
 		d.Log(fmt.Sprintf("task definition %s will be deregistered", name))
 		d.Log("DRY RUN OK")
 		return nil
 	}
-	if aws.BoolValue(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %s ?", name), false) {
+	if aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %s ?", name), false) {
 		d.Log(fmt.Sprintf("Deregistring %s", name))
-		if _, err := d.ecs.DeregisterTaskDefinitionWithContext(ctx, &ecs.DeregisterTaskDefinitionInput{
+		if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
 			TaskDefinition: aws.String(name),
 		}); err != nil {
 			return errors.Wrap(err, "failed to deregister task definition")
@@ -77,7 +77,7 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 }
 
 func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse map[string]string) error {
-	keeps := aws.IntValue(opt.Keeps)
+	keeps := aws.ToInt(opt.Keeps)
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to load task definition")
@@ -85,7 +85,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 	names := []string{}
 	var nextToken *string
 	for {
-		res, err := d.ecs.ListTaskDefinitionsWithContext(ctx, &ecs.ListTaskDefinitionsInput{
+		res, err := d.ecs.ListTaskDefinitions(ctx, &ecs.ListTaskDefinitionsInput{
 			FamilyPrefix: td.Family,
 			NextToken:    nextToken,
 		})
@@ -93,7 +93,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 			return errors.Wrap(err, "failed to list task definitions")
 		}
 		for _, a := range res.TaskDefinitionArns {
-			name, err := taskDefinitionToName(*a)
+			name, err := taskDefinitionToName(a)
 			if err != nil {
 				continue
 			}
@@ -121,16 +121,16 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 			deregs = append(deregs, name)
 		}
 	}
-	if aws.BoolValue(opt.DryRun) {
+	if aws.ToBool(opt.DryRun) {
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
 	deregistered := 0
-	if aws.BoolValue(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %d revisons?", len(deregs)), false) {
+	if aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %d revisons?", len(deregs)), false) {
 		for _, name := range deregs {
 			d.Log(fmt.Sprintf("Deregistring %s", name))
-			if _, err := d.ecs.DeregisterTaskDefinitionWithContext(ctx, &ecs.DeregisterTaskDefinitionInput{
+			if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
 				TaskDefinition: aws.String(name),
 			}); err != nil {
 				return errors.Wrap(err, "failed to deregister task definition")
@@ -150,15 +150,15 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 
 func (d *App) inUseRevisions(ctx context.Context) (map[string]string, error) {
 	inUse := make(map[string]string)
-	tasks, err := d.listTasks(ctx, nil)
+	tasks, err := d.listTasks(ctx)
 	if err != nil {
 		return nil, err
 	}
 	for _, task := range tasks {
 		name, _ := taskDefinitionToName(*task.TaskDefinitionArn)
-		st := aws.StringValue(task.LastStatus)
+		st := aws.ToString(task.LastStatus)
 		if st == "" {
-			st = aws.StringValue(task.DesiredStatus)
+			st = aws.ToString(task.DesiredStatus)
 		}
 		if st != "STOPPED" {
 			// ignore STOPPED tasks for in use

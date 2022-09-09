@@ -3,18 +3,19 @@ package ecspresso
 import (
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/pkg/errors"
 )
 
 type CreateOption struct {
 	DryRun       *bool
-	DesiredCount *int64
+	DesiredCount *int32
 	NoWait       *bool
 }
 
-func (opt CreateOption) getDesiredCount() *int64 {
+func (opt CreateOption) getDesiredCount() *int32 {
 	return opt.DesiredCount
 }
 
@@ -40,8 +41,8 @@ func (d *App) Create(opt CreateOption) error {
 	}
 
 	count := calcDesiredCount(svd, opt)
-	if count == nil && (svd.SchedulingStrategy != nil && *svd.SchedulingStrategy == "REPLICA") {
-		count = aws.Int64(0) // Must provide desired count for replica scheduling strategy
+	if count == nil && (svd.SchedulingStrategy != "" && svd.SchedulingStrategy == types.SchedulingStrategyReplica) {
+		count = aws.Int32(0) // Must provide desired count for replica scheduling strategy
 	}
 
 	if *opt.DryRun {
@@ -79,7 +80,7 @@ func (d *App) Create(opt CreateOption) error {
 		Tags:                          svd.Tags,
 		TaskDefinition:                newTd.TaskDefinitionArn,
 	}
-	if _, err := d.ecs.CreateServiceWithContext(ctx, createServiceInput); err != nil {
+	if _, err := d.ecs.CreateService(ctx, createServiceInput); err != nil {
 		return errors.Wrap(err, "failed to create service")
 	}
 	d.Log("Service is created")

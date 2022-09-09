@@ -5,7 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/kayac/ecspresso"
 )
 
@@ -26,14 +27,14 @@ func TestLoadServiceDefinition(t *testing.T) {
 		}
 
 		if *sv.ServiceName != "test" ||
-			*sv.DesiredCount != 2 ||
-			*sv.LoadBalancers[0].TargetGroupArn != "arn:aws:elasticloadbalancing:us-east-1:1111111111:targetgroup/test/12345678" ||
-			*sv.LaunchType != "EC2" ||
-			*sv.SchedulingStrategy != "REPLICA" ||
-			*sv.PropagateTags != "SERVICE" ||
+			aws.ToInt32(sv.DesiredCount) != 2 ||
+			aws.ToString(sv.LoadBalancers[0].TargetGroupArn) != "arn:aws:elasticloadbalancing:us-east-1:1111111111:targetgroup/test/12345678" ||
+			sv.LaunchType != types.LaunchTypeEc2 ||
+			sv.SchedulingStrategy != types.SchedulingStrategyReplica ||
+			sv.PropagateTags != types.PropagateTagsService ||
 			*sv.Tags[0].Key != "cluster" ||
 			*sv.Tags[0].Value != "default2" {
-			t.Errorf("unexpected service definition %s", sv.String())
+			t.Errorf("unexpected service definition %#v", sv)
 		}
 	}
 }
@@ -94,9 +95,9 @@ func testLoadConfigWithPlugin(t *testing.T, path string) {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(svd.String())
-	sgID := *svd.NetworkConfiguration.AwsvpcConfiguration.SecurityGroups[0]
-	subnetID := *svd.NetworkConfiguration.AwsvpcConfiguration.Subnets[0]
+	t.Log(svd)
+	sgID := svd.NetworkConfiguration.AwsvpcConfiguration.SecurityGroups[0]
+	subnetID := svd.NetworkConfiguration.AwsvpcConfiguration.Subnets[0]
 	if sgID != "sg-12345678" {
 		t.Errorf("unexpected sg id got:%s", sgID)
 	}
@@ -104,18 +105,18 @@ func testLoadConfigWithPlugin(t *testing.T, path string) {
 		t.Errorf("unexpected subnet id got:%s", subnetID)
 	}
 	cb := *svd.DeploymentConfiguration.DeploymentCircuitBreaker
-	if !aws.BoolValue(cb.Enable) {
-		t.Errorf("unexpected deploymentCircuitBreaker.enable got:%v", *cb.Enable)
+	if !cb.Enable {
+		t.Errorf("unexpected deploymentCircuitBreaker.enable got:%v", cb.Enable)
 	}
-	if !aws.BoolValue(cb.Rollback) {
-		t.Errorf("unexpected deploymentCircuitBreaker.rollback got:%v", *cb.Rollback)
+	if !cb.Rollback {
+		t.Errorf("unexpected deploymentCircuitBreaker.rollback got:%v", cb.Rollback)
 	}
 
 	td, err := app.LoadTaskDefinition(conf.TaskDefinitionPath)
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(td.String())
+	t.Log(td)
 	image := *td.ContainerDefinitions[0].Image
 	if image != "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/app:testing" {
 		t.Errorf("unexpected image got:%s", image)

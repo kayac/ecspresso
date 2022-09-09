@@ -3,7 +3,8 @@ package appspec_test
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/kayac/ecspresso/appspec"
 	"github.com/kayac/go-config"
@@ -19,31 +20,31 @@ var expected = &appspec.AppSpec{
 					TaskDefinition: aws.String("arn:aws:ecs:us-east-1:111222333444:task-definition/my-task-definition-family-name:1"),
 					LoadBalancerInfo: &appspec.LoadBalancerInfo{
 						ContainerName: aws.String("SampleApplicationName"),
-						ContainerPort: aws.Int64(80),
+						ContainerPort: aws.Int32(80),
 					},
 					PlatformVersion: aws.String("LATEST"),
 					NetworkConfiguration: &appspec.NetworkConfiguration{
 						AwsvpcConfiguration: &appspec.AwsVpcConfiguration{
-							Subnets: []*string{
-								aws.String("subnet-1234abcd"),
-								aws.String("subnet-5678abcd"),
+							Subnets: []string{
+								"subnet-1234abcd",
+								"subnet-5678abcd",
 							},
-							SecurityGroups: []*string{
-								aws.String("sg-12345678"),
+							SecurityGroups: []string{
+								"sg-12345678",
 							},
-							AssignPublicIp: aws.String("ENABLED"),
+							AssignPublicIp: types.AssignPublicIpEnabled,
 						},
 					},
 					CapacityProviderStrategy: []*appspec.CapacityProviderStrategy{
 						{
 							CapacityProvider: aws.String("FARGATE_SPOT"),
-							Base: aws.Int64(1),
-							Weight: aws.Int64(2),
+							Base:             1,
+							Weight:           2,
 						},
 						{
 							CapacityProvider: aws.String("FARGATE"),
-							Base: aws.Int64(0),
-							Weight: aws.Int64(1),
+							Base:             0,
+							Weight:           1,
 						},
 					},
 				},

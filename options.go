@@ -3,8 +3,8 @@ package ecspresso
 import (
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/pkg/errors"
 )
 
@@ -15,12 +15,12 @@ type DryRunnable interface {
 }
 
 type optWithDesiredCount interface {
-	getDesiredCount() *int64
+	getDesiredCount() *int32
 }
 
 type DeployOption struct {
 	DryRun               *bool
-	DesiredCount         *int64
+	DesiredCount         *int32
 	SkipTaskDefinition   *bool
 	ForceNewDeployment   *bool
 	NoWait               *bool
@@ -30,7 +30,7 @@ type DeployOption struct {
 	LatestTaskDefinition *bool
 }
 
-func (opt DeployOption) getDesiredCount() *int64 {
+func (opt DeployOption) getDesiredCount() *int32 {
 	return opt.DesiredCount
 }
 
@@ -78,7 +78,7 @@ type RunOption struct {
 	TaskOverrideStr      *string
 	TaskOverrideFile     *string
 	SkipTaskDefinition   *bool
-	Count                *int64
+	Count                *int32
 	WatchContainer       *string
 	LatestTaskDefinition *bool
 	PropagateTags        *string
@@ -88,7 +88,7 @@ type RunOption struct {
 }
 
 func (opt RunOption) waitUntilRunning() bool {
-	return aws.StringValue(opt.WaitUntil) == "running"
+	return aws.ToString(opt.WaitUntil) == "running"
 }
 
 func (opt RunOption) DryRunString() string {
@@ -98,8 +98,8 @@ func (opt RunOption) DryRunString() string {
 	return ""
 }
 
-func parseTags(s string) ([]*ecs.Tag, error) {
-	tags := make([]*ecs.Tag, 0)
+func parseTags(s string) ([]types.Tag, error) {
+	tags := make([]types.Tag, 0)
 	if s == "" {
 		return tags, nil
 	}
@@ -116,7 +116,7 @@ func parseTags(s string) ([]*ecs.Tag, error) {
 		if len(pair[0]) == 0 {
 			return tags, errors.Errorf("tag Key is required")
 		}
-		tags = append(tags, &ecs.Tag{
+		tags = append(tags, types.Tag{
 			Key:   aws.String(pair[0]),
 			Value: aws.String(pair[1]),
 		})

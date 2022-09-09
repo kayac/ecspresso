@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,9 @@ import (
 	"github.com/kayac/ecspresso/appspec"
 	gc "github.com/kayac/go-config"
 	"github.com/pkg/errors"
+
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	awsv2Config "github.com/aws/aws-sdk-go-v2/config"
 )
 
 const (
@@ -38,6 +42,8 @@ type Config struct {
 	dir                string
 	versionConstraints gv.Constraints
 	sess               *session.Session
+
+	awsv2Config awsv2.Config
 }
 
 // Load loads configuration file from file path.
@@ -75,6 +81,15 @@ func (c *Config) Restrict() error {
 		Config:            aws.Config{Region: aws.String(c.Region)},
 		SharedConfigState: session.SharedConfigEnable,
 	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create session")
+	}
+
+	c.awsv2Config, err = awsv2Config.LoadDefaultConfig(context.TODO(), awsv2Config.WithRegion(c.Region))
+	if err != nil {
+		return errors.Wrap(err, "failed to load aws config")
+	}
+
 	return err
 }
 

@@ -38,7 +38,7 @@ func _main() int {
 	deploy.Flag("resume-auto-scaling", "resume application auto-scaling attached with the ECS service").IsSetByUser(&isSetResumeAutoScaling).Bool()
 	deployOption := ecspresso.DeployOption{
 		DryRun:               deploy.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:         deploy.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
+		DesiredCount:         deploy.Flag("tasks", "desired count of tasks").Default("-1").Int32(),
 		SkipTaskDefinition:   deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
 		ForceNewDeployment:   deploy.Flag("force-new-deployment", "force a new deployment of the service").Bool(),
 		NoWait:               deploy.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
@@ -52,7 +52,7 @@ func _main() int {
 	scale.Flag("resume-auto-scaling", "resume application auto-scaling attached with the ECS service").IsSetByUser(&isSetResumeAutoScaling).Bool()
 	scaleOption := ecspresso.DeployOption{
 		DryRun:               scale.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
+		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Default("-1").Int32(),
 		SkipTaskDefinition:   boolp(true),
 		SuspendAutoScaling:   scale.Flag("suspend-auto-scaling", "suspend application auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
 		ForceNewDeployment:   boolp(false),
@@ -75,7 +75,7 @@ func _main() int {
 	create := kingpin.Command("create", "create service")
 	createOption := ecspresso.CreateOption{
 		DryRun:       create.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount: create.Flag("tasks", "desired count of tasks").Default("-1").Int64(),
+		DesiredCount: create.Flag("tasks", "desired count of tasks").Default("-1").Int32(),
 		NoWait:       create.Flag("no-wait", "exit ecspresso immediately after just created without waiting for service stable").Bool(),
 	}
 
@@ -107,7 +107,7 @@ func _main() int {
 		TaskOverrideStr:      run.Flag("overrides", "task overrides JSON string").Default("").String(),
 		TaskOverrideFile:     run.Flag("overrides-file", "task overrides JSON file path").Default("").String(),
 		SkipTaskDefinition:   run.Flag("skip-task-definition", "skip register a new task definition").Bool(),
-		Count:                run.Flag("count", "the number of tasks (max 10)").Default("1").Int64(),
+		Count:                run.Flag("count", "the number of tasks (max 10)").Default("1").Int32(),
 		WatchContainer:       run.Flag("watch-container", "the container name to watch exit code").String(),
 		LatestTaskDefinition: run.Flag("latest-task-definition", "run with latest task definition without registering new task definition").Default("false").Bool(),
 		PropagateTags:        run.Flag("propagate-tags", "propagate the tags for the task (SERVICE or TASK_DEFINITION)").Default("").Enum("SERVICE", "TASK_DEFINITION", ""),

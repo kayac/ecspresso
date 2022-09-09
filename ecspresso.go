@@ -12,15 +12,17 @@ import (
 	"time"
 
 	"github.com/Songmu/prompter"
+	"github.com/aws/aws-sdk-go-v2/service/applicationautoscaling"
+	aasTypes "github.com/aws/aws-sdk-go-v2/service/applicationautoscaling/types"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/codedeploy"
+	cdTypes "github.com/aws/aws-sdk-go-v2/service/codedeploy/types"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	"github.com/aws/aws-sdk-go/service/codedeploy"
-	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fatih/color"
 	gc "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
@@ -35,20 +37,32 @@ var TerminalWidth = 90
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
 
-type TaskDefinition = ecs.TaskDefinition
+type TaskDefinition = types.TaskDefinition
 
 type TaskDefinitionInput = ecs.RegisterTaskDefinitionInput
 
 func taskDefinitionName(t *TaskDefinition) string {
-	return fmt.Sprintf("%s:%d", *t.Family, *t.Revision)
+	return fmt.Sprintf("%s:%d", *t.Family, t.Revision)
+}
+
+type Service struct {
+	types.Service
+	DesiredCount *int32
+}
+
+func newServiceFromTypes(sv types.Service) *Service {
+	return &Service{
+		Service:      sv,
+		DesiredCount: aws.Int32(sv.DesiredCount),
+	}
 }
 
 type App struct {
-	ecs         *ecs.ECS
-	autoScaling *applicationautoscaling.ApplicationAutoScaling
-	codedeploy  *codedeploy.CodeDeploy
-	cwl         *cloudwatchlogs.CloudWatchLogs
-	iam         *iam.IAM
+	ecs         *ecs.Client
+	autoScaling *applicationautoscaling.Client
+	codedeploy  *codedeploy.Client
+	cwl         *cloudwatchlogs.Client
+	iam         *iam.Client
 
 	sess     *session.Session
 	verifier *verifier
@@ -67,14 +81,14 @@ type App struct {
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
 	return &ecs.DescribeServicesInput{
 		Cluster:  aws.String(d.Cluster),
-		Services: []*string{aws.String(d.Service)},
+		Services: []string{d.Service},
 	}
 }
 
-func (d *App) DescribeTasksInput(task *ecs.Task) *ecs.DescribeTasksInput {
+func (d *App) DescribeTasksInput(task *types.Task) *ecs.DescribeTasksInput {
 	return &ecs.DescribeTasksInput{
 		Cluster: aws.String(d.Cluster),
-		Tasks:   []*string{task.TaskArn},
+		Tasks:   []string{*task.TaskArn},
 	}
 }
 
@@ -87,18 +101,18 @@ func (d *App) GetLogEventsInput(logGroup string, logStream string, startAt int64
 	}
 }
 
-func (d *App) DescribeService(ctx context.Context) (*ecs.Service, error) {
-	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
+func (d *App) DescribeService(ctx context.Context) (*Service, error) {
+	out, err := d.ecs.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe service")
 	}
 	if len(out.Services) == 0 {
 		return nil, errors.New("service is not found")
 	}
-	return out.Services[0], nil
+	return newServiceFromTypes(out.Services[0]), nil
 }
 
-func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Service, error) {
+func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*Service, error) {
 	s, err := d.DescribeService(ctx)
 	if err != nil {
 		return nil, err
@@ -119,7 +133,7 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 		}
 	}
 
-	if err := d.describeAutoScaling(s); err != nil {
+	if err := d.describeAutoScaling(ctx, s); err != nil {
 		return nil, errors.Wrap(err, "failed to describe autoscaling")
 	}
 
@@ -135,13 +149,14 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*ecs.Servi
 	return s, nil
 }
 
-func (d *App) describeAutoScaling(s *ecs.Service) error {
+func (d *App) describeAutoScaling(ctx context.Context, s *Service) error {
 	resourceId := fmt.Sprintf("service/%s/%s", arnToName(*s.ClusterArn), *s.ServiceName)
 	tout, err := d.autoScaling.DescribeScalableTargets(
+		ctx,
 		&applicationautoscaling.DescribeScalableTargetsInput{
-			ResourceIds:       []*string{&resourceId},
-			ServiceNamespace:  aws.String("ecs"),
-			ScalableDimension: aws.String("ecs:service:DesiredCount"),
+			ResourceIds:       []string{resourceId},
+			ServiceNamespace:  aasTypes.ServiceNamespaceEcs,
+			ScalableDimension: aasTypes.ScalableDimensionECSServiceDesiredCount,
 		},
 	)
 	if err != nil {
@@ -163,10 +178,11 @@ func (d *App) describeAutoScaling(s *ecs.Service) error {
 	}
 
 	pout, err := d.autoScaling.DescribeScalingPolicies(
+		ctx,
 		&applicationautoscaling.DescribeScalingPoliciesInput{
 			ResourceId:        &resourceId,
-			ServiceNamespace:  aws.String("ecs"),
-			ScalableDimension: aws.String("ecs:service:DesiredCount"),
+			ServiceNamespace:  aasTypes.ServiceNamespaceEcs,
+			ScalableDimension: aasTypes.ScalableDimensionECSServiceDesiredCount,
 		},
 	)
 	if err != nil {
@@ -179,7 +195,7 @@ func (d *App) describeAutoScaling(s *ecs.Service) error {
 }
 
 func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Time) (int, error) {
-	out, err := d.ecs.DescribeServicesWithContext(ctx, d.DescribeServicesInput())
+	out, err := d.ecs.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return 0, err
 	}
@@ -203,8 +219,8 @@ func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Tim
 	return lines, nil
 }
 
-func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchContainer *ecs.ContainerDefinition) error {
-	out, err := d.ecs.DescribeTasksWithContext(ctx, d.DescribeTasksInput(task))
+func (d *App) DescribeTaskStatus(ctx context.Context, task *types.Task, watchContainer *types.ContainerDefinition) error {
+	out, err := d.ecs.DescribeTasks(ctx, d.DescribeTasksInput(task))
 	if err != nil {
 		return err
 	}
@@ -214,19 +230,19 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchConta
 		return errors.New(*f.Reason)
 	}
 
-	var container *ecs.Container
+	var container *types.Container
 	for _, c := range out.Tasks[0].Containers {
 		if *c.Name == *watchContainer.Name {
-			container = c
+			container = &c
 			break
 		}
 	}
 	if container == nil {
-		container = out.Tasks[0].Containers[0]
+		container = &(out.Tasks[0].Containers[0])
 	}
 
 	if container.ExitCode != nil && *container.ExitCode != 0 {
-		msg := fmt.Sprintf("Container: %s, Exit Code: %s", *container.Name, strconv.FormatInt(*container.ExitCode, 10))
+		msg := fmt.Sprintf("Container: %s, Exit Code: %s", *container.Name, strconv.FormatInt(int64(*container.ExitCode), 10))
 		if container.Reason != nil {
 			msg += ", Reason: " + *container.Reason
 		}
@@ -238,9 +254,9 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *ecs.Task, watchConta
 }
 
 func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDefinitionInput, error) {
-	out, err := d.ecs.DescribeTaskDefinitionWithContext(ctx, &ecs.DescribeTaskDefinitionInput{
+	out, err := d.ecs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
 		TaskDefinition: &tdArn,
-		Include:        []*string{aws.String("TAGS")},
+		Include:        []types.TaskDefinitionField{types.TaskDefinitionFieldTags},
 	})
 	if err != nil {
 		return nil, err
@@ -250,7 +266,7 @@ func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDe
 
 func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream string, startedAt time.Time, nextToken *string) (*string, error) {
 	ms := startedAt.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
-	out, err := d.cwl.GetLogEventsWithContext(ctx, d.GetLogEventsInput(logGroup, logStream, ms, nextToken))
+	out, err := d.cwl.GetLogEvents(ctx, d.GetLogEventsInput(logGroup, logStream, ms, nextToken))
 	if err != nil {
 		return nextToken, err
 	}
@@ -278,11 +294,11 @@ func NewApp(conf *Config) (*App, error) {
 	d := &App{
 		Service:     conf.Service,
 		Cluster:     conf.Cluster,
-		ecs:         ecs.New(sess),
-		autoScaling: applicationautoscaling.New(sess),
-		codedeploy:  codedeploy.New(sess),
-		cwl:         cloudwatchlogs.New(sess),
-		iam:         iam.New(sess),
+		ecs:         ecs.NewFromConfig(conf.awsv2Config),
+		autoScaling: applicationautoscaling.NewFromConfig(conf.awsv2Config),
+		codedeploy:  codedeploy.NewFromConfig(conf.awsv2Config),
+		cwl:         cloudwatchlogs.NewFromConfig(conf.awsv2Config),
+		iam:         iam.NewFromConfig(conf.awsv2Config),
 
 		sess:   sess,
 		config: conf,
@@ -332,10 +348,10 @@ func (d *App) Delete(opt DeleteOption) error {
 	}
 
 	dsi := &ecs.DeleteServiceInput{
-		Cluster: sv.ClusterArn,
+		Cluster: &d.config.Cluster,
 		Service: sv.ServiceName,
 	}
-	if _, err := d.ecs.DeleteServiceWithContext(ctx, dsi); err != nil {
+	if _, err := d.ecs.DeleteService(ctx, dsi); err != nil {
 		return errors.Wrap(err, "failed to delete service")
 	}
 	d.Log("Service is deleted")
@@ -343,14 +359,14 @@ func (d *App) Delete(opt DeleteOption) error {
 	return nil
 }
 
-func containerOf(td *TaskDefinitionInput, name *string) *ecs.ContainerDefinition {
+func containerOf(td *TaskDefinitionInput, name *string) *types.ContainerDefinition {
 	if name == nil || *name == "" {
-		return td.ContainerDefinitions[0]
+		return &td.ContainerDefinitions[0]
 	}
 	for _, c := range td.ContainerDefinitions {
 		if *c.Name == *name {
 			c := c
-			return c
+			return &c
 		}
 	}
 	return nil
@@ -366,7 +382,7 @@ func (d *App) Wait(opt WaitOption) error {
 	if err != nil {
 		return err
 	}
-	if isCodeDeploy(sv.DeploymentController) {
+	if sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy {
 		err := d.WaitForCodeDeploy(ctx, sv)
 		if err != nil {
 			return errors.Wrap(err, "failed to wait for a deployment successfully")
@@ -385,12 +401,12 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 	var nextToken *string
 	family := strings.Split(arnToName(taskDefinitionArn), ":")[0]
 	for {
-		out, err := d.ecs.ListTaskDefinitionsWithContext(ctx,
+		out, err := d.ecs.ListTaskDefinitions(ctx,
 			&ecs.ListTaskDefinitionsInput{
 				NextToken:    nextToken,
 				FamilyPrefix: aws.String(family),
-				MaxResults:   aws.Int64(100),
-				Sort:         aws.String("DESC"),
+				MaxResults:   aws.Int32(100),
+				Sort:         types.SortOrderDesc,
 			},
 		)
 		if err != nil {
@@ -402,9 +418,9 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 		nextToken = out.NextToken
 		for _, tdArn := range out.TaskDefinitionArns {
 			if found {
-				return *tdArn, nil
+				return tdArn, nil
 			}
-			if *tdArn == taskDefinitionArn {
+			if tdArn == taskDefinitionArn {
 				found = true
 			}
 		}
@@ -412,11 +428,11 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 }
 
 func (d *App) findLatestTaskDefinitionArn(ctx context.Context, family string) (string, error) {
-	out, err := d.ecs.ListTaskDefinitionsWithContext(ctx,
+	out, err := d.ecs.ListTaskDefinitions(ctx,
 		&ecs.ListTaskDefinitionsInput{
 			FamilyPrefix: aws.String(family),
-			MaxResults:   aws.Int64(1),
-			Sort:         aws.String("DESC"),
+			MaxResults:   aws.Int32(1),
+			Sort:         types.SortOrderDesc,
 		},
 	)
 	if err != nil {
@@ -425,7 +441,7 @@ func (d *App) findLatestTaskDefinitionArn(ctx context.Context, family string) (s
 	if len(out.TaskDefinitionArns) == 0 {
 		return "", errors.New("no task definitions are found")
 	}
-	return *out.TaskDefinitionArns[0], nil
+	return out.TaskDefinitionArns[0], nil
 }
 
 func (d *App) Name() string {
@@ -472,10 +488,8 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 		}
 	}()
 
-	return d.ecs.WaitUntilServicesStableWithContext(
-		ctx, d.DescribeServicesInput(),
-		d.waiterOptions()...,
-	)
+	waiter := ecs.NewServicesStableWaiter(d.ecs)
+	return waiter.Wait(ctx, d.DescribeServicesInput(), d.config.Timeout)
 }
 
 func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInput) (*TaskDefinition, error) {
@@ -483,7 +497,7 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInpu
 	if len(td.Tags) == 0 {
 		td.Tags = nil // Tags can not be empty.
 	}
-	out, err := d.ecs.RegisterTaskDefinitionWithContext(
+	out, err := d.ecs.RegisterTaskDefinition(
 		ctx,
 		td,
 	)
@@ -510,7 +524,7 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 		src = c.TaskDefinition
 	}
 	var td TaskDefinitionInput
-	if err := d.unmarshalJSON(src, &td, path); err != nil {
+	if err := d.UnmarshalJSONForStruct(src, &td, path); err != nil {
 		return nil, err
 	}
 	if len(td.Tags) == 0 {
@@ -537,12 +551,12 @@ func (d *App) unmarshalJSON(src []byte, v interface{}, path string) error {
 	return nil
 }
 
-func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
+func (d *App) LoadServiceDefinition(path string) (*Service, error) {
 	if path == "" {
 		return nil, errors.New("service_definition is not defined")
 	}
 
-	sv := ecs.Service{}
+	var sv Service
 	src, err := d.readDefinitionFile(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to load service definition %s", path)
@@ -552,17 +566,22 @@ func (d *App) LoadServiceDefinition(path string) (*ecs.Service, error) {
 	}
 
 	sv.ServiceName = aws.String(d.config.Service)
+	if sv.DesiredCount == nil {
+		d.DebugLog("Loaded DesiredCount: nil (-1)")
+	} else {
+		d.DebugLog("Loaded DesiredCount:", *sv.DesiredCount)
+	}
 	return &sv, nil
 }
 
-func (d *App) GetLogInfo(task *ecs.Task, c *ecs.ContainerDefinition) (string, string) {
+func (d *App) GetLogInfo(task *types.Task, c *types.ContainerDefinition) (string, string) {
 	p := strings.Split(*task.TaskArn, "/")
 	taskID := p[len(p)-1]
 	lc := c.LogConfiguration
-	logStreamPrefix := *lc.Options["awslogs-stream-prefix"]
+	logStreamPrefix := lc.Options["awslogs-stream-prefix"]
 
 	logStream := strings.Join([]string{logStreamPrefix, *c.Name, taskID}, "/")
-	logGroup := *lc.Options["awslogs-group"]
+	logGroup := lc.Options["awslogs-group"]
 
 	d.Log("logGroup:", logGroup)
 	d.Log("logStream:", logStream)
@@ -570,14 +589,15 @@ func (d *App) GetLogInfo(task *ecs.Task, c *ecs.ContainerDefinition) (string, st
 	return logGroup, logStream
 }
 
-func (d *App) suspendAutoScaling(suspendState bool) error {
+func (d *App) suspendAutoScaling(ctx context.Context, suspendState bool) error {
 	resourceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
 
 	out, err := d.autoScaling.DescribeScalableTargets(
+		ctx,
 		&applicationautoscaling.DescribeScalableTargetsInput{
-			ResourceIds:       []*string{&resourceId},
-			ServiceNamespace:  aws.String("ecs"),
-			ScalableDimension: aws.String("ecs:service:DesiredCount"),
+			ResourceIds:       []string{resourceId},
+			ServiceNamespace:  aasTypes.ServiceNamespaceEcs,
+			ScalableDimension: aasTypes.ScalableDimensionECSServiceDesiredCount,
 		},
 	)
 	if err != nil {
@@ -590,11 +610,12 @@ func (d *App) suspendAutoScaling(suspendState bool) error {
 	for _, target := range out.ScalableTargets {
 		d.Log(fmt.Sprintf("Register scalable target %s set suspend state to %t", *target.ResourceId, suspendState))
 		_, err := d.autoScaling.RegisterScalableTarget(
+			ctx,
 			&applicationautoscaling.RegisterScalableTargetInput{
 				ServiceNamespace:  target.ServiceNamespace,
 				ScalableDimension: target.ScalableDimension,
 				ResourceId:        target.ResourceId,
-				SuspendedState: &applicationautoscaling.SuspendedState{
+				SuspendedState: &aasTypes.SuspendedState{
 					DynamicScalingInSuspended:  &suspendState,
 					DynamicScalingOutSuspended: &suspendState,
 					ScheduledScalingSuspended:  &suspendState,
@@ -608,21 +629,20 @@ func (d *App) suspendAutoScaling(suspendState bool) error {
 	return nil
 }
 
-func (d *App) WaitForCodeDeploy(ctx context.Context, sv *ecs.Service) error {
-	dp, err := d.findDeploymentInfo()
+func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
+	dp, err := d.findDeploymentInfo(ctx)
 	if err != nil {
 		return err
 	}
-	out, err := d.codedeploy.ListDeploymentsWithContext(
+	out, err := d.codedeploy.ListDeployments(
 		ctx,
 		&codedeploy.ListDeploymentsInput{
 			ApplicationName:     dp.ApplicationName,
 			DeploymentGroupName: dp.DeploymentGroupName,
-			IncludeOnlyStatuses: []*string{
-				aws.String("Created"),
-				aws.String("Queued"),
-				aws.String("InProgress"),
-				aws.String("Ready"),
+			IncludeOnlyStatuses: []cdTypes.DeploymentStatus{
+				cdTypes.DeploymentStatusCreated,
+				cdTypes.DeploymentStatusQueued,
+				cdTypes.DeploymentStatusInProgress,
 			},
 		},
 	)
@@ -633,21 +653,22 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *ecs.Service) error {
 		return errors.New("no deployments found in progress")
 	}
 	dpID := out.Deployments[0]
-	d.Log("Waiting for a deployment successful ID: " + *dpID)
-	return d.codedeploy.WaitUntilDeploymentSuccessfulWithContext(
+	d.Log("Waiting for a deployment successful ID: " + dpID)
+	waiter := codedeploy.NewDeploymentSuccessfulWaiter(d.codedeploy)
+	return waiter.Wait(
 		ctx,
-		&codedeploy.GetDeploymentInput{DeploymentId: dpID},
-		d.waiterOptions()...,
+		&codedeploy.GetDeploymentInput{DeploymentId: &dpID},
+		d.config.Timeout,
 	)
 }
 
-func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *ecs.Service, tdArn string, opt RollbackOption) error {
-	dp, err := d.findDeploymentInfo()
+func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) error {
+	dp, err := d.findDeploymentInfo(ctx)
 	if err != nil {
 		return err
 	}
 
-	ld, err := d.codedeploy.ListDeploymentsWithContext(ctx, &codedeploy.ListDeploymentsInput{
+	ld, err := d.codedeploy.ListDeployments(ctx, &codedeploy.ListDeploymentsInput{
 		ApplicationName:     dp.ApplicationName,
 		DeploymentGroupName: dp.DeploymentGroupName,
 	})
@@ -660,48 +681,32 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *ecs.Service, tdArn s
 
 	dpID := ld.Deployments[0] // latest deployment id
 
-	dep, err := d.codedeploy.GetDeploymentWithContext(ctx, &codedeploy.GetDeploymentInput{
-		DeploymentId: dpID,
+	dep, err := d.codedeploy.GetDeployment(ctx, &codedeploy.GetDeploymentInput{
+		DeploymentId: &dpID,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to get deployment")
 	}
 
 	if *opt.DryRun {
-		d.Log("deployment id:", *dpID)
+		d.Log("deployment id:", dpID)
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	switch *dep.DeploymentInfo.Status {
-	case "Succeeded", "Failed", "Stopped":
+	switch dep.DeploymentInfo.Status {
+	case cdTypes.DeploymentStatusSucceeded, cdTypes.DeploymentStatusFailed, cdTypes.DeploymentStatusStopped:
 		return d.createDeployment(ctx, sv, tdArn, opt.RollbackEvents)
 	default: // If the deployment is not yet complete
-		_, err = d.codedeploy.StopDeploymentWithContext(ctx, &codedeploy.StopDeploymentInput{
-			DeploymentId:        dpID,
+		_, err = d.codedeploy.StopDeployment(ctx, &codedeploy.StopDeploymentInput{
+			DeploymentId:        &dpID,
 			AutoRollbackEnabled: aws.Bool(true),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to roll back the deployment")
 		}
 
-		d.Log(fmt.Sprintf("Deployment %s is rolled back on CodeDeploy:", *dpID))
+		d.Log(fmt.Sprintf("Deployment %s is rolled back on CodeDeploy:", dpID))
 		return nil
-	}
-}
-
-// Build an option WithWaiterDelay and request.WithWaiterMaxAttempts for a long timeout.
-// SDK Default is 10 min (MaxAttempts=40 * Delay=15sec) at now.
-// ref. https://github.com/aws/aws-sdk-go/blob/d57c8d96f72d9475194ccf18d2ba70ac294b0cb3/service/ecs/waiters.go#L82-L83
-// Explicitly set these options so not being affected by the default setting.
-func (d *App) waiterOptions() []request.WaiterOption {
-	const delay = 15 * time.Second
-	attempts := int((d.config.Timeout / delay)) + 1
-	if (d.config.Timeout % delay) > 0 {
-		attempts++
-	}
-	return []request.WaiterOption{
-		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
-		request.WithWaiterMaxAttempts(attempts),
 	}
 }
