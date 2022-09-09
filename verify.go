@@ -14,13 +14,13 @@ import (
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/elbv2"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -524,7 +524,7 @@ func (d *App) verifyRole(ctx context.Context, arn string) error {
 	if err != nil {
 		return err
 	}
-	out, err := d.iam.GetRoleWithContext(ctx, &iam.GetRoleInput{
+	out, err := d.iam.GetRole(ctx, &iam.GetRoleInput{
 		RoleName: aws.String(roleName),
 	})
 	if err != nil {

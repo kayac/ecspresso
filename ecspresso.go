@@ -14,6 +14,7 @@ import (
 	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -21,7 +22,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/codedeploy"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fatih/color"
 	gc "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
@@ -61,7 +61,7 @@ type App struct {
 	autoScaling *applicationautoscaling.ApplicationAutoScaling
 	codedeploy  *codedeploy.CodeDeploy
 	cwl         *cloudwatchlogs.CloudWatchLogs
-	iam         *iam.IAM
+	iam         *iam.Client
 
 	sess     *session.Session
 	verifier *verifier
@@ -291,11 +291,11 @@ func NewApp(conf *Config) (*App, error) {
 	d := &App{
 		Service:     conf.Service,
 		Cluster:     conf.Cluster,
-		ecs:       ecs.NewFromConfig(conf.awsv2Config),
+		ecs:         ecs.NewFromConfig(conf.awsv2Config),
 		autoScaling: applicationautoscaling.New(sess),
 		codedeploy:  codedeploy.New(sess),
 		cwl:         cloudwatchlogs.New(sess),
-		iam:         iam.New(sess),
+		iam:         iam.NewFromConfig(conf.awsv2Config),
 
 		sess:   sess,
 		config: conf,
