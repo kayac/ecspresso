@@ -11,9 +11,10 @@ import (
 	"github.com/kayac/ecspresso/appspec"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/codedeploy"
+	cdTypes "github.com/aws/aws-sdk-go-v2/service/codedeploy/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/aws/aws-sdk-go/service/codedeploy"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
 )
@@ -242,10 +243,10 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	return d.createDeployment(ctx, sv, taskDefinitionArn, opt.RollbackEvents)
 }
 
-func (d *App) findDeploymentInfo() (*codedeploy.DeploymentInfo, error) {
+func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, error) {
 	// search deploymentGroup in CodeDeploy
 	d.DebugLog("find all applications in CodeDeploy")
-	la, err := d.codedeploy.ListApplications(&codedeploy.ListApplicationsInput{})
+	la, err := d.codedeploy.ListApplications(ctx, &codedeploy.ListApplicationsInput{})
 	if err != nil {
 		return nil, err
 	}
@@ -258,18 +259,18 @@ func (d *App) findDeploymentInfo() (*codedeploy.DeploymentInfo, error) {
 		if end > len(la.Applications) {
 			end = len(la.Applications)
 		}
-		apps, err := d.codedeploy.BatchGetApplications(&codedeploy.BatchGetApplicationsInput{
+		apps, err := d.codedeploy.BatchGetApplications(ctx, &codedeploy.BatchGetApplicationsInput{
 			ApplicationNames: la.Applications[i:end],
 		})
 		if err != nil {
 			return nil, err
 		}
 		for _, info := range apps.ApplicationsInfo {
-			d.DebugLog("application", info.String())
-			if *info.ComputePlatform != "ECS" {
+			d.DebugLog("application", info)
+			if info.ComputePlatform != cdTypes.ComputePlatformEcs {
 				continue
 			}
-			lg, err := d.codedeploy.ListDeploymentGroups(&codedeploy.ListDeploymentGroupsInput{
+			lg, err := d.codedeploy.ListDeploymentGroups(ctx, &codedeploy.ListDeploymentGroupsInput{
 				ApplicationName: info.ApplicationName,
 			})
 			if err != nil {
@@ -279,7 +280,7 @@ func (d *App) findDeploymentInfo() (*codedeploy.DeploymentInfo, error) {
 				d.DebugLog("no deploymentGroups in application", *info.ApplicationName)
 				continue
 			}
-			groups, err := d.codedeploy.BatchGetDeploymentGroups(&codedeploy.BatchGetDeploymentGroupsInput{
+			groups, err := d.codedeploy.BatchGetDeploymentGroups(ctx, &codedeploy.BatchGetDeploymentGroupsInput{
 				ApplicationName:      info.ApplicationName,
 				DeploymentGroupNames: lg.DeploymentGroups,
 			})
@@ -287,10 +288,10 @@ func (d *App) findDeploymentInfo() (*codedeploy.DeploymentInfo, error) {
 				return nil, err
 			}
 			for _, dg := range groups.DeploymentGroupsInfo {
-				d.DebugLog("deploymentGroup", dg.String())
+				d.DebugLog("deploymentGroup", dg)
 				for _, ecsService := range dg.EcsServices {
 					if *ecsService.ClusterName == d.config.Cluster && *ecsService.ServiceName == d.config.Service {
-						return &codedeploy.DeploymentInfo{
+						return &cdTypes.DeploymentInfo{
 							ApplicationName:      aws.String(*info.ApplicationName),
 							DeploymentGroupName:  aws.String(*dg.DeploymentGroupName),
 							DeploymentConfigName: aws.String(*dg.DeploymentConfigName),
@@ -319,7 +320,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 	d.DebugLog("appSpecContent:", spec.String())
 
 	// deployment
-	dp, err := d.findDeploymentInfo()
+	dp, err := d.findDeploymentInfo(ctx)
 	if err != nil {
 		return err
 	}
@@ -327,27 +328,36 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 		ApplicationName:      dp.ApplicationName,
 		DeploymentGroupName:  dp.DeploymentGroupName,
 		DeploymentConfigName: dp.DeploymentConfigName,
-		Revision: &codedeploy.RevisionLocation{
-			RevisionType: aws.String("AppSpecContent"),
-			AppSpecContent: &codedeploy.AppSpecContent{
+		Revision: &cdTypes.RevisionLocation{
+			RevisionType: cdTypes.RevisionLocationTypeAppSpecContent,
+			AppSpecContent: &cdTypes.AppSpecContent{
 				Content: aws.String(spec.String()),
 			},
 		},
 	}
 	if ev := aws.ToString(rollbackEvents); ev != "" {
-		var events []*string
+		var events []cdTypes.AutoRollbackEvent
 		for _, ev := range strings.Split(ev, ",") {
-			events = append(events, aws.String(ev))
+			switch ev {
+			case "DEPLOYMENT_FAILURE":
+				events = append(events, cdTypes.AutoRollbackEventDeploymentFailure)
+			case "DEPLOYMENT_STOP_ON_ALARM":
+				events = append(events, cdTypes.AutoRollbackEventDeploymentStopOnAlarm)
+			case "DEPLOYMENT_STOP_ON_REQUEST":
+				events = append(events, cdTypes.AutoRollbackEventDeploymentStopOnRequest)
+			default:
+				return fmt.Errorf("invalid rollback event: %s", ev)
+			}
 		}
-		dd.AutoRollbackConfiguration = &codedeploy.AutoRollbackConfiguration{
-			Enabled: aws.Bool(true),
+		dd.AutoRollbackConfiguration = &cdTypes.AutoRollbackConfiguration{
+			Enabled: true,
 			Events:  events,
 		}
 	}
 
-	d.DebugLog("creating a deployment to CodeDeploy", dd.String())
+	d.DebugLog("creating a deployment to CodeDeploy", dd)
 
-	res, err := d.codedeploy.CreateDeploymentWithContext(ctx, dd)
+	res, err := d.codedeploy.CreateDeployment(ctx, dd)
 	if err != nil {
 		return errors.Wrap(err, "failed to create deployment")
 	}

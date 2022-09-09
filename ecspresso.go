@@ -14,15 +14,15 @@ import (
 	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go-v2/service/applicationautoscaling"
 	aasTypes "github.com/aws/aws-sdk-go-v2/service/applicationautoscaling/types"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/codedeploy"
+	cdTypes "github.com/aws/aws-sdk-go-v2/service/codedeploy/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/fatih/color"
 	gc "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
@@ -60,8 +60,8 @@ func newServiceFromTypes(sv types.Service) *Service {
 type App struct {
 	ecs         *ecs.Client
 	autoScaling *applicationautoscaling.Client
-	codedeploy  *codedeploy.CodeDeploy
-	cwl         *cloudwatchlogs.CloudWatchLogs
+	codedeploy  *codedeploy.Client
+	cwl         *cloudwatchlogs.Client
 	iam         *iam.Client
 
 	sess     *session.Session
@@ -266,7 +266,7 @@ func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDe
 
 func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream string, startedAt time.Time, nextToken *string) (*string, error) {
 	ms := startedAt.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
-	out, err := d.cwl.GetLogEventsWithContext(ctx, d.GetLogEventsInput(logGroup, logStream, ms, nextToken))
+	out, err := d.cwl.GetLogEvents(ctx, d.GetLogEventsInput(logGroup, logStream, ms, nextToken))
 	if err != nil {
 		return nextToken, err
 	}
@@ -296,8 +296,8 @@ func NewApp(conf *Config) (*App, error) {
 		Cluster:     conf.Cluster,
 		ecs:         ecs.NewFromConfig(conf.awsv2Config),
 		autoScaling: applicationautoscaling.NewFromConfig(conf.awsv2Config),
-		codedeploy:  codedeploy.New(sess),
-		cwl:         cloudwatchlogs.New(sess),
+		codedeploy:  codedeploy.NewFromConfig(conf.awsv2Config),
+		cwl:         cloudwatchlogs.NewFromConfig(conf.awsv2Config),
 		iam:         iam.NewFromConfig(conf.awsv2Config),
 
 		sess:   sess,
@@ -630,20 +630,19 @@ func (d *App) suspendAutoScaling(ctx context.Context, suspendState bool) error {
 }
 
 func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
-	dp, err := d.findDeploymentInfo()
+	dp, err := d.findDeploymentInfo(ctx)
 	if err != nil {
 		return err
 	}
-	out, err := d.codedeploy.ListDeploymentsWithContext(
+	out, err := d.codedeploy.ListDeployments(
 		ctx,
 		&codedeploy.ListDeploymentsInput{
 			ApplicationName:     dp.ApplicationName,
 			DeploymentGroupName: dp.DeploymentGroupName,
-			IncludeOnlyStatuses: []*string{
-				aws.String("Created"),
-				aws.String("Queued"),
-				aws.String("InProgress"),
-				aws.String("Ready"),
+			IncludeOnlyStatuses: []cdTypes.DeploymentStatus{
+				cdTypes.DeploymentStatusCreated,
+				cdTypes.DeploymentStatusQueued,
+				cdTypes.DeploymentStatusInProgress,
 			},
 		},
 	)
@@ -654,21 +653,22 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 		return errors.New("no deployments found in progress")
 	}
 	dpID := out.Deployments[0]
-	d.Log("Waiting for a deployment successful ID: " + *dpID)
-	return d.codedeploy.WaitUntilDeploymentSuccessfulWithContext(
+	d.Log("Waiting for a deployment successful ID: " + dpID)
+	waiter := codedeploy.NewDeploymentSuccessfulWaiter(d.codedeploy)
+	return waiter.Wait(
 		ctx,
-		&codedeploy.GetDeploymentInput{DeploymentId: dpID},
-		d.waiterOptions()...,
+		&codedeploy.GetDeploymentInput{DeploymentId: &dpID},
+		d.config.Timeout,
 	)
 }
 
 func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) error {
-	dp, err := d.findDeploymentInfo()
+	dp, err := d.findDeploymentInfo(ctx)
 	if err != nil {
 		return err
 	}
 
-	ld, err := d.codedeploy.ListDeploymentsWithContext(ctx, &codedeploy.ListDeploymentsInput{
+	ld, err := d.codedeploy.ListDeployments(ctx, &codedeploy.ListDeploymentsInput{
 		ApplicationName:     dp.ApplicationName,
 		DeploymentGroupName: dp.DeploymentGroupName,
 	})
@@ -681,48 +681,32 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 
 	dpID := ld.Deployments[0] // latest deployment id
 
-	dep, err := d.codedeploy.GetDeploymentWithContext(ctx, &codedeploy.GetDeploymentInput{
-		DeploymentId: dpID,
+	dep, err := d.codedeploy.GetDeployment(ctx, &codedeploy.GetDeploymentInput{
+		DeploymentId: &dpID,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to get deployment")
 	}
 
 	if *opt.DryRun {
-		d.Log("deployment id:", *dpID)
+		d.Log("deployment id:", dpID)
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
-	switch *dep.DeploymentInfo.Status {
-	case "Succeeded", "Failed", "Stopped":
+	switch dep.DeploymentInfo.Status {
+	case cdTypes.DeploymentStatusSucceeded, cdTypes.DeploymentStatusFailed, cdTypes.DeploymentStatusStopped:
 		return d.createDeployment(ctx, sv, tdArn, opt.RollbackEvents)
 	default: // If the deployment is not yet complete
-		_, err = d.codedeploy.StopDeploymentWithContext(ctx, &codedeploy.StopDeploymentInput{
-			DeploymentId:        dpID,
+		_, err = d.codedeploy.StopDeployment(ctx, &codedeploy.StopDeploymentInput{
+			DeploymentId:        &dpID,
 			AutoRollbackEnabled: aws.Bool(true),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to roll back the deployment")
 		}
 
-		d.Log(fmt.Sprintf("Deployment %s is rolled back on CodeDeploy:", *dpID))
+		d.Log(fmt.Sprintf("Deployment %s is rolled back on CodeDeploy:", dpID))
 		return nil
-	}
-}
-
-// Build an option WithWaiterDelay and request.WithWaiterMaxAttempts for a long timeout.
-// SDK Default is 10 min (MaxAttempts=40 * Delay=15sec) at now.
-// ref. https://github.com/aws/aws-sdk-go/blob/d57c8d96f72d9475194ccf18d2ba70ac294b0cb3/service/ecs/waiters.go#L82-L83
-// Explicitly set these options so not being affected by the default setting.
-func (d *App) waiterOptions() []request.WaiterOption {
-	const delay = 15 * time.Second
-	attempts := int((d.config.Timeout / delay)) + 1
-	if (d.config.Timeout % delay) > 0 {
-		attempts++
-	}
-	return []request.WaiterOption{
-		request.WithWaiterDelay(request.ConstantWaiterDelay(delay)),
-		request.WithWaiterMaxAttempts(attempts),
 	}
 }

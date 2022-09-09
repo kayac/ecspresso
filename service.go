@@ -6,8 +6,8 @@ import (
 	"time"
 
 	aasTypes "github.com/aws/aws-sdk-go-v2/service/applicationautoscaling/types"
+	logsTypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 )
 
 func arnToName(s string) string {
@@ -50,7 +50,7 @@ func formatEvent(e types.ServiceEvent, chars int) []string {
 	return lines
 }
 
-func formatLogEvent(e *cloudwatchlogs.OutputLogEvent, chars int) []string {
+func formatLogEvent(e logsTypes.OutputLogEvent, chars int) []string {
 	t := time.Unix((*e.Timestamp / int64(1000)), 0)
 	line := fmt.Sprintf("%s %s",
 		t.In(time.Local).Format("2006/01/02 15:04:05"),

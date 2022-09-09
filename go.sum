@@ -124,6 +124,8 @@ github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.15.16/go.mod h1:W
 github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.11/go.mod h1:0vT2mfhUL63/UT1RvYF/1wuqvvuvY0e+CiLB1paT+qI=
 github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.14 h1:SO5LdqjF9dlURPzk3LNMzCz9RA5K8/yNOf6WpdoffJU=
 github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.14/go.mod h1:62kPuTAGPxpvo/0y/+QvaFwHffIe4l8hmStHLwaisLI=
+github.com/aws/aws-sdk-go-v2/service/codedeploy v1.14.16 h1:aERwTws2R3Xn8uj3khpmTv5ts5+5RgUKa0d6XovzOwU=
+github.com/aws/aws-sdk-go-v2/service/codedeploy v1.14.16/go.mod h1:vCAKtnnEccDGzqyB/rPZFLFN137iqVx1iS+OrmKv1/Q=
 github.com/aws/aws-sdk-go-v2/service/ecs v1.18.12/go.mod h1:h1UvIIC+fPNj4PkuQ/o9QyRH0/vC+qlHRNGefwwYzv8=
 github.com/aws/aws-sdk-go-v2/service/ecs v1.18.15 h1:dseu9SGI3VepG39If8W1HTyNrI/PFyh8PoJUDjnYCtQ=
 github.com/aws/aws-sdk-go-v2/service/ecs v1.18.15/go.mod h1:KIyoYPeoCLYhO0mA82lUwtZnEyQPVdgg6aPSGQOD0TA=
