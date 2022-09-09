@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
+	aasTypes "github.com/aws/aws-sdk-go-v2/service/applicationautoscaling/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 )
 
@@ -68,7 +68,7 @@ func formatLogEvent(e *cloudwatchlogs.OutputLogEvent, chars int) []string {
 	return lines
 }
 
-func formatScalableTarget(t *applicationautoscaling.ScalableTarget) string {
+func formatScalableTarget(t aasTypes.ScalableTarget) string {
 	return strings.Join([]string{
 		fmt.Sprintf(
 			spcIndent+"Capacity min:%d max:%d",
@@ -84,6 +84,6 @@ func formatScalableTarget(t *applicationautoscaling.ScalableTarget) string {
 	}, "\n")
 }
 
-func formatScalingPolicy(p *applicationautoscaling.ScalingPolicy) string {
-	return fmt.Sprintf("  Policy name:%s type:%s", *p.PolicyName, *p.PolicyType)
+func formatScalingPolicy(p aasTypes.ScalingPolicy) string {
+	return fmt.Sprintf("  Policy name:%s type:%s", *p.PolicyName, p.PolicyType)
 }

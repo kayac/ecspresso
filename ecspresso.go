@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/Songmu/prompter"
+	"github.com/aws/aws-sdk-go-v2/service/applicationautoscaling"
+	aasTypes "github.com/aws/aws-sdk-go-v2/service/applicationautoscaling/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -19,7 +21,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/codedeploy"
 	"github.com/fatih/color"
@@ -58,7 +59,7 @@ func newServiceFromTypes(sv types.Service) *Service {
 
 type App struct {
 	ecs         *ecs.Client
-	autoScaling *applicationautoscaling.ApplicationAutoScaling
+	autoScaling *applicationautoscaling.Client
 	codedeploy  *codedeploy.CodeDeploy
 	cwl         *cloudwatchlogs.CloudWatchLogs
 	iam         *iam.Client
@@ -132,7 +133,7 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*Service, 
 		}
 	}
 
-	if err := d.describeAutoScaling(s); err != nil {
+	if err := d.describeAutoScaling(ctx, s); err != nil {
 		return nil, errors.Wrap(err, "failed to describe autoscaling")
 	}
 
@@ -148,13 +149,14 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*Service, 
 	return s, nil
 }
 
-func (d *App) describeAutoScaling(s *Service) error {
+func (d *App) describeAutoScaling(ctx context.Context, s *Service) error {
 	resourceId := fmt.Sprintf("service/%s/%s", arnToName(*s.ClusterArn), *s.ServiceName)
 	tout, err := d.autoScaling.DescribeScalableTargets(
+		ctx,
 		&applicationautoscaling.DescribeScalableTargetsInput{
-			ResourceIds:       []*string{&resourceId},
-			ServiceNamespace:  aws.String("ecs"),
-			ScalableDimension: aws.String("ecs:service:DesiredCount"),
+			ResourceIds:       []string{resourceId},
+			ServiceNamespace:  aasTypes.ServiceNamespaceEcs,
+			ScalableDimension: aasTypes.ScalableDimensionECSServiceDesiredCount,
 		},
 	)
 	if err != nil {
@@ -176,10 +178,11 @@ func (d *App) describeAutoScaling(s *Service) error {
 	}
 
 	pout, err := d.autoScaling.DescribeScalingPolicies(
+		ctx,
 		&applicationautoscaling.DescribeScalingPoliciesInput{
 			ResourceId:        &resourceId,
-			ServiceNamespace:  aws.String("ecs"),
-			ScalableDimension: aws.String("ecs:service:DesiredCount"),
+			ServiceNamespace:  aasTypes.ServiceNamespaceEcs,
+			ScalableDimension: aasTypes.ScalableDimensionECSServiceDesiredCount,
 		},
 	)
 	if err != nil {
@@ -292,7 +295,7 @@ func NewApp(conf *Config) (*App, error) {
 		Service:     conf.Service,
 		Cluster:     conf.Cluster,
 		ecs:         ecs.NewFromConfig(conf.awsv2Config),
-		autoScaling: applicationautoscaling.New(sess),
+		autoScaling: applicationautoscaling.NewFromConfig(conf.awsv2Config),
 		codedeploy:  codedeploy.New(sess),
 		cwl:         cloudwatchlogs.New(sess),
 		iam:         iam.NewFromConfig(conf.awsv2Config),
@@ -586,14 +589,15 @@ func (d *App) GetLogInfo(task *types.Task, c *types.ContainerDefinition) (string
 	return logGroup, logStream
 }
 
-func (d *App) suspendAutoScaling(suspendState bool) error {
+func (d *App) suspendAutoScaling(ctx context.Context, suspendState bool) error {
 	resourceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
 
 	out, err := d.autoScaling.DescribeScalableTargets(
+		ctx,
 		&applicationautoscaling.DescribeScalableTargetsInput{
-			ResourceIds:       []*string{&resourceId},
-			ServiceNamespace:  aws.String("ecs"),
-			ScalableDimension: aws.String("ecs:service:DesiredCount"),
+			ResourceIds:       []string{resourceId},
+			ServiceNamespace:  aasTypes.ServiceNamespaceEcs,
+			ScalableDimension: aasTypes.ScalableDimensionECSServiceDesiredCount,
 		},
 	)
 	if err != nil {
@@ -606,11 +610,12 @@ func (d *App) suspendAutoScaling(suspendState bool) error {
 	for _, target := range out.ScalableTargets {
 		d.Log(fmt.Sprintf("Register scalable target %s set suspend state to %t", *target.ResourceId, suspendState))
 		_, err := d.autoScaling.RegisterScalableTarget(
+			ctx,
 			&applicationautoscaling.RegisterScalableTargetInput{
 				ServiceNamespace:  target.ServiceNamespace,
 				ScalableDimension: target.ScalableDimension,
 				ResourceId:        target.ResourceId,
-				SuspendedState: &applicationautoscaling.SuspendedState{
+				SuspendedState: &aasTypes.SuspendedState{
 					DynamicScalingInSuspended:  &suspendState,
 					DynamicScalingOutSuspended: &suspendState,
 					ScheduledScalingSuspended:  &suspendState,

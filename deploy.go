@@ -108,7 +108,7 @@ func (d *App) Deploy(opt DeployOption) error {
 
 	// manage auto scaling only when set option --suspend-auto-scaling or --no-suspend-auto-scaling explicitly
 	if suspendState := opt.SuspendAutoScaling; suspendState != nil {
-		if err := d.suspendAutoScaling(*suspendState); err != nil {
+		if err := d.suspendAutoScaling(ctx, *suspendState); err != nil {
 			return err
 		}
 	}
