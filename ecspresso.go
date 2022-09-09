@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/Songmu/prompter"
-	ecsv2 "github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -38,7 +38,7 @@ var spcIndent = "  "
 
 type TaskDefinition = types.TaskDefinition
 
-type TaskDefinitionInput = ecsv2.RegisterTaskDefinitionInput
+type TaskDefinitionInput = ecs.RegisterTaskDefinitionInput
 
 func taskDefinitionName(t *TaskDefinition) string {
 	return fmt.Sprintf("%s:%d", *t.Family, t.Revision)
@@ -57,7 +57,7 @@ func newServiceFromTypes(sv types.Service) *Service {
 }
 
 type App struct {
-	ecsv2       *ecsv2.Client
+	ecs         *ecs.Client
 	autoScaling *applicationautoscaling.ApplicationAutoScaling
 	codedeploy  *codedeploy.CodeDeploy
 	cwl         *cloudwatchlogs.CloudWatchLogs
@@ -77,15 +77,15 @@ type App struct {
 	loader *gc.Loader
 }
 
-func (d *App) DescribeServicesInput() *ecsv2.DescribeServicesInput {
-	return &ecsv2.DescribeServicesInput{
+func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
+	return &ecs.DescribeServicesInput{
 		Cluster:  aws.String(d.Cluster),
 		Services: []string{d.Service},
 	}
 }
 
-func (d *App) DescribeTasksInput(task *types.Task) *ecsv2.DescribeTasksInput {
-	return &ecsv2.DescribeTasksInput{
+func (d *App) DescribeTasksInput(task *types.Task) *ecs.DescribeTasksInput {
+	return &ecs.DescribeTasksInput{
 		Cluster: aws.String(d.Cluster),
 		Tasks:   []string{*task.TaskArn},
 	}
@@ -101,7 +101,7 @@ func (d *App) GetLogEventsInput(logGroup string, logStream string, startAt int64
 }
 
 func (d *App) DescribeService(ctx context.Context) (*Service, error) {
-	out, err := d.ecsv2.DescribeServices(ctx, d.DescribeServicesInput())
+	out, err := d.ecs.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe service")
 	}
@@ -192,7 +192,7 @@ func (d *App) describeAutoScaling(s *Service) error {
 }
 
 func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Time) (int, error) {
-	out, err := d.ecsv2.DescribeServices(ctx, d.DescribeServicesInput())
+	out, err := d.ecs.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return 0, err
 	}
@@ -217,7 +217,7 @@ func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Tim
 }
 
 func (d *App) DescribeTaskStatus(ctx context.Context, task *types.Task, watchContainer *types.ContainerDefinition) error {
-	out, err := d.ecsv2.DescribeTasks(ctx, d.DescribeTasksInput(task))
+	out, err := d.ecs.DescribeTasks(ctx, d.DescribeTasksInput(task))
 	if err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *types.Task, watchCon
 }
 
 func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDefinitionInput, error) {
-	out, err := d.ecsv2.DescribeTaskDefinition(ctx, &ecsv2.DescribeTaskDefinitionInput{
+	out, err := d.ecs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
 		TaskDefinition: &tdArn,
 		Include:        []types.TaskDefinitionField{types.TaskDefinitionFieldTags},
 	})
@@ -291,7 +291,7 @@ func NewApp(conf *Config) (*App, error) {
 	d := &App{
 		Service:     conf.Service,
 		Cluster:     conf.Cluster,
-		ecsv2:       ecsv2.NewFromConfig(conf.awsv2Config),
+		ecs:       ecs.NewFromConfig(conf.awsv2Config),
 		autoScaling: applicationautoscaling.New(sess),
 		codedeploy:  codedeploy.New(sess),
 		cwl:         cloudwatchlogs.New(sess),
@@ -344,11 +344,11 @@ func (d *App) Delete(opt DeleteOption) error {
 		}
 	}
 
-	dsi := &ecsv2.DeleteServiceInput{
+	dsi := &ecs.DeleteServiceInput{
 		Cluster: &d.config.Cluster,
 		Service: sv.ServiceName,
 	}
-	if _, err := d.ecsv2.DeleteService(ctx, dsi); err != nil {
+	if _, err := d.ecs.DeleteService(ctx, dsi); err != nil {
 		return errors.Wrap(err, "failed to delete service")
 	}
 	d.Log("Service is deleted")
@@ -398,8 +398,8 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 	var nextToken *string
 	family := strings.Split(arnToName(taskDefinitionArn), ":")[0]
 	for {
-		out, err := d.ecsv2.ListTaskDefinitions(ctx,
-			&ecsv2.ListTaskDefinitionsInput{
+		out, err := d.ecs.ListTaskDefinitions(ctx,
+			&ecs.ListTaskDefinitionsInput{
 				NextToken:    nextToken,
 				FamilyPrefix: aws.String(family),
 				MaxResults:   aws.Int32(100),
@@ -425,8 +425,8 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 }
 
 func (d *App) findLatestTaskDefinitionArn(ctx context.Context, family string) (string, error) {
-	out, err := d.ecsv2.ListTaskDefinitions(ctx,
-		&ecsv2.ListTaskDefinitionsInput{
+	out, err := d.ecs.ListTaskDefinitions(ctx,
+		&ecs.ListTaskDefinitionsInput{
 			FamilyPrefix: aws.String(family),
 			MaxResults:   aws.Int32(1),
 			Sort:         types.SortOrderDesc,
@@ -485,7 +485,7 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 		}
 	}()
 
-	waiter := ecsv2.NewServicesStableWaiter(d.ecsv2)
+	waiter := ecs.NewServicesStableWaiter(d.ecs)
 	return waiter.Wait(ctx, d.DescribeServicesInput(), d.config.Timeout)
 }
 
@@ -494,7 +494,7 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInpu
 	if len(td.Tags) == 0 {
 		td.Tags = nil // Tags can not be empty.
 	}
-	out, err := d.ecsv2.RegisterTaskDefinition(
+	out, err := d.ecs.RegisterTaskDefinition(
 		ctx,
 		td,
 	)

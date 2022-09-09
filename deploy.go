@@ -159,7 +159,7 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 	d.Log(msg)
 	d.DebugLog(in)
 
-	_, err := d.ecsv2.UpdateService(ctx, in)
+	_, err := d.ecs.UpdateService(ctx, in)
 	if err != nil {
 		return err
 	}
@@ -212,7 +212,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, opt Depl
 	d.Log("Updating service attributes...")
 	d.DebugLog(in)
 
-	if _, err := d.ecsv2.UpdateService(ctx, in); err != nil {
+	if _, err := d.ecs.UpdateService(ctx, in); err != nil {
 		return err
 	}
 	time.Sleep(delayForServiceChanged) // wait for service updated
@@ -223,7 +223,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	if count != nil {
 		d.Log("updating desired count to", *count)
 	}
-	_, err := d.ecsv2.UpdateService(
+	_, err := d.ecs.UpdateService(
 		ctx,
 		&ecs.UpdateServiceInput{
 			Service:      aws.String(d.Service),

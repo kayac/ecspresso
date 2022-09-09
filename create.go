@@ -80,7 +80,7 @@ func (d *App) Create(opt CreateOption) error {
 		Tags:                          svd.Tags,
 		TaskDefinition:                newTd.TaskDefinitionArn,
 	}
-	if _, err := d.ecsv2.CreateService(ctx, createServiceInput); err != nil {
+	if _, err := d.ecs.CreateService(ctx, createServiceInput); err != nil {
 		return errors.Wrap(err, "failed to create service")
 	}
 	d.Log("Service is created")

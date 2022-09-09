@@ -47,7 +47,7 @@ func (d *App) Init(opt InitOption) error {
 		}
 	}
 
-	out, err := d.ecsv2.DescribeServices(ctx, d.DescribeServicesInput())
+	out, err := d.ecs.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
 		return errors.Wrap(err, "failed to describe service")
 	}
@@ -63,7 +63,7 @@ func (d *App) Init(opt InitOption) error {
 
 	if long, _ := isLongArnFormat(*sv.ServiceArn); long {
 		// Long arn format must be used for tagging operations
-		lt, err := d.ecsv2.ListTagsForResource(ctx, &ecs.ListTagsForResourceInput{
+		lt, err := d.ecs.ListTagsForResource(ctx, &ecs.ListTagsForResourceInput{
 			ResourceArn: sv.ServiceArn,
 		})
 		if err != nil {

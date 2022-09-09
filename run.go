@@ -92,7 +92,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 
 	switch aws.ToString(opt.PropagateTags) {
 	case "SERVICE":
-		out, err := d.ecsv2.ListTagsForResource(ctx, &ecs.ListTagsForResourceInput{
+		out, err := d.ecs.ListTagsForResource(ctx, &ecs.ListTagsForResourceInput{
 			ResourceArn: sv.ServiceArn,
 		})
 		if err != nil {
@@ -107,7 +107,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 	}
 	d.DebugLog("run task input", in)
 
-	out, err := d.ecsv2.RunTask(ctx, in)
+	out, err := d.ecs.RunTask(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool)
 	id := arnToName(*task.TaskArn)
 	if untilRunning {
 		d.Log(fmt.Sprintf("Waiting for task ID %s until running", id))
-		waiter := ecs.NewTasksRunningWaiter(d.ecsv2)
+		waiter := ecs.NewTasksRunningWaiter(d.ecs)
 		if err := waiter.Wait(ctx, d.DescribeTasksInput(task), d.config.Timeout); err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool)
 	}
 
 	d.Log(fmt.Sprintf("Waiting for task ID %s until stopped", id))
-	waiter := ecs.NewTasksStoppedWaiter(d.ecsv2)
+	waiter := ecs.NewTasksStoppedWaiter(d.ecs)
 	return waiter.Wait(ctx, d.DescribeTasksInput(task), d.config.Timeout)
 }
 

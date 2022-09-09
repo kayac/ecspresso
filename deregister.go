@@ -63,7 +63,7 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 	}
 	if aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %s ?", name), false) {
 		d.Log(fmt.Sprintf("Deregistring %s", name))
-		if _, err := d.ecsv2.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
+		if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
 			TaskDefinition: aws.String(name),
 		}); err != nil {
 			return errors.Wrap(err, "failed to deregister task definition")
@@ -85,7 +85,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 	names := []string{}
 	var nextToken *string
 	for {
-		res, err := d.ecsv2.ListTaskDefinitions(ctx, &ecs.ListTaskDefinitionsInput{
+		res, err := d.ecs.ListTaskDefinitions(ctx, &ecs.ListTaskDefinitionsInput{
 			FamilyPrefix: td.Family,
 			NextToken:    nextToken,
 		})
@@ -130,7 +130,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 	if aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %d revisons?", len(deregs)), false) {
 		for _, name := range deregs {
 			d.Log(fmt.Sprintf("Deregistring %s", name))
-			if _, err := d.ecsv2.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
+			if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
 				TaskDefinition: aws.String(name),
 			}); err != nil {
 				return errors.Wrap(err, "failed to deregister task definition")

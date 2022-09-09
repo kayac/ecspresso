@@ -90,7 +90,7 @@ func (d *App) listTasks(ctx context.Context) ([]types.Task, error) {
 	}
 	for _, status := range []types.DesiredStatus{types.DesiredStatusRunning, types.DesiredStatusStopped} {
 		tp := ecs.NewListTasksPaginator(
-			d.ecsv2,
+			d.ecs,
 			&ecs.ListTasksInput{
 				Cluster:       &d.config.Cluster,
 				Family:        &family,
@@ -105,7 +105,7 @@ func (d *App) listTasks(ctx context.Context) ([]types.Task, error) {
 			if len(to.TaskArns) == 0 {
 				continue
 			}
-			out, err := d.ecsv2.DescribeTasks(ctx, &ecs.DescribeTasksInput{
+			out, err := d.ecs.DescribeTasks(ctx, &ecs.DescribeTasksInput{
 				Cluster: &d.config.Cluster,
 				Tasks:   to.TaskArns,
 				Include: []types.TaskField{"TAGS"},

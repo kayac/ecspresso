@@ -79,7 +79,7 @@ func (d *App) Revesions(opt RevisionsOption) error {
 
 	if r := aws.ToInt64(opt.Revision); r > 0 {
 		name := fmt.Sprintf("%s:%d", aws.ToString(td.Family), r)
-		res, err := d.ecsv2.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
+		res, err := d.ecs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
 			TaskDefinition: &name,
 			Include:        []types.TaskDefinitionField{types.TaskDefinitionFieldTags},
 		})
@@ -97,7 +97,7 @@ func (d *App) Revesions(opt RevisionsOption) error {
 	revs := revisions{}
 	var nextToken *string
 	for {
-		res, err := d.ecsv2.ListTaskDefinitions(ctx, &ecs.ListTaskDefinitionsInput{
+		res, err := d.ecs.ListTaskDefinitions(ctx, &ecs.ListTaskDefinitionsInput{
 			FamilyPrefix: td.Family,
 			NextToken:    nextToken,
 		})

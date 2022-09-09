@@ -71,7 +71,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 
 	if *opt.DeregisterTaskDefinition {
 		d.Log("Deregistering the rolled-back task definition", arnToName(currentArn))
-		_, err := d.ecsv2.DeregisterTaskDefinition(
+		_, err := d.ecs.DeregisterTaskDefinition(
 			ctx,
 			&ecs.DeregisterTaskDefinitionInput{
 				TaskDefinition: &currentArn,

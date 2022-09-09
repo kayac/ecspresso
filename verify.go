@@ -183,7 +183,7 @@ func (d *App) verifyResource(ctx context.Context, resourceType string, verifyFun
 
 func (d *App) verifyCluster(ctx context.Context) error {
 	cluster := d.config.Cluster
-	out, err := d.ecsv2.DescribeClusters(ctx, &ecs.DescribeClustersInput{
+	out, err := d.ecs.DescribeClusters(ctx, &ecs.DescribeClustersInput{
 		Clusters: []string{cluster},
 	})
 	if err != nil {
