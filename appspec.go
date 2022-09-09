@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/kayac/ecspresso/appspec"
 	"github.com/pkg/errors"
 )
@@ -33,7 +33,7 @@ func (d *App) AppSpec(opt AppSpecOption) error {
 			return errors.New("--task-definition requires current, latest or a valid task definition arn")
 		}
 	}
-	if aws.BoolValue(opt.UpdateService) {
+	if aws.ToBool(opt.UpdateService) {
 		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 		if err != nil {
 			return err

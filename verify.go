@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go/aws"
-	awsv2 "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
@@ -52,7 +52,7 @@ func newVerifier(execSess, appSess *session.Session, opt *VerifyOption) *verifie
 }
 
 func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
-	if !aws.BoolValue(v.opt.GetSecrets) {
+	if !awsv2.ToBool(v.opt.GetSecrets) {
 		return verifySkipErr(fmt.Sprintf("get a secret value for %s", from))
 	}
 
@@ -101,7 +101,7 @@ func (d *App) newAssumedVerifier(sess *session.Session, executionRole *string, o
 		)
 		return newVerifier(sess, sess, opt), nil
 	}
-	assumedSess := session.New(&awsv2.Config{
+	assumedSess := session.New(&aws.Config{
 		Region: sess.Config.Region,
 		Credentials: credentials.NewStaticCredentials(
 			*out.Credentials.AccessKeyId,
@@ -242,13 +242,13 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 				return errors.Errorf("target group %s is not found", *lb.TargetGroupArn)
 			}
 			d.DebugLog(out.GoString())
-			tgPort := aws.Int64Value(out.TargetGroups[0].Port)
-			cPort := aws.Int32Value(lb.ContainerPort)
+			tgPort := awsv2.ToInt64(out.TargetGroups[0].Port)
+			cPort := awsv2.ToInt32(lb.ContainerPort)
 			if int32(tgPort) != cPort {
 				return errors.Errorf("target group's port %d and container's port %d mismatch", tgPort, cPort)
 			}
 
-			cname := aws.StringValue(lb.ContainerName)
+			cname := awsv2.ToString(lb.ContainerName)
 			var container *types.ContainerDefinition
 			for _, c := range td.ContainerDefinitions {
 				if aws.StringValue(c.Name) == cname {
@@ -472,7 +472,7 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 		return errors.New("awslogs-region is required")
 	}
 
-	if !aws.BoolValue(d.verifier.opt.PutLogs) {
+	if !awsv2.ToBool(d.verifier.opt.PutLogs) {
 		return verifySkipErr(fmt.Sprintf("putting logs to %s", group))
 	}
 
