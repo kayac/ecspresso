@@ -19,7 +19,14 @@ type ExecOption struct {
 }
 
 func (d *App) NewEcsta(ctx context.Context) (*ecsta.Ecsta, error) {
-	return ecsta.New(ctx, d.config.Region, d.config.Cluster)
+	app, err := ecsta.New(ctx, d.config.Region, d.config.Cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create ecsta")
+	}
+	if fc := d.config.FilterCommand; fc != "" {
+		app.Config.Set("filter_command", fc)
+	}
+	return app, nil
 }
 
 func (d *App) Exec(opt ExecOption) error {
