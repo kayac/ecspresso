@@ -187,8 +187,6 @@ func (d *App) verifyCluster(ctx context.Context) error {
 		return errors.Wrapf(err, "failed to describe cluster %s", cluster)
 	} else if len(out.Clusters) == 0 {
 		return errors.Errorf("cluster %s is not found", cluster)
-	} else {
-		d.DebugLog(out.Clusters[0])
 	}
 	return nil
 }
