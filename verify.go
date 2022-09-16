@@ -11,48 +11,46 @@ import (
 	"strings"
 	"time"
 
-	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	cloudwatchlogsTypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/aws/aws-sdk-go/service/elbv2"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/fatih/color"
 	"github.com/kayac/ecspresso/registry"
 	"github.com/pkg/errors"
 )
 
 type verifier struct {
-	cwl            *cloudwatchlogs.CloudWatchLogs
-	elbv2          []*elbv2.ELBV2 // fallback to executionRole until v1.6
-	ssm            *ssm.SSM
-	secretsmanager *secretsmanager.SecretsManager
-	ecr            *ecr.ECR
+	cwl            *cloudwatchlogs.Client
+	elbv2          []*elbv2.Client // fallback to executionRole until v1.6
+	ssm            *ssm.Client
+	secretsmanager *secretsmanager.Client
+	ecr            *ecr.Client
 	opt            *VerifyOption
 	isAssumed      bool
 }
 
-func newVerifier(execSess, appSess *session.Session, opt *VerifyOption) *verifier {
+func newVerifier(execCfg, appCfg aws.Config, opt *VerifyOption) *verifier {
 	return &verifier{
-		cwl:            cloudwatchlogs.New(execSess),
-		elbv2:          []*elbv2.ELBV2{elbv2.New(appSess), elbv2.New(execSess)},
-		ssm:            ssm.New(execSess),
-		secretsmanager: secretsmanager.New(execSess),
-		ecr:            ecr.New(execSess),
-		opt:            opt,
-		isAssumed:      execSess != appSess,
+		cwl:            cloudwatchlogs.NewFromConfig(execCfg),
+		elbv2:          []*elbv2.Client{elbv2.NewFromConfig(appCfg), elbv2.NewFromConfig(execCfg)},
+		ssm:            ssm.NewFromConfig(execCfg),
+		secretsmanager: secretsmanager.NewFromConfig(execCfg),
+		ecr:            ecr.NewFromConfig(execCfg),
+		opt:            opt, isAssumed: &execCfg != &appCfg,
 	}
 }
 
 func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
-	if !awsv2.ToBool(v.opt.GetSecrets) {
+	if !aws.ToBool(v.opt.GetSecrets) {
 		return verifySkipErr(fmt.Sprintf("get a secret value for %s", from))
 	}
 
@@ -65,7 +63,7 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 			return errors.New("invalid arn format")
 		}
 		secretArn := strings.Join(part[0:7], ":")
-		_, err := v.secretsmanager.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{
+		_, err := v.secretsmanager.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 			SecretId: &secretArn,
 		})
 		return errors.Wrapf(err, "failed to get secret value from %s secret id %s", from, secretArn)
@@ -79,19 +77,19 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 	} else {
 		name = from
 	}
-	_, err := v.ssm.GetParameterWithContext(ctx, &ssm.GetParameterInput{
+	_, err := v.ssm.GetParameter(ctx, &ssm.GetParameterInput{
 		Name:           &name,
 		WithDecryption: aws.Bool(true),
 	})
 	return errors.Wrapf(err, "failed to get ssm parameter %s", name)
 }
 
-func (d *App) newAssumedVerifier(sess *session.Session, executionRole *string, opt *VerifyOption) (*verifier, error) {
+func (d *App) newAssumedVerifier(cfg aws.Config, executionRole *string, opt *VerifyOption) (*verifier, error) {
 	if executionRole == nil {
-		return newVerifier(sess, sess, opt), nil
+		return newVerifier(cfg, cfg, opt), nil
 	}
-	svc := sts.New(sess)
-	out, err := svc.AssumeRole(&sts.AssumeRoleInput{
+	svc := sts.NewFromConfig(d.config.awsv2Config)
+	out, err := svc.AssumeRole(context.TODO(), &sts.AssumeRoleInput{
 		RoleArn:         executionRole,
 		RoleSessionName: aws.String("ecspresso-verifier"),
 	})
@@ -99,17 +97,16 @@ func (d *App) newAssumedVerifier(sess *session.Session, executionRole *string, o
 		fmt.Println(
 			color.CyanString("INFO: failed to assume role to taskExecutionRole. Continue to verify with current session. %s", err.Error()),
 		)
-		return newVerifier(sess, sess, opt), nil
+		return newVerifier(cfg, cfg, opt), nil
 	}
-	assumedSess := session.New(&aws.Config{
-		Region: sess.Config.Region,
-		Credentials: credentials.NewStaticCredentials(
-			*out.Credentials.AccessKeyId,
-			*out.Credentials.SecretAccessKey,
-			*out.Credentials.SessionToken,
-		),
-	})
-	return newVerifier(assumedSess, sess, opt), nil
+	ec := aws.Config{}
+	ec.Region = d.config.Region
+	ec.Credentials = credentials.NewStaticCredentialsProvider(
+		aws.ToString(out.Credentials.AccessKeyId),
+		aws.ToString(out.Credentials.SecretAccessKey),
+		aws.ToString(out.Credentials.SessionToken),
+	)
+	return newVerifier(ec, cfg, opt), nil
 }
 
 // VerifyOption represents options for Verify()
@@ -132,7 +129,7 @@ func (d *App) Verify(opt VerifyOption) error {
 	if err != nil {
 		return err
 	}
-	d.verifier, err = d.newAssumedVerifier(d.sess, td.ExecutionRoleArn, &opt)
+	d.verifier, err = d.newAssumedVerifier(d.config.awsv2Config, td.ExecutionRoleArn, &opt)
 	if err != nil {
 		return err
 	}
@@ -190,8 +187,6 @@ func (d *App) verifyCluster(ctx context.Context) error {
 		return errors.Wrapf(err, "failed to describe cluster %s", cluster)
 	} else if len(out.Clusters) == 0 {
 		return errors.Errorf("cluster %s is not found", cluster)
-	} else {
-		d.DebugLog(out.Clusters[0])
 	}
 	return nil
 }
@@ -222,8 +217,8 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 	for i, lb := range sv.LoadBalancers {
 		name := fmt.Sprintf("LoadBalancer[%d]", i)
 		err := d.verifyResource(ctx, name, func(context.Context) error {
-			out, err := d.verifier.elbv2[0].DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
-				TargetGroupArns: []*string{lb.TargetGroupArn},
+			out, err := d.verifier.elbv2[0].DescribeTargetGroups(ctx, &elbv2.DescribeTargetGroupsInput{
+				TargetGroupArns: []string{*lb.TargetGroupArn},
 			})
 			if err != nil && d.verifier.isAssumed {
 				fmt.Fprintln(
@@ -232,8 +227,8 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 						"WARNING: verifying the target group using the task execution role has been DEPRECATED and will be removed in the future. "+
 							"Allow `elasticloadbalancing: DescribeTargetGroups` to the role that executes ecspresso."),
 				)
-				out, err = d.verifier.elbv2[1].DescribeTargetGroupsWithContext(ctx, &elbv2.DescribeTargetGroupsInput{
-					TargetGroupArns: []*string{lb.TargetGroupArn},
+				out, err = d.verifier.elbv2[1].DescribeTargetGroups(ctx, &elbv2.DescribeTargetGroupsInput{
+					TargetGroupArns: []string{*lb.TargetGroupArn},
 				})
 			}
 			if err != nil {
@@ -241,17 +236,16 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 			} else if len(out.TargetGroups) == 0 {
 				return errors.Errorf("target group %s is not found", *lb.TargetGroupArn)
 			}
-			d.DebugLog(out.GoString())
-			tgPort := awsv2.ToInt64(out.TargetGroups[0].Port)
-			cPort := awsv2.ToInt32(lb.ContainerPort)
+			tgPort := aws.ToInt32(out.TargetGroups[0].Port)
+			cPort := aws.ToInt32(lb.ContainerPort)
 			if int32(tgPort) != cPort {
 				return errors.Errorf("target group's port %d and container's port %d mismatch", tgPort, cPort)
 			}
 
-			cname := awsv2.ToString(lb.ContainerName)
+			cname := aws.ToString(lb.ContainerName)
 			var container *types.ContainerDefinition
 			for _, c := range td.ContainerDefinitions {
-				if aws.StringValue(c.Name) == cname {
+				if aws.ToString(c.Name) == cname {
 					container = &c
 					break
 				}
@@ -298,7 +292,7 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 	}
 
 	for _, c := range td.ContainerDefinitions {
-		name := fmt.Sprintf("ContainerDefinition[%s]", aws.StringValue(c.Name))
+		name := fmt.Sprintf("ContainerDefinition[%s]", aws.ToString(c.Name))
 		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifyContainer(ctx, &c)
 		})
@@ -315,7 +309,7 @@ var (
 
 func (d *App) verifyECRImage(ctx context.Context, image string) error {
 	d.DebugLog("VERIFY ECR Image")
-	out, err := d.verifier.ecr.GetAuthorizationTokenWithContext(
+	out, err := d.verifier.ecr.GetAuthorizationToken(
 		ctx,
 		&ecr.GetAuthorizationTokenInput{},
 	)
@@ -323,7 +317,7 @@ func (d *App) verifyECRImage(ctx context.Context, image string) error {
 		return err
 	}
 	token := out.AuthorizationData[0].AuthorizationToken
-	return d.verifyRegistryImage(ctx, image, "AWS", aws.StringValue(token))
+	return d.verifyRegistryImage(ctx, image, "AWS", aws.ToString(token))
 }
 
 func (d *App) verifyRegistryImage(ctx context.Context, image, user, password string) error {
@@ -433,7 +427,7 @@ func (d *App) verifyImage(ctx context.Context, image string) error {
 }
 
 func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition) error {
-	image := aws.StringValue(c.Image)
+	image := aws.ToString(c.Image)
 	name := fmt.Sprintf("Image[%s]", image)
 	err := d.verifyResource(ctx, name, func(ctx context.Context) error {
 		return d.verifyImage(ctx, image)
@@ -472,7 +466,7 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 		return errors.New("awslogs-region is required")
 	}
 
-	if !awsv2.ToBool(d.verifier.opt.PutLogs) {
+	if !aws.ToBool(d.verifier.opt.PutLogs) {
 		return verifySkipErr(fmt.Sprintf("putting logs to %s", group))
 	}
 
@@ -484,16 +478,16 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 		stream = fmt.Sprintf("%s/%s-%s", *c.Name, "ecspresso-verify", suffix)
 	}
 
-	if _, err := d.verifier.cwl.CreateLogStreamWithContext(ctx, &cloudwatchlogs.CreateLogStreamInput{
+	if _, err := d.verifier.cwl.CreateLogStream(ctx, &cloudwatchlogs.CreateLogStreamInput{
 		LogGroupName:  &group,
 		LogStreamName: aws.String(stream),
 	}); err != nil {
 		return errors.Wrapf(err, "failed to create log stream %s in %s", stream, group)
 	}
-	if _, err := d.verifier.cwl.PutLogEventsWithContext(ctx, &cloudwatchlogs.PutLogEventsInput{
+	if _, err := d.verifier.cwl.PutLogEvents(ctx, &cloudwatchlogs.PutLogEventsInput{
 		LogGroupName:  &group,
 		LogStreamName: aws.String(stream),
-		LogEvents: []*cloudwatchlogs.InputLogEvent{
+		LogEvents: []cloudwatchlogsTypes.InputLogEvent{
 			{
 				Message:   aws.String("This is a verify message by ecspresso"),
 				Timestamp: aws.Int64(time.Now().Unix() * 1000),
