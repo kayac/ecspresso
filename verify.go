@@ -79,7 +79,7 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 	}
 	_, err := v.ssm.GetParameter(ctx, &ssm.GetParameterInput{
 		Name:           &name,
-		WithDecryption: true,
+		WithDecryption: aws.Bool(true),
 	})
 	return errors.Wrapf(err, "failed to get ssm parameter %s", name)
 }
