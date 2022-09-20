@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/google/go-cmp/cmp"
 	"github.com/kayac/ecspresso"
 )
 
@@ -138,10 +139,12 @@ var testTaskDefinition2 = &ecspresso.TaskDefinitionInput{
 func TestTaskDefinitionDiffer(t *testing.T) {
 	ecspresso.SortTaskDefinitionForDiff(testTaskDefinition1)
 	ecspresso.SortTaskDefinitionForDiff(testTaskDefinition2)
-	if ecspresso.MarshalJSONString(testTaskDefinition1) != ecspresso.MarshalJSONString(testTaskDefinition2) {
-		t.Error("failed to sortTaskDefinitionForDiff")
-		t.Log(testTaskDefinition1)
-		t.Log(testTaskDefinition2)
+	td1, _ := ecspresso.MarshalJSONForAPI(testTaskDefinition1)
+	td2, _ := ecspresso.MarshalJSONForAPI(testTaskDefinition2)
+	if diff := cmp.Diff(td1, td2); diff != "" {
+		t.Error("failed to sortTaskDefinitionForDiff", diff)
+		t.Log(string(td1))
+		t.Log(string(td2))
 	}
 }
 
@@ -190,9 +193,11 @@ var testServiceDefinition2 = &ecspresso.Service{
 func TestServiceDefinitionDiffer(t *testing.T) {
 	ecspresso.SortServiceDefinitionForDiff(testServiceDefinition1)
 	ecspresso.SortServiceDefinitionForDiff(testServiceDefinition2)
-	if ecspresso.MarshalJSONString(testServiceDefinition1) != ecspresso.MarshalJSONString(testServiceDefinition2) {
-		t.Error("failed to SortTaskDefinitionForDiff")
-		t.Log(testServiceDefinition1)
-		t.Log(testServiceDefinition2)
+	sv1, _ := ecspresso.MarshalJSONForAPI(testServiceDefinition1)
+	sv2, _ := ecspresso.MarshalJSONForAPI(testServiceDefinition2)
+	if diff := cmp.Diff(sv1, sv2); diff != "" {
+		t.Error("failed to SortTaskDefinitionForDiff", diff)
+		t.Log(string(sv1))
+		t.Log(string(sv2))
 	}
 }
