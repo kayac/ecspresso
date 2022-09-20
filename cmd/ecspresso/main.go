@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/alecthomas/kingpin"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/fatih/color"
 	"github.com/kayac/ecspresso"
 	"github.com/mattn/go-isatty"
@@ -246,7 +245,7 @@ func _main() int {
 			deployOption.SuspendAutoScaling = nil
 		}
 		if isSetResumeAutoScaling {
-			deployOption.SuspendAutoScaling = aws.Bool(false)
+			deployOption.SuspendAutoScaling = boolp(false)
 		}
 		err = app.Deploy(deployOption)
 	case "refresh":
@@ -256,7 +255,7 @@ func _main() int {
 			scaleOption.SuspendAutoScaling = nil
 		}
 		if isSetResumeAutoScaling {
-			scaleOption.SuspendAutoScaling = aws.Bool(false)
+			scaleOption.SuspendAutoScaling = boolp(false)
 		}
 		err = app.Deploy(scaleOption)
 	case "status":

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Songmu/prompter"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/applicationautoscaling"
 	aasTypes "github.com/aws/aws-sdk-go-v2/service/applicationautoscaling/types"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
@@ -20,9 +21,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/fatih/color"
 	gc "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
@@ -64,7 +62,6 @@ type App struct {
 	cwl         *cloudwatchlogs.Client
 	iam         *iam.Client
 
-	sess     *session.Session
 	verifier *verifier
 
 	Service string
@@ -160,12 +157,6 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) error {
 		},
 	)
 	if err != nil {
-		if awsErr, ok := err.(awserr.Error); ok {
-			if awsErr.Code() == "AccessDeniedException" {
-				d.DebugLog("unable to describe scalable targets. requires IAM for application-autoscaling:Describe* to display informations about auto-scaling.")
-				return nil
-			}
-		}
 		return errors.Wrap(err, "failed to describe scalable targets")
 	}
 	if len(tout.ScalableTargets) == 0 {
@@ -290,7 +281,6 @@ func NewApp(conf *Config) (*App, error) {
 		loader.Funcs(f)
 	}
 
-	sess := conf.sess
 	d := &App{
 		Service:     conf.Service,
 		Cluster:     conf.Cluster,
@@ -299,10 +289,8 @@ func NewApp(conf *Config) (*App, error) {
 		codedeploy:  codedeploy.NewFromConfig(conf.awsv2Config),
 		cwl:         cloudwatchlogs.NewFromConfig(conf.awsv2Config),
 		iam:         iam.NewFromConfig(conf.awsv2Config),
-
-		sess:   sess,
-		config: conf,
-		loader: loader,
+		config:      conf,
+		loader:      loader,
 	}
 	return d, nil
 }
