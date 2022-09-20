@@ -1,11 +1,12 @@
 package ssm_test
 
 import (
+	"context"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	awsssm "github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsssm "github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 
@@ -13,11 +14,10 @@ import (
 )
 
 type mockSSM struct {
-	ssmiface.SSMAPI
 	getParameter func(input *awsssm.GetParameterInput) (*awsssm.GetParameterOutput, error)
 }
 
-func (m mockSSM) GetParameter(input *awsssm.GetParameterInput) (*awsssm.GetParameterOutput, error) {
+func (m mockSSM) GetParameter(ctx context.Context, input *awsssm.GetParameterInput, opts ...func(*awsssm.Options)) (*awsssm.GetParameterOutput, error) {
 	return m.getParameter(input)
 }
 
@@ -29,25 +29,25 @@ func mockGetParameter(input *awsssm.GetParameterInput) (*awsssm.GetParameterOutp
 	switch *input.Name {
 	case "/string":
 		return &awsssm.GetParameterOutput{
-			Parameter: &awsssm.Parameter{
+			Parameter: &types.Parameter{
 				Name:  input.Name,
-				Type:  aws.String("String"),
+				Type:  types.ParameterTypeString,
 				Value: aws.String("string value"),
 			},
 		}, nil
 	case "/stringlist":
 		return &awsssm.GetParameterOutput{
-			Parameter: &awsssm.Parameter{
+			Parameter: &types.Parameter{
 				Name:  input.Name,
-				Type:  aws.String("StringList"),
+				Type:  types.ParameterTypeStringList,
 				Value: aws.String("stringlist value 1,stringlist value 2"),
 			},
 		}, nil
 	case "/securestring":
 		return &awsssm.GetParameterOutput{
-			Parameter: &awsssm.Parameter{
+			Parameter: &types.Parameter{
 				Name:  input.Name,
-				Type:  aws.String("SecureString"),
+				Type:  types.ParameterTypeSecureString,
 				Value: aws.String("securestring value"),
 			},
 		}, nil
@@ -67,11 +67,11 @@ func TestLookupOk(t *testing.T) {
 		{"StringList 1", "/stringlist", []int{1}, "stringlist value 2"},
 		{"SecureString", "/securestring", nil, "securestring value"},
 	}
-
+	ctx := context.Background()
 	app := newMockApp(mockGetParameter)
 	for _, td := range tests {
 		t.Run(td.testname, func(t *testing.T) {
-			got, err := app.Lookup(td.param, td.index...)
+			got, err := app.Lookup(ctx, td.param, td.index...)
 			if err != nil {
 				t.Fatalf("got unexpected error: %v", err)
 			}
@@ -95,10 +95,11 @@ func TestLookupError(t *testing.T) {
 		{"SecureString index", "/securestring", []int{0}, "the second argument is supported only for StringList type, but the parameter /securestring is of type SecureString"},
 	}
 
+	ctx := context.Background()
 	app := newMockApp(mockGetParameter)
 	for _, td := range tests {
 		t.Run(td.testname, func(t *testing.T) {
-			_, err := app.Lookup(td.param, td.index...)
+			_, err := app.Lookup(ctx, td.param, td.index...)
 			if diff := cmp.Diff(err.Error(), td.err); diff != "" {
 				t.Errorf("got unexpected error %s", diff)
 			}
