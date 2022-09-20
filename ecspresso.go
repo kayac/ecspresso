@@ -22,7 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/fatih/color"
-	gc "github.com/kayac/go-config"
+	goConfig "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
 	"github.com/pkg/errors"
@@ -72,7 +72,7 @@ type App struct {
 	ExtStr  map[string]string
 	ExtCode map[string]string
 
-	loader *gc.Loader
+	loader *goConfig.Loader
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
@@ -276,7 +276,7 @@ func NewApp(conf *Config) (*App, error) {
 	if err := conf.setupPlugins(); err != nil {
 		return nil, err
 	}
-	loader := gc.New()
+	loader := goConfig.New()
 	for _, f := range conf.templateFuncs {
 		loader.Funcs(f)
 	}
@@ -450,7 +450,8 @@ func (d *App) DebugLog(v ...interface{}) {
 }
 
 func (d *App) LogJSON(v interface{}) {
-	fmt.Print(MarshalJSONString(v))
+	b, _ := json.Marshal(v)
+	fmt.Print(string(b))
 }
 
 func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error {
@@ -458,14 +459,14 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	waitCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	tick := time.NewTicker(10 * time.Second)
 	go func() {
-		tick := time.Tick(10 * time.Second)
 		var lines int
 		for {
 			select {
 			case <-waitCtx.Done():
 				return
-			case <-tick:
+			case <-tick.C:
 				if isTerminal {
 					for i := 0; i < lines; i++ {
 						fmt.Print(aec.EraseLine(aec.EraseModes.All), aec.PreviousLine(1))

@@ -74,7 +74,7 @@ func (d *App) Init(opt InitOption) error {
 
 	// service-def
 	treatmentServiceDefinition(sv)
-	if b, err := MarshalJSON(sv); err != nil {
+	if b, err := MarshalJSONForAPI(sv); err != nil {
 		return errors.Wrap(err, "unable to marshal service definition to JSON")
 	} else {
 		if *opt.Jsonnet {
@@ -91,7 +91,7 @@ func (d *App) Init(opt InitOption) error {
 	}
 
 	// task-def
-	if b, err := MarshalJSON(td); err != nil {
+	if b, err := MarshalJSONForAPI(td); err != nil {
 		return errors.Wrap(err, "unable to marshal task definition to JSON")
 	} else {
 		if *opt.Jsonnet {

@@ -16,7 +16,7 @@ require (
 	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/Songmu/prompter v0.5.1
 	github.com/alecthomas/kingpin v1.3.8-0.20190930021037-0a108b7f5563
-	github.com/aws/aws-sdk-go v1.44.99
+	github.com/aws/aws-sdk-go v1.44.99 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.16.15
 	github.com/aws/aws-sdk-go-v2/config v1.17.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.19
