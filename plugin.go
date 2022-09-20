@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -83,7 +84,7 @@ func setupPluginCFn(p ConfigPlugin, c *Config) error {
 }
 
 func setupPluginSSM(p ConfigPlugin, c *Config) error {
-	funcs, err := ssm.FuncMap(c.sess)
+	funcs, err := ssm.FuncMap(context.TODO(), c.awsv2Config)
 	if err != nil {
 		return err
 	}

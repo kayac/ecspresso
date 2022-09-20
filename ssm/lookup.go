@@ -1,65 +1,69 @@
 package ssm
 
 import (
+	"context"
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/pkg/errors"
 )
 
 // App represents an application
 type App struct {
-	ssm   ssmiface.SSMAPI
+	ssm   ssmiface
 	cache *sync.Map
 }
 
+type ssmiface interface {
+	GetParameter(context.Context, *ssm.GetParameterInput, ...func(*ssm.Options)) (*ssm.GetParameterOutput, error)
+}
+
 // New creates an application instance
-func New(sess *session.Session, cache *sync.Map) *App {
-    return &App{
-        ssm:   ssm.New(sess),
-        cache: cache,
-    }
+func New(cfg aws.Config, cache *sync.Map) *App {
+	return &App{
+		ssm:   ssm.NewFromConfig(cfg),
+		cache: cache,
+	}
 }
 
 // Lookup lookups a parameter from AWS Systems Manager Parameter Store
-func (a *App) Lookup(paramName string, index ...int) (outputValue string, err error) {
+func (a *App) Lookup(ctx context.Context, paramName string, index ...int) (outputValue string, err error) {
 	if len(index) > 1 {
 		return "", errors.Errorf("ssm template function accepts at most 2 parameters, but got %d", len(index)+1)
 	}
 
-	param, err := getParameterWithCache(a.ssm, paramName, a.cache)
+	param, err := getParameterWithCache(ctx, a.ssm, paramName, a.cache)
 	if err != nil {
 		return "", err
 	}
 
-	switch *param.Parameter.Type {
-	case ssm.ParameterTypeStringList:
+	switch param.Parameter.Type {
+	case types.ParameterTypeStringList:
 		if len(index) != 1 {
 			return "", errors.Errorf("the second argument is required for StringList type parrameter to specify the index")
 		}
-	case ssm.ParameterTypeString, ssm.ParameterTypeSecureString:
+	case types.ParameterTypeString, types.ParameterTypeSecureString:
 		if len(index) != 0 {
-			return "", errors.Errorf("the second argument is supported only for StringList type, but the parameter %s is of type %s", *param.Parameter.Name, *param.Parameter.Type)
+			return "", errors.Errorf("the second argument is supported only for StringList type, but the parameter %s is of type %s", *param.Parameter.Name, param.Parameter.Type)
 		}
 	}
 
 	return lookupValue(param, index...)
 }
 
-func getParameterWithCache(service ssmiface.SSMAPI, paramName string, cache *sync.Map) (*ssm.GetParameterOutput, error) {
+func getParameterWithCache(ctx context.Context, service ssmiface, paramName string, cache *sync.Map) (*ssm.GetParameterOutput, error) {
 	if cache == nil {
-		return getParameter(service, paramName)
+		return getParameter(ctx, service, paramName)
 	}
 
 	if s, found := cache.Load(paramName); found {
 		return s.(*ssm.GetParameterOutput), nil
 	}
 
-	if p, err := getParameter(service, paramName); err != nil {
+	if p, err := getParameter(ctx, service, paramName); err != nil {
 		return nil, err
 	} else {
 		cache.Store(paramName, p)
@@ -67,8 +71,8 @@ func getParameterWithCache(service ssmiface.SSMAPI, paramName string, cache *syn
 	}
 }
 
-func getParameter(service ssmiface.SSMAPI, paramName string) (*ssm.GetParameterOutput, error) {
-	res, err := service.GetParameter(&ssm.GetParameterInput{
+func getParameter(ctx context.Context, service ssmiface, paramName string) (*ssm.GetParameterOutput, error) {
+	res, err := service.GetParameter(ctx, &ssm.GetParameterInput{
 		Name:           aws.String(paramName),
 		WithDecryption: aws.Bool(true),
 	})
@@ -79,15 +83,15 @@ func getParameter(service ssmiface.SSMAPI, paramName string) (*ssm.GetParameterO
 }
 
 func lookupValue(param *ssm.GetParameterOutput, index ...int) (string, error) {
-	switch *param.Parameter.Type {
-	case ssm.ParameterTypeString:
+	switch param.Parameter.Type {
+	case types.ParameterTypeString:
 		return lookupStringValue(param)
-	case ssm.ParameterTypeStringList:
+	case types.ParameterTypeStringList:
 		return lookupStringListValue(param, index...)
-	case ssm.ParameterTypeSecureString:
+	case types.ParameterTypeSecureString:
 		return lookupSecureString(param)
 	}
-	return "", errors.Errorf("received unexpected parameter type: %s", *param.Parameter.Type)
+	return "", errors.Errorf("received unexpected parameter type: %s", param.Parameter.Type)
 }
 
 func lookupStringValue(param *ssm.GetParameterOutput) (string, error) {
