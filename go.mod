@@ -32,7 +32,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.28.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.16.18
 	github.com/fatih/color v1.13.0
-	github.com/fujiwara/cfn-lookup v0.0.2
+	github.com/fujiwara/cfn-lookup v1.0.0
 	github.com/fujiwara/ecsta v0.0.5
 	github.com/fujiwara/tfstate-lookup v0.4.4
 	github.com/fujiwara/tracer v1.0.0 // indirect

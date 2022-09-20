@@ -131,7 +131,6 @@ github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d h1:UQZhZ2O0vMHr2c
 github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/aws/aws-lambda-go v1.28.0/go.mod h1:jJmlefzPfGnckuHdXX7/80O3BvUUi12XOkbv4w9SGLU=
-github.com/aws/aws-sdk-go v1.36.15/go.mod h1:hcU610XS61/+aQV88ixoOzUoG7v3b31pl2zKMmprdro=
 github.com/aws/aws-sdk-go v1.40.28/go.mod h1:585smgzpB/KqRA+K3y/NL/oYRqQvpNJYvLm+LY1U59Q=
 github.com/aws/aws-sdk-go v1.44.99 h1:ITZ9q/fmH+Ksaz2TbyMU2d19vOOWs/hAlt8NbXAieHw=
 github.com/aws/aws-sdk-go v1.44.99/go.mod h1:y4AeaBuwd2Lk+GepC1E9v0qOiTws0MIWAX4oIKwKHZo=
@@ -165,6 +164,8 @@ github.com/aws/aws-sdk-go-v2/internal/ini v1.3.23 h1:Sy266MXyLZZbObFhStGF9dyJm5n
 github.com/aws/aws-sdk-go-v2/internal/ini v1.3.23/go.mod h1:XtEkQMmxls+Tb5dZLmpa1QAk0OzSIFDAXanC9Jkf81E=
 github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.15.17 h1:/+RFboFHs712sYAUammvFHHa8EEKLbZyB4a+1Cc3xAA=
 github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.15.17/go.mod h1:SlGk43vfUh/OPg8bQwbTdE20QmuAV2EI2xlydebUq3Q=
+github.com/aws/aws-sdk-go-v2/service/cloudformation v1.22.9 h1:RJMkHM2pwS/oQ+syqa4qWYN4gODmQAmAi9JYYxt5cYQ=
+github.com/aws/aws-sdk-go-v2/service/cloudformation v1.22.9/go.mod h1:T3k87PNi5z7Aus/enP5W8LZgy/oAyFuEGBovJWJ2CSk=
 github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.11/go.mod h1:0vT2mfhUL63/UT1RvYF/1wuqvvuvY0e+CiLB1paT+qI=
 github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.14/go.mod h1:62kPuTAGPxpvo/0y/+QvaFwHffIe4l8hmStHLwaisLI=
 github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.19 h1:IKo9W8WugueXbrKGFsJ2N3efxQqnopF26vk9ccbsYYM=
@@ -250,8 +251,8 @@ github.com/fatih/color v1.10.0/go.mod h1:ELkj/draVOlAH/xkhN6mQ50Qd0MPOk5AAr3maGE
 github.com/fatih/color v1.13.0 h1:8LOYc1KYPPmyKMuN8QV2DNRWNbLo6LZ0iLs8+mlH53w=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
-github.com/fujiwara/cfn-lookup v0.0.2 h1:1l0HNyPMO5yzXacVi6LWbyahs6uW+faBPd8CwFOiaFw=
-github.com/fujiwara/cfn-lookup v0.0.2/go.mod h1:if7hlqDFCHxOy2TnH/GWKpD6j5Bp3UwFl+jfj9WZYis=
+github.com/fujiwara/cfn-lookup v1.0.0 h1:oDhBXaEvT27B0dFB4z3zbjuTzA3E6m8t8Sge9mffAzU=
+github.com/fujiwara/cfn-lookup v1.0.0/go.mod h1:HI8F4hlW+nN9KRTWNzdwvnOUQFrN8jX9puyfhtAVgwU=
 github.com/fujiwara/ecsta v0.0.5 h1:c2hfn35e/5Z3xJ4H8qHcProjOnwSuV73nPAHfCtr/7o=
 github.com/fujiwara/ecsta v0.0.5/go.mod h1:9DRjF/GS4lMR18TYJCVjRk22kkTNGjm1c43Tv/e3Vyk=
 github.com/fujiwara/tfstate-lookup v0.4.4 h1:HxVsq62Tk9W1RcbPPq7/c1s0Qd4bBFkccciFxMXZpLI=

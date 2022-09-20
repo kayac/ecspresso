@@ -76,7 +76,7 @@ func setupPluginTFState(p ConfigPlugin, c *Config) error {
 }
 
 func setupPluginCFn(p ConfigPlugin, c *Config) error {
-	funcs, err := cfn.FuncMap(c.sess)
+	funcs, err := cfn.FuncMap(context.TODO(), c.awsv2Config)
 	if err != nil {
 		return err
 	}
