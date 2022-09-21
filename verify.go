@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -18,7 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
+	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
@@ -30,7 +29,6 @@ import (
 
 type verifier struct {
 	cwl            *cloudwatchlogs.Client
-	elbv2          []*elbv2.Client // fallback to executionRole until v1.6
 	ssm            *ssm.Client
 	secretsmanager *secretsmanager.Client
 	ecr            *ecr.Client
@@ -41,11 +39,11 @@ type verifier struct {
 func newVerifier(execCfg, appCfg aws.Config, opt *VerifyOption) *verifier {
 	return &verifier{
 		cwl:            cloudwatchlogs.NewFromConfig(execCfg),
-		elbv2:          []*elbv2.Client{elbv2.NewFromConfig(appCfg), elbv2.NewFromConfig(execCfg)},
 		ssm:            ssm.NewFromConfig(execCfg),
 		secretsmanager: secretsmanager.NewFromConfig(execCfg),
 		ecr:            ecr.NewFromConfig(execCfg),
-		opt:            opt, isAssumed: &execCfg != &appCfg,
+		opt:            opt,
+		isAssumed:      &execCfg != &appCfg,
 	}
 }
 
@@ -217,20 +215,9 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 	for i, lb := range sv.LoadBalancers {
 		name := fmt.Sprintf("LoadBalancer[%d]", i)
 		err := d.verifyResource(ctx, name, func(context.Context) error {
-			out, err := d.verifier.elbv2[0].DescribeTargetGroups(ctx, &elbv2.DescribeTargetGroupsInput{
+			out, err := d.elbv2.DescribeTargetGroups(ctx, &elasticloadbalancingv2.DescribeTargetGroupsInput{
 				TargetGroupArns: []string{*lb.TargetGroupArn},
 			})
-			if err != nil && d.verifier.isAssumed {
-				fmt.Fprintln(
-					os.Stderr,
-					color.YellowString(
-						"WARNING: verifying the target group using the task execution role has been DEPRECATED and will be removed in the future. "+
-							"Allow `elasticloadbalancing: DescribeTargetGroups` to the role that executes ecspresso."),
-				)
-				out, err = d.verifier.elbv2[1].DescribeTargetGroups(ctx, &elbv2.DescribeTargetGroupsInput{
-					TargetGroupArns: []string{*lb.TargetGroupArn},
-				})
-			}
 			if err != nil {
 				return err
 			} else if len(out.TargetGroups) == 0 {
