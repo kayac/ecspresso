@@ -20,6 +20,7 @@ import (
 	cdTypes "github.com/aws/aws-sdk-go-v2/service/codedeploy/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/fatih/color"
 	goConfig "github.com/kayac/go-config"
@@ -61,6 +62,7 @@ type App struct {
 	codedeploy  *codedeploy.Client
 	cwl         *cloudwatchlogs.Client
 	iam         *iam.Client
+	elbv2       *elasticloadbalancingv2.Client
 
 	verifier *verifier
 
@@ -282,15 +284,18 @@ func NewApp(conf *Config) (*App, error) {
 	}
 
 	d := &App{
-		Service:     conf.Service,
-		Cluster:     conf.Cluster,
+		Service: conf.Service,
+		Cluster: conf.Cluster,
+
 		ecs:         ecs.NewFromConfig(conf.awsv2Config),
 		autoScaling: applicationautoscaling.NewFromConfig(conf.awsv2Config),
 		codedeploy:  codedeploy.NewFromConfig(conf.awsv2Config),
 		cwl:         cloudwatchlogs.NewFromConfig(conf.awsv2Config),
 		iam:         iam.NewFromConfig(conf.awsv2Config),
-		config:      conf,
-		loader:      loader,
+		elbv2:       elasticloadbalancingv2.NewFromConfig(conf.awsv2Config),
+
+		config: conf,
+		loader: loader,
 	}
 	return d, nil
 }
