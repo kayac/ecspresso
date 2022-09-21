@@ -30,7 +30,7 @@ func (rev revision) Cols() []string {
 type revisions []revision
 
 func (revs revisions) OutputJSON(w io.Writer) error {
-	b, err := MarshalJSON(revs)
+	b, err := MarshalJSONForAPI(revs)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (d *App) Revesions(opt RevisionsOption) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to describe task definition")
 		}
-		b, err := MarshalJSON(res.TaskDefinition)
+		b, err := MarshalJSONForAPI(res.TaskDefinition)
 		if err != nil {
 			return err
 		}

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Songmu/prompter"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/applicationautoscaling"
 	aasTypes "github.com/aws/aws-sdk-go-v2/service/applicationautoscaling/types"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
@@ -20,11 +21,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/fatih/color"
-	gc "github.com/kayac/go-config"
+	goConfig "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
 	"github.com/pkg/errors"
@@ -64,7 +62,6 @@ type App struct {
 	cwl         *cloudwatchlogs.Client
 	iam         *iam.Client
 
-	sess     *session.Session
 	verifier *verifier
 
 	Service string
@@ -75,7 +72,7 @@ type App struct {
 	ExtStr  map[string]string
 	ExtCode map[string]string
 
-	loader *gc.Loader
+	loader *goConfig.Loader
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
@@ -160,12 +157,6 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) error {
 		},
 	)
 	if err != nil {
-		if awsErr, ok := err.(awserr.Error); ok {
-			if awsErr.Code() == "AccessDeniedException" {
-				d.DebugLog("unable to describe scalable targets. requires IAM for application-autoscaling:Describe* to display informations about auto-scaling.")
-				return nil
-			}
-		}
 		return errors.Wrap(err, "failed to describe scalable targets")
 	}
 	if len(tout.ScalableTargets) == 0 {
@@ -285,12 +276,11 @@ func NewApp(conf *Config) (*App, error) {
 	if err := conf.setupPlugins(); err != nil {
 		return nil, err
 	}
-	loader := gc.New()
+	loader := goConfig.New()
 	for _, f := range conf.templateFuncs {
 		loader.Funcs(f)
 	}
 
-	sess := conf.sess
 	d := &App{
 		Service:     conf.Service,
 		Cluster:     conf.Cluster,
@@ -299,10 +289,8 @@ func NewApp(conf *Config) (*App, error) {
 		codedeploy:  codedeploy.NewFromConfig(conf.awsv2Config),
 		cwl:         cloudwatchlogs.NewFromConfig(conf.awsv2Config),
 		iam:         iam.NewFromConfig(conf.awsv2Config),
-
-		sess:   sess,
-		config: conf,
-		loader: loader,
+		config:      conf,
+		loader:      loader,
 	}
 	return d, nil
 }
@@ -462,7 +450,8 @@ func (d *App) DebugLog(v ...interface{}) {
 }
 
 func (d *App) LogJSON(v interface{}) {
-	fmt.Print(MarshalJSONString(v))
+	b, _ := json.Marshal(v)
+	fmt.Print(string(b))
 }
 
 func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error {
@@ -470,14 +459,14 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	waitCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	tick := time.NewTicker(10 * time.Second)
 	go func() {
-		tick := time.Tick(10 * time.Second)
 		var lines int
 		for {
 			select {
 			case <-waitCtx.Done():
 				return
-			case <-tick:
+			case <-tick.C:
 				if isTerminal {
 					for i := 0; i < lines; i++ {
 						fmt.Print(aec.EraseLine(aec.EraseModes.All), aec.PreviousLine(1))

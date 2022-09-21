@@ -8,16 +8,14 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/fatih/color"
-	gv "github.com/hashicorp/go-version"
+	goVersion "github.com/hashicorp/go-version"
 	"github.com/kayac/ecspresso/appspec"
-	gc "github.com/kayac/go-config"
+	goConfig "github.com/kayac/go-config"
 	"github.com/pkg/errors"
 
-	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
-	awsv2Config "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 )
 
 const (
@@ -40,15 +38,13 @@ type Config struct {
 
 	templateFuncs      []template.FuncMap
 	dir                string
-	versionConstraints gv.Constraints
-	sess               *session.Session
-
-	awsv2Config awsv2.Config
+	versionConstraints goVersion.Constraints
+	awsv2Config        aws.Config
 }
 
 // Load loads configuration file from file path.
 func (c *Config) Load(path string) error {
-	if err := gc.LoadWithEnv(c, path); err != nil {
+	if err := goConfig.LoadWithEnv(c, path); err != nil {
 		return err
 	}
 	c.dir = filepath.Dir(path)
@@ -70,22 +66,14 @@ func (c *Config) Restrict() error {
 		c.TaskDefinitionPath = filepath.Join(c.dir, c.TaskDefinitionPath)
 	}
 	if c.RequiredVersion != "" {
-		constraints, err := gv.NewConstraint(c.RequiredVersion)
+		constraints, err := goVersion.NewConstraint(c.RequiredVersion)
 		if err != nil {
 			return errors.Wrap(err, "required_version has invalid format")
 		}
 		c.versionConstraints = constraints
 	}
 	var err error
-	c.sess, err = session.NewSessionWithOptions(session.Options{
-		Config:            aws.Config{Region: aws.String(c.Region)},
-		SharedConfigState: session.SharedConfigEnable,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to create session")
-	}
-
-	c.awsv2Config, err = awsv2Config.LoadDefaultConfig(context.TODO(), awsv2Config.WithRegion(c.Region))
+	c.awsv2Config, err = awsConfig.LoadDefaultConfig(context.TODO(), awsConfig.WithRegion(c.Region))
 	if err != nil {
 		return errors.Wrap(err, "failed to load aws config")
 	}
@@ -107,7 +95,7 @@ func (c *Config) ValidateVersion(version string) error {
 	if c.versionConstraints == nil {
 		return nil
 	}
-	v, err := gv.NewVersion(version)
+	v, err := goVersion.NewVersion(version)
 	if err != nil {
 		fmt.Fprintln(
 			os.Stderr,

@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -186,7 +187,7 @@ func sortSlicesInDefinition(t reflect.Type, v reflect.Value, fieldNames ...strin
 		if size := fv.Len(); size == 0 {
 			fv.Set(reflect.MakeSlice(fv.Type(), 0, 0))
 		} else {
-			slice := make([]reflect.Value, size, size)
+			slice := make([]reflect.Value, size)
 			for i := 0; i < size; i++ {
 				slice[i] = fv.Index(i)
 			}
@@ -197,6 +198,10 @@ func sortSlicesInDefinition(t reflect.Type, v reflect.Value, fieldNames ...strin
 					is, js = iv.Interface().(string), jv.Interface().(string)
 				} else if iv.Type().Implements(stringerType) && jv.Type().Implements(stringerType) {
 					is, js = iv.Interface().(fmt.Stringer).String(), jv.Interface().(fmt.Stringer).String()
+				} else {
+					ib, _ := json.Marshal(iv.Interface())
+					jb, _ := json.Marshal(jv.Interface())
+					is, js = string(ib), string(jb)
 				}
 				return is < js
 			})
@@ -257,15 +262,16 @@ func sortServiceDefinitionForDiff(sv *Service) {
 }
 
 func sortTaskDefinitionForDiff(td *TaskDefinitionInput) {
-	for _, cd := range td.ContainerDefinitions {
+	for i, cd := range td.ContainerDefinitions {
 		sortSlicesInDefinition(
-			reflect.TypeOf(cd), reflect.Indirect(reflect.ValueOf(cd)),
+			reflect.TypeOf(cd), reflect.Indirect(reflect.ValueOf(&cd)),
 			"Environment",
 			"MountPoints",
 			"PortMappings",
 			"VolumesFrom",
 			"Secrets",
 		)
+		td.ContainerDefinitions[i] = cd // set sorted value
 	}
 	sortSlicesInDefinition(
 		reflect.TypeOf(*td), reflect.Indirect(reflect.ValueOf(td)),

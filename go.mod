@@ -16,10 +16,9 @@ require (
 	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/Songmu/prompter v0.5.1
 	github.com/alecthomas/kingpin v1.3.8-0.20190930021037-0a108b7f5563
-	github.com/aws/aws-sdk-go v1.44.99
-	github.com/aws/aws-sdk-go-v2 v1.16.15
-	github.com/aws/aws-sdk-go-v2/config v1.17.6
-	github.com/aws/aws-sdk-go-v2/credentials v1.12.19
+	github.com/aws/aws-sdk-go-v2 v1.16.16
+	github.com/aws/aws-sdk-go-v2/config v1.17.7
+	github.com/aws/aws-sdk-go-v2/credentials v1.12.20
 	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.15.17
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.19
 	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.14.17
@@ -30,11 +29,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.16.0
 	github.com/aws/aws-sdk-go-v2/service/sns v1.18.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.28.0
-	github.com/aws/aws-sdk-go-v2/service/sts v1.16.18
+	github.com/aws/aws-sdk-go-v2/service/sts v1.16.19
 	github.com/fatih/color v1.13.0
 	github.com/fujiwara/cfn-lookup v1.0.0
 	github.com/fujiwara/ecsta v0.0.5
-	github.com/fujiwara/tfstate-lookup v0.4.4
+	github.com/fujiwara/tfstate-lookup v1.0.0
 	github.com/fujiwara/tracer v1.0.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect

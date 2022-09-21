@@ -68,7 +68,7 @@ func setupPluginTFState(p ConfigPlugin, c *Config) error {
 	} else {
 		return errors.New("tfstate plugin requires path or url for tfstate location")
 	}
-	funcs, err := tfstate.FuncMap(loc)
+	funcs, err := tfstate.FuncMap(context.TODO(), loc)
 	if err != nil {
 		return err
 	}
