@@ -158,7 +158,7 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 	}
 	msg = msg + "..."
 	d.Log(msg)
-	d.DebugLog(in)
+	d.LogJSON(in)
 
 	_, err := d.ecs.UpdateService(ctx, in)
 	if err != nil {
