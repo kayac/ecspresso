@@ -456,7 +456,7 @@ func (d *App) DebugLog(v ...interface{}) {
 
 func (d *App) LogJSON(v interface{}) {
 	b, _ := json.Marshal(v)
-	fmt.Print(string(b))
+	fmt.Println(string(b))
 }
 
 func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error {

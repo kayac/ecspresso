@@ -3,7 +3,6 @@ package ecspresso
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -165,53 +164,9 @@ func tdToTaskDefinitionInput(td *TaskDefinition, tdTags []types.Tag) *TaskDefini
 	return tdi
 }
 
-var stringerType = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
-
-func sortSlicesInDefinition(t reflect.Type, v reflect.Value, fieldNames ...string) {
-	isSortableField := func(name string) bool {
-		for _, n := range fieldNames {
-			if n == name {
-				return true
-			}
-		}
-		return false
-	}
-	for i := 0; i < t.NumField(); i++ {
-		fv, field := v.Field(i), t.Field(i)
-		if fv.Kind() != reflect.Slice || !fv.CanSet() {
-			continue
-		}
-		if !isSortableField(field.Name) {
-			continue
-		}
-		if size := fv.Len(); size == 0 {
-			fv.Set(reflect.MakeSlice(fv.Type(), 0, 0))
-		} else {
-			slice := make([]reflect.Value, size)
-			for i := 0; i < size; i++ {
-				slice[i] = fv.Index(i)
-			}
-			sort.SliceStable(slice, func(i, j int) bool {
-				iv, jv := reflect.Indirect(slice[i]), reflect.Indirect(slice[j])
-				var is, js string
-				if iv.Kind() == reflect.String && jv.Kind() == reflect.String {
-					is, js = iv.Interface().(string), jv.Interface().(string)
-				} else if iv.Type().Implements(stringerType) && jv.Type().Implements(stringerType) {
-					is, js = iv.Interface().(fmt.Stringer).String(), jv.Interface().(fmt.Stringer).String()
-				} else {
-					ib, _ := json.Marshal(iv.Interface())
-					jb, _ := json.Marshal(jv.Interface())
-					is, js = string(ib), string(jb)
-				}
-				return is < js
-			})
-			sorted := reflect.MakeSlice(fv.Type(), size, size)
-			for i := 0; i < size; i++ {
-				sorted.Index(i).Set(slice[i])
-			}
-			fv.Set(sorted)
-		}
-	}
+func jsonStr(v interface{}) string {
+	s, _ := json.Marshal(v)
+	return string(s)
 }
 
 func equalString(a *string, b string) bool {
@@ -222,12 +177,12 @@ func equalString(a *string, b string) bool {
 }
 
 func sortServiceDefinitionForDiff(sv *Service) {
-	sortSlicesInDefinition(
-		reflect.TypeOf(*sv), reflect.Indirect(reflect.ValueOf(sv)),
-		"PlacementConstraints",
-		"PlacementStrategy",
-		"RequiresCompatibilities",
-	)
+	sort.SliceStable(sv.PlacementConstraints, func(i, j int) bool {
+		return jsonStr(sv.PlacementConstraints[i]) < jsonStr(sv.PlacementConstraints[j])
+	})
+	sort.SliceStable(sv.PlacementStrategy, func(i, j int) bool {
+		return jsonStr(sv.PlacementStrategy[i]) < jsonStr(sv.PlacementStrategy[j])
+	})
 	if sv.LaunchType == types.LaunchTypeFargate && sv.PlatformVersion == nil {
 		sv.PlatformVersion = aws.String("LATEST")
 	}
@@ -251,38 +206,50 @@ func sortServiceDefinitionForDiff(sv *Service) {
 			if ac.AssignPublicIp == "" {
 				ac.AssignPublicIp = types.AssignPublicIpDisabled
 			}
-			sortSlicesInDefinition(
-				reflect.TypeOf(*ac),
-				reflect.Indirect(reflect.ValueOf(ac)),
-				"SecurityGroups",
-				"Subnets",
-			)
+			sort.SliceStable(ac.SecurityGroups, func(i, j int) bool {
+				return ac.SecurityGroups[i] < ac.SecurityGroups[j]
+			})
+			sort.SliceStable(ac.Subnets, func(i, j int) bool {
+				return ac.Subnets[i] < ac.Subnets[j]
+			})
 		}
 	}
 }
 
 func sortTaskDefinitionForDiff(td *TaskDefinitionInput) {
 	for i, cd := range td.ContainerDefinitions {
-		sortSlicesInDefinition(
-			reflect.TypeOf(cd), reflect.Indirect(reflect.ValueOf(&cd)),
-			"Environment",
-			"MountPoints",
-			"PortMappings",
-			"VolumesFrom",
-			"Secrets",
-		)
+		sort.SliceStable(cd.Environment, func(i, j int) bool {
+			return aws.ToString(cd.Environment[i].Name) < aws.ToString(cd.Environment[j].Name)
+		})
+		sort.SliceStable(cd.MountPoints, func(i, j int) bool {
+			return jsonStr(cd.MountPoints[i]) < jsonStr(cd.MountPoints[j])
+		})
+		sort.SliceStable(cd.PortMappings, func(i, j int) bool {
+			return jsonStr(cd.PortMappings[i]) < jsonStr(cd.PortMappings[j])
+		})
+		sort.SliceStable(cd.VolumesFrom, func(i, j int) bool {
+			return jsonStr(cd.VolumesFrom[i]) < jsonStr(cd.VolumesFrom[j])
+		})
+		sort.SliceStable(cd.Secrets, func(i, j int) bool {
+			return aws.ToString(cd.Secrets[i].Name) < aws.ToString(cd.Secrets[j].Name)
+		})
 		td.ContainerDefinitions[i] = cd // set sorted value
 	}
-	sortSlicesInDefinition(
-		reflect.TypeOf(*td), reflect.Indirect(reflect.ValueOf(td)),
-		"PlacementConstraints",
-		"RequiresCompatibilities",
-		"Volumes",
-		"Tags",
-	)
+	sort.SliceStable(td.PlacementConstraints, func(i, j int) bool {
+		return jsonStr(td.PlacementConstraints[i]) < jsonStr(td.PlacementConstraints[j])
+	})
+	sort.SliceStable(td.RequiresCompatibilities, func(i, j int) bool {
+		return td.RequiresCompatibilities[i] < td.RequiresCompatibilities[j]
+	})
+	sort.SliceStable(td.Volumes, func(i, j int) bool {
+		return jsonStr(td.Volumes[i]) < jsonStr(td.Volumes[j])
+	})
+	sort.SliceStable(td.Tags, func(i, j int) bool {
+		return aws.ToString(td.Tags[i].Key) < aws.ToString(td.Tags[j].Key)
+	})
 	// containerDefinitions are sorted by name
 	sort.SliceStable(td.ContainerDefinitions, func(i, j int) bool {
-		return *(td.ContainerDefinitions[i].Name) > *(td.ContainerDefinitions[j].Name)
+		return aws.ToString(td.ContainerDefinitions[i].Name) > aws.ToString(td.ContainerDefinitions[j].Name)
 	})
 
 	if td.Cpu != nil {
@@ -292,10 +259,10 @@ func sortTaskDefinitionForDiff(td *TaskDefinitionInput) {
 		td.Memory = toNumberMemory(*td.Memory)
 	}
 	if td.ProxyConfiguration != nil && len(td.ProxyConfiguration.Properties) > 0 {
-		sortSlicesInDefinition(
-			reflect.TypeOf(*td.ProxyConfiguration), reflect.Indirect(reflect.ValueOf(td.ProxyConfiguration)),
-			"Properties",
-		)
+		p := td.ProxyConfiguration.Properties
+		sort.SliceStable(p, func(i, j int) bool {
+			return aws.ToString(p[i].Name) < aws.ToString(p[j].Name)
+		})
 	}
 }
 
