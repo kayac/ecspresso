@@ -26,7 +26,6 @@ import (
 	goConfig "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
-	"github.com/pkg/errors"
 )
 
 const DefaultDesiredCount = -1
@@ -103,10 +102,10 @@ func (d *App) GetLogEventsInput(logGroup string, logStream string, startAt int64
 func (d *App) DescribeService(ctx context.Context) (*Service, error) {
 	out, err := d.ecs.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to describe service")
+		return nil, fmt.Errorf("failed to describe service: %w", err)
 	}
 	if len(out.Services) == 0 {
-		return nil, errors.New("service is not found")
+		return nil, fmt.Errorf("service %s is not found", d.Service)
 	}
 	return newServiceFromTypes(out.Services[0]), nil
 }
@@ -133,7 +132,7 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*Service, 
 	}
 
 	if err := d.describeAutoScaling(ctx, s); err != nil {
-		return nil, errors.Wrap(err, "failed to describe autoscaling")
+		return nil, fmt.Errorf("failed to describe autoscaling: %w", err)
 	}
 
 	fmt.Println("Events:")
@@ -159,7 +158,7 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) error {
 		},
 	)
 	if err != nil {
-		return errors.Wrap(err, "failed to describe scalable targets")
+		return fmt.Errorf("failed to describe scalable targets: %w", err)
 	}
 	if len(tout.ScalableTargets) == 0 {
 		return nil
@@ -179,7 +178,7 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) error {
 		},
 	)
 	if err != nil {
-		return errors.Wrap(err, "failed to describe scaling policies")
+		return fmt.Errorf("failed to describe scaling policies: %w", err)
 	}
 	for _, policy := range pout.ScalingPolicies {
 		fmt.Println(formatScalingPolicy(policy))
@@ -190,7 +189,7 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) error {
 func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Time) (int, error) {
 	out, err := d.ecs.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to describe service deployments: %w", err)
 	}
 	if len(out.Services) == 0 {
 		return 0, nil
@@ -215,12 +214,12 @@ func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Tim
 func (d *App) DescribeTaskStatus(ctx context.Context, task *types.Task, watchContainer *types.ContainerDefinition) error {
 	out, err := d.ecs.DescribeTasks(ctx, d.DescribeTasksInput(task))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to describe tasks: %w", err)
 	}
 	if len(out.Failures) > 0 {
 		f := out.Failures[0]
 		d.Log("Task ARN: " + *f.Arn)
-		return errors.New(*f.Reason)
+		return fmt.Errorf(*f.Reason)
 	}
 
 	var container *types.Container
@@ -235,13 +234,13 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *types.Task, watchCon
 	}
 
 	if container.ExitCode != nil && *container.ExitCode != 0 {
-		msg := fmt.Sprintf("Container: %s, Exit Code: %s", *container.Name, strconv.FormatInt(int64(*container.ExitCode), 10))
+		msg := fmt.Sprintf("container: %s, exit code: %s", *container.Name, strconv.FormatInt(int64(*container.ExitCode), 10))
 		if container.Reason != nil {
-			msg += ", Reason: " + *container.Reason
+			msg += ", reason: " + *container.Reason
 		}
-		return errors.New(msg)
+		return fmt.Errorf(msg)
 	} else if container.Reason != nil {
-		return fmt.Errorf("Container: %s, Reason: %s", *container.Name, *container.Reason)
+		return fmt.Errorf("container: %s, reason: %s", *container.Name, *container.Reason)
 	}
 	return nil
 }
@@ -252,7 +251,7 @@ func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDe
 		Include:        []types.TaskDefinitionField{types.TaskDefinitionFieldTags},
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to describe task definition: %w", err)
 	}
 	return tdToTaskDefinitionInput(out.TaskDefinition, out.Tags), nil
 }
@@ -336,7 +335,7 @@ func (d *App) Delete(opt DeleteOption) error {
 		service := prompter.Prompt(`Enter the service name to DELETE`, "")
 		if service != *sv.ServiceName {
 			d.Log("Aborted")
-			return errors.New("confirmation failed")
+			return fmt.Errorf("confirmation failed")
 		}
 	}
 
@@ -345,7 +344,7 @@ func (d *App) Delete(opt DeleteOption) error {
 		Service: sv.ServiceName,
 	}
 	if _, err := d.ecs.DeleteService(ctx, dsi); err != nil {
-		return errors.Wrap(err, "failed to delete service")
+		return fmt.Errorf("failed to delete service: %w", err)
 	}
 	d.Log("Service is deleted")
 
@@ -378,11 +377,11 @@ func (d *App) Wait(opt WaitOption) error {
 	if sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy {
 		err := d.WaitForCodeDeploy(ctx, sv)
 		if err != nil {
-			return errors.Wrap(err, "failed to wait for a deployment successfully")
+			return fmt.Errorf("failed to wait for a deployment successfully: %w", err)
 		}
 	} else {
 		if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
-			return errors.Wrap(err, "the service still unstable")
+			return err
 		}
 	}
 	d.Log("Service is stable now. Completed!")
@@ -403,10 +402,10 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 			},
 		)
 		if err != nil {
-			return "", errors.Wrap(err, "failed to list taskdefinitions")
+			return "", fmt.Errorf("failed to list taskdefinitions: %w", err)
 		}
 		if len(out.TaskDefinitionArns) == 0 {
-			return "", errors.New("rollback target is not found")
+			return "", fmt.Errorf("rollback target is not found: %w", err)
 		}
 		nextToken = out.NextToken
 		for _, tdArn := range out.TaskDefinitionArns {
@@ -429,10 +428,10 @@ func (d *App) findLatestTaskDefinitionArn(ctx context.Context, family string) (s
 		},
 	)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to list taskdefinitions")
+		return "", fmt.Errorf("failed to list taskdefinitions: %w", err)
 	}
 	if len(out.TaskDefinitionArns) == 0 {
-		return "", errors.New("no task definitions are found")
+		return "", fmt.Errorf("no task definitions family %s are found", family)
 	}
 	return out.TaskDefinitionArns[0], nil
 }
@@ -483,7 +482,10 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	}()
 
 	waiter := ecs.NewServicesStableWaiter(d.ecs)
-	return waiter.Wait(ctx, d.DescribeServicesInput(), d.config.Timeout)
+	if err := waiter.Wait(ctx, d.DescribeServicesInput(), d.config.Timeout); err != nil {
+		return fmt.Errorf("failed to wait for service stable: %w", err)
+	}
+	return nil
 }
 
 func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInput) (*TaskDefinition, error) {
@@ -496,7 +498,7 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInpu
 		td,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to register task definition: %w", err)
 	}
 	d.Log("Task definition is registered", taskDefinitionName(out.TaskDefinition))
 	return out.TaskDefinition, nil
@@ -505,21 +507,21 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInpu
 func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 	src, err := d.readDefinitionFile(path)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to load task definition %s", path)
+		return nil, fmt.Errorf("failed to load task definition %s: %w", path, err)
 	}
 	c := struct {
 		TaskDefinition json.RawMessage `json:"taskDefinition"`
 	}{}
 	dec := json.NewDecoder(bytes.NewReader(src))
 	if err := dec.Decode(&c); err != nil {
-		return nil, errors.Wrapf(err, "failed to load task definition %s", path)
+		return nil, fmt.Errorf("failed to load task definition %s: %w", path, err)
 	}
 	if c.TaskDefinition != nil {
 		src = c.TaskDefinition
 	}
 	var td TaskDefinitionInput
 	if err := d.UnmarshalJSONForStruct(src, &td, path); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load task definition %s: %w", path, err)
 	}
 	if len(td.Tags) == 0 {
 		td.Tags = nil
@@ -547,16 +549,16 @@ func (d *App) unmarshalJSON(src []byte, v interface{}, path string) error {
 
 func (d *App) LoadServiceDefinition(path string) (*Service, error) {
 	if path == "" {
-		return nil, errors.New("service_definition is not defined")
+		return nil, fmt.Errorf("service_definition is not defined")
 	}
 
 	var sv Service
 	src, err := d.readDefinitionFile(path)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to load service definition %s", path)
+		return nil, fmt.Errorf("failed to load service definition %s: %w", path, err)
 	}
 	if err := d.unmarshalJSON(src, &sv, path); err != nil {
-		return nil, errors.Wrapf(err, "failed to load service definition %s", path)
+		return nil, fmt.Errorf("failed to load service definition %s: %w", path, err)
 	}
 
 	sv.ServiceName = aws.String(d.config.Service)
@@ -595,7 +597,7 @@ func (d *App) suspendAutoScaling(ctx context.Context, suspendState bool) error {
 		},
 	)
 	if err != nil {
-		return errors.Wrap(err, "failed to describe scalable targets")
+		return fmt.Errorf("failed to describe scalable targets: %w", err)
 	}
 	if len(out.ScalableTargets) == 0 {
 		d.Log(fmt.Sprintf("No scalable target for %s", resourceId))
@@ -617,7 +619,7 @@ func (d *App) suspendAutoScaling(ctx context.Context, suspendState bool) error {
 			},
 		)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to register scalable target %s set suspend state to %t", *target.ResourceId, suspendState))
+			return fmt.Errorf("failed to register scalable target %s set suspend state to %t: %w", *target.ResourceId, suspendState, err)
 		}
 	}
 	return nil
@@ -644,7 +646,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 		return err
 	}
 	if len(out.Deployments) == 0 {
-		return errors.New("no deployments found in progress")
+		return fmt.Errorf("no deployments found in progress")
 	}
 	dpID := out.Deployments[0]
 	d.Log("Waiting for a deployment successful ID: " + dpID)
@@ -667,10 +669,10 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 		DeploymentGroupName: dp.DeploymentGroupName,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to list deployments")
+		return fmt.Errorf("failed to list deployments: %w", err)
 	}
 	if len(ld.Deployments) == 0 {
-		return errors.New("no deployments are found")
+		return fmt.Errorf("no deployments are found")
 	}
 
 	dpID := ld.Deployments[0] // latest deployment id
@@ -679,7 +681,7 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 		DeploymentId: &dpID,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to get deployment")
+		return fmt.Errorf("failed to get deployment: %w", err)
 	}
 
 	if *opt.DryRun {
@@ -697,7 +699,7 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 			AutoRollbackEnabled: aws.Bool(true),
 		})
 		if err != nil {
-			return errors.Wrap(err, "failed to roll back the deployment")
+			return fmt.Errorf("failed to roll back the deployment: %w", err)
 		}
 
 		d.Log(fmt.Sprintf("Deployment %s is rolled back on CodeDeploy:", dpID))

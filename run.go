@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/pkg/errors"
 )
 
 func (d *App) Run(opt RunOption) error {
@@ -20,15 +19,15 @@ func (d *App) Run(opt RunOption) error {
 	ov := types.TaskOverride{}
 	if ovStr := aws.ToString(opt.TaskOverrideStr); ovStr != "" {
 		if err := json.Unmarshal([]byte(ovStr), &ov); err != nil {
-			return errors.Wrap(err, "invalid overrides")
+			return fmt.Errorf("invalid overrides: %w", err)
 		}
 	} else if ovFile := aws.ToString(opt.TaskOverrideFile); ovFile != "" {
 		src, err := d.readDefinitionFile(ovFile)
 		if err != nil {
-			return errors.Wrapf(err, "failed to read overrides-file %s", ovFile)
+			return fmt.Errorf("failed to read overrides-file %s: %w", ovFile, err)
 		}
 		if err := d.unmarshalJSON(src, &ov, ovFile); err != nil {
-			return errors.Wrapf(err, "failed to read overrides-file %s", ovFile)
+			return fmt.Errorf("failed to read overrides-file %s: %w", ovFile, err)
 		}
 	}
 	d.DebugLog("Overrides:", ov)
@@ -44,14 +43,14 @@ func (d *App) Run(opt RunOption) error {
 
 	task, err := d.RunTask(ctx, tdArn, &ov, &opt)
 	if err != nil {
-		return errors.Wrap(err, "failed to run task")
+		return err
 	}
 	if *opt.NoWait {
 		d.Log("Run task invoked")
 		return nil
 	}
 	if err := d.WaitRunTask(ctx, task, watchContainer, time.Now(), opt.waitUntilRunning()); err != nil {
-		return errors.Wrap(err, "failed to run task")
+		return err
 	}
 	if err := d.DescribeTaskStatus(ctx, task, watchContainer); err != nil {
 		return err
@@ -71,7 +70,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 
 	tags, err := parseTags(*opt.Tags)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to run task. invalid tags: %w", err)
 	}
 
 	in := &ecs.RunTaskInput{
@@ -96,7 +95,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 			ResourceArn: sv.ServiceArn,
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to list tags for service: %w", err)
 		}
 		d.DebugLog("propagate tags from service", *sv.ServiceArn, out)
 		in.Tags = append(in.Tags, out.Tags...)
@@ -109,14 +108,14 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 
 	out, err := d.ecs.RunTask(ctx, in)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to run task: %w", err)
 	}
 	if len(out.Failures) > 0 {
 		f := out.Failures[0]
 		if f.Arn != nil {
 			d.Log("Task ARN: " + *f.Arn)
 		}
-		return nil, errors.New(*f.Reason)
+		return nil, fmt.Errorf("failed to run task: %s %s", *f.Reason, *f.Detail)
 	}
 
 	task := out.Tasks[0]
@@ -133,7 +132,7 @@ func (d *App) WaitRunTask(ctx context.Context, task *types.Task, watchContainer 
 	if lc == nil || lc.LogDriver != types.LogDriverAwslogs || lc.Options["awslogs-stream-prefix"] == "" {
 		d.Log("awslogs not configured")
 		if err := d.waitTask(ctx, task, untilRunning); err != nil {
-			return errors.Wrap(err, "failed to run task")
+			return err
 		}
 		return nil
 	}
@@ -156,7 +155,7 @@ func (d *App) WaitRunTask(ctx context.Context, task *types.Task, watchContainer 
 	}()
 
 	if err := d.waitTask(ctx, task, untilRunning); err != nil {
-		return errors.Wrap(err, "failed to run task")
+		return err
 	}
 	return nil
 }
@@ -175,7 +174,10 @@ func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool)
 
 	d.Log(fmt.Sprintf("Waiting for task ID %s until stopped", id))
 	waiter := ecs.NewTasksStoppedWaiter(d.ecs)
-	return waiter.Wait(ctx, d.DescribeTasksInput(task), d.config.Timeout)
+	if err := waiter.Wait(ctx, d.DescribeTasksInput(task), d.config.Timeout); err != nil {
+		return fmt.Errorf("failed to wait task: %w", err)
+	}
+	return nil
 }
 
 func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn string, watchContainer *types.ContainerDefinition, err error) {

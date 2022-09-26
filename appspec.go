@@ -6,7 +6,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/kayac/ecspresso/appspec"
-	"github.com/pkg/errors"
 )
 
 func (d *App) AppSpec(opt AppSpecOption) error {
@@ -30,7 +29,7 @@ func (d *App) AppSpec(opt AppSpecOption) error {
 	default:
 		taskDefinitionArn = *opt.TaskDefinition
 		if !strings.HasPrefix(taskDefinitionArn, "arn:aws:ecs:") {
-			return errors.New("--task-definition requires current, latest or a valid task definition arn")
+			return fmt.Errorf("--task-definition requires current, latest or a valid task definition arn")
 		}
 	}
 	if aws.ToBool(opt.UpdateService) {
@@ -43,7 +42,7 @@ func (d *App) AppSpec(opt AppSpecOption) error {
 
 	spec, err := appspec.NewWithService(&sv.Service, taskDefinitionArn)
 	if err != nil {
-		return errors.Wrap(err, "failed to create appspec")
+		return fmt.Errorf("failed to create appspec: %w", err)
 	}
 	if d.config.AppSpec != nil {
 		spec.Hooks = d.config.AppSpec.Hooks

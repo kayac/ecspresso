@@ -1,12 +1,12 @@
 package ecspresso
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/pkg/errors"
 )
 
 type CreateOption struct {
@@ -33,11 +33,11 @@ func (d *App) Create(opt CreateOption) error {
 	d.Log("Starting create service", opt.DryRunString())
 	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to load service definition")
+		return err
 	}
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to load task definition")
+		return err
 	}
 
 	count := calcDesiredCount(svd, opt)
@@ -56,7 +56,7 @@ func (d *App) Create(opt CreateOption) error {
 
 	newTd, err := d.RegisterTaskDefinition(ctx, td)
 	if err != nil {
-		return errors.Wrap(err, "failed to register task definition")
+		return err
 	}
 	createServiceInput := &ecs.CreateServiceInput{
 		Cluster:                       aws.String(d.config.Cluster),
@@ -81,7 +81,7 @@ func (d *App) Create(opt CreateOption) error {
 		TaskDefinition:                newTd.TaskDefinitionArn,
 	}
 	if _, err := d.ecs.CreateService(ctx, createServiceInput); err != nil {
-		return errors.Wrap(err, "failed to create service")
+		return fmt.Errorf("failed to create service: %w", err)
 	}
 	d.Log("Service is created")
 
@@ -92,7 +92,7 @@ func (d *App) Create(opt CreateOption) error {
 	start := time.Now()
 	time.Sleep(delayForServiceChanged) // wait for service created
 	if err := d.WaitServiceStable(ctx, start); err != nil {
-		return errors.Wrap(err, "failed to wait service stable")
+		return fmt.Errorf("failed to wait service stable: %w", err)
 	}
 
 	d.Log("Service is stable now. Completed!")

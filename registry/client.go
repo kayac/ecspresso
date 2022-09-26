@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -21,8 +20,8 @@ const (
 )
 
 var (
-	ErrDeprecatedManifest    = errors.New("deprecated image manifest")
-	ErrPullRateLimitExceeded = errors.New("image pull rate limit exceeded")
+	ErrDeprecatedManifest    = fmt.Errorf("deprecated image manifest")
+	ErrPullRateLimitExceeded = fmt.Errorf("image pull rate limit exceeded")
 )
 
 // Repository represents a repository using Docker Registry API v2.
@@ -80,7 +79,7 @@ func (c *Repository) login(ctx context.Context, endpoint, service, scope string)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return errors.Errorf("login failed %s", resp.Status)
+		return fmt.Errorf("login failed %s", resp.Status)
 	}
 	dec := json.NewDecoder(resp.Body)
 	var body struct {
@@ -90,7 +89,7 @@ func (c *Repository) login(ctx context.Context, endpoint, service, scope string)
 		return err
 	}
 	if body.Token == "" {
-		return errors.New("response does not contains token")
+		return fmt.Errorf("response does not contains token")
 	}
 	c.token = body.Token
 	return nil
@@ -128,7 +127,7 @@ func (c *Repository) getManifests(ctx context.Context, tag string) (mediaType st
 	if resp.StatusCode == http.StatusTooManyRequests {
 		return "", nil, ErrPullRateLimitExceeded
 	} else if resp.StatusCode != http.StatusOK {
-		return "", nil, errors.New(resp.Status)
+		return "", nil, fmt.Errorf(resp.Status)
 	}
 	mediaType = parseContentType(resp.Header.Get("Content-Type"))
 	return mediaType, resp.Body, nil
@@ -148,7 +147,7 @@ func (c *Repository) getImageConfig(ctx context.Context, digest string) (io.Read
 	}
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, errors.New(resp.Status)
+		return nil, fmt.Errorf(resp.Status)
 	}
 	return resp.Body, err
 }
@@ -265,10 +264,10 @@ func (c *Repository) HasImage(ctx context.Context, tag string) (bool, error) {
 		case http.StatusOK:
 			return true, nil
 		default:
-			return false, errors.New(resp.Status)
+			return false, fmt.Errorf(resp.Status)
 		}
 	}
-	return false, errors.New("aborted")
+	return false, fmt.Errorf("aborted")
 }
 
 var (

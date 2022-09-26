@@ -2,13 +2,13 @@ package ssm
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
-	"github.com/pkg/errors"
 )
 
 // App represents an application
@@ -32,7 +32,7 @@ func New(cfg aws.Config, cache *sync.Map) *App {
 // Lookup lookups a parameter from AWS Systems Manager Parameter Store
 func (a *App) Lookup(ctx context.Context, paramName string, index ...int) (outputValue string, err error) {
 	if len(index) > 1 {
-		return "", errors.Errorf("ssm template function accepts at most 2 parameters, but got %d", len(index)+1)
+		return "", fmt.Errorf("ssm template function accepts at most 2 parameters, but got %d", len(index)+1)
 	}
 
 	param, err := getParameterWithCache(ctx, a.ssm, paramName, a.cache)
@@ -43,11 +43,11 @@ func (a *App) Lookup(ctx context.Context, paramName string, index ...int) (outpu
 	switch param.Parameter.Type {
 	case types.ParameterTypeStringList:
 		if len(index) != 1 {
-			return "", errors.Errorf("the second argument is required for StringList type parrameter to specify the index")
+			return "", fmt.Errorf("the second argument is required for StringList type parrameter to specify the index")
 		}
 	case types.ParameterTypeString, types.ParameterTypeSecureString:
 		if len(index) != 0 {
-			return "", errors.Errorf("the second argument is supported only for StringList type, but the parameter %s is of type %s", *param.Parameter.Name, param.Parameter.Type)
+			return "", fmt.Errorf("the second argument is supported only for StringList type, but the parameter %s is of type %s", *param.Parameter.Name, param.Parameter.Type)
 		}
 	}
 
@@ -77,7 +77,7 @@ func getParameter(ctx context.Context, service ssmiface, paramName string) (*ssm
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "something went wrong calling get-parameter API")
+		return nil, fmt.Errorf("something went wrong calling get-parameter API: %w", err)
 	}
 	return res, nil
 }
@@ -91,7 +91,7 @@ func lookupValue(param *ssm.GetParameterOutput, index ...int) (string, error) {
 	case types.ParameterTypeSecureString:
 		return lookupSecureString(param)
 	}
-	return "", errors.Errorf("received unexpected parameter type: %s", param.Parameter.Type)
+	return "", fmt.Errorf("received unexpected parameter type: %s", param.Parameter.Type)
 }
 
 func lookupStringValue(param *ssm.GetParameterOutput) (string, error) {
@@ -101,7 +101,7 @@ func lookupStringValue(param *ssm.GetParameterOutput) (string, error) {
 func lookupStringListValue(param *ssm.GetParameterOutput, index ...int) (string, error) {
 	values := strings.Split(*param.Parameter.Value, ",")
 	if len(values) < index[0]-1 {
-		return "", errors.Errorf("StringList values were %v, but the index %d is out of range", values, index[0])
+		return "", fmt.Errorf("StringList values were %v, but the index %d is out of range", values, index[0])
 	}
 
 	return values[index[0]], nil

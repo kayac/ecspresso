@@ -2,14 +2,13 @@ package ssm_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsssm "github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
-
 	"github.com/kayac/ecspresso/ssm"
 )
 
@@ -52,7 +51,7 @@ func mockGetParameter(input *awsssm.GetParameterInput) (*awsssm.GetParameterOutp
 			},
 		}, nil
 	}
-	return nil, errors.New("unknown parameter")
+	return nil, fmt.Errorf("unknown parameter")
 }
 
 func TestLookupOk(t *testing.T) {
