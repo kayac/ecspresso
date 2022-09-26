@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/fujiwara/ecsta"
-	"github.com/pkg/errors"
 )
 
 type TasksOption struct {
@@ -30,7 +29,7 @@ func (d *App) Tasks(opt TasksOption) error {
 
 	ecstaApp, err := d.NewEcsta(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to create ecsta")
+		return err
 	}
 	ecstaApp.Config.Set("output", aws.ToString(opt.Output))
 
@@ -51,7 +50,7 @@ func (d *App) Tasks(opt TasksOption) error {
 	} else {
 		family, err := d.taskDefinitionFamily(ctx)
 		if err != nil {
-			return errors.Wrap(err, "failed to get task definition family")
+			return err
 		}
 		return ecstaApp.RunList(ctx, &ecsta.ListOption{
 			Family: family,

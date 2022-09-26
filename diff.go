@@ -14,7 +14,6 @@ import (
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
 	"github.com/kylelemons/godebug/diff"
-	"github.com/pkg/errors"
 )
 
 func diffServices(local, remote *Service, remoteArn string, localPath string, unified bool) (string, error) {
@@ -23,7 +22,7 @@ func diffServices(local, remote *Service, remoteArn string, localPath string, un
 
 	newSvBytes, err := MarshalJSONForAPI(svToUpdateServiceInput(local))
 	if err != nil {
-		return "", errors.Wrap(err, "failed to marshal new service definition")
+		return "", fmt.Errorf("failed to marshal new service definition: %w", err)
 	}
 	if local.DesiredCount == nil {
 		// ignore DesiredCount when it in local is not defined.
@@ -31,7 +30,7 @@ func diffServices(local, remote *Service, remoteArn string, localPath string, un
 	}
 	remoteSvBytes, err := MarshalJSONForAPI(svToUpdateServiceInput(remote))
 	if err != nil {
-		return "", errors.Wrap(err, "failed to marshal remote service definition")
+		return "", fmt.Errorf("failed to marshal remote service definition: %w", err)
 	}
 
 	remoteSv := string(remoteSvBytes)
@@ -55,12 +54,12 @@ func diffTaskDefs(local, remote *TaskDefinitionInput, remoteArn string, localPat
 
 	newTdBytes, err := MarshalJSONForAPI(local)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to marshal new task definition")
+		return "", fmt.Errorf("failed to marshal new task definition: %w", err)
 	}
 
 	remoteTdBytes, err := MarshalJSONForAPI(remote)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to marshal remote task definition")
+		return "", fmt.Errorf("failed to marshal remote task definition: %w", err)
 	}
 
 	remoteTd := string(remoteTdBytes)
@@ -87,11 +86,11 @@ func (d *App) Diff(opt DiffOption) error {
 	if d.config.Service != "" {
 		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 		if err != nil {
-			return errors.Wrap(err, "failed to load service definition")
+			return fmt.Errorf("failed to load service definition: %w", err)
 		}
 		remoteSv, err := d.DescribeService(ctx)
 		if err != nil {
-			return errors.Wrap(err, "failed to describe service")
+			return fmt.Errorf("failed to describe service: %w", err)
 		}
 
 		if ds, err := diffServices(newSv, remoteSv, *remoteSv.ServiceArn, d.config.ServiceDefinitionPath, *opt.Unified); err != nil {
@@ -105,18 +104,18 @@ func (d *App) Diff(opt DiffOption) error {
 	// task definition
 	newTd, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to load task definition")
+		return err
 	}
 	if taskDefArn == "" {
 		arn, err := d.findLatestTaskDefinitionArn(ctx, *newTd.Family)
 		if err != nil {
-			return errors.Wrap(err, "failed to find latest task definition from family")
+			return err
 		}
 		taskDefArn = arn
 	}
 	remoteTd, err := d.DescribeTaskDefinition(ctx, taskDefArn)
 	if err != nil {
-		return errors.Wrap(err, "failed to describe task definition")
+		return err
 	}
 
 	if ds, err := diffTaskDefs(newTd, remoteTd, taskDefArn, d.config.TaskDefinitionPath, *opt.Unified); err != nil {

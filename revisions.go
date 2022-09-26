@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/olekukonko/tablewriter"
-	"github.com/pkg/errors"
 )
 
 type RevisionsOption struct {
@@ -74,7 +73,7 @@ func (d *App) Revesions(opt RevisionsOption) error {
 
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to load task definition")
+		return err
 	}
 
 	if r := aws.ToInt64(opt.Revision); r > 0 {
@@ -84,7 +83,7 @@ func (d *App) Revesions(opt RevisionsOption) error {
 			Include:        []types.TaskDefinitionField{types.TaskDefinitionFieldTags},
 		})
 		if err != nil {
-			return errors.Wrap(err, "failed to describe task definition")
+			return fmt.Errorf("failed to describe task definition %s: %w", name, err)
 		}
 		b, err := MarshalJSONForAPI(res.TaskDefinition)
 		if err != nil {
@@ -102,7 +101,7 @@ func (d *App) Revesions(opt RevisionsOption) error {
 			NextToken:    nextToken,
 		})
 		if err != nil {
-			return errors.Wrap(err, "failed to list task definitions")
+			return fmt.Errorf("failed to list task definitions family %s: %w", aws.ToString(td.Family), err)
 		}
 		for _, a := range res.TaskDefinitionArns {
 			name, err := taskDefinitionToName(a)

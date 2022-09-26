@@ -12,7 +12,6 @@ import (
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/kayac/ecspresso/appspec"
 	goConfig "github.com/kayac/go-config"
-	"github.com/pkg/errors"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
@@ -68,14 +67,14 @@ func (c *Config) Restrict() error {
 	if c.RequiredVersion != "" {
 		constraints, err := goVersion.NewConstraint(c.RequiredVersion)
 		if err != nil {
-			return errors.Wrap(err, "required_version has invalid format")
+			return fmt.Errorf("required_version has invalid format: %w", err)
 		}
 		c.versionConstraints = constraints
 	}
 	var err error
 	c.awsv2Config, err = awsConfig.LoadDefaultConfig(context.TODO(), awsConfig.WithRegion(c.Region))
 	if err != nil {
-		return errors.Wrap(err, "failed to load aws config")
+		return fmt.Errorf("failed to load aws config: %w", err)
 	}
 
 	return err
@@ -105,7 +104,7 @@ func (c *Config) ValidateVersion(version string) error {
 		return nil
 	}
 	if !c.versionConstraints.Check(v) {
-		return errors.Errorf("version %s does not satisfy constraints required_version: %s", version, c.versionConstraints)
+		return fmt.Errorf("version %s does not satisfy constraints required_version: %s", version, c.versionConstraints)
 	}
 
 	return nil

@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/google/go-jsonnet/formatter"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -49,16 +48,16 @@ func (d *App) Init(opt InitOption) error {
 
 	out, err := d.ecs.DescribeServices(ctx, d.DescribeServicesInput())
 	if err != nil {
-		return errors.Wrap(err, "failed to describe service")
+		return fmt.Errorf("failed to describe service: %w", err)
 	}
 	if len(out.Services) == 0 {
-		return errors.New("service is not found")
+		return fmt.Errorf("service is not found")
 	}
 
 	sv := newServiceFromTypes(out.Services[0])
 	td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
 	if err != nil {
-		return errors.Wrap(err, "failed to describe task definition")
+		return err
 	}
 
 	if long, _ := isLongArnFormat(*sv.ServiceArn); long {
@@ -67,7 +66,7 @@ func (d *App) Init(opt InitOption) error {
 			ResourceArn: sv.ServiceArn,
 		})
 		if err != nil {
-			return errors.Wrap(err, "failed to list tags for service")
+			return fmt.Errorf("failed to list tags for service: %w", err)
 		}
 		sv.Tags = lt.Tags
 	}
@@ -75,45 +74,45 @@ func (d *App) Init(opt InitOption) error {
 	// service-def
 	treatmentServiceDefinition(sv)
 	if b, err := MarshalJSONForAPI(sv); err != nil {
-		return errors.Wrap(err, "unable to marshal service definition to JSON")
+		return fmt.Errorf("unable to marshal service definition to JSON: %w", err)
 	} else {
 		if *opt.Jsonnet {
 			out, err := formatter.Format(config.ServiceDefinitionPath, string(b), formatter.DefaultOptions())
 			if err != nil {
-				return errors.Wrap(err, "unable to format service definition as Jsonnet")
+				return fmt.Errorf("unable to format service definition as Jsonnet: %w", err)
 			}
 			b = []byte(out)
 		}
 		d.Log("save service definition to", config.ServiceDefinitionPath)
 		if err := d.saveFile(config.ServiceDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
-			return errors.Wrap(err, "failed to write file")
+			return err
 		}
 	}
 
 	// task-def
 	if b, err := MarshalJSONForAPI(td); err != nil {
-		return errors.Wrap(err, "unable to marshal task definition to JSON")
+		return fmt.Errorf("unable to marshal task definition to JSON: %w", err)
 	} else {
 		if *opt.Jsonnet {
 			out, err := formatter.Format(config.TaskDefinitionPath, string(b), formatter.DefaultOptions())
 			if err != nil {
-				return errors.Wrap(err, "unable to format task definition as Jsonnet")
+				return fmt.Errorf("unable to format task definition as Jsonnet: %w", err)
 			}
 			b = []byte(out)
 		}
 		d.Log("save task definition to", config.TaskDefinitionPath)
 		if err := d.saveFile(config.TaskDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
-			return errors.Wrap(err, "failed to write file")
+			return err
 		}
 	}
 
 	// config
 	if b, err := yaml.Marshal(config); err != nil {
-		return errors.Wrap(err, "unable to marshal config to YAML")
+		return fmt.Errorf("unable to marshal config to YAML: %w", err)
 	} else {
 		d.Log("save config to", *opt.ConfigFilePath)
 		if err := d.saveFile(*opt.ConfigFilePath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
-			return errors.Wrap(err, "failed to write file")
+			return err
 		}
 	}
 
@@ -150,5 +149,8 @@ func (d *App) saveFile(path string, b []byte, mode os.FileMode, force bool) erro
 			return nil
 		}
 	}
-	return ioutil.WriteFile(path, b, mode)
+	if err := ioutil.WriteFile(path, b, mode); err != nil {
+		return fmt.Errorf("failed to write file %s: %w", path, err)
+	}
+	return nil
 }

@@ -1,11 +1,11 @@
 package ecspresso
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/pkg/errors"
 )
 
 const dryRunStr = "DRY RUN"
@@ -111,10 +111,10 @@ func parseTags(s string) ([]types.Tag, error) {
 		}
 		pair := strings.SplitN(tag, "=", 2)
 		if len(pair) != 2 {
-			return tags, errors.Errorf("invalid tag format. Key=Value is required: %s", tag)
+			return tags, fmt.Errorf("invalid tag format. Key=Value is required: %s", tag)
 		}
 		if len(pair[0]) == 0 {
-			return tags, errors.Errorf("tag Key is required")
+			return tags, fmt.Errorf("tag Key is required")
 		}
 		tags = append(tags, types.Tag{
 			Key:   aws.String(pair[0]),

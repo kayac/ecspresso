@@ -16,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	isatty "github.com/mattn/go-isatty"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -44,7 +43,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	d.Log("Starting deploy", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
-		return errors.Wrap(err, "failed to describe current service status")
+		return err
 	}
 
 	var tdArn string
@@ -53,14 +52,14 @@ func (d *App) Deploy(opt DeployOption) error {
 		var err error
 		tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
 		if err != nil {
-			return errors.Wrap(err, "failed to load latest task definition")
+			return err
 		}
 	} else if *opt.SkipTaskDefinition {
 		tdArn = *sv.TaskDefinition
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
-			return errors.Wrap(err, "failed to load task definition")
+			return err
 		}
 		if *opt.DryRun {
 			d.Log("task definition:")
@@ -68,7 +67,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		} else {
 			newTd, err := d.RegisterTaskDefinition(ctx, td)
 			if err != nil {
-				return errors.Wrap(err, "failed to register task definition")
+				return err
 			}
 			tdArn = *newTd.TaskDefinitionArn
 		}
@@ -78,15 +77,15 @@ func (d *App) Deploy(opt DeployOption) error {
 	if d.config.ServiceDefinitionPath != "" && aws.ToBool(opt.UpdateService) {
 		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 		if err != nil {
-			return errors.Wrap(err, "failed to load service definition")
+			return err
 		}
 		ds, err := diffServices(newSv, sv, "", d.config.ServiceDefinitionPath, true)
 		if err != nil {
-			return errors.Wrap(err, "failed to diff of service definitions")
+			return fmt.Errorf("failed to diff of service definitions: %w", err)
 		}
 		if ds != "" {
 			if err = d.UpdateServiceAttributes(ctx, newSv, opt); err != nil {
-				return errors.Wrap(err, "failed to update service attributes")
+				return err
 			}
 			sv = newSv // updated
 		} else {
@@ -128,7 +127,7 @@ func (d *App) Deploy(opt DeployOption) error {
 
 	// rolling deploy (ECS internal)
 	if err := d.UpdateServiceTasks(ctx, tdArn, count, opt); err != nil {
-		return errors.Wrap(err, "failed to update service tasks")
+		return err
 	}
 
 	if *opt.NoWait {
@@ -137,7 +136,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	}
 
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
-		return errors.Wrap(err, "failed to wait service stable")
+		return err
 	}
 
 	d.Log("Service is stable now. Completed!")
@@ -162,7 +161,7 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 
 	_, err := d.ecs.UpdateService(ctx, in)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update service tasks: %w", err)
 	}
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	return nil
@@ -214,7 +213,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, opt Depl
 	d.DebugLog(in)
 
 	if _, err := d.ecs.UpdateService(ctx, in); err != nil {
-		return err
+		return fmt.Errorf("failed to update service attributes: %w", err)
 	}
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	return nil
@@ -233,7 +232,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 		},
 	)
 	if err != nil {
-		return errors.Wrap(err, "failed to update service")
+		return fmt.Errorf("failed to update service: %w", err)
 	}
 	if aws.ToBool(opt.SkipTaskDefinition) && !aws.ToBool(opt.UpdateService) && !aws.ToBool(opt.ForceNewDeployment) {
 		// no need to create new deployment.
@@ -248,10 +247,10 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 	d.DebugLog("find all applications in CodeDeploy")
 	la, err := d.codedeploy.ListApplications(ctx, &codedeploy.ListApplicationsInput{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list applications in CodeDeploy: %w", err)
 	}
 	if len(la.Applications) == 0 {
-		return nil, errors.New("no any applications in CodeDeploy")
+		return nil, fmt.Errorf("no any applications in CodeDeploy")
 	}
 	// BatchGetApplications accepts applications less than 100
 	for i := 0; i < len(la.Applications); i += 100 {
@@ -263,7 +262,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 			ApplicationNames: la.Applications[i:end],
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to batch get applications in CodeDeploy: %w", err)
 		}
 		for _, info := range apps.ApplicationsInfo {
 			d.DebugLog("application", info)
@@ -274,7 +273,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 				ApplicationName: info.ApplicationName,
 			})
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to list deployment groups in CodeDeploy: %w", err)
 			}
 			if len(lg.DeploymentGroups) == 0 {
 				d.DebugLog("no deploymentGroups in application", *info.ApplicationName)
@@ -285,7 +284,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 				DeploymentGroupNames: lg.DeploymentGroups,
 			})
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to batch get deployment groups in CodeDeploy: %w", err)
 			}
 			for _, dg := range groups.DeploymentGroupsInfo {
 				d.DebugLog("deploymentGroup", dg)
@@ -309,10 +308,9 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 }
 
 func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionArn string, rollbackEvents *string) error {
-
 	spec, err := appspec.NewWithService(&sv.Service, taskDefinitionArn)
 	if err != nil {
-		return errors.Wrap(err, "failed to create appspec")
+		return fmt.Errorf("failed to create appspec: %w", err)
 	}
 	if d.config.AppSpec != nil {
 		spec.Hooks = d.config.AppSpec.Hooks
@@ -359,7 +357,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 
 	res, err := d.codedeploy.CreateDeployment(ctx, dd)
 	if err != nil {
-		return errors.Wrap(err, "failed to create deployment")
+		return fmt.Errorf("failed to create deployment: %w", err)
 	}
 	id := *res.DeploymentId
 	u := fmt.Sprintf(

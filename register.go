@@ -1,7 +1,5 @@
 package ecspresso
 
-import "github.com/pkg/errors"
-
 type RegisterOption struct {
 	DryRun *bool
 	Output *bool
@@ -21,7 +19,7 @@ func (d *App) Register(opt RegisterOption) error {
 	d.Log("Starting register task definition", opt.DryRunString())
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to load task definition")
+		return err
 	}
 	if *opt.DryRun {
 		d.Log("task definition:")
@@ -32,7 +30,7 @@ func (d *App) Register(opt RegisterOption) error {
 
 	newTd, err := d.RegisterTaskDefinition(ctx, td)
 	if err != nil {
-		return errors.Wrap(err, "failed to register task definition")
+		return err
 	}
 
 	if *opt.Output {

@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
-	"github.com/pkg/errors"
 )
 
 type DeregisterOption struct {
@@ -42,18 +41,18 @@ func (d *App) Deregister(opt DeregisterOption) error {
 	} else if aws.ToInt(opt.Keeps) > 0 {
 		return d.deregisterKeeps(ctx, opt, inUse)
 	}
-	return errors.New("--revision or --keeps required")
+	return fmt.Errorf("--revision or --keeps required")
 }
 
 func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse map[string]string) error {
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to load task definition")
+		return err
 	}
 	name := fmt.Sprintf("%s:%d", aws.ToString(td.Family), aws.ToInt64(opt.Revision))
 
 	if s := inUse[name]; s != "" {
-		return errors.Errorf("%s is in use by %s", name, s)
+		return fmt.Errorf("%s is in use by %s", name, s)
 	}
 
 	if aws.ToBool(opt.DryRun) {
@@ -66,12 +65,12 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 		if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
 			TaskDefinition: aws.String(name),
 		}); err != nil {
-			return errors.Wrap(err, "failed to deregister task definition")
+			return fmt.Errorf("failed to deregister task definition: %w", err)
 		}
 		d.Log(fmt.Sprintf("%s was deregistered successfully", name))
 	} else {
 		d.Log("Aborted")
-		return errors.New("confirmation failed")
+		return fmt.Errorf("confirmation failed")
 	}
 	return nil
 }
@@ -80,7 +79,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 	keeps := aws.ToInt(opt.Keeps)
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to load task definition")
+		return err
 	}
 	names := []string{}
 	var nextToken *string
@@ -90,7 +89,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 			NextToken:    nextToken,
 		})
 		if err != nil {
-			return errors.Wrap(err, "failed to list task definitions")
+			return fmt.Errorf("failed to list task definitions: %w", err)
 		}
 		for _, a := range res.TaskDefinitionArns {
 			name, err := taskDefinitionToName(a)
@@ -133,7 +132,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 			if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
 				TaskDefinition: aws.String(name),
 			}); err != nil {
-				return errors.Wrap(err, "failed to deregister task definition")
+				return fmt.Errorf("failed to deregister task definition: %w", err)
 			}
 			d.Log(fmt.Sprintf("%s was deregistered successfully", name))
 			time.Sleep(time.Second)
@@ -141,7 +140,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 		}
 	} else {
 		d.Log("Aborted")
-		return errors.New("confirmation failed")
+		return fmt.Errorf("confirmation failed")
 	}
 	d.Log(fmt.Sprintf("%d task definitions were deregistered", deregistered))
 

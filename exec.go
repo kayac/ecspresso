@@ -2,10 +2,10 @@ package ecspresso
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/fujiwara/ecsta"
-	"github.com/pkg/errors"
 )
 
 type ExecOption struct {
@@ -21,7 +21,7 @@ type ExecOption struct {
 func (d *App) NewEcsta(ctx context.Context) (*ecsta.Ecsta, error) {
 	app, err := ecsta.New(ctx, d.config.Region, d.config.Cluster)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create ecsta")
+		return nil, fmt.Errorf("failed to create ecsta application: %w", err)
 	}
 	if fc := d.config.FilterCommand; fc != "" {
 		app.Config.Set("filter_command", fc)
@@ -35,7 +35,7 @@ func (d *App) Exec(opt ExecOption) error {
 
 	ecstaApp, err := d.NewEcsta(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to create ecsta app")
+		return err
 	}
 
 	if aws.ToBool(opt.PortForward) {

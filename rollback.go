@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/fatih/color"
-	"github.com/pkg/errors"
 )
 
 func (d *App) Rollback(opt RollbackOption) error {
@@ -26,13 +25,13 @@ func (d *App) Rollback(opt RollbackOption) error {
 	d.Log("Starting rollback", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
-		return errors.Wrap(err, "failed to describe service status")
+		return err
 	}
 
 	currentArn := *sv.TaskDefinition
 	targetArn, err := d.FindRollbackTarget(ctx, currentArn)
 	if err != nil {
-		return errors.Wrap(err, "failed to find rollback target")
+		return err
 	}
 
 	if sv.DeploymentController != nil && sv.DeploymentController.Type != types.DeploymentControllerTypeCodeDeploy {
@@ -54,7 +53,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 			UpdateService:      aws.Bool(false),
 		},
 	); err != nil {
-		return errors.Wrap(err, "failed to update service")
+		return err
 	}
 
 	if *opt.NoWait {
@@ -64,7 +63,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
-		return errors.Wrap(err, "failed to wait service stable")
+		return err
 	}
 
 	d.Log("Service is stable now. Completed!")
@@ -78,7 +77,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 			},
 		)
 		if err != nil {
-			return errors.Wrap(err, "failed to deregister task definition")
+			return fmt.Errorf("failed to deregister task definition: %w", err)
 		}
 		d.Log(arnToName(currentArn), "was deregistered successfully")
 	}

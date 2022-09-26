@@ -3,6 +3,7 @@ package ecspresso
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -24,7 +25,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/fatih/color"
 	"github.com/kayac/ecspresso/registry"
-	"github.com/pkg/errors"
 )
 
 type verifier struct {
@@ -64,7 +64,7 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 		_, err := v.secretsmanager.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 			SecretId: &secretArn,
 		})
-		return errors.Wrapf(err, "failed to get secret value from %s secret id %s", from, secretArn)
+		return fmt.Errorf("failed to get secret value from %s secret id %s: %w", from, secretArn, err)
 	}
 
 	// ssm
@@ -79,7 +79,7 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 		Name:           &name,
 		WithDecryption: aws.Bool(true),
 	})
-	return errors.Wrapf(err, "failed to get ssm parameter %s", name)
+	return fmt.Errorf("failed to get ssm parameter %s: %w", name, err)
 }
 
 func (d *App) newAssumedVerifier(cfg aws.Config, executionRole *string, opt *VerifyOption) (*verifier, error) {
@@ -170,7 +170,7 @@ func (d *App) verifyResource(ctx context.Context, resourceType string, verifyFun
 			return nil
 		}
 		print("--> %s [%s] %s", resourceType, color.RedString("NG"), color.RedString(err.Error()))
-		return errors.Wrapf(err, "verify %s failed", resourceType)
+		return fmt.Errorf("verify %s failed: %w", resourceType, err)
 	}
 	print("--> [%s]", color.GreenString("OK"))
 	return nil
@@ -182,9 +182,9 @@ func (d *App) verifyCluster(ctx context.Context) error {
 		Clusters: []string{cluster},
 	})
 	if err != nil {
-		return errors.Wrapf(err, "failed to describe cluster %s", cluster)
+		return fmt.Errorf("failed to describe cluster %s: %w", cluster, err)
 	} else if len(out.Clusters) == 0 {
-		return errors.Errorf("cluster %s is not found", cluster)
+		return fmt.Errorf("cluster %s is not found", cluster)
 	}
 	return nil
 }
@@ -221,12 +221,12 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 			if err != nil {
 				return err
 			} else if len(out.TargetGroups) == 0 {
-				return errors.Errorf("target group %s is not found", *lb.TargetGroupArn)
+				return fmt.Errorf("target group %s is not found: %w", *lb.TargetGroupArn, err)
 			}
 			tgPort := aws.ToInt32(out.TargetGroups[0].Port)
 			cPort := aws.ToInt32(lb.ContainerPort)
 			if int32(tgPort) != cPort {
-				return errors.Errorf("target group's port %d and container's port %d mismatch", tgPort, cPort)
+				return fmt.Errorf("target group's port %d and container's port %d mismatch", tgPort, cPort)
 			}
 
 			cname := aws.ToString(lb.ContainerName)
@@ -238,7 +238,7 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 				}
 			}
 			if container == nil {
-				return errors.Errorf("container name %s is not defined in task definition", cname)
+				return fmt.Errorf("container name %s is not defined in task definition", cname)
 			}
 			return nil
 		})
@@ -247,7 +247,7 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 		}
 	}
 	if len(sv.LoadBalancers) == 0 && sv.HealthCheckGracePeriodSeconds != nil {
-		return errors.Errorf("service has no load balancers, but healthCheckGracePeriodSeconds is defined.")
+		return fmt.Errorf("service has no load balancers, but healthCheckGracePeriodSeconds is defined.")
 	}
 
 	return nil
@@ -324,7 +324,7 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 		return err
 	}
 	if !ok {
-		return errors.Errorf("%s:%s is not found in Registry", image, tag)
+		return fmt.Errorf("%s:%s is not found in Registry", image, tag)
 	}
 
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
@@ -351,7 +351,7 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	if ok {
 		return nil
 	}
-	return errors.Errorf("%s:%s for arch=%s os=%s is not found in Registry", image, tag, arch, os)
+	return fmt.Errorf("%s:%s for arch=%s os=%s is not found in Registry", image, tag, arch, os)
 }
 
 func (d *App) isFargateService() (bool, error) {
@@ -469,7 +469,7 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 		LogGroupName:  &group,
 		LogStreamName: aws.String(stream),
 	}); err != nil {
-		return errors.Wrapf(err, "failed to create log stream %s in %s", stream, group)
+		return fmt.Errorf("failed to create log stream %s in %s: %w", stream, group, err)
 	}
 	if _, err := d.verifier.cwl.PutLogEvents(ctx, &cloudwatchlogs.PutLogEventsInput{
 		LogGroupName:  &group,
@@ -481,21 +481,21 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 			},
 		},
 	}); err != nil {
-		return errors.Wrapf(err, "failed to put log events to %s stream %s", group, stream)
+		return fmt.Errorf("failed to put log events to %s stream %s: %w", group, stream, err)
 	}
 	return nil
 }
 
 func parseRoleArn(arn string) (roleName string, err error) {
 	if !strings.HasPrefix(arn, "arn:aws:iam::") {
-		return "", errors.Errorf("not a valid role arn")
+		return "", fmt.Errorf("not a valid role arn")
 	}
 	rn := strings.Split(arn, "/")
 	if len(rn) < 2 {
 		return "", errors.New("invalid role syntax")
 	}
 	if !strings.HasSuffix(rn[0], ":role") {
-		return "", errors.Errorf("not a valid role arn")
+		return "", fmt.Errorf("not a valid role arn")
 	}
 	return rn[len(rn)-1], nil
 }
@@ -513,14 +513,14 @@ func (d *App) verifyRole(ctx context.Context, arn string) error {
 	}
 	doc, err := parseIAMPolicyDocument(*out.Role.AssumeRolePolicyDocument)
 	if err != nil {
-		return errors.Wrap(err, "failed to parse IAM policy document")
+		return fmt.Errorf("failed to parse IAM policy document: %w", err)
 	}
 	for _, st := range doc.Statement {
 		if st.Principal.Service == "ecs-tasks.amazonaws.com" && st.Action == "sts:AssumeRole" {
 			return nil
 		}
 	}
-	return errors.Errorf("executionRole %s has not a valid policy document", roleName)
+	return fmt.Errorf("executionRole %s has not a valid policy document: %w", roleName, err)
 }
 
 type iamPolicyDocument struct {
