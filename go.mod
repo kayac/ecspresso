@@ -33,6 +33,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/fujiwara/cfn-lookup v1.0.0
 	github.com/fujiwara/ecsta v0.0.5
+	github.com/fujiwara/logutils v1.1.0
 	github.com/fujiwara/tfstate-lookup v1.0.0
 	github.com/fujiwara/tracer v1.0.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect

@@ -8,7 +8,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/fatih/color"
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/kayac/ecspresso/appspec"
 	goConfig "github.com/kayac/go-config"
@@ -96,10 +95,7 @@ func (c *Config) ValidateVersion(version string) error {
 	}
 	v, err := goVersion.NewVersion(version)
 	if err != nil {
-		fmt.Fprintln(
-			os.Stderr,
-			color.YellowString("WARNING: Invalid version format \"%s\". Skip checking required_version.", version),
-		)
+		Log("[WARNING] Invalid version format \"%s\". Skip checking required_version.", version)
 		// invalid version string (e.g. "current") always allowed
 		return nil
 	}

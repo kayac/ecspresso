@@ -137,7 +137,7 @@ func (d *App) WaitRunTask(ctx context.Context, task *types.Task, watchContainer 
 		return nil
 	}
 
-	d.Log(fmt.Sprintf("Watching container: %s", *watchContainer.Name))
+	d.Log("Watching container: %s", *watchContainer.Name)
 	logGroup, logStream := d.GetLogInfo(task, watchContainer)
 	time.Sleep(3 * time.Second) // wait for log stream
 
@@ -163,16 +163,16 @@ func (d *App) WaitRunTask(ctx context.Context, task *types.Task, watchContainer 
 func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool) error {
 	id := arnToName(*task.TaskArn)
 	if untilRunning {
-		d.Log(fmt.Sprintf("Waiting for task ID %s until running", id))
+		d.Log("Waiting for task ID %s until running", id)
 		waiter := ecs.NewTasksRunningWaiter(d.ecs)
 		if err := waiter.Wait(ctx, d.DescribeTasksInput(task), d.config.Timeout); err != nil {
 			return err
 		}
-		d.Log(fmt.Sprintf("Task ID %s is running", id))
+		d.Log("Task ID %s is running", id)
 		return nil
 	}
 
-	d.Log(fmt.Sprintf("Waiting for task ID %s until stopped", id))
+	d.Log("Waiting for task ID %s until stopped", id)
 	waiter := ecs.NewTasksStoppedWaiter(d.ecs)
 	if err := waiter.Wait(ctx, d.DescribeTasksInput(task), d.config.Timeout); err != nil {
 		return fmt.Errorf("failed to wait task: %w", err)

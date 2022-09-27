@@ -210,7 +210,6 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, opt Depl
 		return nil
 	}
 	d.Log("Updating service attributes...")
-	d.DebugLog(in)
 
 	if _, err := d.ecs.UpdateService(ctx, in); err != nil {
 		return fmt.Errorf("failed to update service attributes: %w", err)
@@ -366,7 +365,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 		id,
 		d.config.Region,
 	)
-	d.Log(fmt.Sprintf("Deployment %s is created on CodeDeploy:", id))
+	d.Log("Deployment %s is created on CodeDeploy:", id)
 	d.Log(u)
 
 	if isatty.IsTerminal(os.Stdout.Fd()) {
