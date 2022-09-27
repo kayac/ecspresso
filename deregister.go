@@ -29,7 +29,7 @@ func (opt DeregisterOption) DryRunString() string {
 func (d *App) Deregister(opt DeregisterOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
-	d.Log("Starting deregister task definition", opt.DryRunString())
+	d.Log("Starting deregister task definition %s", opt.DryRunString())
 
 	inUse, err := d.inUseRevisions(ctx)
 	if err != nil {
@@ -56,18 +56,18 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 	}
 
 	if aws.ToBool(opt.DryRun) {
-		d.Log(fmt.Sprintf("task definition %s will be deregistered", name))
+		d.Log("task definition %s will be deregistered", name)
 		d.Log("DRY RUN OK")
 		return nil
 	}
 	if aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %s ?", name), false) {
-		d.Log(fmt.Sprintf("Deregistring %s", name))
+		d.Log("Deregistring %s", name)
 		if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
 			TaskDefinition: aws.String(name),
 		}); err != nil {
 			return fmt.Errorf("failed to deregister task definition: %w", err)
 		}
-		d.Log(fmt.Sprintf("%s was deregistered successfully", name))
+		d.Log("%s was deregistered successfully", name)
 	} else {
 		d.Log("Aborted")
 		return fmt.Errorf("confirmation failed")
@@ -97,9 +97,9 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 				continue
 			}
 			if s := inUse[name]; s != "" {
-				d.Log(fmt.Sprintf("%s is in use by %s. skip", name, s))
+				d.Log("%s is in use by %s. skip", name, s)
 			} else {
-				d.DebugLog(fmt.Sprintf("%s is marked to deregister", name))
+				d.Log("[DEBUG] %s is marked to deregister", name)
 				names = append(names, name)
 			}
 		}
@@ -116,7 +116,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 	}
 	for i, name := range names {
 		if i < idx {
-			d.Log(fmt.Sprintf("%s will be deregistered", name))
+			d.Log("%s will be deregistered", name)
 			deregs = append(deregs, name)
 		}
 	}
@@ -128,13 +128,13 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 	deregistered := 0
 	if aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %d revisons?", len(deregs)), false) {
 		for _, name := range deregs {
-			d.Log(fmt.Sprintf("Deregistring %s", name))
+			d.Log("Deregistring %s", name)
 			if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
 				TaskDefinition: aws.String(name),
 			}); err != nil {
 				return fmt.Errorf("failed to deregister task definition: %w", err)
 			}
-			d.Log(fmt.Sprintf("%s was deregistered successfully", name))
+			d.Log("%s was deregistered successfully", name)
 			time.Sleep(time.Second)
 			deregistered++
 		}
@@ -142,7 +142,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 		d.Log("Aborted")
 		return fmt.Errorf("confirmation failed")
 	}
-	d.Log(fmt.Sprintf("%d task definitions were deregistered", deregistered))
+	d.Log("%d task definitions were deregistered", deregistered)
 
 	return nil
 }
@@ -163,7 +163,7 @@ func (d *App) inUseRevisions(ctx context.Context) (map[string]string, error) {
 			// ignore STOPPED tasks for in use
 			inUse[name] = st + " task"
 		}
-		d.DebugLog(fmt.Sprintf("%s is in use by tasks", name))
+		d.Log("[DEBUG] %s is in use by tasks", name)
 	}
 
 	if d.config.Service != "" {
@@ -174,7 +174,7 @@ func (d *App) inUseRevisions(ctx context.Context) (map[string]string, error) {
 		for _, dp := range sv.Deployments {
 			name, _ := taskDefinitionToName(*dp.TaskDefinition)
 			inUse[name] = fmt.Sprintf("%s deployment", *dp.Status)
-			d.DebugLog(fmt.Sprintf("%s is in use by deployments", name))
+			d.Log("[DEBUG] %s is in use by deployments", name)
 		}
 	}
 	return inUse, nil

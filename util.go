@@ -26,10 +26,10 @@ func (d *App) readDefinitionFile(path string) ([]byte, error) {
 	switch filepath.Ext(path) {
 	case jsonnetExt:
 		vm := jsonnet.MakeVM()
-		for k, v := range d.ExtStr {
+		for k, v := range d.option.ExtStr {
 			vm.ExtVar(k, v)
 		}
-		for k, v := range d.ExtCode {
+		for k, v := range d.option.ExtCode {
 			vm.ExtCode(k, v)
 		}
 		jsonStr, err := vm.EvaluateFile(path)

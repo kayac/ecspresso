@@ -16,7 +16,7 @@ func (d *App) Register(opt RegisterOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	d.Log("Starting register task definition", opt.DryRunString())
+	d.Log("Starting register task definition %s", opt.DryRunString())
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
 		return err

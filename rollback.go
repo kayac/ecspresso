@@ -2,13 +2,11 @@ package ecspresso
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/fatih/color"
 )
 
 func (d *App) Rollback(opt RollbackOption) error {
@@ -16,13 +14,10 @@ func (d *App) Rollback(opt RollbackOption) error {
 	defer cancel()
 
 	if aws.ToBool(opt.DeregisterTaskDefinition) && aws.ToBool(opt.NoWait) {
-		fmt.Fprintln(
-			os.Stderr,
-			color.YellowString("WARNING: --deregister-task-definition not works with --no-wait together"),
-		)
+		Log("[WARNING] --deregister-task-definition not works with --no-wait together")
 	}
 
-	d.Log("Starting rollback", opt.DryRunString())
+	d.Log("Starting rollback %s", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
 		return err
@@ -38,7 +33,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 		return d.RollbackByCodeDeploy(ctx, sv, targetArn, opt)
 	}
 
-	d.Log("Rolling back to", arnToName(targetArn))
+	d.Log("Rolling back to %s", arnToName(targetArn))
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
@@ -69,7 +64,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 	d.Log("Service is stable now. Completed!")
 
 	if *opt.DeregisterTaskDefinition {
-		d.Log("Deregistering the rolled-back task definition", arnToName(currentArn))
+		d.Log("Deregistering the rolled-back task definition %s", arnToName(currentArn))
 		_, err := d.ecs.DeregisterTaskDefinition(
 			ctx,
 			&ecs.DeregisterTaskDefinitionInput{
@@ -79,7 +74,7 @@ func (d *App) Rollback(opt RollbackOption) error {
 		if err != nil {
 			return fmt.Errorf("failed to deregister task definition: %w", err)
 		}
-		d.Log(arnToName(currentArn), "was deregistered successfully")
+		d.Log("%s was deregistered successfully", arnToName(currentArn))
 	}
 
 	return nil

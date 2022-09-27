@@ -98,9 +98,7 @@ func (d *App) newAssumedVerifier(cfg aws.Config, executionRole *string, opt *Ver
 		RoleSessionName: aws.String("ecspresso-verifier"),
 	})
 	if err != nil {
-		fmt.Println(
-			color.CyanString("INFO: failed to assume role to taskExecutionRole. Continue to verify with current session. %s", err.Error()),
-		)
+		d.Log("[INFO] failed to assume role to taskExecutionRole. Continue to verify with current session. %s", err.Error())
 		return newVerifier(cfg, cfg, opt), nil
 	}
 	ec := aws.Config{}
@@ -301,7 +299,7 @@ var (
 )
 
 func (d *App) verifyECRImage(ctx context.Context, image string) error {
-	d.DebugLog("VERIFY ECR Image")
+	d.Log("[DEBUG] VERIFY ECR Image")
 	out, err := d.verifier.ecr.GetAuthorizationToken(
 		ctx,
 		&ecr.GetAuthorizationTokenInput{},
@@ -322,7 +320,7 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	} else {
 		tag = rr[1]
 	}
-	d.DebugLog(fmt.Sprintf("image=%s tag=%s", image, tag))
+	d.Log("[DEBUG] image=%s tag=%s", image, tag)
 
 	repo := registry.New(image, user, password)
 	ok, err := repo.HasImage(ctx, tag)
@@ -450,7 +448,7 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition)
 
 func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefinition) error {
 	options := c.LogConfiguration.Options
-	d.Log(fmt.Sprintf("LogConfiguration[awslogs] options=%v", options))
+	d.Log("LogConfiguration[awslogs] options=%v", options)
 	group, region, prefix := options["awslogs-group"], options["awslogs-region"], options["awslogs-stream-prefix"]
 	if group == "" {
 		return errors.New("awslogs-group is required")

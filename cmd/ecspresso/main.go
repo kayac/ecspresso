@@ -230,14 +230,16 @@ func _main() int {
 		}
 	}
 
-	app, err := ecspresso.NewApp(c)
+	opt := &ecspresso.Option{
+		Debug:   *debug,
+		ExtStr:  *extStr,
+		ExtCode: *extCode,
+	}
+	app, err := ecspresso.New(c, opt)
 	if err != nil {
 		log.Println(err)
 		return 1
 	}
-	app.Debug = *debug
-	app.ExtStr = *extStr
-	app.ExtCode = *extCode
 
 	switch sub {
 	case "deploy":
@@ -304,8 +306,4 @@ func _main() int {
 
 func boolp(b bool) *bool {
 	return &b
-}
-
-func int64p(i int64) *int64 {
-	return &i
 }

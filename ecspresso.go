@@ -22,7 +22,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
-	"github.com/fatih/color"
 	goConfig "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 	"github.com/morikuni/aec"
@@ -56,24 +55,27 @@ func newServiceFromTypes(sv types.Service) *Service {
 }
 
 type App struct {
+	Service string
+	Cluster string
+
 	ecs         *ecs.Client
 	autoScaling *applicationautoscaling.Client
 	codedeploy  *codedeploy.Client
 	cwl         *cloudwatchlogs.Client
 	iam         *iam.Client
 	elbv2       *elasticloadbalancingv2.Client
+	verifier    *verifier
 
-	verifier *verifier
+	config *Config
+	option *Option
+	loader *goConfig.Loader
+	logger *log.Logger
+}
 
-	Service string
-	Cluster string
-	config  *Config
+type Option struct {
 	Debug   bool
-
 	ExtStr  map[string]string
 	ExtCode map[string]string
-
-	loader *goConfig.Loader
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
@@ -273,7 +275,7 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 	return out.NextForwardToken, nil
 }
 
-func NewApp(conf *Config) (*App, error) {
+func New(conf *Config, opt *Option) (*App, error) {
 	if err := conf.setupPlugins(); err != nil {
 		return nil, err
 	}
@@ -281,7 +283,12 @@ func NewApp(conf *Config) (*App, error) {
 	for _, f := range conf.templateFuncs {
 		loader.Funcs(f)
 	}
-
+	logger := newLogger()
+	if opt.Debug {
+		logger.SetOutput(newLogFilter(os.Stderr, "DEBUG"))
+	} else {
+		logger.SetOutput(newLogFilter(os.Stderr, "INFO"))
+	}
 	d := &App{
 		Service: conf.Service,
 		Cluster: conf.Cluster,
@@ -294,14 +301,14 @@ func NewApp(conf *Config) (*App, error) {
 		elbv2:       elasticloadbalancingv2.NewFromConfig(conf.awsv2Config),
 
 		config: conf,
+		option: opt,
 		loader: loader,
+		logger: logger,
 	}
 	return d, nil
 }
 
 func (d *App) Start() (context.Context, context.CancelFunc) {
-	log.SetOutput(os.Stdout)
-
 	if d.config.Timeout > 0 {
 		return context.WithTimeout(context.Background(), d.config.Timeout)
 	} else {
@@ -320,7 +327,7 @@ func (d *App) Delete(opt DeleteOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	d.Log("Deleting service", opt.DryRunString())
+	d.Log("Deleting service %s", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 3)
 	if err != nil {
 		return err
@@ -440,24 +447,6 @@ func (d *App) Name() string {
 	return fmt.Sprintf("%s/%s", d.Service, d.Cluster)
 }
 
-func (d *App) Log(v ...interface{}) {
-	args := []interface{}{d.Name()}
-	args = append(args, v...)
-	log.Println(args...)
-}
-
-func (d *App) DebugLog(v ...interface{}) {
-	if !d.Debug {
-		return
-	}
-	d.Log(v...)
-}
-
-func (d *App) LogJSON(v interface{}) {
-	b, _ := json.Marshal(v)
-	fmt.Println(string(b))
-}
-
 func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error {
 	d.Log("Waiting for service stable...(it will take a few minutes)")
 	waitCtx, cancel := context.WithCancel(ctx)
@@ -500,7 +489,7 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInpu
 	if err != nil {
 		return nil, fmt.Errorf("failed to register task definition: %w", err)
 	}
-	d.Log("Task definition is registered", taskDefinitionName(out.TaskDefinition))
+	d.Log("Task definition is registered %s", taskDefinitionName(out.TaskDefinition))
 	return out.TaskDefinition, nil
 }
 
@@ -536,10 +525,7 @@ func (d *App) unmarshalJSON(src []byte, v interface{}, path string) error {
 		if !strings.Contains(err.Error(), "unknown field") {
 			return err
 		}
-		fmt.Fprintln(
-			os.Stderr,
-			color.YellowString("WARNING: %s in %s", err, path),
-		)
+		Log("[WARNING] %s in %s", err, path)
 		// unknown field -> try lax decoder
 		lax := json.NewDecoder(bytes.NewReader(src))
 		return lax.Decode(&v)
@@ -563,9 +549,9 @@ func (d *App) LoadServiceDefinition(path string) (*Service, error) {
 
 	sv.ServiceName = aws.String(d.config.Service)
 	if sv.DesiredCount == nil {
-		d.DebugLog("Loaded DesiredCount: nil (-1)")
+		d.Log("[DEBUG] Loaded DesiredCount: nil (-1)")
 	} else {
-		d.DebugLog("Loaded DesiredCount:", *sv.DesiredCount)
+		d.Log("[DEBUG] Loaded DesiredCount: %d", *sv.DesiredCount)
 	}
 	return &sv, nil
 }
@@ -579,8 +565,8 @@ func (d *App) GetLogInfo(task *types.Task, c *types.ContainerDefinition) (string
 	logStream := strings.Join([]string{logStreamPrefix, *c.Name, taskID}, "/")
 	logGroup := lc.Options["awslogs-group"]
 
-	d.Log("logGroup:", logGroup)
-	d.Log("logStream:", logStream)
+	d.Log("logGroup: %s", logGroup)
+	d.Log("logStream: %s", logStream)
 
 	return logGroup, logStream
 }
@@ -600,11 +586,11 @@ func (d *App) suspendAutoScaling(ctx context.Context, suspendState bool) error {
 		return fmt.Errorf("failed to describe scalable targets: %w", err)
 	}
 	if len(out.ScalableTargets) == 0 {
-		d.Log(fmt.Sprintf("No scalable target for %s", resourceId))
+		d.Log("No scalable target for %s", resourceId)
 		return nil
 	}
 	for _, target := range out.ScalableTargets {
-		d.Log(fmt.Sprintf("Register scalable target %s set suspend state to %t", *target.ResourceId, suspendState))
+		d.Log("Register scalable target %s set suspend state to %t", *target.ResourceId, suspendState)
 		_, err := d.autoScaling.RegisterScalableTarget(
 			ctx,
 			&applicationautoscaling.RegisterScalableTargetInput{
@@ -685,7 +671,7 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 	}
 
 	if *opt.DryRun {
-		d.Log("deployment id:", dpID)
+		d.Log("deployment id: %s", dpID)
 		d.Log("DRY RUN OK")
 		return nil
 	}
@@ -702,7 +688,7 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 			return fmt.Errorf("failed to roll back the deployment: %w", err)
 		}
 
-		d.Log(fmt.Sprintf("Deployment %s is rolled back on CodeDeploy:", dpID))
+		d.Log("Deployment %s is rolled back on CodeDeploy:", dpID)
 		return nil
 	}
 }

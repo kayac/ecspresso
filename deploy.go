@@ -40,7 +40,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	defer cancel()
 
 	var sv *Service
-	d.Log("Starting deploy", opt.DryRunString())
+	d.Log("Starting deploy %s", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		count = calcDesiredCount(sv, opt)
 	}
 	if count != nil {
-		d.Log("desired count:", *count)
+		d.Log("desired count: %d", *count)
 	} else {
 		d.Log("desired count: unchanged")
 	}
@@ -210,7 +210,6 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, opt Depl
 		return nil
 	}
 	d.Log("Updating service attributes...")
-	d.DebugLog(in)
 
 	if _, err := d.ecs.UpdateService(ctx, in); err != nil {
 		return fmt.Errorf("failed to update service attributes: %w", err)
@@ -221,7 +220,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, opt Depl
 
 func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) error {
 	if count != nil {
-		d.Log("updating desired count to", *count)
+		d.Log("updating desired count to %d", *count)
 	}
 	_, err := d.ecs.UpdateService(
 		ctx,
@@ -244,7 +243,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 
 func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, error) {
 	// search deploymentGroup in CodeDeploy
-	d.DebugLog("find all applications in CodeDeploy")
+	d.Log("[DEBUG] find all applications in CodeDeploy")
 	la, err := d.codedeploy.ListApplications(ctx, &codedeploy.ListApplicationsInput{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list applications in CodeDeploy: %w", err)
@@ -265,7 +264,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 			return nil, fmt.Errorf("failed to batch get applications in CodeDeploy: %w", err)
 		}
 		for _, info := range apps.ApplicationsInfo {
-			d.DebugLog("application", info)
+			d.Log("[DEBUG] application %v", info)
 			if info.ComputePlatform != cdTypes.ComputePlatformEcs {
 				continue
 			}
@@ -276,7 +275,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 				return nil, fmt.Errorf("failed to list deployment groups in CodeDeploy: %w", err)
 			}
 			if len(lg.DeploymentGroups) == 0 {
-				d.DebugLog("no deploymentGroups in application", *info.ApplicationName)
+				d.Log("[DEBUG] no deploymentGroups in application %v", *info.ApplicationName)
 				continue
 			}
 			groups, err := d.codedeploy.BatchGetDeploymentGroups(ctx, &codedeploy.BatchGetDeploymentGroupsInput{
@@ -287,7 +286,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 				return nil, fmt.Errorf("failed to batch get deployment groups in CodeDeploy: %w", err)
 			}
 			for _, dg := range groups.DeploymentGroupsInfo {
-				d.DebugLog("deploymentGroup", dg)
+				d.Log("[DEBUG] deploymentGroup %v", dg)
 				for _, ecsService := range dg.EcsServices {
 					if *ecsService.ClusterName == d.config.Cluster && *ecsService.ServiceName == d.config.Service {
 						return &cdTypes.DeploymentInfo{
@@ -315,7 +314,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 	if d.config.AppSpec != nil {
 		spec.Hooks = d.config.AppSpec.Hooks
 	}
-	d.DebugLog("appSpecContent:", spec.String())
+	d.Log("[DEBUG] appSpecContent: %s", spec.String())
 
 	// deployment
 	dp, err := d.findDeploymentInfo(ctx)
@@ -353,7 +352,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 		}
 	}
 
-	d.DebugLog("creating a deployment to CodeDeploy", dd)
+	d.Log("[DEBUG] creating a deployment to CodeDeploy %v", dd)
 
 	res, err := d.codedeploy.CreateDeployment(ctx, dd)
 	if err != nil {
@@ -366,12 +365,12 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 		id,
 		d.config.Region,
 	)
-	d.Log(fmt.Sprintf("Deployment %s is created on CodeDeploy:", id))
+	d.Log("Deployment %s is created on CodeDeploy:", id)
 	d.Log(u)
 
 	if isatty.IsTerminal(os.Stdout.Fd()) {
 		if err := exec.Command("open", u).Start(); err != nil {
-			d.Log("Couldn't open URL", u)
+			d.Log("Couldn't open URL %s", u)
 		}
 	}
 	return nil
