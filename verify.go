@@ -64,7 +64,10 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 		_, err := v.secretsmanager.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 			SecretId: &secretArn,
 		})
-		return fmt.Errorf("failed to get secret value from %s secret id %s: %w", from, secretArn, err)
+		if err != nil {
+			return fmt.Errorf("failed to get secret value from %s secret id %s: %w", from, secretArn, err)
+		}
+		return nil
 	}
 
 	// ssm
@@ -79,7 +82,10 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 		Name:           &name,
 		WithDecryption: aws.Bool(true),
 	})
-	return fmt.Errorf("failed to get ssm parameter %s: %w", name, err)
+	if err != nil {
+		return fmt.Errorf("failed to get ssm parameter %s: %w", name, err)
+	}
+	return nil
 }
 
 func (d *App) newAssumedVerifier(cfg aws.Config, executionRole *string, opt *VerifyOption) (*verifier, error) {
