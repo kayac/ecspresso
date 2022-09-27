@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/alecthomas/kingpin"
@@ -201,7 +200,7 @@ func _main() int {
 	color.NoColor = !*colorOpt
 	for _, envFile := range *envFiles {
 		if err := ecspresso.ExportEnvFile(envFile); err != nil {
-			log.Println("Failed to load envfile", err)
+			ecspresso.Log("[ERROR] Failed to load envfile", err)
 			return 1
 		}
 	}
@@ -215,17 +214,17 @@ func _main() int {
 		c.ServiceDefinitionPath = *initOption.ServiceDefinitionPath
 		initOption.ConfigFilePath = conf
 		if err := c.Restrict(); err != nil {
-			log.Println("Could not init config", err)
+			ecspresso.Log("[ERROR] Could not init config", err)
 			return 1
 		}
 	} else {
 		if err := c.Load(*conf); err != nil {
-			log.Println("Could not load config file", *conf, err)
+			ecspresso.Log("[ERROR] Could not load config file", *conf, err)
 			kingpin.Usage()
 			return 1
 		}
 		if err := c.ValidateVersion(Version); err != nil {
-			log.Println(err.Error())
+			ecspresso.Log("[ERROR] %s", err.Error())
 			return 1
 		}
 	}
@@ -237,7 +236,7 @@ func _main() int {
 	}
 	app, err := ecspresso.New(c, opt)
 	if err != nil {
-		log.Println(err)
+		ecspresso.Log("[ERROR] %s", err)
 		return 1
 	}
 
@@ -297,7 +296,7 @@ func _main() int {
 		return 1
 	}
 	if err != nil {
-		log.Printf("%s FAILED. %s", sub, err)
+		ecspresso.Log("[ERROR] %s FAILED. %s", sub, err)
 		return 1
 	}
 
