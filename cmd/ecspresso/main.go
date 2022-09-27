@@ -200,7 +200,7 @@ func _main() int {
 	color.NoColor = !*colorOpt
 	for _, envFile := range *envFiles {
 		if err := ecspresso.ExportEnvFile(envFile); err != nil {
-			ecspresso.Log("[ERROR] Failed to load envfile", err)
+			ecspresso.Log("[ERROR] Failed to load envfile: %s", err)
 			return 1
 		}
 	}
@@ -214,12 +214,12 @@ func _main() int {
 		c.ServiceDefinitionPath = *initOption.ServiceDefinitionPath
 		initOption.ConfigFilePath = conf
 		if err := c.Restrict(); err != nil {
-			ecspresso.Log("[ERROR] Could not init config", err)
+			ecspresso.Log("[ERROR] Could not init config: %s", err)
 			return 1
 		}
 	} else {
 		if err := c.Load(*conf); err != nil {
-			ecspresso.Log("[ERROR] Could not load config file", *conf, err)
+			ecspresso.Log("[ERROR] Could not load config file %s: %s", *conf, err)
 			kingpin.Usage()
 			return 1
 		}
