@@ -83,7 +83,7 @@ func (d *App) Init(opt InitOption) error {
 			}
 			b = []byte(out)
 		}
-		d.Log("save service definition to", config.ServiceDefinitionPath)
+		d.Log("save service definition to %s", config.ServiceDefinitionPath)
 		if err := d.saveFile(config.ServiceDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
 			return err
 		}
@@ -100,7 +100,7 @@ func (d *App) Init(opt InitOption) error {
 			}
 			b = []byte(out)
 		}
-		d.Log("save task definition to", config.TaskDefinitionPath)
+		d.Log("save task definition to %s", config.TaskDefinitionPath)
 		if err := d.saveFile(config.TaskDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
 			return err
 		}
@@ -110,7 +110,7 @@ func (d *App) Init(opt InitOption) error {
 	if b, err := yaml.Marshal(config); err != nil {
 		return fmt.Errorf("unable to marshal config to YAML: %w", err)
 	} else {
-		d.Log("save config to", *opt.ConfigFilePath)
+		d.Log("save config to %s", *opt.ConfigFilePath)
 		if err := d.saveFile(*opt.ConfigFilePath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
 			return err
 		}
@@ -145,7 +145,7 @@ func (d *App) saveFile(path string, b []byte, mode os.FileMode, force bool) erro
 	if _, err := os.Stat(path); err == nil && !force {
 		ok := prompter.YN(fmt.Sprintf("Overwrite existing file %s?", path), false)
 		if !ok {
-			d.Log("skip", path)
+			d.Log("skip %s", path)
 			return nil
 		}
 	}

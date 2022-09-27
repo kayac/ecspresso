@@ -40,7 +40,7 @@ func (d *App) Deploy(opt DeployOption) error {
 	defer cancel()
 
 	var sv *Service
-	d.Log("Starting deploy", opt.DryRunString())
+	d.Log("Starting deploy %s", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func (d *App) Deploy(opt DeployOption) error {
 		count = calcDesiredCount(sv, opt)
 	}
 	if count != nil {
-		d.Log("desired count:", *count)
+		d.Log("desired count: %d", *count)
 	} else {
 		d.Log("desired count: unchanged")
 	}
@@ -220,7 +220,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, opt Depl
 
 func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) error {
 	if count != nil {
-		d.Log("updating desired count to", *count)
+		d.Log("updating desired count to %d", *count)
 	}
 	_, err := d.ecs.UpdateService(
 		ctx,
@@ -264,7 +264,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 			return nil, fmt.Errorf("failed to batch get applications in CodeDeploy: %w", err)
 		}
 		for _, info := range apps.ApplicationsInfo {
-			d.Log("[DEBUG] application", info)
+			d.Log("[DEBUG] application %v", info)
 			if info.ComputePlatform != cdTypes.ComputePlatformEcs {
 				continue
 			}
@@ -314,7 +314,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 	if d.config.AppSpec != nil {
 		spec.Hooks = d.config.AppSpec.Hooks
 	}
-	d.Log("[DEBUG] appSpecContent:", spec.String())
+	d.Log("[DEBUG] appSpecContent: %s", spec.String())
 
 	// deployment
 	dp, err := d.findDeploymentInfo(ctx)
@@ -352,7 +352,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 		}
 	}
 
-	d.Log("[DEBUG] creating a deployment to CodeDeploy", dd)
+	d.Log("[DEBUG] creating a deployment to CodeDeploy %v", dd)
 
 	res, err := d.codedeploy.CreateDeployment(ctx, dd)
 	if err != nil {
@@ -370,7 +370,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 
 	if isatty.IsTerminal(os.Stdout.Fd()) {
 		if err := exec.Command("open", u).Start(); err != nil {
-			d.Log("Couldn't open URL", u)
+			d.Log("Couldn't open URL %s", u)
 		}
 	}
 	return nil

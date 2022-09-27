@@ -15,7 +15,7 @@ func (d *App) Run(opt RunOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	d.Log("Running task", opt.DryRunString())
+	d.Log("Running task %s", opt.DryRunString())
 	ov := types.TaskOverride{}
 	if ovStr := aws.ToString(opt.TaskOverrideStr); ovStr != "" {
 		if err := json.Unmarshal([]byte(ovStr), &ov); err != nil {
@@ -61,7 +61,7 @@ func (d *App) Run(opt RunOption) error {
 }
 
 func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride, opt *RunOption) (*types.Task, error) {
-	d.Log("Running task with", tdArn)
+	d.Log("Running task with %s", tdArn)
 
 	sv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 	if err != nil {
@@ -97,14 +97,14 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 		if err != nil {
 			return nil, fmt.Errorf("failed to list tags for service: %w", err)
 		}
-		d.Log("[DEBUG] propagate tags from service", *sv.ServiceArn, out)
+		d.Log("[DEBUG] propagate tags from service %s", *sv.ServiceArn, out)
 		in.Tags = append(in.Tags, out.Tags...)
 	case "":
 		in.PropagateTags = types.PropagateTagsNone
 	default:
 		in.PropagateTags = types.PropagateTagsTaskDefinition
 	}
-	d.Log("[DEBUG] run task input", in)
+	d.Log("[DEBUG] run task input %v", in)
 
 	out, err := d.ecs.RunTask(ctx, in)
 	if err != nil {
@@ -119,7 +119,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 	}
 
 	task := out.Tasks[0]
-	d.Log("Task ARN:", *task.TaskArn)
+	d.Log("Task ARN: %s", *task.TaskArn)
 	return &task, nil
 }
 
@@ -193,8 +193,8 @@ func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn st
 	family := *td.Family
 	defer func() {
 		watchContainer = containerOf(td, opt.WatchContainer)
-		d.Log("Task definition ARN:", tdArn)
-		d.Log("Watch container:", *watchContainer.Name)
+		d.Log("Task definition ARN: %s", tdArn)
+		d.Log("Watch container: %s", *watchContainer.Name)
 	}()
 
 	if *opt.LatestTaskDefinition {

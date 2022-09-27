@@ -30,7 +30,7 @@ func (d *App) Create(opt CreateOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	d.Log("Starting create service", opt.DryRunString())
+	d.Log("Starting create service %s", opt.DryRunString())
 	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 	if err != nil {
 		return err

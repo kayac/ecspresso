@@ -327,7 +327,7 @@ func (d *App) Delete(opt DeleteOption) error {
 	ctx, cancel := d.Start()
 	defer cancel()
 
-	d.Log("Deleting service", opt.DryRunString())
+	d.Log("Deleting service %s", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 3)
 	if err != nil {
 		return err
@@ -489,7 +489,7 @@ func (d *App) RegisterTaskDefinition(ctx context.Context, td *TaskDefinitionInpu
 	if err != nil {
 		return nil, fmt.Errorf("failed to register task definition: %w", err)
 	}
-	d.Log("Task definition is registered", taskDefinitionName(out.TaskDefinition))
+	d.Log("Task definition is registered %s", taskDefinitionName(out.TaskDefinition))
 	return out.TaskDefinition, nil
 }
 
@@ -565,8 +565,8 @@ func (d *App) GetLogInfo(task *types.Task, c *types.ContainerDefinition) (string
 	logStream := strings.Join([]string{logStreamPrefix, *c.Name, taskID}, "/")
 	logGroup := lc.Options["awslogs-group"]
 
-	d.Log("logGroup:", logGroup)
-	d.Log("logStream:", logStream)
+	d.Log("logGroup: %s", logGroup)
+	d.Log("logStream: %s", logStream)
 
 	return logGroup, logStream
 }
@@ -671,7 +671,7 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 	}
 
 	if *opt.DryRun {
-		d.Log("deployment id:", dpID)
+		d.Log("deployment id: %s", dpID)
 		d.Log("DRY RUN OK")
 		return nil
 	}
