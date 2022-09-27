@@ -299,7 +299,7 @@ var (
 )
 
 func (d *App) verifyECRImage(ctx context.Context, image string) error {
-	d.DebugLog("VERIFY ECR Image")
+	d.Log("[DEBUG] VERIFY ECR Image")
 	out, err := d.verifier.ecr.GetAuthorizationToken(
 		ctx,
 		&ecr.GetAuthorizationTokenInput{},
@@ -320,7 +320,7 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	} else {
 		tag = rr[1]
 	}
-	d.DebugLog("image=%s tag=%s", image, tag)
+	d.Log("[DEBUG] image=%s tag=%s", image, tag)
 
 	repo := registry.New(image, user, password)
 	ok, err := repo.HasImage(ctx, tag)

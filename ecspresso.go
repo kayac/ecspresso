@@ -55,25 +55,27 @@ func newServiceFromTypes(sv types.Service) *Service {
 }
 
 type App struct {
+	Service string
+	Cluster string
+
 	ecs         *ecs.Client
 	autoScaling *applicationautoscaling.Client
 	codedeploy  *codedeploy.Client
 	cwl         *cloudwatchlogs.Client
 	iam         *iam.Client
 	elbv2       *elasticloadbalancingv2.Client
+	verifier    *verifier
 
-	verifier *verifier
-
-	Service string
-	Cluster string
-	config  *Config
-	Debug   bool
-
-	ExtStr  map[string]string
-	ExtCode map[string]string
-
+	config *Config
+	option *Option
 	loader *goConfig.Loader
 	logger *log.Logger
+}
+
+type Option struct {
+	Debug   bool
+	ExtStr  map[string]string
+	ExtCode map[string]string
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
@@ -273,7 +275,7 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 	return out.NextForwardToken, nil
 }
 
-func NewApp(conf *Config) (*App, error) {
+func New(conf *Config, opt *Option) (*App, error) {
 	if err := conf.setupPlugins(); err != nil {
 		return nil, err
 	}
@@ -281,7 +283,12 @@ func NewApp(conf *Config) (*App, error) {
 	for _, f := range conf.templateFuncs {
 		loader.Funcs(f)
 	}
-
+	logger := newLogger()
+	if opt.Debug {
+		logger.SetOutput(newLogFilter(os.Stderr, "DEBUG"))
+	} else {
+		logger.SetOutput(newLogFilter(os.Stderr, "INFO"))
+	}
 	d := &App{
 		Service: conf.Service,
 		Cluster: conf.Cluster,
@@ -294,15 +301,14 @@ func NewApp(conf *Config) (*App, error) {
 		elbv2:       elasticloadbalancingv2.NewFromConfig(conf.awsv2Config),
 
 		config: conf,
+		option: opt,
 		loader: loader,
-		logger: NewLogger(),
+		logger: logger,
 	}
 	return d, nil
 }
 
 func (d *App) Start() (context.Context, context.CancelFunc) {
-	log.SetOutput(os.Stdout)
-
 	if d.config.Timeout > 0 {
 		return context.WithTimeout(context.Background(), d.config.Timeout)
 	} else {
@@ -543,9 +549,9 @@ func (d *App) LoadServiceDefinition(path string) (*Service, error) {
 
 	sv.ServiceName = aws.String(d.config.Service)
 	if sv.DesiredCount == nil {
-		d.DebugLog("Loaded DesiredCount: nil (-1)")
+		d.Log("[DEBUG] Loaded DesiredCount: nil (-1)")
 	} else {
-		d.DebugLog("Loaded DesiredCount:", *sv.DesiredCount)
+		d.Log("[DEBUG] Loaded DesiredCount: %d", *sv.DesiredCount)
 	}
 	return &sv, nil
 }

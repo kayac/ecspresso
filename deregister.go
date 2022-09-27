@@ -99,7 +99,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 			if s := inUse[name]; s != "" {
 				d.Log("%s is in use by %s. skip", name, s)
 			} else {
-				d.DebugLog("%s is marked to deregister", name)
+				d.Log("[DEBUG] %s is marked to deregister", name)
 				names = append(names, name)
 			}
 		}
@@ -163,7 +163,7 @@ func (d *App) inUseRevisions(ctx context.Context) (map[string]string, error) {
 			// ignore STOPPED tasks for in use
 			inUse[name] = st + " task"
 		}
-		d.DebugLog("%s is in use by tasks", name)
+		d.Log("[DEBUG] %s is in use by tasks", name)
 	}
 
 	if d.config.Service != "" {
@@ -174,7 +174,7 @@ func (d *App) inUseRevisions(ctx context.Context) (map[string]string, error) {
 		for _, dp := range sv.Deployments {
 			name, _ := taskDefinitionToName(*dp.TaskDefinition)
 			inUse[name] = fmt.Sprintf("%s deployment", *dp.Status)
-			d.DebugLog("%s is in use by deployments", name)
+			d.Log("[DEBUG] %s is in use by deployments", name)
 		}
 	}
 	return inUse, nil

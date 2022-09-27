@@ -30,7 +30,7 @@ func (d *App) Run(opt RunOption) error {
 			return fmt.Errorf("failed to read overrides-file %s: %w", ovFile, err)
 		}
 	}
-	d.DebugLog("Overrides:", ov)
+	d.Log("[DEBUG] Overrides: %v", ov)
 
 	tdArn, watchContainer, err := d.taskDefinitionForRun(ctx, opt)
 	if err != nil {
@@ -97,14 +97,14 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 		if err != nil {
 			return nil, fmt.Errorf("failed to list tags for service: %w", err)
 		}
-		d.DebugLog("propagate tags from service", *sv.ServiceArn, out)
+		d.Log("[DEBUG] propagate tags from service", *sv.ServiceArn, out)
 		in.Tags = append(in.Tags, out.Tags...)
 	case "":
 		in.PropagateTags = types.PropagateTagsNone
 	default:
 		in.PropagateTags = types.PropagateTagsTaskDefinition
 	}
-	d.DebugLog("run task input", in)
+	d.Log("[DEBUG] run task input", in)
 
 	out, err := d.ecs.RunTask(ctx, in)
 	if err != nil {

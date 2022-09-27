@@ -16,7 +16,7 @@ func TestLoadServiceDefinition(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	app, err := ecspresso.NewApp(c)
+	app, err := ecspresso.New(c, &ecspresso.Option{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -56,7 +56,7 @@ func TestLoadConfigWithPluginDuplicate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = ecspresso.NewApp(conf)
+	_, err = ecspresso.New(conf, &ecspresso.Option{})
 	if err == nil {
 		t.Log("expected an error to occur, but it didn't.")
 		t.FailNow()
@@ -83,7 +83,7 @@ func testLoadConfigWithPlugin(t *testing.T, path string) {
 	if err != nil {
 		t.Error(err)
 	}
-	app, err := ecspresso.NewApp(conf)
+	app, err := ecspresso.New(conf, &ecspresso.Option{})
 	if err != nil {
 		t.Error(err)
 	}

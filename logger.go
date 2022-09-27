@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"os"
 
@@ -10,29 +11,31 @@ import (
 )
 
 var (
-	commonLogger    = log.New(os.Stderr, "", log.LstdFlags|log.Lmicroseconds)
-	commonLogFilter = &logutils.LevelFilter{
-		Levels: []logutils.LogLevel{"DEBUG", "INFO", "NOTICE", "WARNING", "ERROR"},
-		ModifierFuncs: []logutils.ModifierFunc{
-			nil, // default
-			logutils.Color(color.FgCyan),
-			logutils.Color(color.FgGreen),
-			logutils.Color(color.FgYellow),
-			logutils.Color(color.FgRed),
-		},
-		MinLevel: logutils.LogLevel("NOTICE"),
-		Writer:   os.Stderr,
-	}
+	commonLogger    *log.Logger
+	commonLogFilter *logutils.LevelFilter
 )
 
 func init() {
-	commonLogger = NewLogger()
+	commonLogger = newLogger()
+	commonLogFilter = newLogFilter(os.Stderr, "WARNING")
 }
 
-func NewLogger() *log.Logger {
-	logger := log.New(os.Stderr, "", log.LstdFlags|log.Lmicroseconds)
-	logger.SetOutput(commonLogFilter)
-	return logger
+func newLogFilter(w io.Writer, minLevel string) *logutils.LevelFilter {
+	return &logutils.LevelFilter{
+		Levels: []logutils.LogLevel{"DEBUG", "INFO", "WARNING", "ERROR"},
+		ModifierFuncs: []logutils.ModifierFunc{
+			nil, // DEBUG
+			nil, // default
+			logutils.Color(color.FgYellow),
+			logutils.Color(color.FgRed),
+		},
+		MinLevel: logutils.LogLevel(minLevel),
+		Writer:   w,
+	}
+}
+
+func newLogger() *log.Logger {
+	return log.New(io.Discard, "", log.LstdFlags|log.Lmicroseconds)
 }
 
 func Log(f string, v ...interface{}) {
@@ -41,13 +44,6 @@ func Log(f string, v ...interface{}) {
 
 func (d *App) Log(f string, v ...interface{}) {
 	d.logger.Printf(d.Name()+" "+f, v...)
-}
-
-func (d *App) DebugLog(f string, v ...interface{}) {
-	if !d.Debug {
-		return
-	}
-	d.Log(f, v...)
 }
 
 func (d *App) LogJSON(v interface{}) {

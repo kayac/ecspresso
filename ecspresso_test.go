@@ -25,12 +25,13 @@ func TestLoadTaskDefinition(t *testing.T) {
 		if err := c.Restrict(); err != nil {
 			t.Error(err)
 		}
-		app, err := ecspresso.NewApp(c)
+		app, err := ecspresso.New(c, &ecspresso.Option{
+			ExtStr:  map[string]string{"WorkerID": "3"},
+			ExtCode: map[string]string{"EphemeralStorage": "24 + 1"}, // == 25
+		})
 		if err != nil {
 			t.Error(err)
 		}
-		app.ExtStr = map[string]string{"WorkerID": "3"}
-		app.ExtCode = map[string]string{"EphemeralStorage": "24 + 1"} // == 25
 
 		td, err := app.LoadTaskDefinition(path)
 		if err != nil || td == nil {
@@ -60,13 +61,13 @@ func TestLoadTaskDefinitionTags(t *testing.T) {
 		if err := c.Restrict(); err != nil {
 			t.Error(err)
 		}
-		app, err := ecspresso.NewApp(c)
+		app, err := ecspresso.New(c, &ecspresso.Option{
+			ExtStr:  map[string]string{"WorkerID": "3"},
+			ExtCode: map[string]string{"EphemeralStorage": "24 + 1"}, // == 25
+		})
 		if err != nil {
 			t.Error(err)
 		}
-		app.ExtStr = map[string]string{"WorkerID": "3"}
-		app.ExtCode = map[string]string{"EphemeralStorage": "24 + 1"} // == 25
-
 		td, err := app.LoadTaskDefinition(path)
 		if err != nil {
 			t.Errorf("%s load failed: %s", path, err)
@@ -87,7 +88,7 @@ func TestLoadTaskDefinitionTags(t *testing.T) {
 		if err := c.Restrict(); err != nil {
 			t.Error(err)
 		}
-		app, err := ecspresso.NewApp(c)
+		app, err := ecspresso.New(c, &ecspresso.Option{})
 		if err != nil {
 			t.Error(err)
 		}

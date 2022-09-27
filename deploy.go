@@ -243,7 +243,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 
 func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, error) {
 	// search deploymentGroup in CodeDeploy
-	d.DebugLog("find all applications in CodeDeploy")
+	d.Log("[DEBUG] find all applications in CodeDeploy")
 	la, err := d.codedeploy.ListApplications(ctx, &codedeploy.ListApplicationsInput{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list applications in CodeDeploy: %w", err)
@@ -264,7 +264,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 			return nil, fmt.Errorf("failed to batch get applications in CodeDeploy: %w", err)
 		}
 		for _, info := range apps.ApplicationsInfo {
-			d.DebugLog("application", info)
+			d.Log("[DEBUG] application", info)
 			if info.ComputePlatform != cdTypes.ComputePlatformEcs {
 				continue
 			}
@@ -275,7 +275,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 				return nil, fmt.Errorf("failed to list deployment groups in CodeDeploy: %w", err)
 			}
 			if len(lg.DeploymentGroups) == 0 {
-				d.DebugLog("no deploymentGroups in application", *info.ApplicationName)
+				d.Log("[DEBUG] no deploymentGroups in application %v", *info.ApplicationName)
 				continue
 			}
 			groups, err := d.codedeploy.BatchGetDeploymentGroups(ctx, &codedeploy.BatchGetDeploymentGroupsInput{
@@ -286,7 +286,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 				return nil, fmt.Errorf("failed to batch get deployment groups in CodeDeploy: %w", err)
 			}
 			for _, dg := range groups.DeploymentGroupsInfo {
-				d.DebugLog("deploymentGroup", dg)
+				d.Log("[DEBUG] deploymentGroup %v", dg)
 				for _, ecsService := range dg.EcsServices {
 					if *ecsService.ClusterName == d.config.Cluster && *ecsService.ServiceName == d.config.Service {
 						return &cdTypes.DeploymentInfo{
@@ -314,7 +314,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 	if d.config.AppSpec != nil {
 		spec.Hooks = d.config.AppSpec.Hooks
 	}
-	d.DebugLog("appSpecContent:", spec.String())
+	d.Log("[DEBUG] appSpecContent:", spec.String())
 
 	// deployment
 	dp, err := d.findDeploymentInfo(ctx)
@@ -352,7 +352,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 		}
 	}
 
-	d.DebugLog("creating a deployment to CodeDeploy", dd)
+	d.Log("[DEBUG] creating a deployment to CodeDeploy", dd)
 
 	res, err := d.codedeploy.CreateDeployment(ctx, dd)
 	if err != nil {
