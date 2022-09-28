@@ -46,6 +46,10 @@ func (d *App) Log(f string, v ...interface{}) {
 }
 
 func (d *App) LogJSON(v interface{}) {
-	b, _ := json.Marshal(v)
-	d.logger.Println(string(b))
+	b, err := json.Marshal(v)
+	if err != nil {
+		d.logger.Printf("[WARNING] failed to marshal json: %s", err)
+		return
+	}
+	d.logger.Println("[INFO] " + string(b))
 }

@@ -26,8 +26,8 @@ func (opt DeregisterOption) DryRunString() string {
 	return ""
 }
 
-func (d *App) Deregister(opt DeregisterOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Deregister(ctx context.Context, opt DeregisterOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 	d.Log("Starting deregister task definition %s", opt.DryRunString())
 

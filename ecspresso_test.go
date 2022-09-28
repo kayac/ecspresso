@@ -1,6 +1,7 @@
 package ecspresso_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 )
 
 func TestLoadTaskDefinition(t *testing.T) {
+	ctx := context.Background()
 	for _, path := range []string{
 		"tests/td.json",
 		"tests/td-plain.json",
@@ -22,7 +24,7 @@ func TestLoadTaskDefinition(t *testing.T) {
 			Cluster:            "default",
 			TaskDefinitionPath: path,
 		}
-		if err := c.Restrict(); err != nil {
+		if err := c.Restrict(ctx); err != nil {
 			t.Error(err)
 		}
 		app, err := ecspresso.New(c, &ecspresso.Option{
@@ -50,6 +52,7 @@ func TestLoadTaskDefinition(t *testing.T) {
 }
 
 func TestLoadTaskDefinitionTags(t *testing.T) {
+	ctx := context.Background()
 	for _, path := range []string{"tests/td.json", "tests/td-plain.json", "tests/td.jsonnet"} {
 		c := &ecspresso.Config{
 			Region:             "ap-northeast-1",
@@ -58,7 +61,7 @@ func TestLoadTaskDefinitionTags(t *testing.T) {
 			Cluster:            "default",
 			TaskDefinitionPath: path,
 		}
-		if err := c.Restrict(); err != nil {
+		if err := c.Restrict(ctx); err != nil {
 			t.Error(err)
 		}
 		app, err := ecspresso.New(c, &ecspresso.Option{
@@ -85,7 +88,7 @@ func TestLoadTaskDefinitionTags(t *testing.T) {
 			Cluster:            "default",
 			TaskDefinitionPath: path,
 		}
-		if err := c.Restrict(); err != nil {
+		if err := c.Restrict(ctx); err != nil {
 			t.Error(err)
 		}
 		app, err := ecspresso.New(c, &ecspresso.Option{})

@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -8,8 +9,8 @@ import (
 	"github.com/kayac/ecspresso/appspec"
 )
 
-func (d *App) AppSpec(opt AppSpecOption) error {
-	ctx, cancel := d.Start()
+func (d *App) AppSpec(ctx context.Context, opt AppSpecOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 	var taskDefinitionArn string
 

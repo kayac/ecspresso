@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -62,8 +63,8 @@ func (revs revisions) OutputTable(w io.Writer) error {
 	return nil
 }
 
-func (d *App) Revesions(opt RevisionsOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Revesions(ctx context.Context, opt RevisionsOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	inUse, err := d.inUseRevisions(ctx)

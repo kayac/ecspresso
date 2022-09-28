@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"bufio"
+	"context"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -14,7 +15,7 @@ type RenderOption struct {
 	TaskDefinition    *bool
 }
 
-func (d *App) Render(opt RenderOption) error {
+func (d *App) Render(ctx context.Context, opt RenderOption) error {
 	out := bufio.NewWriter(os.Stdout)
 	defer out.Flush()
 

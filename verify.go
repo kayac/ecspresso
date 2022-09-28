@@ -88,12 +88,12 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 	return nil
 }
 
-func (d *App) newAssumedVerifier(cfg aws.Config, executionRole *string, opt *VerifyOption) (*verifier, error) {
+func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionRole *string, opt *VerifyOption) (*verifier, error) {
 	if executionRole == nil {
 		return newVerifier(cfg, cfg, opt), nil
 	}
 	svc := sts.NewFromConfig(d.config.awsv2Config)
-	out, err := svc.AssumeRole(context.TODO(), &sts.AssumeRoleInput{
+	out, err := svc.AssumeRole(ctx, &sts.AssumeRoleInput{
 		RoleArn:         executionRole,
 		RoleSessionName: aws.String("ecspresso-verifier"),
 	})
@@ -126,17 +126,17 @@ func (v verifySkipErr) Error() string {
 }
 
 // Verify verifies service / task definitions related resources are valid.
-func (d *App) Verify(opt VerifyOption) error {
+func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
 		return err
 	}
-	d.verifier, err = d.newAssumedVerifier(d.config.awsv2Config, td.ExecutionRoleArn, &opt)
+	d.verifier, err = d.newAssumedVerifier(ctx, d.config.awsv2Config, td.ExecutionRoleArn, &opt)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := d.Start()
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	d.Log("Starting verify")

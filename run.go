@@ -11,8 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
-func (d *App) Run(opt RunOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Run(ctx context.Context, opt RunOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	d.Log("Running task %s", opt.DryRunString())

@@ -276,9 +276,6 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 }
 
 func New(conf *Config, opt *Option) (*App, error) {
-	if err := conf.setupPlugins(); err != nil {
-		return nil, err
-	}
 	loader := goConfig.New()
 	for _, f := range conf.templateFuncs {
 		loader.Funcs(f)
@@ -308,23 +305,23 @@ func New(conf *Config, opt *Option) (*App, error) {
 	return d, nil
 }
 
-func (d *App) Start() (context.Context, context.CancelFunc) {
+func (d *App) Start(ctx context.Context) (context.Context, context.CancelFunc) {
 	if d.config.Timeout > 0 {
-		return context.WithTimeout(context.Background(), d.config.Timeout)
+		return context.WithTimeout(ctx, d.config.Timeout)
 	} else {
-		return context.Background(), func() {}
+		return ctx, func() {}
 	}
 }
 
-func (d *App) Status(opt StatusOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Status(ctx context.Context, opt StatusOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 	_, err := d.DescribeServiceStatus(ctx, *opt.Events)
 	return err
 }
 
-func (d *App) Delete(opt DeleteOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Delete(ctx context.Context, opt DeleteOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	d.Log("Deleting service %s", opt.DryRunString())
@@ -371,8 +368,8 @@ func containerOf(td *TaskDefinitionInput, name *string) *types.ContainerDefiniti
 	return nil
 }
 
-func (d *App) Wait(opt WaitOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Wait(ctx context.Context, opt WaitOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	d.Log("Waiting for the service stable")
