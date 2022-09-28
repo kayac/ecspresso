@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -9,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
-func (d *App) Rollback(opt RollbackOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	if aws.ToBool(opt.DeregisterTaskDefinition) && aws.ToBool(opt.NoWait) {

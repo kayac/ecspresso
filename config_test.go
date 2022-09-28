@@ -1,6 +1,7 @@
 package ecspresso_test
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -12,7 +13,8 @@ import (
 
 func TestLoadServiceDefinition(t *testing.T) {
 	c := &ecspresso.Config{}
-	err := c.Load("tests/test.yaml")
+	ctx := context.Background()
+	err := c.Load(ctx, "tests/test.yaml")
 	if err != nil {
 		t.Error(err)
 	}
@@ -52,7 +54,8 @@ func TestLoadConfigWithPluginDuplicate(t *testing.T) {
 	os.Setenv("JSON", `{"foo":"bar"}`)
 
 	conf := &ecspresso.Config{}
-	err := conf.Load("tests/config_duplicate_plugins.yaml")
+	ctx := context.Background()
+	err := conf.Load(ctx, "tests/config_duplicate_plugins.yaml")
 	if err != nil {
 		t.Error(err)
 	}
@@ -77,9 +80,9 @@ func TestLoadConfigWithPlugin(t *testing.T) {
 func testLoadConfigWithPlugin(t *testing.T, path string) {
 	os.Setenv("TAG", "testing")
 	os.Setenv("JSON", `{"foo":"bar"}`)
-
+	ctx := context.Background()
 	conf := &ecspresso.Config{}
-	err := conf.Load(path)
+	err := conf.Load(ctx, path)
 	if err != nil {
 		t.Error(err)
 	}
@@ -200,11 +203,12 @@ func TestConfigWithRequiredVersionUnsatisfied(t *testing.T) {
 			ErrorMessage:    "does not satisfy constraints",
 		},
 	}
+	ctx := context.Background()
 	for _, c := range cases {
 		t.Run(c.CurrentVersion+":"+c.RequiredVersion, func(t *testing.T) {
 			conf := ecspresso.NewDefaultConfig()
 			conf.RequiredVersion = c.RequiredVersion
-			if err := conf.Restrict(); err != nil {
+			if err := conf.Restrict(ctx); err != nil {
 				t.Error(err)
 				return
 			}
@@ -232,11 +236,12 @@ func TestConfigWithInvalidRequiredVersion(t *testing.T) {
 			ErrorMessage:    "invalid format",
 		},
 	}
+	ctx := context.Background()
 	for _, c := range cases {
 		t.Run(c.CurrentVersion+":"+c.RequiredVersion, func(t *testing.T) {
 			conf := ecspresso.NewDefaultConfig()
 			conf.RequiredVersion = c.RequiredVersion
-			err := conf.Restrict()
+			err := conf.Restrict(ctx)
 			if err == nil {
 				t.Error("expected any error, but no error")
 				return

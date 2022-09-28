@@ -29,8 +29,8 @@ func (d *App) NewEcsta(ctx context.Context) (*ecsta.Ecsta, error) {
 	return app, nil
 }
 
-func (d *App) Exec(opt ExecOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Exec(ctx context.Context, opt ExecOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	ecstaApp, err := d.NewEcsta(ctx)

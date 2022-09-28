@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -77,8 +78,8 @@ func diffTaskDefs(local, remote *TaskDefinitionInput, remoteArn string, localPat
 	return fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds), nil
 }
 
-func (d *App) Diff(opt DiffOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Diff(ctx context.Context, opt DiffOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	var taskDefArn string

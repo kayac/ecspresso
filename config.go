@@ -41,16 +41,16 @@ type Config struct {
 }
 
 // Load loads configuration file from file path.
-func (c *Config) Load(path string) error {
+func (c *Config) Load(ctx context.Context, path string) error {
 	if err := goConfig.LoadWithEnv(c, path); err != nil {
 		return err
 	}
 	c.dir = filepath.Dir(path)
-	return c.Restrict()
+	return c.Restrict(ctx)
 }
 
 // Restrict restricts a configuration.
-func (c *Config) Restrict() error {
+func (c *Config) Restrict(ctx context.Context) error {
 	if c.Cluster == "" {
 		c.Cluster = DefaultClusterName
 	}
@@ -71,17 +71,19 @@ func (c *Config) Restrict() error {
 		c.versionConstraints = constraints
 	}
 	var err error
-	c.awsv2Config, err = awsConfig.LoadDefaultConfig(context.TODO(), awsConfig.WithRegion(c.Region))
+	c.awsv2Config, err = awsConfig.LoadDefaultConfig(ctx, awsConfig.WithRegion(c.Region))
 	if err != nil {
 		return fmt.Errorf("failed to load aws config: %w", err)
 	}
-
-	return err
+	if err := c.setupPlugins(ctx); err != nil {
+		return fmt.Errorf("failed to setup plugins: %w", err)
+	}
+	return nil
 }
 
-func (c *Config) setupPlugins() error {
+func (c *Config) setupPlugins(ctx context.Context) error {
 	for _, p := range c.Plugins {
-		if err := p.Setup(c); err != nil {
+		if err := p.Setup(ctx, c); err != nil {
 			return err
 		}
 	}

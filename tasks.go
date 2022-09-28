@@ -23,8 +23,8 @@ func (o TasksOption) taskID() string {
 	return aws.ToString(o.ID)
 }
 
-func (d *App) Tasks(opt TasksOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	ecstaApp, err := d.NewEcsta(ctx)

@@ -33,9 +33,8 @@ var (
 	jsonExt    = ".json"
 )
 
-func (d *App) Init(opt InitOption) error {
+func (d *App) Init(ctx context.Context, opt InitOption) error {
 	config := d.config
-	ctx := context.Background()
 
 	if *opt.Jsonnet {
 		if ext := filepath.Ext(config.ServiceDefinitionPath); ext == jsonExt {

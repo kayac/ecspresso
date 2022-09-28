@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -26,8 +27,8 @@ func (opt CreateOption) DryRunString() string {
 	return ""
 }
 
-func (d *App) Create(opt CreateOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Create(ctx context.Context, opt CreateOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	d.Log("Starting create service %s", opt.DryRunString())

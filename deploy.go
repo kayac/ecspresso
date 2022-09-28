@@ -35,8 +35,8 @@ func calcDesiredCount(sv *Service, opt optWithDesiredCount) *int32 {
 	return nil
 }
 
-func (d *App) Deploy(opt DeployOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	var sv *Service

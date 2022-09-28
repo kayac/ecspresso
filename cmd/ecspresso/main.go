@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -204,6 +205,7 @@ func _main() int {
 			return 1
 		}
 	}
+	ctx := context.TODO()
 
 	c := ecspresso.NewDefaultConfig()
 	if sub == "init" {
@@ -213,12 +215,12 @@ func _main() int {
 		c.TaskDefinitionPath = *initOption.TaskDefinitionPath
 		c.ServiceDefinitionPath = *initOption.ServiceDefinitionPath
 		initOption.ConfigFilePath = conf
-		if err := c.Restrict(); err != nil {
+		if err := c.Restrict(ctx); err != nil {
 			ecspresso.Log("[ERROR] Could not init config: %s", err)
 			return 1
 		}
 	} else {
-		if err := c.Load(*conf); err != nil {
+		if err := c.Load(ctx, *conf); err != nil {
 			ecspresso.Log("[ERROR] Could not load config file %s: %s", *conf, err)
 			kingpin.Usage()
 			return 1
@@ -248,9 +250,9 @@ func _main() int {
 		if isSetResumeAutoScaling {
 			deployOption.SuspendAutoScaling = boolp(false)
 		}
-		err = app.Deploy(deployOption)
+		err = app.Deploy(ctx, deployOption)
 	case "refresh":
-		err = app.Deploy(refreshOption)
+		err = app.Deploy(ctx, refreshOption)
 	case "scale":
 		if !isSetSuspendAutoScaling {
 			scaleOption.SuspendAutoScaling = nil
@@ -258,39 +260,39 @@ func _main() int {
 		if isSetResumeAutoScaling {
 			scaleOption.SuspendAutoScaling = boolp(false)
 		}
-		err = app.Deploy(scaleOption)
+		err = app.Deploy(ctx, scaleOption)
 	case "status":
-		err = app.Status(statusOption)
+		err = app.Status(ctx, statusOption)
 	case "rollback":
-		err = app.Rollback(rollbackOption)
+		err = app.Rollback(ctx, rollbackOption)
 	case "create":
-		err = app.Create(createOption)
+		err = app.Create(ctx, createOption)
 	case "delete":
-		err = app.Delete(deleteOption)
+		err = app.Delete(ctx, deleteOption)
 	case "run":
-		err = app.Run(runOption)
+		err = app.Run(ctx, runOption)
 	case "wait":
-		err = app.Wait(waitOption)
+		err = app.Wait(ctx, waitOption)
 	case "register":
-		err = app.Register(registerOption)
+		err = app.Register(ctx, registerOption)
 	case "deregister":
-		err = app.Deregister(deregisterOption)
+		err = app.Deregister(ctx, deregisterOption)
 	case "revisions":
-		err = app.Revesions(revisionsOption)
+		err = app.Revesions(ctx, revisionsOption)
 	case "init":
-		err = app.Init(initOption)
+		err = app.Init(ctx, initOption)
 	case "diff":
-		err = app.Diff(diffOption)
+		err = app.Diff(ctx, diffOption)
 	case "appspec":
-		err = app.AppSpec(appspecOption)
+		err = app.AppSpec(ctx, appspecOption)
 	case "verify":
-		err = app.Verify(verifyOption)
+		err = app.Verify(ctx, verifyOption)
 	case "render":
-		err = app.Render(renderOption)
+		err = app.Render(ctx, renderOption)
 	case "tasks":
-		err = app.Tasks(tasksOption)
+		err = app.Tasks(ctx, tasksOption)
 	case "exec":
-		err = app.Exec(execOption)
+		err = app.Exec(ctx, execOption)
 	default:
 		kingpin.Usage()
 		return 1

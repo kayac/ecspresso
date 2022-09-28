@@ -20,14 +20,14 @@ type ConfigPlugin struct {
 	FuncPrefix string                 `yaml:"func_prefix"`
 }
 
-func (p ConfigPlugin) Setup(c *Config) error {
+func (p ConfigPlugin) Setup(ctx context.Context, c *Config) error {
 	switch strings.ToLower(p.Name) {
 	case "tfstate":
-		return setupPluginTFState(p, c)
+		return setupPluginTFState(ctx, p, c)
 	case "cloudformation":
-		return setupPluginCFn(p, c)
+		return setupPluginCFn(ctx, p, c)
 	case "ssm":
-		return setupPluginSSM(p, c)
+		return setupPluginSSM(ctx, p, c)
 	default:
 		return fmt.Errorf("plugin %s is not available", p.Name)
 	}
@@ -48,7 +48,7 @@ func (p ConfigPlugin) AppendFuncMap(c *Config, funcMap template.FuncMap) error {
 	return nil
 }
 
-func setupPluginTFState(p ConfigPlugin, c *Config) error {
+func setupPluginTFState(ctx context.Context, p ConfigPlugin, c *Config) error {
 	var loc string
 	if p.Config["path"] != nil {
 		path, ok := p.Config["path"].(string)
@@ -68,23 +68,23 @@ func setupPluginTFState(p ConfigPlugin, c *Config) error {
 	} else {
 		return errors.New("tfstate plugin requires path or url for tfstate location")
 	}
-	funcs, err := tfstate.FuncMap(context.TODO(), loc)
+	funcs, err := tfstate.FuncMap(ctx, loc)
 	if err != nil {
 		return err
 	}
 	return p.AppendFuncMap(c, funcs)
 }
 
-func setupPluginCFn(p ConfigPlugin, c *Config) error {
-	funcs, err := cfn.FuncMap(context.TODO(), c.awsv2Config)
+func setupPluginCFn(ctx context.Context, p ConfigPlugin, c *Config) error {
+	funcs, err := cfn.FuncMap(ctx, c.awsv2Config)
 	if err != nil {
 		return err
 	}
 	return p.AppendFuncMap(c, funcs)
 }
 
-func setupPluginSSM(p ConfigPlugin, c *Config) error {
-	funcs, err := ssm.FuncMap(context.TODO(), c.awsv2Config)
+func setupPluginSSM(ctx context.Context, p ConfigPlugin, c *Config) error {
+	funcs, err := ssm.FuncMap(ctx, c.awsv2Config)
 	if err != nil {
 		return err
 	}

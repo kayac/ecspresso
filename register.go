@@ -1,5 +1,7 @@
 package ecspresso
 
+import "context"
+
 type RegisterOption struct {
 	DryRun *bool
 	Output *bool
@@ -12,8 +14,8 @@ func (opt RegisterOption) DryRunString() string {
 	return ""
 }
 
-func (d *App) Register(opt RegisterOption) error {
-	ctx, cancel := d.Start()
+func (d *App) Register(ctx context.Context, opt RegisterOption) error {
+	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
 	d.Log("Starting register task definition %s", opt.DryRunString())
