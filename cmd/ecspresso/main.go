@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/fatih/color"
@@ -205,7 +207,9 @@ func _main() int {
 			return 1
 		}
 	}
-	ctx := context.TODO()
+
+	ctx, stop := signal.NotifyContext(context.Background(), trapSignals...)
+	defer stop()
 
 	c := ecspresso.NewDefaultConfig()
 	if sub == "init" {
@@ -298,7 +302,11 @@ func _main() int {
 		return 1
 	}
 	if err != nil {
-		ecspresso.Log("[ERROR] %s FAILED. %s", sub, err)
+		if errors.Is(err, context.Canceled) {
+			ecspresso.Log("[WARNING] Interrupted")
+		} else {
+			ecspresso.Log("[ERROR] %s FAILED. %s", sub, err)
+		}
 		return 1
 	}
 
