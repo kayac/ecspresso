@@ -11,13 +11,12 @@ import (
 )
 
 var (
-	commonLogger    *log.Logger
-	commonLogFilter *logutils.LevelFilter
+	commonLogger *log.Logger
 )
 
 func init() {
 	commonLogger = newLogger()
-	commonLogFilter = newLogFilter(os.Stderr, "WARNING")
+	commonLogger.SetOutput(newLogFilter(os.Stderr, "INFO"))
 }
 
 func newLogFilter(w io.Writer, minLevel string) *logutils.LevelFilter {
