@@ -56,10 +56,6 @@ func TestLoadConfigWithPluginDuplicate(t *testing.T) {
 	conf := &ecspresso.Config{}
 	ctx := context.Background()
 	err := conf.Load(ctx, "tests/config_duplicate_plugins.yaml")
-	if err != nil {
-		t.Error(err)
-	}
-	_, err = ecspresso.New(conf, &ecspresso.Option{})
 	if err == nil {
 		t.Log("expected an error to occur, but it didn't.")
 		t.FailNow()
