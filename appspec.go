@@ -9,6 +9,11 @@ import (
 	"github.com/kayac/ecspresso/appspec"
 )
 
+type AppSpecOption struct {
+	TaskDefinition *string
+	UpdateService  *bool
+}
+
 func (d *App) AppSpec(ctx context.Context, opt AppSpecOption) error {
 	ctx, cancel := d.Start(ctx)
 	defer cancel()

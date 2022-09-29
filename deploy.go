@@ -23,6 +23,25 @@ const (
 	CodeDeployConsoleURLFmt = "https://%s.console.aws.amazon.com/codesuite/codedeploy/deployments/%s?region=%s"
 )
 
+type DeployOption struct {
+	DryRun               *bool
+	DesiredCount         *int32
+	SkipTaskDefinition   *bool
+	ForceNewDeployment   *bool
+	NoWait               *bool
+	SuspendAutoScaling   *bool
+	RollbackEvents       *string
+	UpdateService        *bool
+	LatestTaskDefinition *bool
+}
+
+func (opt DeployOption) DryRunString() string {
+	if *opt.DryRun {
+		return dryRunStr
+	}
+	return ""
+}
+
 func calcDesiredCount(sv *Service, opt DeployOption) *int32 {
 	if sv.SchedulingStrategy == types.SchedulingStrategyDaemon {
 		return nil

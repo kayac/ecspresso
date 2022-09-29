@@ -3,12 +3,29 @@ package ecspresso
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/codedeploy"
+	cdTypes "github.com/aws/aws-sdk-go-v2/service/codedeploy/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
+
+type RollbackOption struct {
+	DryRun                   *bool
+	DeregisterTaskDefinition *bool
+	NoWait                   *bool
+	RollbackEvents           *string
+}
+
+func (opt RollbackOption) DryRunString() string {
+	if *opt.DryRun {
+		return dryRunStr
+	}
+	return ""
+}
 
 func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	ctx, cancel := d.Start(ctx)
@@ -79,4 +96,84 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	}
 
 	return nil
+}
+
+func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) error {
+	dp, err := d.findDeploymentInfo(ctx)
+	if err != nil {
+		return err
+	}
+
+	ld, err := d.codedeploy.ListDeployments(ctx, &codedeploy.ListDeploymentsInput{
+		ApplicationName:     dp.ApplicationName,
+		DeploymentGroupName: dp.DeploymentGroupName,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list deployments: %w", err)
+	}
+	if len(ld.Deployments) == 0 {
+		return ErrNotFound("no deployments are found")
+	}
+
+	dpID := ld.Deployments[0] // latest deployment id
+
+	dep, err := d.codedeploy.GetDeployment(ctx, &codedeploy.GetDeploymentInput{
+		DeploymentId: &dpID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get deployment: %w", err)
+	}
+
+	if *opt.DryRun {
+		d.Log("deployment id: %s", dpID)
+		d.Log("DRY RUN OK")
+		return nil
+	}
+
+	switch dep.DeploymentInfo.Status {
+	case cdTypes.DeploymentStatusSucceeded, cdTypes.DeploymentStatusFailed, cdTypes.DeploymentStatusStopped:
+		return d.createDeployment(ctx, sv, tdArn, opt.RollbackEvents)
+	default: // If the deployment is not yet complete
+		_, err = d.codedeploy.StopDeployment(ctx, &codedeploy.StopDeploymentInput{
+			DeploymentId:        &dpID,
+			AutoRollbackEnabled: aws.Bool(true),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to roll back the deployment: %w", err)
+		}
+
+		d.Log("Deployment %s is rolled back on CodeDeploy:", dpID)
+		return nil
+	}
+}
+
+func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) (string, error) {
+	var found bool
+	var nextToken *string
+	family := strings.Split(arnToName(taskDefinitionArn), ":")[0]
+	for {
+		out, err := d.ecs.ListTaskDefinitions(ctx,
+			&ecs.ListTaskDefinitionsInput{
+				NextToken:    nextToken,
+				FamilyPrefix: aws.String(family),
+				MaxResults:   aws.Int32(100),
+				Sort:         types.SortOrderDesc,
+			},
+		)
+		if err != nil {
+			return "", fmt.Errorf("failed to list taskdefinitions: %w", err)
+		}
+		if len(out.TaskDefinitionArns) == 0 {
+			return "", ErrNotFound(fmt.Sprintf("rollback target is not found: %s", err))
+		}
+		nextToken = out.NextToken
+		for _, tdArn := range out.TaskDefinitionArns {
+			if found {
+				return tdArn, nil
+			}
+			if tdArn == taskDefinitionArn {
+				found = true
+			}
+		}
+	}
 }
