@@ -49,7 +49,7 @@ func newVerifier(execCfg, appCfg aws.Config, opt *VerifyOption) *verifier {
 
 func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 	if !aws.ToBool(v.opt.GetSecrets) {
-		return verifySkipErr(fmt.Sprintf("get a secret value for %s", from))
+		return ErrSkipVerify(fmt.Sprintf("get a secret value for %s", from))
 	}
 
 	// secrets manager
@@ -119,9 +119,9 @@ type VerifyOption struct {
 
 type verifyResourceFunc func(context.Context) error
 
-type verifySkipErr string
+type ErrSkipVerify string
 
-func (v verifySkipErr) Error() string {
+func (v ErrSkipVerify) Error() string {
 	return string(v)
 }
 
@@ -169,7 +169,8 @@ func (d *App) verifyResource(ctx context.Context, resourceType string, verifyFun
 	print("%s", resourceType)
 	err := verifyFunc(ctx)
 	if err != nil {
-		if _, ok := err.(verifySkipErr); ok {
+		e := ErrSkipVerify("")
+		if errors.As(err, &e) {
 			print("--> %s [%s] %s", resourceType, color.CyanString("SKIP"), color.CyanString(err.Error()))
 			return nil
 		}
@@ -195,7 +196,7 @@ func (d *App) verifyCluster(ctx context.Context) error {
 
 func (d *App) verifyServiceDefinition(ctx context.Context) error {
 	if d.config.ServiceDefinitionPath == "" {
-		return verifySkipErr("no ServiceDefinition")
+		return ErrSkipVerify("no ServiceDefinition")
 	}
 	sv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 	if err != nil {
@@ -348,7 +349,7 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	ok, err = repo.HasPlatformImage(ctx, tag, arch, os)
 	if err != nil {
 		if errors.Is(err, registry.ErrDeprecatedManifest) || errors.Is(err, registry.ErrPullRateLimitExceeded) {
-			return verifySkipErr(err.Error())
+			return ErrSkipVerify(err.Error())
 		}
 		return err
 	}
@@ -458,7 +459,7 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 	}
 
 	if !aws.ToBool(d.verifier.opt.PutLogs) {
-		return verifySkipErr(fmt.Sprintf("putting logs to %s", group))
+		return ErrSkipVerify(fmt.Sprintf("putting logs to %s", group))
 	}
 
 	var stream string
