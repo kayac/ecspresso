@@ -23,11 +23,11 @@ const (
 	CodeDeployConsoleURLFmt = "https://%s.console.aws.amazon.com/codesuite/codedeploy/deployments/%s?region=%s"
 )
 
-func calcDesiredCount(sv *Service, opt optWithDesiredCount) *int32 {
+func calcDesiredCount(sv *Service, opt DeployOption) *int32 {
 	if sv.SchedulingStrategy == types.SchedulingStrategyDaemon {
 		return nil
 	}
-	if oc := opt.getDesiredCount(); oc != nil {
+	if oc := opt.DesiredCount; oc != nil {
 		if *oc == DefaultDesiredCount {
 			return sv.DesiredCount
 		}

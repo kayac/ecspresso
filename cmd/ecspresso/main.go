@@ -73,11 +73,12 @@ func _main() int {
 		LatestTaskDefinition: boolp(false),
 	}
 
-	create := kingpin.Command("create", "create service")
-	createOption := ecspresso.CreateOption{
-		DryRun:       create.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount: create.Flag("tasks", "desired count of tasks").Default("-1").Int32(),
-		NoWait:       create.Flag("no-wait", "exit ecspresso immediately after just created without waiting for service stable").Bool(),
+	create := kingpin.Command("create", "[DEPRECATED] use deploy command instead")
+	{
+		// for backward compatibility
+		create.Flag("dry-run", "dry-run").Bool()
+		create.Flag("tasks", "desired count of tasks").Default("-1").Int32()
+		create.Flag("no-wait", "exit ecspresso immediately after just created without waiting for service stable").Bool()
 	}
 
 	status := kingpin.Command("status", "show status of service")
@@ -270,7 +271,7 @@ func _main() int {
 	case "rollback":
 		err = app.Rollback(ctx, rollbackOption)
 	case "create":
-		err = app.Create(ctx, createOption)
+		err = fmt.Errorf("create command is deprecated. use deploy command instead")
 	case "delete":
 		err = app.Delete(ctx, deleteOption)
 	case "run":
