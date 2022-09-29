@@ -17,6 +17,60 @@ import (
 	"github.com/kylelemons/godebug/diff"
 )
 
+type DiffOption struct {
+	Unified *bool
+}
+
+func (d *App) Diff(ctx context.Context, opt DiffOption) error {
+	ctx, cancel := d.Start(ctx)
+	defer cancel()
+
+	var taskDefArn string
+	// diff for services only when service defined
+	if d.config.Service != "" {
+		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+		if err != nil {
+			return fmt.Errorf("failed to load service definition: %w", err)
+		}
+		remoteSv, err := d.DescribeService(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to describe service: %w", err)
+		}
+
+		if ds, err := diffServices(newSv, remoteSv, *remoteSv.ServiceArn, d.config.ServiceDefinitionPath, *opt.Unified); err != nil {
+			return err
+		} else if ds != "" {
+			fmt.Print(coloredDiff(ds))
+		}
+		taskDefArn = *remoteSv.TaskDefinition
+	}
+
+	// task definition
+	newTd, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return err
+	}
+	if taskDefArn == "" {
+		arn, err := d.findLatestTaskDefinitionArn(ctx, *newTd.Family)
+		if err != nil {
+			return err
+		}
+		taskDefArn = arn
+	}
+	remoteTd, err := d.DescribeTaskDefinition(ctx, taskDefArn)
+	if err != nil {
+		return err
+	}
+
+	if ds, err := diffTaskDefs(newTd, remoteTd, taskDefArn, d.config.TaskDefinitionPath, *opt.Unified); err != nil {
+		return err
+	} else if ds != "" {
+		fmt.Print(coloredDiff(ds))
+	}
+
+	return nil
+}
+
 func diffServices(local, remote *Service, remoteArn string, localPath string, unified bool) (string, error) {
 	sortServiceDefinitionForDiff(local)
 	sortServiceDefinitionForDiff(remote)
@@ -76,56 +130,6 @@ func diffTaskDefs(local, remote *TaskDefinitionInput, remoteArn string, localPat
 		return ds, nil
 	}
 	return fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds), nil
-}
-
-func (d *App) Diff(ctx context.Context, opt DiffOption) error {
-	ctx, cancel := d.Start(ctx)
-	defer cancel()
-
-	var taskDefArn string
-	// diff for services only when service defined
-	if d.config.Service != "" {
-		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
-		if err != nil {
-			return fmt.Errorf("failed to load service definition: %w", err)
-		}
-		remoteSv, err := d.DescribeService(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to describe service: %w", err)
-		}
-
-		if ds, err := diffServices(newSv, remoteSv, *remoteSv.ServiceArn, d.config.ServiceDefinitionPath, *opt.Unified); err != nil {
-			return err
-		} else if ds != "" {
-			fmt.Print(coloredDiff(ds))
-		}
-		taskDefArn = *remoteSv.TaskDefinition
-	}
-
-	// task definition
-	newTd, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-	if err != nil {
-		return err
-	}
-	if taskDefArn == "" {
-		arn, err := d.findLatestTaskDefinitionArn(ctx, *newTd.Family)
-		if err != nil {
-			return err
-		}
-		taskDefArn = arn
-	}
-	remoteTd, err := d.DescribeTaskDefinition(ctx, taskDefArn)
-	if err != nil {
-		return err
-	}
-
-	if ds, err := diffTaskDefs(newTd, remoteTd, taskDefArn, d.config.TaskDefinitionPath, *opt.Unified); err != nil {
-		return err
-	} else if ds != "" {
-		fmt.Print(coloredDiff(ds))
-	}
-
-	return nil
 }
 
 func coloredDiff(src string) string {

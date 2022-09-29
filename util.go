@@ -1,10 +1,13 @@
 package ecspresso
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/google/go-jsonnet"
 )
 
@@ -39,4 +42,30 @@ func (d *App) readDefinitionFile(path string) ([]byte, error) {
 		return d.loader.ReadWithEnvBytes([]byte(jsonStr))
 	}
 	return d.loader.ReadWithEnv(path)
+}
+
+func parseTags(s string) ([]types.Tag, error) {
+	tags := make([]types.Tag, 0)
+	if s == "" {
+		return tags, nil
+	}
+
+	tagsStr := strings.Split(s, ",")
+	for _, tag := range tagsStr {
+		if tag == "" {
+			continue
+		}
+		pair := strings.SplitN(tag, "=", 2)
+		if len(pair) != 2 {
+			return tags, fmt.Errorf("invalid tag format. Key=Value is required: %s", tag)
+		}
+		if len(pair[0]) == 0 {
+			return tags, fmt.Errorf("tag Key is required")
+		}
+		tags = append(tags, types.Tag{
+			Key:   aws.String(pair[0]),
+			Value: aws.String(pair[1]),
+		})
+	}
+	return tags, nil
 }

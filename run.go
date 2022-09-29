@@ -11,6 +11,33 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
+type RunOption struct {
+	DryRun               *bool
+	TaskDefinition       *string
+	NoWait               *bool
+	TaskOverrideStr      *string
+	TaskOverrideFile     *string
+	SkipTaskDefinition   *bool
+	Count                *int32
+	WatchContainer       *string
+	LatestTaskDefinition *bool
+	PropagateTags        *string
+	Tags                 *string
+	WaitUntil            *string
+	Revision             *int64
+}
+
+func (opt RunOption) waitUntilRunning() bool {
+	return aws.ToString(opt.WaitUntil) == "running"
+}
+
+func (opt RunOption) DryRunString() string {
+	if *opt.DryRun {
+		return ""
+	}
+	return ""
+}
+
 func (d *App) Run(ctx context.Context, opt RunOption) error {
 	ctx, cancel := d.Start(ctx)
 	defer cancel()
