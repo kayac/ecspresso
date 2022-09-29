@@ -50,7 +50,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 		return fmt.Errorf("failed to describe service: %w", err)
 	}
 	if len(out.Services) == 0 {
-		return fmt.Errorf("service is not found")
+		return ErrNotFound("service is not found")
 	}
 
 	sv := newServiceFromTypes(out.Services[0])

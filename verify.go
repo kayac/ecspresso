@@ -189,7 +189,7 @@ func (d *App) verifyCluster(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to describe cluster %s: %w", cluster, err)
 	} else if len(out.Clusters) == 0 {
-		return fmt.Errorf("cluster %s is not found", cluster)
+		return ErrNotFound(fmt.Sprintf("cluster %s is not found", cluster))
 	}
 	return nil
 }
@@ -226,7 +226,7 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 			if err != nil {
 				return err
 			} else if len(out.TargetGroups) == 0 {
-				return fmt.Errorf("target group %s is not found: %w", *lb.TargetGroupArn, err)
+				return ErrNotFound(fmt.Sprintf("target group %s is not found: %s", *lb.TargetGroupArn, err))
 			}
 			tgPort := aws.ToInt32(out.TargetGroups[0].Port)
 			cPort := aws.ToInt32(lb.ContainerPort)

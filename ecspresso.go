@@ -42,6 +42,12 @@ func taskDefinitionName(t *TaskDefinition) string {
 	return fmt.Sprintf("%s:%d", *t.Family, t.Revision)
 }
 
+type ErrNotFound string
+
+func (e ErrNotFound) Error() string {
+	return string(e)
+}
+
 type Service struct {
 	types.Service
 	DesiredCount *int32
@@ -107,7 +113,7 @@ func (d *App) DescribeService(ctx context.Context) (*Service, error) {
 		return nil, fmt.Errorf("failed to describe service: %w", err)
 	}
 	if len(out.Services) == 0 {
-		return nil, fmt.Errorf("service %s is not found", d.Service)
+		return nil, ErrNotFound(fmt.Sprintf("service %s is not found", d.Service))
 	}
 	return newServiceFromTypes(out.Services[0]), nil
 }
@@ -409,7 +415,7 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 			return "", fmt.Errorf("failed to list taskdefinitions: %w", err)
 		}
 		if len(out.TaskDefinitionArns) == 0 {
-			return "", fmt.Errorf("rollback target is not found: %w", err)
+			return "", ErrNotFound(fmt.Sprintf("rollback target is not found: %s", err))
 		}
 		nextToken = out.NextToken
 		for _, tdArn := range out.TaskDefinitionArns {
@@ -435,7 +441,7 @@ func (d *App) findLatestTaskDefinitionArn(ctx context.Context, family string) (s
 		return "", fmt.Errorf("failed to list taskdefinitions: %w", err)
 	}
 	if len(out.TaskDefinitionArns) == 0 {
-		return "", fmt.Errorf("no task definitions family %s are found", family)
+		return "", ErrNotFound(fmt.Sprintf("no task definitions family %s are found", family))
 	}
 	return out.TaskDefinitionArns[0], nil
 }
@@ -629,7 +635,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 		return err
 	}
 	if len(out.Deployments) == 0 {
-		return fmt.Errorf("no deployments found in progress")
+		return ErrNotFound("no deployments found in progress")
 	}
 	dpID := out.Deployments[0]
 	d.Log("Waiting for a deployment successful ID: " + dpID)
@@ -655,7 +661,7 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 		return fmt.Errorf("failed to list deployments: %w", err)
 	}
 	if len(ld.Deployments) == 0 {
-		return fmt.Errorf("no deployments are found")
+		return ErrNotFound("no deployments are found")
 	}
 
 	dpID := ld.Deployments[0] // latest deployment id
