@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -22,11 +23,11 @@ const (
 	CodeDeployConsoleURLFmt = "https://%s.console.aws.amazon.com/codesuite/codedeploy/deployments/%s?region=%s"
 )
 
-func calcDesiredCount(sv *Service, opt optWithDesiredCount) *int32 {
+func calcDesiredCount(sv *Service, opt DeployOption) *int32 {
 	if sv.SchedulingStrategy == types.SchedulingStrategyDaemon {
 		return nil
 	}
-	if oc := opt.getDesiredCount(); oc != nil {
+	if oc := opt.DesiredCount; oc != nil {
 		if *oc == DefaultDesiredCount {
 			return sv.DesiredCount
 		}
@@ -43,6 +44,10 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 	d.Log("Starting deploy %s", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
+		if errors.As(err, &errNotFound) {
+			d.Log("Service %s not found. Creating a new service %s", d.Service, opt.DryRunString())
+			return d.createService(ctx, opt)
+		}
 		return err
 	}
 
@@ -249,7 +254,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 		return nil, fmt.Errorf("failed to list applications in CodeDeploy: %w", err)
 	}
 	if len(la.Applications) == 0 {
-		return nil, fmt.Errorf("no any applications in CodeDeploy")
+		return nil, ErrNotFound("no any applications in CodeDeploy")
 	}
 	// BatchGetApplications accepts applications less than 100
 	for i := 0; i < len(la.Applications); i += 100 {
@@ -275,7 +280,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 				return nil, fmt.Errorf("failed to list deployment groups in CodeDeploy: %w", err)
 			}
 			if len(lg.DeploymentGroups) == 0 {
-				d.Log("[DEBUG] no deploymentGroups in application %v", *info.ApplicationName)
+				d.Log("[DEBUG] no deploymentGroups in application %s", *info.ApplicationName)
 				continue
 			}
 			groups, err := d.codedeploy.BatchGetDeploymentGroups(ctx, &codedeploy.BatchGetDeploymentGroupsInput{

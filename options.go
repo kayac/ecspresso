@@ -14,10 +14,6 @@ type DryRunnable interface {
 	DryRunString() bool
 }
 
-type optWithDesiredCount interface {
-	getDesiredCount() *int32
-}
-
 type DeployOption struct {
 	DryRun               *bool
 	DesiredCount         *int32
@@ -28,10 +24,6 @@ type DeployOption struct {
 	RollbackEvents       *string
 	UpdateService        *bool
 	LatestTaskDefinition *bool
-}
-
-func (opt DeployOption) getDesiredCount() *int32 {
-	return opt.DesiredCount
 }
 
 func (opt DeployOption) DryRunString() string {

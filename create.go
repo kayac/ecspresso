@@ -10,27 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
-type CreateOption struct {
-	DryRun       *bool
-	DesiredCount *int32
-	NoWait       *bool
-}
-
-func (opt CreateOption) getDesiredCount() *int32 {
-	return opt.DesiredCount
-}
-
-func (opt CreateOption) DryRunString() string {
-	if *opt.DryRun {
-		return dryRunStr
-	}
-	return ""
-}
-
-func (d *App) Create(ctx context.Context, opt CreateOption) error {
-	ctx, cancel := d.Start(ctx)
-	defer cancel()
-
+func (d *App) createService(ctx context.Context, opt DeployOption) error {
 	d.Log("Starting create service %s", opt.DryRunString())
 	svd, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 	if err != nil {
