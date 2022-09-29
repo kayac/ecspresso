@@ -119,12 +119,6 @@ type VerifyOption struct {
 
 type verifyResourceFunc func(context.Context) error
 
-type ErrSkipVerify string
-
-func (v ErrSkipVerify) Error() string {
-	return string(v)
-}
-
 // Verify verifies service / task definitions related resources are valid.
 func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
@@ -169,8 +163,7 @@ func (d *App) verifyResource(ctx context.Context, resourceType string, verifyFun
 	print("%s", resourceType)
 	err := verifyFunc(ctx)
 	if err != nil {
-		e := ErrSkipVerify("")
-		if errors.As(err, &e) {
+		if errors.As(err, &errSkipVerify) {
 			print("--> %s [%s] %s", resourceType, color.CyanString("SKIP"), color.CyanString(err.Error()))
 			return nil
 		}

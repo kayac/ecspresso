@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -43,6 +44,10 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 	d.Log("Starting deploy %s", opt.DryRunString())
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
+		if errors.As(err, &errNotFound) {
+			d.Log("Service %s not found. Creating a new service %s", d.Service, opt.DryRunString())
+			return d.createService(ctx, opt)
+		}
 		return err
 	}
 

@@ -42,12 +42,6 @@ func taskDefinitionName(t *TaskDefinition) string {
 	return fmt.Sprintf("%s:%d", *t.Family, t.Revision)
 }
 
-type ErrNotFound string
-
-func (e ErrNotFound) Error() string {
-	return string(e)
-}
-
 type Service struct {
 	types.Service
 	DesiredCount *int32
