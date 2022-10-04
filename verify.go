@@ -267,22 +267,24 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 				return errors.Errorf("target group %s is not found", *lb.TargetGroupArn)
 			}
 			d.DebugLog(out.GoString())
-			tgPort := aws.Int64Value(out.TargetGroups[0].Port)
-			cPort := aws.Int64Value(lb.ContainerPort)
-			if tgPort != cPort {
-				return errors.Errorf("target group's port %d and container's port %d mismatch", tgPort, cPort)
-			}
 
 			cname := aws.StringValue(lb.ContainerName)
+			cport := aws.Int64Value(lb.ContainerPort)
 			var container *ecs.ContainerDefinition
+		CONTAINER_DEF:
 			for _, c := range td.ContainerDefinitions {
-				if aws.StringValue(c.Name) == cname {
-					container = c
-					break
+				if aws.StringValue(c.Name) != cname {
+					continue
+				}
+				for _, pm := range c.PortMappings {
+					if aws.Int64Value(pm.ContainerPort) == cport {
+						container = c
+						break CONTAINER_DEF
+					}
 				}
 			}
 			if container == nil {
-				return errors.Errorf("container name %s is not defined in task definition", cname)
+				return errors.Errorf("container name %s and port %d is not defined in task definition", cname, cport)
 			}
 			return nil
 		})
