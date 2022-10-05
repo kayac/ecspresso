@@ -221,22 +221,24 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 			} else if len(out.TargetGroups) == 0 {
 				return ErrNotFound(fmt.Sprintf("target group %s is not found: %s", *lb.TargetGroupArn, err))
 			}
-			tgPort := aws.ToInt32(out.TargetGroups[0].Port)
-			cPort := aws.ToInt32(lb.ContainerPort)
-			if int32(tgPort) != cPort {
-				return fmt.Errorf("target group's port %d and container's port %d mismatch", tgPort, cPort)
-			}
 
 			cname := aws.ToString(lb.ContainerName)
+			cport := aws.ToInt32(lb.ContainerPort)
 			var container *types.ContainerDefinition
+		CONTAINER_DEF:
 			for _, c := range td.ContainerDefinitions {
-				if aws.ToString(c.Name) == cname {
-					container = &c
-					break
+				if aws.ToString(c.Name) != cname {
+					continue
+				}
+				for _, pm := range c.PortMappings {
+					if aws.ToInt32(pm.ContainerPort) == cport {
+						container = &c
+						break CONTAINER_DEF
+					}
 				}
 			}
 			if container == nil {
-				return fmt.Errorf("container name %s is not defined in task definition", cname)
+				return fmt.Errorf("container name %s and port %d is not defined in task definition", cname, cport)
 			}
 			return nil
 		})
