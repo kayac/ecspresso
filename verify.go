@@ -281,7 +281,7 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 	for _, c := range td.ContainerDefinitions {
 		name := fmt.Sprintf("ContainerDefinition[%s]", aws.ToString(c.Name))
 		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
-			return d.verifyContainer(ctx, &c)
+			return d.verifyContainer(ctx, &c, td)
 		})
 		if err != nil {
 			return err
@@ -413,7 +413,7 @@ func (d *App) verifyImage(ctx context.Context, image string) error {
 	return d.verifyRegistryImage(ctx, image, "", "")
 }
 
-func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition) error {
+func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition, td *ecs.RegisterTaskDefinitionInput) error {
 	image := aws.ToString(c.Image)
 	name := fmt.Sprintf("Image[%s]", image)
 	err := d.verifyResource(ctx, name, func(ctx context.Context) error {
@@ -439,6 +439,15 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition)
 			return err
 		}
 	}
+
+	if td.NetworkMode == types.NetworkModeAwsvpc {
+		for _, pm := range c.PortMappings {
+			if pm.HostPort != nil && aws.ToInt32(pm.ContainerPort) != aws.ToInt32(pm.HostPort) {
+				return fmt.Errorf("hostPort must be same as containerPort for awsvpc networkMode")
+			}
+		}
+	}
+
 	return nil
 }
 
