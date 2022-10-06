@@ -72,7 +72,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return err
 	}
 
-	var deploy deployFunc
+	deploy := d.UpdateServiceTasks // default
 	// detect controller
 	if dc := sv.DeploymentController; dc != nil {
 		switch dc.Type {
