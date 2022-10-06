@@ -123,7 +123,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 			return fmt.Errorf("failed to diff of service definitions: %w", err)
 		}
 		if ds != "" {
-			if err = d.UpdateServiceAttributes(ctx, newSv, opt); err != nil {
+			if err = d.UpdateServiceAttributes(ctx, newSv, tdArn, opt); err != nil {
 				return err
 			}
 			sv = newSv // updated
@@ -215,7 +215,7 @@ func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 	return in
 }
 
-func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, opt DeployOption) error {
+func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, taskDefinitionArn string, opt DeployOption) error {
 	in := svToUpdateServiceInput(sv)
 	if sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy {
 		// unable to update attributes below with a CODE_DEPLOY deployment controller.
@@ -229,6 +229,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, opt Depl
 	}
 	in.Service = aws.String(d.Service)
 	in.Cluster = aws.String(d.Cluster)
+	in.TaskDefinition = aws.String(taskDefinitionArn)
 
 	if *opt.DryRun {
 		d.Log("update service input:")
