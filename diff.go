@@ -81,7 +81,7 @@ func diffServices(local, remote *Service, remoteArn string, localPath string, un
 	}
 	if local.DesiredCount == nil {
 		// ignore DesiredCount when it in local is not defined.
-		remote.DesiredCount = aws.Int32(0)
+		remote.DesiredCount = nil
 	}
 	remoteSvBytes, err := MarshalJSONForAPI(svToUpdateServiceInput(remote))
 	if err != nil {
@@ -231,6 +231,15 @@ func sortTaskDefinitionForDiff(td *TaskDefinitionInput) {
 		sort.SliceStable(cd.PortMappings, func(i, j int) bool {
 			return jsonStr(cd.PortMappings[i]) < jsonStr(cd.PortMappings[j])
 		})
+		// fill hostPort only when networkMode is awsvpc
+		if td.NetworkMode == types.NetworkModeAwsvpc {
+			for i, pm := range cd.PortMappings {
+				if pm.HostPort == nil {
+					pm.HostPort = pm.ContainerPort
+				}
+				cd.PortMappings[i] = pm
+			}
+		}
 		sort.SliceStable(cd.VolumesFrom, func(i, j int) bool {
 			return jsonStr(cd.VolumesFrom[i]) < jsonStr(cd.VolumesFrom[j])
 		})
