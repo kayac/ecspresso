@@ -47,20 +47,22 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 		return err
 	}
 
-	if sv.DeploymentController != nil && sv.DeploymentController.Type != types.DeploymentControllerTypeCodeDeploy {
-		return d.RollbackByCodeDeploy(ctx, sv, targetArn, opt)
-	}
-
 	d.Log("Rolling back to %s", arnToName(targetArn))
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
+	d.Log("deployment controller: %s", sv.DeploymentController.Type)
+	if sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy {
+		return d.RollbackByCodeDeploy(ctx, sv, targetArn, opt)
+	}
+
 	if err := d.UpdateServiceTasks(
 		ctx,
 		targetArn,
 		nil,
+		sv,
 		DeployOption{
 			ForceNewDeployment: aws.Bool(false),
 			UpdateService:      aws.Bool(false),
