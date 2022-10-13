@@ -42,6 +42,8 @@ func (opt DeployOption) DryRunString() string {
 	return ""
 }
 
+type deployFunc func(context.Context, string, *int32, *Service, DeployOption) error
+
 func calcDesiredCount(sv *Service, opt DeployOption) *int32 {
 	if sv.SchedulingStrategy == types.SchedulingStrategyDaemon {
 		return nil
@@ -68,6 +70,19 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 			return d.createService(ctx, opt)
 		}
 		return err
+	}
+
+	deploy := d.UpdateServiceTasks // default
+	// detect controller
+	if dc := sv.DeploymentController; dc != nil {
+		switch dc.Type {
+		case types.DeploymentControllerTypeCodeDeploy:
+			deploy = d.DeployByCodeDeploy
+		case types.DeploymentControllerTypeEcs:
+			deploy = d.UpdateServiceTasks
+		default:
+			return fmt.Errorf("unsupported deployment controller type: %s", dc.Type)
+		}
 	}
 
 	var tdArn string
@@ -108,7 +123,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 			return fmt.Errorf("failed to diff of service definitions: %w", err)
 		}
 		if ds != "" {
-			if err = d.UpdateServiceAttributes(ctx, newSv, opt); err != nil {
+			if err = d.UpdateServiceAttributes(ctx, newSv, tdArn, opt); err != nil {
 				return err
 			}
 			sv = newSv // updated
@@ -137,20 +152,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		}
 	}
 
-	// detect controller
-	if dc := sv.DeploymentController; dc != nil {
-		switch dc.Type {
-		case types.DeploymentControllerTypeCodeDeploy:
-			return d.DeployByCodeDeploy(ctx, tdArn, count, sv, opt)
-		case types.DeploymentControllerTypeEcs:
-			break
-		default:
-			return fmt.Errorf("could not deploy a service using deployment controller type %s", dc.Type)
-		}
-	}
-
-	// rolling deploy (ECS internal)
-	if err := d.UpdateServiceTasks(ctx, tdArn, count, opt); err != nil {
+	if err := deploy(ctx, tdArn, count, sv, opt); err != nil {
 		return err
 	}
 
@@ -167,9 +169,9 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 	return nil
 }
 
-func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, count *int32, opt DeployOption) error {
+func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) error {
 	in := &ecs.UpdateServiceInput{
-		Service:            aws.String(d.Service),
+		Service:            sv.ServiceName,
 		Cluster:            aws.String(d.Cluster),
 		TaskDefinition:     aws.String(taskDefinitionArn),
 		DesiredCount:       count,
@@ -213,7 +215,7 @@ func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 	return in
 }
 
-func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, opt DeployOption) error {
+func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, taskDefinitionArn string, opt DeployOption) error {
 	in := svToUpdateServiceInput(sv)
 	if sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy {
 		// unable to update attributes below with a CODE_DEPLOY deployment controller.
@@ -227,6 +229,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, opt Depl
 	}
 	in.Service = aws.String(d.Service)
 	in.Cluster = aws.String(d.Cluster)
+	in.TaskDefinition = aws.String(taskDefinitionArn)
 
 	if *opt.DryRun {
 		d.Log("update service input:")
