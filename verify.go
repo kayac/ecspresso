@@ -533,22 +533,24 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 	return nil
 }
 
-func parseRoleArn(arn string) (roleName string, err error) {
-	if !strings.HasPrefix(arn, "arn:aws:iam::") {
+func extractRoleName(roleArn string) (string, error) {
+	a, err := arn.Parse(roleArn)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse role arn:%s %w", roleArn, err)
+	}
+	if a.Service != "iam" {
 		return "", fmt.Errorf("not a valid role arn")
 	}
-	rn := strings.Split(arn, "/")
-	if len(rn) < 2 {
-		return "", errors.New("invalid role syntax")
-	}
-	if !strings.HasSuffix(rn[0], ":role") {
+	if strings.HasPrefix(a.Resource, "role/") {
+		rs := strings.Split(a.Resource, "/")
+		return rs[len(rs)-1], nil
+	} else {
 		return "", fmt.Errorf("not a valid role arn")
 	}
-	return rn[len(rn)-1], nil
 }
 
-func (d *App) verifyRole(ctx context.Context, arn string) error {
-	roleName, err := parseRoleArn(arn)
+func (d *App) verifyRole(ctx context.Context, roleArn string) error {
+	roleName, err := extractRoleName(roleArn)
 	if err != nil {
 		return err
 	}

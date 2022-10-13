@@ -134,7 +134,7 @@ func TestNormalizePlatform(t *testing.T) {
 
 func TestParseRoleArn(t *testing.T) {
 	for _, s := range testRoleArns {
-		name, err := ecspresso.ParseRoleArn(s.arn)
+		name, err := ecspresso.ExtractRoleName(s.arn)
 		if s.isValid {
 			if name != s.roleName {
 				t.Errorf("invalid roleName got:%s expected:%s", name, s.roleName)
