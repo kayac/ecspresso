@@ -202,9 +202,6 @@ func sortServiceDefinitionForDiff(sv *Service) {
 		}
 	}
 
-	if len(sv.LoadBalancers) > 0 && sv.HealthCheckGracePeriodSeconds == nil {
-		sv.HealthCheckGracePeriodSeconds = aws.Int32(0)
-	}
 	if nc := sv.NetworkConfiguration; nc != nil {
 		if ac := nc.AwsvpcConfiguration; ac != nil {
 			if ac.AssignPublicIp == "" {
