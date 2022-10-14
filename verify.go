@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	cloudwatchlogsTypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
@@ -20,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -32,6 +34,7 @@ type verifier struct {
 	ssm            *ssm.Client
 	secretsmanager *secretsmanager.Client
 	ecr            *ecr.Client
+	s3             *s3.Client
 	opt            *VerifyOption
 	isAssumed      bool
 }
@@ -42,6 +45,7 @@ func newVerifier(execCfg, appCfg aws.Config, opt *VerifyOption) *verifier {
 		ssm:            ssm.NewFromConfig(execCfg),
 		secretsmanager: secretsmanager.NewFromConfig(execCfg),
 		ecr:            ecr.NewFromConfig(execCfg),
+		s3:             s3.NewFromConfig(appCfg),
 		opt:            opt,
 		isAssumed:      &execCfg != &appCfg,
 	}
@@ -84,6 +88,32 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 	})
 	if err != nil {
 		return fmt.Errorf("failed to get ssm parameter %s: %w", name, err)
+	}
+	return nil
+}
+
+func (v *verifier) existsEnvironmentFile(ctx context.Context, envFile types.EnvironmentFile) error {
+	if envFile.Type != types.EnvironmentFileTypeS3 {
+		return ErrSkipVerify("unsupported environment file type: " + string(envFile.Type))
+	}
+	s3arn := aws.ToString(envFile.Value)
+	a, err := arn.Parse(s3arn)
+	if err != nil {
+		return fmt.Errorf("failed to parse s3 arn %s: %w", s3arn, err)
+	}
+	if a.Service != "s3" {
+		return fmt.Errorf("invalid s3 arn %s", s3arn)
+	}
+	rs := strings.SplitN(a.Resource, "/", 2)
+	if len(rs) != 2 {
+		return fmt.Errorf("invalid s3 arn %s", s3arn)
+	}
+	bucket, key := rs[0], rs[1]
+	if _, err = v.s3.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	}); err != nil {
+		return fmt.Errorf("failed to head s3 object %s: %w", s3arn, err)
 	}
 	return nil
 }
@@ -439,6 +469,14 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition,
 			return err
 		}
 	}
+	for _, envFile := range c.EnvironmentFiles {
+		name := fmt.Sprintf("EnvironmentFile[%s %s]", envFile.Type, aws.ToString(envFile.Value))
+		if err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+			return d.verifier.existsEnvironmentFile(ctx, envFile)
+		}); err != nil {
+			return err
+		}
+	}
 
 	if td.NetworkMode == types.NetworkModeAwsvpc {
 		for _, pm := range c.PortMappings {
@@ -495,22 +533,24 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 	return nil
 }
 
-func parseRoleArn(arn string) (roleName string, err error) {
-	if !strings.HasPrefix(arn, "arn:aws:iam::") {
+func extractRoleName(roleArn string) (string, error) {
+	a, err := arn.Parse(roleArn)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse role arn:%s %w", roleArn, err)
+	}
+	if a.Service != "iam" {
 		return "", fmt.Errorf("not a valid role arn")
 	}
-	rn := strings.Split(arn, "/")
-	if len(rn) < 2 {
-		return "", errors.New("invalid role syntax")
-	}
-	if !strings.HasSuffix(rn[0], ":role") {
+	if strings.HasPrefix(a.Resource, "role/") {
+		rs := strings.Split(a.Resource, "/")
+		return rs[len(rs)-1], nil
+	} else {
 		return "", fmt.Errorf("not a valid role arn")
 	}
-	return rn[len(rn)-1], nil
 }
 
-func (d *App) verifyRole(ctx context.Context, arn string) error {
-	roleName, err := parseRoleArn(arn)
+func (d *App) verifyRole(ctx context.Context, roleArn string) error {
+	roleName, err := extractRoleName(roleArn)
 	if err != nil {
 		return err
 	}
