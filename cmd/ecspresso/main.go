@@ -170,7 +170,7 @@ func _main() int {
 
 	render := kingpin.Command("render", "render config, service definition or task definition file to stdout")
 	renderOption := ecspresso.RenderOption{
-		Targets: render.Arg("targets", "render targets").Required().Enums(
+		Targets: render.Arg("targets", "render targets (config, servicedef, taskdef)").Required().Enums(
 			"config",
 			"servicedef", "service-definition",
 			"taskdef", "task-definition",
