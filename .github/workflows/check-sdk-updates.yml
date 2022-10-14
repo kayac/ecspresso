@@ -1,0 +1,34 @@
+name: Check SDK updates for ECS
+on:
+  schedule:
+    - cron: "14 23 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Check SDK updates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          ref: working-v2
+          fetch-depth: 0 # it is required for the changelog to work correctly.
+
+      - name: Check SDK updates for ECS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          gh release --repo aws/aws-sdk-go-v2 view | grep service/ecs >> aws-sdk-go-v2-ecs.md
+          uniq aws-sdk-go-v2-ecs.md > aws-sdk-go-v2-ecs.md.tmp
+          mv aws-sdk-go-v2-ecs.md.tmp aws-sdk-go-v2-ecs.md
+          git diff --exit-code aws-sdk-go-v2-ecs.md
+          if [[ $? -eq 0 ]]; then
+            echo "No changes detected"
+            exit 0
+          fi
+          git switch -c update-aws-sdk-go-v2-ecs-$(date +%Y-%m-%d-%H-%M-%S)
+          git add aws-sdk-go-v2-ecs.md
+          git commit -m "Update aws-sdk-go-v2 about service/ecs $(date +%Y-%m-%d)"
+          gh pr create --title "Update aws-sdk-go-v2 about service/ecs $(date +%Y-%m-%d)"
