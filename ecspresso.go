@@ -243,7 +243,7 @@ func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDe
 		Include:        []*string{aws.String("TAGS")},
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to describe taskdefinition")
 	}
 	return tdToTaskDefinitionInput(out.TaskDefinition, out.Tags), nil
 }
