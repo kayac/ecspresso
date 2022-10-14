@@ -170,9 +170,11 @@ func _main() int {
 
 	render := kingpin.Command("render", "render config, service definition or task definition file to stdout")
 	renderOption := ecspresso.RenderOption{
-		ServiceDefinition: render.Flag("service-definition", "render service definition").Bool(),
-		TaskDefinition:    render.Flag("task-definition", "render task definition").Bool(),
-		ConfigFile:        render.Flag("config-file", "render config file").Bool(),
+		Targets: render.Arg("targets", "render targets (config, servicedef, taskdef)").Required().Enums(
+			"config",
+			"servicedef", "service-definition",
+			"taskdef", "task-definition",
+		),
 	}
 
 	tasks := kingpin.Command("tasks", "list tasks that are in a service or having the same family")
