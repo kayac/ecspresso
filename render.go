@@ -3,45 +3,47 @@ package ecspresso
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"os"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"gopkg.in/yaml.v2"
 )
 
 type RenderOption struct {
-	ConfigFile        *bool
-	ServiceDefinition *bool
-	TaskDefinition    *bool
+	Targets *[]string
 }
 
 func (d *App) Render(ctx context.Context, opt RenderOption) error {
 	out := bufio.NewWriter(os.Stdout)
 	defer out.Flush()
 
-	if aws.ToBool(opt.ConfigFile) {
-		return yaml.NewEncoder(out).Encode(d.config)
-	}
-
-	if aws.ToBool(opt.ServiceDefinition) {
-		sv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
-		if err != nil {
-			return err
+	for _, target := range *opt.Targets {
+		switch target {
+		case "config":
+			if err := yaml.NewEncoder(out).Encode(d.config); err != nil {
+				return err
+			}
+		case "service-definition", "servicedef":
+			sv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
+			if err != nil {
+				return err
+			}
+			b, _ := MarshalJSONForAPI(sv)
+			if _, err = out.Write(b); err != nil {
+				return err
+			}
+		case "task-definition", "taskdef":
+			td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+			if err != nil {
+				return err
+			}
+			b, _ := MarshalJSONForAPI(td)
+			if _, err := out.Write(b); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unknown target: %s", target)
 		}
-		b, _ := MarshalJSONForAPI(sv)
-		_, err = out.Write(b)
-		return err
 	}
-
-	if aws.ToBool(opt.TaskDefinition) {
-		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-		if err != nil {
-			return err
-		}
-		b, _ := MarshalJSONForAPI(td)
-		_, err = out.Write(b)
-		return err
-	}
-
 	return nil
 }

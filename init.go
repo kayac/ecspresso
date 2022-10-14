@@ -118,7 +118,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 	return nil
 }
 
-func treatmentServiceDefinition(sv *Service) *Service {
+func treatmentServiceDefinition(sv *Service) {
 	sv.ClusterArn = nil
 	sv.CreatedAt = nil
 	sv.CreatedBy = nil
@@ -136,8 +136,6 @@ func treatmentServiceDefinition(sv *Service) *Service {
 	if sv.PropagateTags != types.PropagateTagsService && sv.PropagateTags != types.PropagateTagsTaskDefinition {
 		sv.PropagateTags = types.PropagateTagsNone
 	}
-
-	return sv
 }
 
 func (d *App) saveFile(path string, b []byte, mode os.FileMode, force bool) error {
