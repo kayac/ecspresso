@@ -32,7 +32,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	defer cancel()
 
 	if aws.ToBool(opt.DeregisterTaskDefinition) && aws.ToBool(opt.NoWait) {
-		Log("[WARNING] --deregister-task-definition not works with --no-wait together")
+		return fmt.Errorf("--deregister-task-definition not works with --no-wait together. Please use --no-deregister-task-definition with --no-wait")
 	}
 
 	d.Log("Starting rollback %s", opt.DryRunString())
@@ -49,6 +49,11 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 
 	d.Log("Rolling back to %s", arnToName(targetArn))
 	if *opt.DryRun {
+		if *opt.DeregisterTaskDefinition {
+			d.Log("%s will be deregistered", arnToName(currentArn))
+		} else {
+			d.Log("%s will not be deregistered", arnToName(currentArn))
+		}
 		d.Log("DRY RUN OK")
 		return nil
 	}
