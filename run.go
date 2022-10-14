@@ -219,6 +219,9 @@ func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn st
 	}
 	family := *td.Family
 	defer func() {
+		if err != nil {
+			return
+		}
 		watchContainer = containerOf(td, opt.WatchContainer)
 		d.Log("Task definition ARN: %s", tdArn)
 		d.Log("Watch container: %s", *watchContainer.Name)
