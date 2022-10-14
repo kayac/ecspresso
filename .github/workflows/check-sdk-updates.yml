@@ -28,7 +28,9 @@ jobs:
             echo "No changes detected"
             exit 0
           fi
+          git config --local user.email "fujiwara.shunichiro@gmail.com"
+          git config --local user.name "GitHub Actions"
           git switch -c update-aws-sdk-go-v2-ecs-$(date +%Y-%m-%d-%H-%M-%S)
           git add aws-sdk-go-v2-ecs.md
           git commit -m "Update aws-sdk-go-v2 about service/ecs $(date +%Y-%m-%d)"
-          gh pr create --title "Update aws-sdk-go-v2 about service/ecs $(date +%Y-%m-%d)"
+          gh pr create --title "Update aws-sdk-go-v2 about service/ecs $(date +%Y-%m-%d)" --fill
