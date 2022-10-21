@@ -20,7 +20,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
-	goConfig "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 )
 
@@ -65,16 +64,20 @@ type App struct {
 	verifier    *verifier
 
 	config *Config
-	option *Option
-	loader *goConfig.Loader
+	loader *configLoader
 	logger *log.Logger
 }
 
-func New(conf *Config, opt *Option) (*App, error) {
-	loader := goConfig.New()
-	for _, f := range conf.templateFuncs {
-		loader.Funcs(f)
+func New(ctx context.Context, opt *Option) (*App, error) {
+	loader := newConfigLoader(opt.ExtStr, opt.ExtCode)
+	conf, err := loader.Load(ctx, opt.ConfigFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
 	}
+	if err := conf.ValidateVersion(opt.Version); err != nil {
+		return nil, err
+	}
+
 	logger := newLogger()
 	if opt.Debug {
 		logger.SetOutput(newLogFilter(os.Stderr, "DEBUG"))
@@ -93,25 +96,34 @@ func New(conf *Config, opt *Option) (*App, error) {
 		elbv2:       elasticloadbalancingv2.NewFromConfig(conf.awsv2Config),
 
 		config: conf,
-		option: opt,
 		loader: loader,
 		logger: logger,
 	}
 	return d, nil
 }
 
+func (d *App) Config() *Config {
+	return d.config
+}
+
+func (d *App) Timeout() time.Duration {
+	return d.config.Timeout.Duration
+}
+
 func (d *App) Start(ctx context.Context) (context.Context, context.CancelFunc) {
-	if d.config.Timeout > 0 {
-		return context.WithTimeout(ctx, d.config.Timeout)
+	if d.config.Timeout.Duration > 0 {
+		return context.WithTimeout(ctx, d.config.Timeout.Duration)
 	} else {
 		return ctx, func() {}
 	}
 }
 
 type Option struct {
-	Debug   bool
-	ExtStr  map[string]string
-	ExtCode map[string]string
+	ConfigFilePath string
+	Version        string
+	Debug          bool
+	ExtStr         map[string]string
+	ExtCode        map[string]string
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {

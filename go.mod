@@ -24,6 +24,7 @@ require (
 	github.com/fujiwara/ecsta v0.0.5
 	github.com/fujiwara/logutils v1.1.0
 	github.com/fujiwara/tfstate-lookup v1.0.0
+	github.com/goccy/go-yaml v1.9.5
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-jsonnet v0.18.0
 	github.com/hashicorp/go-envparse v0.1.0
@@ -36,7 +37,6 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/image-spec v1.0.2
 	golang.org/x/sys v0.0.0-20220927170352-d9d178bc13c6
-	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -117,5 +117,6 @@ require (
 	google.golang.org/genproto v0.0.0-20220916134934-764224ccc2d1 // indirect
 	google.golang.org/grpc v1.49.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )

@@ -226,24 +226,16 @@ func _main() int {
 			ecspresso.Log("[ERROR] Could not init config: %s", err)
 			return 1
 		}
-	} else {
-		if err := c.Load(ctx, *conf); err != nil {
-			ecspresso.Log("[ERROR] Could not load config file %s: %s", *conf, err)
-			kingpin.Usage()
-			return 1
-		}
-		if err := c.ValidateVersion(Version); err != nil {
-			ecspresso.Log("[ERROR] %s", err.Error())
-			return 1
-		}
 	}
 
 	opt := &ecspresso.Option{
-		Debug:   *debug,
-		ExtStr:  *extStr,
-		ExtCode: *extCode,
+		ConfigFilePath: *conf,
+		Version:        Version,
+		Debug:          *debug,
+		ExtStr:         *extStr,
+		ExtCode:        *extCode,
 	}
-	app, err := ecspresso.New(c, opt)
+	app, err := ecspresso.New(ctx, opt)
 	if err != nil {
 		ecspresso.Log("[ERROR] %s", err)
 		return 1

@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
@@ -12,16 +13,12 @@ import (
 )
 
 func TestLoadServiceDefinition(t *testing.T) {
-	c := &ecspresso.Config{}
 	ctx := context.Background()
-	err := c.Load(ctx, "tests/test.yaml")
+	app, err := ecspresso.New(ctx, &ecspresso.Option{ConfigFilePath: "tests/test.yaml"})
 	if err != nil {
 		t.Error(err)
 	}
-	app, err := ecspresso.New(c, &ecspresso.Option{})
-	if err != nil {
-		t.Error(err)
-	}
+	c := app.Config()
 	for _, ext := range []string{"", "net"} {
 		sv, err := app.LoadServiceDefinition(c.ServiceDefinitionPath + ext)
 		if err != nil || sv == nil {
@@ -52,10 +49,9 @@ func TestLoadConfigWithPluginMultiple(t *testing.T) {
 func TestLoadConfigWithPluginDuplicate(t *testing.T) {
 	os.Setenv("TAG", "testing")
 	os.Setenv("JSON", `{"foo":"bar"}`)
-
-	conf := &ecspresso.Config{}
 	ctx := context.Background()
-	err := conf.Load(ctx, "tests/config_duplicate_plugins.yaml")
+	loader := ecspresso.NewConfigLoader(nil, nil)
+	_, err := loader.Load(ctx, "tests/config_duplicate_plugins.yaml")
 	if err == nil {
 		t.Log("expected an error to occur, but it didn't.")
 		t.FailNow()
@@ -70,24 +66,26 @@ func TestLoadConfigWithPluginDuplicate(t *testing.T) {
 }
 
 func TestLoadConfigWithPlugin(t *testing.T) {
-	testLoadConfigWithPlugin(t, "tests/ecspresso.yml")
+	for _, ext := range []string{".yml", ".yaml", ".json", ".jsonnet"} {
+		testLoadConfigWithPlugin(t, "tests/ecspresso"+ext)
+	}
 }
 
 func testLoadConfigWithPlugin(t *testing.T, path string) {
 	os.Setenv("TAG", "testing")
 	os.Setenv("JSON", `{"foo":"bar"}`)
+	os.Setenv("AWS_REGION", "ap-northeast-1")
 	ctx := context.Background()
-	conf := &ecspresso.Config{}
-	err := conf.Load(ctx, path)
-	if err != nil {
-		t.Error(err)
-	}
-	app, err := ecspresso.New(conf, &ecspresso.Option{})
+	app, err := ecspresso.New(ctx, &ecspresso.Option{ConfigFilePath: path})
 	if err != nil {
 		t.Error(err)
 	}
 	if app.Name() != "test/default" {
 		t.Errorf("unexpected name got %s", app.Name())
+	}
+	conf := app.Config()
+	if conf.Timeout.Duration != time.Minute*10 {
+		t.Errorf("unexpected timeout got %s expected %s", conf.Timeout.Duration, time.Minute*10)
 	}
 
 	svd, err := app.LoadServiceDefinition(conf.ServiceDefinitionPath)

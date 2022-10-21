@@ -26,13 +26,7 @@ func TestCommonLogger(t *testing.T) {
 }
 
 func TestLogger(t *testing.T) {
-	app, err := ecspresso.New(&ecspresso.Config{
-		Cluster: "testcluster",
-		Service: "testservice",
-	}, &ecspresso.Option{})
-	if err != nil {
-		t.Error(err)
-	}
+	app := &ecspresso.App{}
 	for _, level := range logLevels {
 		b := new(bytes.Buffer)
 		logger := ecspresso.NewLogger()

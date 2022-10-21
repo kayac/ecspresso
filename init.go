@@ -11,8 +11,8 @@ import (
 	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/goccy/go-yaml"
 	"github.com/google/go-jsonnet/formatter"
-	"gopkg.in/yaml.v2"
 )
 
 var CreateFileMode = os.FileMode(0644)
