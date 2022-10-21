@@ -24,6 +24,7 @@ import (
 )
 
 const DefaultDesiredCount = -1
+const DefaultConfigFilePath = "ecspresso.yml"
 const dryRunStr = "DRY RUN"
 
 var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
@@ -69,6 +70,7 @@ type App struct {
 }
 
 func New(ctx context.Context, opt *Option) (*App, error) {
+	opt.resolveDefaultConfigFilePath()
 	loader := newConfigLoader(opt.ExtStr, opt.ExtCode)
 	var (
 		conf *Config
@@ -133,6 +135,27 @@ type Option struct {
 	Debug          bool
 	ExtStr         map[string]string
 	ExtCode        map[string]string
+}
+
+func (opt *Option) resolveDefaultConfigFilePath() string {
+	path := DefaultConfigFilePath
+	defer func() {
+		log.Println("resolved config file path:", path)
+		opt.ConfigFilePath = path
+		if opt.InitOption != nil {
+			opt.InitOption.ConfigFilePath = &path
+		}
+	}()
+	if opt.ConfigFilePath != "" {
+		return opt.ConfigFilePath
+	}
+	for _, ext := range []string{ymlExt, yamlExt, jsonExt, jsonnetExt} {
+		if _, err := os.Stat("ecspresso" + ext); err == nil {
+			path = "ecspresso" + ext
+			return path
+		}
+	}
+	return path
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {

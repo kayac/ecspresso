@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -185,7 +184,7 @@ func (d *App) saveFile(path string, b []byte, mode os.FileMode, force bool) erro
 			return nil
 		}
 	}
-	if err := ioutil.WriteFile(path, b, mode); err != nil {
+	if err := os.WriteFile(path, b, mode); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", path, err)
 	}
 	return nil

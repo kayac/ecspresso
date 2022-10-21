@@ -22,7 +22,7 @@ func main() {
 func _main() int {
 	kingpin.Command("version", "show version")
 
-	configFilePath := kingpin.Flag("config", "config file").Default("ecspresso.yml").String()
+	configFilePath := kingpin.Flag("config", "config file").String()
 	debug := kingpin.Flag("debug", "enable debug log").Bool()
 	envFiles := kingpin.Flag("envfile", "environment files").Strings()
 	extStr := kingpin.Flag("ext-str", "external string values for Jsonnet").StringMap()
