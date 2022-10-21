@@ -134,7 +134,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 		var b []byte
 		var err error
 		if *opt.Jsonnet {
-			b, err = json.Marshal(conf)
+			b, err = json.MarshalIndent(conf, "", "  ")
 			if err != nil {
 				return fmt.Errorf("unable to marshal config to JSON: %w", err)
 			}
