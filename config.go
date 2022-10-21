@@ -55,6 +55,7 @@ type Config struct {
 	FilterCommand         string           `yaml:"filter_command,omitempty" json:"filter_command,omitempty"`
 	Timeout               Duration         `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 
+	path               string
 	templateFuncs      []template.FuncMap
 	dir                string
 	versionConstraints goVersion.Constraints
@@ -62,11 +63,11 @@ type Config struct {
 }
 
 // Load loads configuration file from file path.
-func (l *configLoader) Load(ctx context.Context, path string) (*Config, error) {
-	conf := &Config{}
+func (l *configLoader) Load(ctx context.Context, path string, version string) (*Config, error) {
+	conf := &Config{path: path}
 	ext := filepath.Ext(path)
 	switch ext {
-	case ".yml", ".yaml":
+	case ymlExt, yamlExt:
 		b, err := l.ReadWithEnv(path)
 		if err != nil {
 			return nil, err
@@ -74,7 +75,7 @@ func (l *configLoader) Load(ctx context.Context, path string) (*Config, error) {
 		if err := yaml.Unmarshal(b, conf); err != nil {
 			return nil, fmt.Errorf("failed to parse yaml: %w", err)
 		}
-	case ".json", ".jsonnet":
+	case jsonExt, jsonnetExt:
 		jsonStr, err := l.VM.EvaluateFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to evaluate jsonnet file: %w", err)
@@ -92,6 +93,9 @@ func (l *configLoader) Load(ctx context.Context, path string) (*Config, error) {
 
 	conf.dir = filepath.Dir(path)
 	if err := conf.Restrict(ctx); err != nil {
+		return nil, err
+	}
+	if err := conf.ValidateVersion(version); err != nil {
 		return nil, err
 	}
 	for _, f := range conf.templateFuncs {

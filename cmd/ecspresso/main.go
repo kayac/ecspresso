@@ -22,7 +22,7 @@ func main() {
 func _main() int {
 	kingpin.Command("version", "show version")
 
-	conf := kingpin.Flag("config", "config file").Default("ecspresso.yml").String()
+	configFilePath := kingpin.Flag("config", "config file").Default("ecspresso.yml").String()
 	debug := kingpin.Flag("debug", "enable debug log").Bool()
 	envFiles := kingpin.Flag("envfile", "environment files").Strings()
 	extStr := kingpin.Flag("ext-str", "external string values for Jsonnet").StringMap()
@@ -149,6 +149,7 @@ func _main() int {
 		ServiceDefinitionPath: init.Flag("service-definition-path", "output service definition file path").Default("ecs-service-def.json").String(),
 		ForceOverwrite:        init.Flag("force-overwrite", "force overwrite files").Bool(),
 		Jsonnet:               init.Flag("jsonnet", "format as jsonnet to generate definition files").Bool(),
+		ConfigFilePath:        configFilePath,
 	}
 
 	diff := kingpin.Command("diff", "display diff for task definition compared with latest one on ECS")
@@ -214,26 +215,15 @@ func _main() int {
 	ctx, stop := signal.NotifyContext(context.Background(), trapSignals...)
 	defer stop()
 
-	c := ecspresso.NewDefaultConfig()
-	if sub == "init" {
-		c.Region = *initOption.Region
-		c.Cluster = *initOption.Cluster
-		c.Service = *initOption.Service
-		c.TaskDefinitionPath = *initOption.TaskDefinitionPath
-		c.ServiceDefinitionPath = *initOption.ServiceDefinitionPath
-		initOption.ConfigFilePath = conf
-		if err := c.Restrict(ctx); err != nil {
-			ecspresso.Log("[ERROR] Could not init config: %s", err)
-			return 1
-		}
-	}
-
 	opt := &ecspresso.Option{
-		ConfigFilePath: *conf,
+		ConfigFilePath: *configFilePath,
 		Version:        Version,
 		Debug:          *debug,
 		ExtStr:         *extStr,
 		ExtCode:        *extCode,
+	}
+	if sub == "init" {
+		opt.InitOption = &initOption
 	}
 	app, err := ecspresso.New(ctx, opt)
 	if err != nil {

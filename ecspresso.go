@@ -70,12 +70,20 @@ type App struct {
 
 func New(ctx context.Context, opt *Option) (*App, error) {
 	loader := newConfigLoader(opt.ExtStr, opt.ExtCode)
-	conf, err := loader.Load(ctx, opt.ConfigFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
-	}
-	if err := conf.ValidateVersion(opt.Version); err != nil {
-		return nil, err
+	var (
+		conf *Config
+		err  error
+	)
+	if opt.InitOption != nil {
+		conf, err = opt.InitOption.NewConfig(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize config: %w", err)
+		}
+	} else {
+		conf, err = loader.Load(ctx, opt.ConfigFilePath, opt.Version)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
+		}
 	}
 
 	logger := newLogger()
@@ -119,6 +127,7 @@ func (d *App) Start(ctx context.Context) (context.Context, context.CancelFunc) {
 }
 
 type Option struct {
+	InitOption     *InitOption
 	ConfigFilePath string
 	Version        string
 	Debug          bool

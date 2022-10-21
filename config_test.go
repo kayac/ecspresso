@@ -51,7 +51,7 @@ func TestLoadConfigWithPluginDuplicate(t *testing.T) {
 	os.Setenv("JSON", `{"foo":"bar"}`)
 	ctx := context.Background()
 	loader := ecspresso.NewConfigLoader(nil, nil)
-	_, err := loader.Load(ctx, "tests/config_duplicate_plugins.yaml")
+	_, err := loader.Load(ctx, "tests/config_duplicate_plugins.yaml", "")
 	if err == nil {
 		t.Log("expected an error to occur, but it didn't.")
 		t.FailNow()
