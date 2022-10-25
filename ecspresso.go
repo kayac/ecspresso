@@ -137,8 +137,8 @@ type Option struct {
 	ExtCode        map[string]string
 }
 
-func (opt *Option) resolveDefaultConfigFilePath() string {
-	path := DefaultConfigFilePath
+func (opt *Option) resolveDefaultConfigFilePath() (path string) {
+	path = DefaultConfigFilePath
 	defer func() {
 		log.Println("resolved config file path:", path)
 		opt.ConfigFilePath = path
@@ -147,15 +147,16 @@ func (opt *Option) resolveDefaultConfigFilePath() string {
 		}
 	}()
 	if opt.ConfigFilePath != "" {
-		return opt.ConfigFilePath
+		path = opt.ConfigFilePath
+		return
 	}
 	for _, ext := range []string{ymlExt, yamlExt, jsonExt, jsonnetExt} {
 		if _, err := os.Stat("ecspresso" + ext); err == nil {
 			path = "ecspresso" + ext
-			return path
+			return
 		}
 	}
-	return path
+	return
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {

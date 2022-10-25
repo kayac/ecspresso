@@ -3,7 +3,6 @@ package ecspresso
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/goccy/go-yaml"
@@ -51,6 +50,5 @@ func (d *Duration) unmarshal(b []byte, unmarshaler func([]byte, interface{}) err
 }
 
 func (d *Duration) marshal() ([]byte, error) {
-	log.Println("marshal called")
 	return []byte(fmt.Sprintf(`"%s"`, d.Duration.String())), nil
 }

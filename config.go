@@ -53,7 +53,7 @@ type Config struct {
 	Plugins               []ConfigPlugin   `yaml:"plugins,omitempty" json:"plugins,omitempty"`
 	AppSpec               *appspec.AppSpec `yaml:"appspec,omitempty" json:"appspec,omitempty"`
 	FilterCommand         string           `yaml:"filter_command,omitempty" json:"filter_command,omitempty"`
-	Timeout               Duration         `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	Timeout               *Duration        `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 
 	path               string
 	templateFuncs      []template.FuncMap
@@ -167,6 +167,6 @@ func (c *Config) ValidateVersion(version string) error {
 func NewDefaultConfig() *Config {
 	return &Config{
 		Region:  os.Getenv("AWS_REGION"),
-		Timeout: Duration{DefaultTimeout},
+		Timeout: &Duration{DefaultTimeout},
 	}
 }
