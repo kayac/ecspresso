@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/pkg/errors"
@@ -33,14 +36,21 @@ func (d *App) Run(opt RunOption) error {
 	}
 	d.DebugLog("Overrides:", ov.String())
 
-	tdArn, watchContainer, err := d.taskDefinitionForRun(ctx, opt)
+	tdArn, err := d.taskDefinitionArnForRun(ctx, opt)
 	if err != nil {
 		return err
 	}
+	d.Log("Task definition ARN:", tdArn)
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
 	}
+	td, err := d.DescribeTaskDefinition(ctx, tdArn)
+	if err != nil {
+		return err
+	}
+	watchContainer := containerOf(td, opt.WatchContainer)
+	d.Log("Watch container:", *watchContainer.Name)
 
 	task, err := d.RunTask(ctx, tdArn, &ov, &opt)
 	if err != nil {
@@ -195,61 +205,45 @@ func (d *App) waitTask(ctx context.Context, task *ecs.Task, untilRunning bool) e
 	)
 }
 
-func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn string, watchContainer *ecs.ContainerDefinition, err error) {
-	tdPath := aws.StringValue(opt.TaskDefinition)
-	if tdPath == "" {
-		tdPath = d.config.TaskDefinitionPath
-	}
-	var td *TaskDefinitionInput
-	td, err = d.LoadTaskDefinition(tdPath)
-	if err != nil {
-		return
-	}
-	family := *td.Family
-	defer func() {
-		if err != nil {
-			return
-		}
-		watchContainer = containerOf(td, opt.WatchContainer)
-		d.Log("Task definition ARN:", tdArn)
-		d.Log("Watch container:", *watchContainer.Name)
-	}()
+var trimRevisionRegexp = regexp.MustCompile(`:(\d+)$`)
 
-	if *opt.LatestTaskDefinition {
-		tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
-		return
-	} else if *opt.SkipTaskDefinition {
-		if aws.Int64Value(opt.Revision) != 0 {
-			tdArn = fmt.Sprintf("%s:%d", family, aws.Int64Value(opt.Revision))
-			return
+func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (string, error) {
+	switch {
+	case *opt.SkipTaskDefinition, *opt.LatestTaskDefinition:
+		sv, err := d.DescribeService(ctx)
+		if err != nil {
+			return "", err
 		}
-		if d.config.Service != "" {
-			if sv, _err := d.DescribeServiceStatus(ctx, 0); _err != nil {
-				err = _err
-			} else {
-				tdArn = *sv.TaskDefinition
-				td, err = d.DescribeTaskDefinition(ctx, tdArn)
-			}
-			return
-		} else {
-			d.Log("Revision is not specified. Use latest task definition")
-			tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
-			return
+		tdArn := *sv.TaskDefinition
+		if rev := aws.Int64Value(opt.Revision); rev > 0 {
+			return trimRevisionRegexp.ReplaceAllString(tdArn, fmt.Sprintf(":%d", rev)), nil
 		}
-	} else {
-		// register
+
+		a, _ := arn.Parse(tdArn)
+		p := strings.SplitN(strings.TrimPrefix(a.Resource, "task-definition/"), ":", 2)
+		family := p[0]
+		d.Log("Revision is not specified. Use latest task definition family" + family)
+		latestTdArn, err := d.findLatestTaskDefinitionArn(ctx, family)
+		if err != nil {
+			return "", err
+		}
+		return latestTdArn, nil
+	default:
+		tdPath := aws.StringValue(opt.TaskDefinition)
+		if tdPath == "" {
+			tdPath = d.config.TaskDefinitionPath
+		}
+		in, err := d.LoadTaskDefinition(tdPath)
+		if err != nil {
+			return "", err
+		}
 		if *opt.DryRun {
-			err = nil
-			return
+			return fmt.Sprintf("family:%s will be registered", *in.Family), nil
 		}
-		if newTd, _err := d.RegisterTaskDefinition(ctx, td); _err != nil {
-			err = _err
-			return
-		} else {
-			tdArn = *newTd.TaskDefinitionArn
-			td, err = d.DescribeTaskDefinition(ctx, tdArn)
-			return
+		newTd, err := d.RegisterTaskDefinition(ctx, in)
+		if err != nil {
+			return "", err
 		}
+		return *newTd.TaskDefinitionArn, nil
 	}
-	return
 }
