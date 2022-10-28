@@ -8,10 +8,12 @@ import (
 	"sort"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/codedeploy"
 	cdTypes "github.com/aws/aws-sdk-go-v2/service/codedeploy/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/schollz/progressbar/v3"
 )
 
 type WaitOption struct {
@@ -149,4 +151,59 @@ func (d *App) showServiceStatus(ctx context.Context, st *showState) error {
 	}
 	st.deploymentsHash = hash
 	return nil
+}
+
+func (d *App) codeDeployProgressBar(ctx context.Context) error {
+	dep, err := d.getCodeDeployDeploymentTarget(ctx)
+	if err != nil {
+		return err
+	}
+
+	bar := progressbar.NewOptions(100,
+		progressbar.OptionSetDescription("Deployment Progress"),
+		progressbar.OptionSetWidth(20),
+	)
+
+	for ok := true; ok; ok = (dep.EcsTarget.Status == "InProgress") {
+		for _, element := range dep.EcsTarget.TaskSetsInfo {
+			if *element.Status == "ACTIVE" {
+				bar.Set(int(element.TrafficWeight))
+			}
+		}
+
+		time.Sleep(10 * time.Second)
+
+		dep, err = d.getCodeDeployDeploymentTarget(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	bar.Set(100)
+	return nil
+}
+
+func (d *App) getCodeDeployDeploymentTarget(ctx context.Context) (*cdTypes.DeploymentTarget, error) {
+	dp, err := d.findDeploymentInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ld, err := d.codedeploy.ListDeployments(ctx, &codedeploy.ListDeploymentsInput{
+		ApplicationName:     dp.ApplicationName,
+		DeploymentGroupName: dp.DeploymentGroupName,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	dpID := ld.Deployments[0]
+	dep, err := d.codedeploy.GetDeploymentTarget(ctx, &codedeploy.GetDeploymentTargetInput{
+		DeploymentId: &dpID,
+		TargetId:     aws.String(d.Cluster + ":" + d.Service),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return dep.DeploymentTarget, nil
 }
