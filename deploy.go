@@ -219,7 +219,7 @@ func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, taskDefinitionArn string, opt DeployOption) error {
 	in := svToUpdateServiceInput(sv)
 	if sv.isCodeDeploy() {
-		d.Log("using CodeDeploy for deployment")
+		d.Log("[INFO] deployment by CodeDeploy")
 		// unable to update attributes below with a CODE_DEPLOY deployment controller.
 		in.NetworkConfiguration = nil
 		in.PlatformVersion = nil
@@ -228,7 +228,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, taskDefi
 		in.ServiceRegistries = nil
 		in.TaskDefinition = nil
 	} else {
-		d.Log("using rolling deployment")
+		d.Log("[INFO] deployment by ECS rolling update")
 		in.ForceNewDeployment = aws.ToBool(opt.ForceNewDeployment)
 		in.TaskDefinition = aws.String(taskDefinitionArn)
 	}
