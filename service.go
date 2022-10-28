@@ -33,39 +33,19 @@ func formatTaskSet(d types.TaskSet) string {
 	)
 }
 
-func formatEvent(e types.ServiceEvent, chars int) []string {
-	line := fmt.Sprintf("%s %s",
+func formatEvent(e types.ServiceEvent) string {
+	return fmt.Sprintf("%s %s",
 		e.CreatedAt.In(time.Local).Format("2006/01/02 15:04:05"),
 		*e.Message,
 	)
-	lines := []string{}
-	n := len(line)/chars + 1
-	for i := 0; i < n; i++ {
-		if i == n-1 {
-			lines = append(lines, line[i*chars:])
-		} else {
-			lines = append(lines, line[i*chars:(i+1)*chars])
-		}
-	}
-	return lines
 }
 
-func formatLogEvent(e logsTypes.OutputLogEvent, chars int) []string {
+func formatLogEvent(e logsTypes.OutputLogEvent) string {
 	t := time.Unix((*e.Timestamp / int64(1000)), 0)
-	line := fmt.Sprintf("%s %s",
+	return fmt.Sprintf("%s %s",
 		t.In(time.Local).Format("2006/01/02 15:04:05"),
 		*e.Message,
 	)
-	lines := []string{}
-	n := len(line)/chars + 1
-	for i := 0; i < n; i++ {
-		if i == n-1 {
-			lines = append(lines, line[i*chars:])
-		} else {
-			lines = append(lines, line[i*chars:(i+1)*chars])
-		}
-	}
-	return lines
 }
 
 func formatScalableTarget(t aasTypes.ScalableTarget) string {
