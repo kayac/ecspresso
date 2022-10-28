@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/codedeploy"
 	cdTypes "github.com/aws/aws-sdk-go-v2/service/codedeploy/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
-	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -29,13 +28,13 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 	if err != nil {
 		return err
 	}
-	if sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy {
+	if sv.isCodeDeploy() {
 		err := d.WaitForCodeDeploy(ctx, sv)
 		if err != nil {
 			return fmt.Errorf("failed to wait for a deployment successfully: %w", err)
 		}
 	} else {
-		if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
+		if err := d.WaitServiceStable(ctx, sv); err != nil {
 			return err
 		}
 	}
@@ -43,14 +42,14 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 	return nil
 }
 
-func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error {
+func (d *App) WaitServiceStable(ctx context.Context, sv *Service) error {
 	d.Log("Waiting for service stable...(it will take a few minutes)")
 	waitCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	tick := time.NewTicker(10 * time.Second)
 	go func() {
-		st := &showState{lastEventAt: startedAt}
+		st := &showState{lastEventAt: time.Now()}
 		for {
 			select {
 			case <-waitCtx.Done():
@@ -96,10 +95,10 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 		return ErrNotFound("no deployments found in progress")
 	}
 
-	go d.codeDeployProgressBar(ctx)
-
 	dpID := out.Deployments[0]
 	d.Log("Waiting for a deployment successful ID: " + dpID)
+	go d.codeDeployProgressBar(ctx, dpID)
+
 	waiter := codedeploy.NewDeploymentSuccessfulWaiter(d.codedeploy)
 	return waiter.Wait(
 		ctx,
@@ -153,57 +152,49 @@ func (d *App) showServiceStatus(ctx context.Context, st *showState) error {
 	return nil
 }
 
-func (d *App) codeDeployProgressBar(ctx context.Context) error {
-	dep, err := d.getCodeDeployDeploymentTarget(ctx)
-	if err != nil {
-		return err
-	}
-
+func (d *App) codeDeployProgressBar(ctx context.Context, dpID string) error {
 	bar := progressbar.NewOptions(100,
-		progressbar.OptionSetDescription("Deployment Progress"),
+		progressbar.OptionSetDescription("Traffic shifted"),
 		progressbar.OptionSetWidth(20),
 	)
-
-	for ok := true; ok; ok = (dep.EcsTarget.Status == "InProgress") {
+	t := time.NewTicker(10 * time.Second)
+	lcEvents := map[string]cdTypes.LifecycleEventStatus{}
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-t.C:
+		}
+		out, err := d.codedeploy.GetDeploymentTarget(ctx, &codedeploy.GetDeploymentTargetInput{
+			DeploymentId: &dpID,
+			TargetId:     aws.String(d.Cluster + ":" + d.Service),
+		})
+		if err != nil {
+			d.Log("[WARNING] %s", err.Error())
+			continue
+		}
+		dep := out.DeploymentTarget
+		d.Log("[DEBUG] status: %s, %s", dep.EcsTarget.Status, *dep.EcsTarget.LastUpdatedAt)
+		if dep.EcsTarget.Status != "InProgress" {
+			break
+		}
+		for _, ev := range dep.EcsTarget.LifecycleEvents {
+			name := *ev.LifecycleEventName
+			if lcEvents[name] != ev.Status {
+				if ev.Status != cdTypes.LifecycleEventStatusPending {
+					d.Log("%s: %s", name, ev.Status)
+				}
+				lcEvents[name] = ev.Status
+			}
+		}
 		for _, element := range dep.EcsTarget.TaskSetsInfo {
+			d.Log("[DEBUG] taskset: %s, %s, %f", element.TaskSetLabel, *element.Status, element.TrafficWeight)
 			if *element.Status == "ACTIVE" {
 				bar.Set(int(element.TrafficWeight))
 			}
 		}
-
-		time.Sleep(10 * time.Second)
-
-		dep, err = d.getCodeDeployDeploymentTarget(ctx)
-		if err != nil {
-			return err
-		}
 	}
 	bar.Set(100)
+	fmt.Println()
 	return nil
-}
-
-func (d *App) getCodeDeployDeploymentTarget(ctx context.Context) (*cdTypes.DeploymentTarget, error) {
-	dp, err := d.findDeploymentInfo(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	ld, err := d.codedeploy.ListDeployments(ctx, &codedeploy.ListDeploymentsInput{
-		ApplicationName:     dp.ApplicationName,
-		DeploymentGroupName: dp.DeploymentGroupName,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	dpID := ld.Deployments[0]
-	dep, err := d.codedeploy.GetDeploymentTarget(ctx, &codedeploy.GetDeploymentTargetInput{
-		DeploymentId: &dpID,
-		TargetId:     aws.String(d.Cluster + ":" + d.Service),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return dep.DeploymentTarget, nil
 }
