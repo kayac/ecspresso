@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/pkg/errors"
@@ -205,8 +203,6 @@ func (d *App) waitTask(ctx context.Context, task *ecs.Task, untilRunning bool) e
 	)
 }
 
-var trimRevisionRegexp = regexp.MustCompile(`:(\d+)$`)
-
 func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (string, error) {
 	switch {
 	case *opt.SkipTaskDefinition, *opt.LatestTaskDefinition:
@@ -215,13 +211,12 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 			return "", err
 		}
 		tdArn := *sv.TaskDefinition
+		p := strings.SplitN(arnToName(tdArn), ":", 2)
+		family := p[0]
 		if rev := aws.Int64Value(opt.Revision); rev > 0 {
-			return trimRevisionRegexp.ReplaceAllString(tdArn, fmt.Sprintf(":%d", rev)), nil
+			return fmt.Sprintf("%s:%d", family, rev), nil
 		}
 
-		a, _ := arn.Parse(tdArn)
-		p := strings.SplitN(strings.TrimPrefix(a.Resource, "task-definition/"), ":", 2)
-		family := p[0]
 		d.Log("Revision is not specified. Use latest task definition family" + family)
 		latestTdArn, err := d.findLatestTaskDefinitionArn(ctx, family)
 		if err != nil {
@@ -238,7 +233,7 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 			return "", err
 		}
 		if *opt.DryRun {
-			return fmt.Sprintf("family:%s will be registered", *in.Family), nil
+			return fmt.Sprintf("family %s will be registered", *in.Family), nil
 		}
 		newTd, err := d.RegisterTaskDefinition(ctx, in)
 		if err != nil {
