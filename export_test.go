@@ -15,6 +15,7 @@ var (
 	ECRImageURLRegex             = ecrImageURLRegex
 	NewLogger                    = newLogger
 	NewLogFilter                 = newLogFilter
+	NewConfigLoader              = newConfigLoader
 )
 
 func (d *App) SetLogger(logger *log.Logger) {

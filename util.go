@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/google/go-jsonnet"
 )
 
 func isLongArnFormat(a string) (bool, error) {
@@ -28,14 +27,7 @@ func isLongArnFormat(a string) (bool, error) {
 func (d *App) readDefinitionFile(path string) ([]byte, error) {
 	switch filepath.Ext(path) {
 	case jsonnetExt:
-		vm := jsonnet.MakeVM()
-		for k, v := range d.option.ExtStr {
-			vm.ExtVar(k, v)
-		}
-		for k, v := range d.option.ExtCode {
-			vm.ExtCode(k, v)
-		}
-		jsonStr, err := vm.EvaluateFile(path)
+		jsonStr, err := d.loader.VM.EvaluateFile(path)
 		if err != nil {
 			return nil, err
 		}

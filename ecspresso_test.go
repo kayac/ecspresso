@@ -3,7 +3,6 @@ package ecspresso_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/kayac/ecspresso"
 )
@@ -17,19 +16,10 @@ func TestLoadTaskDefinition(t *testing.T) {
 		"tests/td-plain-in-tags.json",
 		"tests/td.jsonnet",
 	} {
-		c := &ecspresso.Config{
-			Region:             "ap-northeast-1",
-			Timeout:            600 * time.Second,
-			Service:            "test",
-			Cluster:            "default",
-			TaskDefinitionPath: path,
-		}
-		if err := c.Restrict(ctx); err != nil {
-			t.Error(err)
-		}
-		app, err := ecspresso.New(c, &ecspresso.Option{
-			ExtStr:  map[string]string{"WorkerID": "3"},
-			ExtCode: map[string]string{"EphemeralStorage": "24 + 1"}, // == 25
+		app, err := ecspresso.New(ctx, &ecspresso.Option{
+			ConfigFilePath: "tests/td-config.yml",
+			ExtStr:         map[string]string{"WorkerID": "3"},
+			ExtCode:        map[string]string{"EphemeralStorage": "24 + 1"}, // == 25
 		})
 		if err != nil {
 			t.Error(err)
@@ -54,19 +44,10 @@ func TestLoadTaskDefinition(t *testing.T) {
 func TestLoadTaskDefinitionTags(t *testing.T) {
 	ctx := context.Background()
 	for _, path := range []string{"tests/td.json", "tests/td-plain.json", "tests/td.jsonnet"} {
-		c := &ecspresso.Config{
-			Region:             "ap-northeast-1",
-			Timeout:            600 * time.Second,
-			Service:            "test",
-			Cluster:            "default",
-			TaskDefinitionPath: path,
-		}
-		if err := c.Restrict(ctx); err != nil {
-			t.Error(err)
-		}
-		app, err := ecspresso.New(c, &ecspresso.Option{
-			ExtStr:  map[string]string{"WorkerID": "3"},
-			ExtCode: map[string]string{"EphemeralStorage": "24 + 1"}, // == 25
+		app, err := ecspresso.New(ctx, &ecspresso.Option{
+			ConfigFilePath: "tests/td-config.yml",
+			ExtStr:         map[string]string{"WorkerID": "3"},
+			ExtCode:        map[string]string{"EphemeralStorage": "24 + 1"}, // == 25
 		})
 		if err != nil {
 			t.Error(err)
@@ -81,17 +62,7 @@ func TestLoadTaskDefinitionTags(t *testing.T) {
 	}
 
 	for _, path := range []string{"tests/td-in-tags.json", "tests/td-plain-in-tags.json"} {
-		c := &ecspresso.Config{
-			Region:             "ap-northeast-1",
-			Timeout:            600 * time.Second,
-			Service:            "test",
-			Cluster:            "default",
-			TaskDefinitionPath: path,
-		}
-		if err := c.Restrict(ctx); err != nil {
-			t.Error(err)
-		}
-		app, err := ecspresso.New(c, &ecspresso.Option{})
+		app, err := ecspresso.New(ctx, &ecspresso.Option{ConfigFilePath: "tests/td-config.yml"})
 		if err != nil {
 			t.Error(err)
 		}

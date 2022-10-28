@@ -63,7 +63,7 @@ func (d *App) WaitServiceStable(ctx context.Context, startedAt time.Time) error 
 	}()
 
 	waiter := ecs.NewServicesStableWaiter(d.ecs)
-	if err := waiter.Wait(ctx, d.DescribeServicesInput(), d.config.Timeout); err != nil {
+	if err := waiter.Wait(ctx, d.DescribeServicesInput(), d.Timeout()); err != nil {
 		return fmt.Errorf("failed to wait for service stable: %w", err)
 	}
 	return nil
@@ -98,6 +98,6 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 	return waiter.Wait(
 		ctx,
 		&codedeploy.GetDeploymentInput{DeploymentId: &dpID},
-		d.config.Timeout,
+		d.Timeout(),
 	)
 }

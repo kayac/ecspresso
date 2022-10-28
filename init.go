@@ -2,8 +2,8 @@ package ecspresso
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,8 +11,8 @@ import (
 	"github.com/Songmu/prompter"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/goccy/go-yaml"
 	"github.com/google/go-jsonnet/formatter"
-	"gopkg.in/yaml.v2"
 )
 
 var CreateFileMode = os.FileMode(0644)
@@ -28,21 +28,44 @@ type InitOption struct {
 	Jsonnet               *bool
 }
 
+func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
+	conf := NewDefaultConfig()
+	conf.path = *opt.ConfigFilePath
+	conf.Region = *opt.Region
+	conf.Cluster = *opt.Cluster
+	conf.Service = *opt.Service
+	conf.TaskDefinitionPath = *opt.TaskDefinitionPath
+	conf.ServiceDefinitionPath = *opt.ServiceDefinitionPath
+	if err := conf.Restrict(ctx); err != nil {
+		return nil, err
+	}
+	return conf, nil
+}
+
 var (
 	jsonnetExt = ".jsonnet"
 	jsonExt    = ".json"
+	ymlExt     = ".yml"
+	yamlExt    = ".yaml"
 )
 
 func (d *App) Init(ctx context.Context, opt InitOption) error {
-	config := d.config
-
+	conf := d.config
+	d.LogJSON(opt)
 	if *opt.Jsonnet {
-		if ext := filepath.Ext(config.ServiceDefinitionPath); ext == jsonExt {
-			config.ServiceDefinitionPath = strings.TrimSuffix(config.ServiceDefinitionPath, ext) + jsonnetExt
+		if ext := filepath.Ext(conf.ServiceDefinitionPath); ext == jsonExt {
+			conf.ServiceDefinitionPath = strings.TrimSuffix(conf.ServiceDefinitionPath, ext) + jsonnetExt
 		}
-		if ext := filepath.Ext(config.TaskDefinitionPath); ext == jsonExt {
-			config.TaskDefinitionPath = strings.TrimSuffix(config.TaskDefinitionPath, ext) + jsonnetExt
+		if ext := filepath.Ext(conf.TaskDefinitionPath); ext == jsonExt {
+			conf.TaskDefinitionPath = strings.TrimSuffix(conf.TaskDefinitionPath, ext) + jsonnetExt
 		}
+		if ext := filepath.Ext(*opt.ConfigFilePath); ext == ymlExt || ext == yamlExt {
+			p := strings.TrimSuffix(*opt.ConfigFilePath, ext) + jsonnetExt
+			opt.ConfigFilePath = &p
+		}
+	}
+	if err := conf.Restrict(ctx); err != nil {
+		return err
 	}
 
 	out, err := d.ecs.DescribeServices(ctx, d.DescribeServicesInput())
@@ -76,14 +99,14 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 		return fmt.Errorf("unable to marshal service definition to JSON: %w", err)
 	} else {
 		if *opt.Jsonnet {
-			out, err := formatter.Format(config.ServiceDefinitionPath, string(b), formatter.DefaultOptions())
+			out, err := formatter.Format(conf.ServiceDefinitionPath, string(b), formatter.DefaultOptions())
 			if err != nil {
 				return fmt.Errorf("unable to format service definition as Jsonnet: %w", err)
 			}
 			b = []byte(out)
 		}
-		d.Log("save service definition to %s", config.ServiceDefinitionPath)
-		if err := d.saveFile(config.ServiceDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
+		d.Log("save service definition to %s", conf.ServiceDefinitionPath)
+		if err := d.saveFile(conf.ServiceDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
 			return err
 		}
 	}
@@ -93,28 +116,43 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 		return fmt.Errorf("unable to marshal task definition to JSON: %w", err)
 	} else {
 		if *opt.Jsonnet {
-			out, err := formatter.Format(config.TaskDefinitionPath, string(b), formatter.DefaultOptions())
+			out, err := formatter.Format(conf.TaskDefinitionPath, string(b), formatter.DefaultOptions())
 			if err != nil {
 				return fmt.Errorf("unable to format task definition as Jsonnet: %w", err)
 			}
 			b = []byte(out)
 		}
-		d.Log("save task definition to %s", config.TaskDefinitionPath)
-		if err := d.saveFile(config.TaskDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
+		d.Log("save task definition to %s", conf.TaskDefinitionPath)
+		if err := d.saveFile(conf.TaskDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
 			return err
 		}
 	}
 
 	// config
-	if b, err := yaml.Marshal(config); err != nil {
-		return fmt.Errorf("unable to marshal config to YAML: %w", err)
-	} else {
+	{
+		var b []byte
+		var err error
+		if *opt.Jsonnet {
+			b, err = json.MarshalIndent(conf, "", "  ")
+			if err != nil {
+				return fmt.Errorf("unable to marshal config to JSON: %w", err)
+			}
+			out, err := formatter.Format(*opt.ConfigFilePath, string(b), formatter.DefaultOptions())
+			if err != nil {
+				return fmt.Errorf("unable to format config as Jsonnet: %w", err)
+			}
+			b = []byte(out)
+		} else {
+			b, err = yaml.Marshal(conf)
+			if err != nil {
+				return fmt.Errorf("unable to marshal config to YAML: %w", err)
+			}
+		}
 		d.Log("save config to %s", *opt.ConfigFilePath)
 		if err := d.saveFile(*opt.ConfigFilePath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -146,7 +184,7 @@ func (d *App) saveFile(path string, b []byte, mode os.FileMode, force bool) erro
 			return nil
 		}
 	}
-	if err := ioutil.WriteFile(path, b, mode); err != nil {
+	if err := os.WriteFile(path, b, mode); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", path, err)
 	}
 	return nil

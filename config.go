@@ -2,18 +2,20 @@ package ecspresso
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"text/template"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/goccy/go-yaml"
+	"github.com/google/go-jsonnet"
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/kayac/ecspresso/appspec"
 	goConfig "github.com/kayac/go-config"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 )
 
 const (
@@ -21,19 +23,39 @@ const (
 	DefaultTimeout     = 10 * time.Minute
 )
 
+type configLoader struct {
+	*goConfig.Loader
+	VM *jsonnet.VM
+}
+
+func newConfigLoader(extStr, extCode map[string]string) *configLoader {
+	vm := jsonnet.MakeVM()
+	for k, v := range extStr {
+		vm.ExtVar(k, v)
+	}
+	for k, v := range extCode {
+		vm.ExtCode(k, v)
+	}
+	return &configLoader{
+		Loader: goConfig.New(),
+		VM:     vm,
+	}
+}
+
 // Config represents a configuration.
 type Config struct {
-	RequiredVersion       string           `yaml:"required_version,omitempty"`
-	Region                string           `yaml:"region"`
-	Cluster               string           `yaml:"cluster"`
-	Service               string           `yaml:"service"`
-	ServiceDefinitionPath string           `yaml:"service_definition"`
-	TaskDefinitionPath    string           `yaml:"task_definition"`
-	Timeout               time.Duration    `yaml:"timeout"`
-	Plugins               []ConfigPlugin   `yaml:"plugins,omitempty"`
-	AppSpec               *appspec.AppSpec `yaml:"appspec,omitempty"`
-	FilterCommand         string           `yaml:"filter_command,omitempty"`
+	RequiredVersion       string           `yaml:"required_version,omitempty" json:"required_version,omitempty"`
+	Region                string           `yaml:"region" json:"region"`
+	Cluster               string           `yaml:"cluster" json:"cluster"`
+	Service               string           `yaml:"service" json:"service"`
+	ServiceDefinitionPath string           `yaml:"service_definition" json:"service_definition"`
+	TaskDefinitionPath    string           `yaml:"task_definition" json:"task_definition"`
+	Plugins               []ConfigPlugin   `yaml:"plugins,omitempty" json:"plugins,omitempty"`
+	AppSpec               *appspec.AppSpec `yaml:"appspec,omitempty" json:"appspec,omitempty"`
+	FilterCommand         string           `yaml:"filter_command,omitempty" json:"filter_command,omitempty"`
+	Timeout               *Duration        `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 
+	path               string
 	templateFuncs      []template.FuncMap
 	dir                string
 	versionConstraints goVersion.Constraints
@@ -41,12 +63,45 @@ type Config struct {
 }
 
 // Load loads configuration file from file path.
-func (c *Config) Load(ctx context.Context, path string) error {
-	if err := goConfig.LoadWithEnv(c, path); err != nil {
-		return err
+func (l *configLoader) Load(ctx context.Context, path string, version string) (*Config, error) {
+	conf := &Config{path: path}
+	ext := filepath.Ext(path)
+	switch ext {
+	case ymlExt, yamlExt:
+		b, err := l.ReadWithEnv(path)
+		if err != nil {
+			return nil, err
+		}
+		if err := yaml.Unmarshal(b, conf); err != nil {
+			return nil, fmt.Errorf("failed to parse yaml: %w", err)
+		}
+	case jsonExt, jsonnetExt:
+		jsonStr, err := l.VM.EvaluateFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to evaluate jsonnet file: %w", err)
+		}
+		b, err := l.ReadWithEnvBytes([]byte(jsonStr))
+		if err != nil {
+			return nil, fmt.Errorf("failed to read template file: %w", err)
+		}
+		if err := json.Unmarshal(b, conf); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal json: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported config file extension: %s", ext)
 	}
-	c.dir = filepath.Dir(path)
-	return c.Restrict(ctx)
+
+	conf.dir = filepath.Dir(path)
+	if err := conf.Restrict(ctx); err != nil {
+		return nil, err
+	}
+	if err := conf.ValidateVersion(version); err != nil {
+		return nil, err
+	}
+	for _, f := range conf.templateFuncs {
+		l.Funcs(f)
+	}
+	return conf, nil
 }
 
 // Restrict restricts a configuration.
@@ -112,6 +167,6 @@ func (c *Config) ValidateVersion(version string) error {
 func NewDefaultConfig() *Config {
 	return &Config{
 		Region:  os.Getenv("AWS_REGION"),
-		Timeout: DefaultTimeout,
+		Timeout: &Duration{DefaultTimeout},
 	}
 }

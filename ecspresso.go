@@ -20,11 +20,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
-	goConfig "github.com/kayac/go-config"
 	"github.com/mattn/go-isatty"
 )
 
 const DefaultDesiredCount = -1
+const DefaultConfigFilePath = "ecspresso.yml"
 const dryRunStr = "DRY RUN"
 
 var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
@@ -65,16 +65,29 @@ type App struct {
 	verifier    *verifier
 
 	config *Config
-	option *Option
-	loader *goConfig.Loader
+	loader *configLoader
 	logger *log.Logger
 }
 
-func New(conf *Config, opt *Option) (*App, error) {
-	loader := goConfig.New()
-	for _, f := range conf.templateFuncs {
-		loader.Funcs(f)
+func New(ctx context.Context, opt *Option) (*App, error) {
+	opt.resolveDefaultConfigFilePath()
+	loader := newConfigLoader(opt.ExtStr, opt.ExtCode)
+	var (
+		conf *Config
+		err  error
+	)
+	if opt.InitOption != nil {
+		conf, err = opt.InitOption.NewConfig(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize config: %w", err)
+		}
+	} else {
+		conf, err = loader.Load(ctx, opt.ConfigFilePath, opt.Version)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
+		}
 	}
+
 	logger := newLogger()
 	if opt.Debug {
 		logger.SetOutput(newLogFilter(os.Stderr, "DEBUG"))
@@ -93,25 +106,57 @@ func New(conf *Config, opt *Option) (*App, error) {
 		elbv2:       elasticloadbalancingv2.NewFromConfig(conf.awsv2Config),
 
 		config: conf,
-		option: opt,
 		loader: loader,
 		logger: logger,
 	}
 	return d, nil
 }
 
+func (d *App) Config() *Config {
+	return d.config
+}
+
+func (d *App) Timeout() time.Duration {
+	return d.config.Timeout.Duration
+}
+
 func (d *App) Start(ctx context.Context) (context.Context, context.CancelFunc) {
-	if d.config.Timeout > 0 {
-		return context.WithTimeout(ctx, d.config.Timeout)
+	if d.config.Timeout.Duration > 0 {
+		return context.WithTimeout(ctx, d.config.Timeout.Duration)
 	} else {
 		return ctx, func() {}
 	}
 }
 
 type Option struct {
-	Debug   bool
-	ExtStr  map[string]string
-	ExtCode map[string]string
+	InitOption     *InitOption
+	ConfigFilePath string
+	Version        string
+	Debug          bool
+	ExtStr         map[string]string
+	ExtCode        map[string]string
+}
+
+func (opt *Option) resolveDefaultConfigFilePath() (path string) {
+	path = DefaultConfigFilePath
+	defer func() {
+		log.Println("resolved config file path:", path)
+		opt.ConfigFilePath = path
+		if opt.InitOption != nil {
+			opt.InitOption.ConfigFilePath = &path
+		}
+	}()
+	if opt.ConfigFilePath != "" {
+		path = opt.ConfigFilePath
+		return
+	}
+	for _, ext := range []string{ymlExt, yamlExt, jsonExt, jsonnetExt} {
+		if _, err := os.Stat("ecspresso" + ext); err == nil {
+			path = "ecspresso" + ext
+			return
+		}
+	}
+	return
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
