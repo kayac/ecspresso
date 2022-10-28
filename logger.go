@@ -34,7 +34,7 @@ func newLogFilter(w io.Writer, minLevel string) *logutils.LevelFilter {
 }
 
 func newLogger() *log.Logger {
-	return log.New(io.Discard, "", log.LstdFlags|log.Lmicroseconds)
+	return log.New(io.Discard, "", log.LstdFlags)
 }
 
 func Log(f string, v ...interface{}) {

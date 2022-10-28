@@ -20,15 +20,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
-	"github.com/mattn/go-isatty"
+	"github.com/samber/lo"
 )
 
 const DefaultDesiredCount = -1
 const DefaultConfigFilePath = "ecspresso.yml"
 const dryRunStr = "DRY RUN"
 
-var isTerminal = isatty.IsTerminal(os.Stdout.Fd())
-var TerminalWidth = 90
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
 
@@ -222,13 +220,12 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*Service, 
 	}
 
 	fmt.Println("Events:")
+	lo.Reverse(s.Events)
 	for i, event := range s.Events {
 		if i >= events {
 			break
 		}
-		for _, line := range formatEvent(event, TerminalWidth) {
-			fmt.Println(line)
-		}
+		fmt.Println(formatEvent(event))
 	}
 	return s, nil
 }
@@ -270,31 +267,6 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) error {
 		fmt.Println(formatScalingPolicy(policy))
 	}
 	return nil
-}
-
-func (d *App) DescribeServiceDeployments(ctx context.Context, startedAt time.Time) (int, error) {
-	out, err := d.ecs.DescribeServices(ctx, d.DescribeServicesInput())
-	if err != nil {
-		return 0, fmt.Errorf("failed to describe service deployments: %w", err)
-	}
-	if len(out.Services) == 0 {
-		return 0, nil
-	}
-	s := out.Services[0]
-	lines := 0
-	for _, dep := range s.Deployments {
-		lines++
-		d.Log(formatDeployment(dep))
-	}
-	for _, event := range s.Events {
-		if (*event.CreatedAt).After(startedAt) {
-			for _, line := range formatEvent(event, TerminalWidth) {
-				fmt.Println(line)
-				lines++
-			}
-		}
-	}
-	return lines, nil
 }
 
 func (d *App) DescribeTaskStatus(ctx context.Context, task *types.Task, watchContainer *types.ContainerDefinition) error {
@@ -352,9 +324,7 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 		return nextToken, nil
 	}
 	for _, event := range out.Events {
-		for _, line := range formatLogEvent(event, TerminalWidth) {
-			fmt.Println(line)
-		}
+		fmt.Println(formatLogEvent(event))
 	}
 	return out.NextForwardToken, nil
 }
