@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -59,14 +60,21 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 	}
 	d.Log("[DEBUG] Overrides: %v", ov)
 
-	tdArn, watchContainer, err := d.taskDefinitionForRun(ctx, opt)
+	tdArn, err := d.taskDefinitionArnForRun(ctx, opt)
 	if err != nil {
 		return err
 	}
+	d.Log("Task definition ARN:", tdArn)
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
 	}
+	td, err := d.DescribeTaskDefinition(ctx, tdArn)
+	if err != nil {
+		return err
+	}
+	watchContainer := containerOf(td, opt.WatchContainer)
+	d.Log("Watch container:", *watchContainer.Name)
 
 	task, err := d.RunTask(ctx, tdArn, &ov, &opt)
 	if err != nil {
@@ -262,5 +270,45 @@ func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn st
 			td, err = d.DescribeTaskDefinition(ctx, tdArn)
 			return
 		}
+	}
+}
+
+func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (string, error) {
+	switch {
+	case *opt.SkipTaskDefinition, *opt.LatestTaskDefinition:
+		sv, err := d.DescribeService(ctx)
+		if err != nil {
+			return "", err
+		}
+		tdArn := *sv.TaskDefinition
+		p := strings.SplitN(arnToName(tdArn), ":", 2)
+		family := p[0]
+		if rev := aws.ToInt64(opt.Revision); rev > 0 {
+			return fmt.Sprintf("%s:%d", family, rev), nil
+		}
+
+		d.Log("Revision is not specified. Use latest task definition family" + family)
+		latestTdArn, err := d.findLatestTaskDefinitionArn(ctx, family)
+		if err != nil {
+			return "", err
+		}
+		return latestTdArn, nil
+	default:
+		tdPath := aws.ToString(opt.TaskDefinition)
+		if tdPath == "" {
+			tdPath = d.config.TaskDefinitionPath
+		}
+		in, err := d.LoadTaskDefinition(tdPath)
+		if err != nil {
+			return "", err
+		}
+		if *opt.DryRun {
+			return fmt.Sprintf("family %s will be registered", *in.Family), nil
+		}
+		newTd, err := d.RegisterTaskDefinition(ctx, in)
+		if err != nil {
+			return "", err
+		}
+		return *newTd.TaskDefinitionArn, nil
 	}
 }
