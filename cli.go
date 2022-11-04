@@ -33,7 +33,74 @@ type cliOptions struct {
 	waitOption       *WaitOption
 }
 
+func dispatchCLI(ctx context.Context, sub string, opts *cliOptions) error {
+	if sub == "version" {
+		fmt.Println("ecspresso", Version)
+		return nil
+	}
+
+	app, err := New(ctx, opts.option)
+	if err != nil {
+		return err
+	}
+
+	switch sub {
+	case "deploy":
+		return app.Deploy(ctx, *opts.deployOption)
+	case "refresh":
+		return app.Deploy(ctx, *opts.refreshOption)
+	case "scale":
+		return app.Deploy(ctx, *opts.scaleOption)
+	case "status":
+		return app.Status(ctx, *opts.statusOption)
+	case "rollback":
+		return app.Rollback(ctx, *opts.rollbackOption)
+	case "create":
+		return fmt.Errorf("create command is deprecated. use deploy command instead")
+	case "delete":
+		return app.Delete(ctx, *opts.deleteOption)
+	case "run":
+		return app.Run(ctx, *opts.runOption)
+	case "wait":
+		return app.Wait(ctx, *opts.waitOption)
+	case "register":
+		return app.Register(ctx, *opts.registerOption)
+	case "deregister":
+		return app.Deregister(ctx, *opts.deregisterOption)
+	case "revisions":
+		return app.Revesions(ctx, *opts.revisionsOption)
+	case "init":
+		return app.Init(ctx, *opts.initOption)
+	case "diff":
+		return app.Diff(ctx, *opts.diffOption)
+	case "appspec":
+		return app.AppSpec(ctx, *opts.appSpecOption)
+	case "verify":
+		return app.Verify(ctx, *opts.verifyOption)
+	case "render":
+		return app.Render(ctx, *opts.renderOption)
+	case "tasks":
+		return app.Tasks(ctx, *opts.tasksOption)
+	case "exec":
+		return app.Exec(ctx, *opts.execOption)
+	default:
+		kingpin.Usage()
+	}
+	return nil
+}
+
 func CLI(ctx context.Context) (int, error) {
+	sub, opts, err := parseCLI()
+	if err != nil {
+		return 1, err
+	}
+	if err := dispatchCLI(ctx, sub, opts); err != nil {
+		return 1, err
+	}
+	return 0, nil
+}
+
+func parseCLI() (string, *cliOptions, error) {
 	opts := &cliOptions{}
 
 	kingpin.Command("version", "show version")
@@ -215,15 +282,11 @@ func CLI(ctx context.Context) (int, error) {
 	}
 
 	sub := kingpin.Parse()
-	if sub == "version" {
-		fmt.Println("ecspresso", Version)
-		return 0, nil
-	}
 
 	color.NoColor = !*colorOpt
 	for _, envFile := range *envFiles {
 		if err := ExportEnvFile(envFile); err != nil {
-			return 1, fmt.Errorf("failed to load envfile: %w", err)
+			return sub, opts, fmt.Errorf("failed to load envfile: %w", err)
 		}
 	}
 
@@ -237,70 +300,17 @@ func CLI(ctx context.Context) (int, error) {
 	if sub == "init" {
 		opts.option.InitOption = opts.initOption
 	}
-	app, err := New(ctx, opts.option)
-	if err != nil {
-		return 1, err
+
+	if !isSetSuspendAutoScaling {
+		opts.deployOption.SuspendAutoScaling = nil
+		opts.scaleOption.SuspendAutoScaling = nil
+	}
+	if isSetResumeAutoScaling {
+		opts.deployOption.SuspendAutoScaling = boolp(false)
+		opts.scaleOption.SuspendAutoScaling = boolp(false)
 	}
 
-	switch sub {
-	case "deploy":
-		if !isSetSuspendAutoScaling {
-			opts.deployOption.SuspendAutoScaling = nil
-		}
-		if isSetResumeAutoScaling {
-			opts.deployOption.SuspendAutoScaling = boolp(false)
-		}
-		err = app.Deploy(ctx, *opts.deployOption)
-	case "refresh":
-		err = app.Deploy(ctx, *opts.refreshOption)
-	case "scale":
-		if !isSetSuspendAutoScaling {
-			opts.scaleOption.SuspendAutoScaling = nil
-		}
-		if isSetResumeAutoScaling {
-			opts.scaleOption.SuspendAutoScaling = boolp(false)
-		}
-		err = app.Deploy(ctx, *opts.scaleOption)
-	case "status":
-		err = app.Status(ctx, *opts.statusOption)
-	case "rollback":
-		err = app.Rollback(ctx, *opts.rollbackOption)
-	case "create":
-		err = fmt.Errorf("create command is deprecated. use deploy command instead")
-	case "delete":
-		err = app.Delete(ctx, *opts.deleteOption)
-	case "run":
-		err = app.Run(ctx, *opts.runOption)
-	case "wait":
-		err = app.Wait(ctx, *opts.waitOption)
-	case "register":
-		err = app.Register(ctx, *opts.registerOption)
-	case "deregister":
-		err = app.Deregister(ctx, *opts.deregisterOption)
-	case "revisions":
-		err = app.Revesions(ctx, *opts.revisionsOption)
-	case "init":
-		err = app.Init(ctx, *opts.initOption)
-	case "diff":
-		err = app.Diff(ctx, *opts.diffOption)
-	case "appspec":
-		err = app.AppSpec(ctx, *opts.appSpecOption)
-	case "verify":
-		err = app.Verify(ctx, *opts.verifyOption)
-	case "render":
-		err = app.Render(ctx, *opts.renderOption)
-	case "tasks":
-		err = app.Tasks(ctx, *opts.tasksOption)
-	case "exec":
-		err = app.Exec(ctx, *opts.execOption)
-	default:
-		kingpin.Usage()
-		return 1, nil
-	}
-	if err != nil {
-		return 1, err
-	}
-	return 0, nil
+	return sub, opts, nil
 }
 
 func boolp(b bool) *bool {
