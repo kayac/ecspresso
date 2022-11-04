@@ -33,8 +33,54 @@ type CLIOptions struct {
 	WaitOption       *WaitOption
 }
 
+func (opts *CLIOptions) ForSubCommand(sub string) interface{} {
+	switch sub {
+	case "appspec":
+		return opts.AppSpecOption
+	case "delete":
+		return opts.DeleteOption
+	case "deploy":
+		return opts.DeployOption
+	case "deregister":
+		return opts.DeregisterOption
+	case "diff":
+		return opts.DiffOption
+	case "exec":
+		return opts.ExecOption
+	case "init":
+		return opts.InitOption
+	case "refresh":
+		return opts.RefreshOption
+	case "register":
+		return opts.RegisterOption
+	case "render":
+		return opts.RenderOption
+	case "revisions":
+		return opts.RevisionsOption
+	case "rollback":
+		return opts.RollbackOption
+	case "run":
+		return opts.RunOption
+	case "scale":
+		return opts.ScaleOption
+	case "status":
+		return opts.StatusOption
+	case "tasks":
+		return opts.TasksOption
+	case "verify":
+		return opts.VerifyOption
+	case "wait":
+		return opts.WaitOption
+	default:
+		return nil
+	}
+}
+
 func dispatchCLI(ctx context.Context, sub string, opts *CLIOptions) error {
-	if sub == "version" {
+	if sub == "" {
+		// usage already printed
+		return nil
+	} else if sub == "version" {
 		fmt.Println("ecspresso", Version)
 		return nil
 	}
@@ -90,7 +136,7 @@ func dispatchCLI(ctx context.Context, sub string, opts *CLIOptions) error {
 }
 
 func CLI(ctx context.Context) (int, error) {
-	sub, opts, err := ParseCLI()
+	sub, opts, err := ParseCLI(os.Args[1:])
 	if err != nil {
 		return 1, err
 	}
@@ -100,7 +146,7 @@ func CLI(ctx context.Context) (int, error) {
 	return 0, nil
 }
 
-func ParseCLI() (string, *CLIOptions, error) {
+func ParseCLI(args []string) (string, *CLIOptions, error) {
 	opts := &CLIOptions{}
 
 	kingpin.Command("version", "show version")
@@ -281,7 +327,11 @@ func ParseCLI() (string, *CLIOptions, error) {
 		PortForward: exec.Flag("port-forward", "enable port forward").Default("false").Bool(),
 	}
 
-	sub := kingpin.Parse()
+	sub := kingpin.MustParse(kingpin.CommandLine.Parse(args))
+	if sub == "" {
+		kingpin.Usage()
+		return "", nil, nil
+	}
 
 	color.NoColor = !*colorOpt
 	for _, envFile := range *envFiles {
