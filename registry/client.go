@@ -275,8 +275,6 @@ func (c *Repository) HasImage(ctx context.Context, tag string) (bool, error) {
 					return false, err
 				}
 			}
-		case http.StatusNotFound:
-			return false, nil
 		case http.StatusOK:
 			return true, nil
 		default:

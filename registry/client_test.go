@@ -59,15 +59,15 @@ func TestFailImages(t *testing.T) {
 		t.Logf("testing (will be fail) %s:%s", c.image, c.tag)
 		client := registry.New(c.image, "", "")
 		ctx := context.Background()
-		if ok, err := client.HasImage(ctx, c.tag); err != nil {
-			t.Errorf("%s:%s error %s", c.image, c.tag, err)
+		if ok, err := client.HasImage(ctx, c.tag); err == nil {
+			t.Errorf("HasImage %s:%s error %s", c.image, c.tag, err)
 		} else if ok {
-			t.Errorf("%s:%s should not be found", c.image, c.tag)
+			t.Errorf("HasImage %s:%s should not be found", c.image, c.tag)
 		}
-		if ok, err := client.HasPlatformImage(ctx, c.tag, c.arch, c.os); err != nil {
-			t.Errorf("%s:%s %s/%s error %s", c.image, c.tag, c.arch, c.os, err)
+		if ok, err := client.HasPlatformImage(ctx, c.tag, c.arch, c.os); err == nil {
+			t.Errorf("HasPlatformImage %s:%s %s/%s error %s", c.image, c.tag, c.arch, c.os, err)
 		} else if ok {
-			t.Errorf("%s:%s %s/%s should not be found", c.image, c.tag, c.arch, c.os)
+			t.Errorf("HasPlatformImage %s:%s %s/%s should not be found", c.image, c.tag, c.arch, c.os)
 		}
 	}
 }
