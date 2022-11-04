@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/alecthomas/kong"
 )
@@ -21,7 +22,7 @@ func ParseCLIv2(args []string) (string, *CLIOptions, error) {
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to parse args: %w", err)
 	}
-	sub := c.Command()
+	sub := strings.Fields(c.Command())[0]
 
 	for _, envFile := range opts.Envfile {
 		if err := ExportEnvFile(envFile); err != nil {

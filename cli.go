@@ -365,7 +365,3 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 
 	return sub, opts, nil
 }
-
-func boolp(b bool) *bool {
-	return &b
-}

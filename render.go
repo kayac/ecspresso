@@ -10,13 +10,13 @@ import (
 )
 
 type RenderOption struct {
-	Targets *[]string `help:"target to render" default:"" enum:"config,service-definition,servicedef,task-definition,taskdef"`
+	Targets *[]string `arg:"" help:"target to render" optional:"" enum:"config,service-definition,servicedef,task-definition,taskdef"`
 }
 
 func (d *App) Render(ctx context.Context, opt RenderOption) error {
 	out := bufio.NewWriter(os.Stdout)
 	defer out.Flush()
-
+	d.Log("[DEBUG] targets %v", opt.Targets)
 	for _, target := range *opt.Targets {
 		switch target {
 		case "config":
