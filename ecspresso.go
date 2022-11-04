@@ -27,6 +27,7 @@ const DefaultDesiredCount = -1
 const DefaultConfigFilePath = "ecspresso.yml"
 const dryRunStr = "DRY RUN"
 
+var Version string
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
 
