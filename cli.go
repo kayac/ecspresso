@@ -348,13 +348,19 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 		opts.Option.InitOption = opts.Init
 	}
 
-	if !isSetSuspendAutoScaling {
+	if isSetSuspendAutoScaling {
+		opts.Deploy.SuspendAutoScaling = ptr(true)
+		opts.Scale.SuspendAutoScaling = ptr(true)
+	} else {
 		opts.Deploy.SuspendAutoScaling = nil
 		opts.Scale.SuspendAutoScaling = nil
 	}
 	if isSetResumeAutoScaling {
-		opts.Deploy.SuspendAutoScaling = boolp(false)
-		opts.Scale.SuspendAutoScaling = boolp(false)
+		opts.Deploy.ResumeAutoScaling = ptr(true)
+		opts.Scale.ResumeAutoScaling = ptr(true)
+	} else {
+		opts.Deploy.ResumeAutoScaling = nil
+		opts.Scale.ResumeAutoScaling = nil
 	}
 
 	return sub, opts, nil

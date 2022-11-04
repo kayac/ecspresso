@@ -133,7 +133,8 @@ var cliTests = []struct {
 		args: []string{"deploy", "--resume-auto-scaling"},
 		sub:  "deploy",
 		subOption: &ecspresso.DeployOption{
-			SuspendAutoScaling:   ptr(false),
+			SuspendAutoScaling:   nil,
+			ResumeAutoScaling:    ptr(true),
 			DryRun:               ptr(false),
 			DesiredCount:         ptr(int32(-1)),
 			SkipTaskDefinition:   ptr(false),
@@ -149,6 +150,7 @@ var cliTests = []struct {
 		sub:  "deploy",
 		subOption: &ecspresso.DeployOption{
 			SuspendAutoScaling:   ptr(true),
+			ResumeAutoScaling:    nil,
 			DryRun:               ptr(false),
 			DesiredCount:         ptr(int32(-1)),
 			SkipTaskDefinition:   ptr(false),

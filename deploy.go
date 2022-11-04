@@ -30,6 +30,7 @@ type DeployOption struct {
 	ForceNewDeployment   *bool   `help:"force a new deployment of the service" default:"false"`
 	NoWait               *bool   `help:"exit ecspresso immediately after just deployed without waiting for service stable" default:"false"`
 	SuspendAutoScaling   *bool   `help:"suspend application auto-scaling attached with the ECS service"`
+	ResumeAutoScaling    *bool   `help:"resume application auto-scaling attached with the ECS service"`
 	RollbackEvents       *string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
 	UpdateService        *bool   `help:"update service attributes by service definition" default:"true"`
 	LatestTaskDefinition *bool   `help:"deploy with the latest task definition without registering a new task definition" default:"false"`
