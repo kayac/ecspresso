@@ -9,8 +9,10 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/shogo82148/go-retry"
 )
 
 const (
@@ -22,6 +24,12 @@ const (
 var (
 	ErrDeprecatedManifest    = fmt.Errorf("deprecated image manifest")
 	ErrPullRateLimitExceeded = fmt.Errorf("image pull rate limit exceeded")
+
+	retryPolicy = retry.Policy{
+		MinDelay: time.Second,
+		MaxDelay: 5 * time.Second,
+		MaxCount: 3,
+	}
 )
 
 // Repository represents a repository using Docker Registry API v2.
@@ -120,14 +128,22 @@ func (c *Repository) getAvailability(ctx context.Context, tag string) (*http.Res
 }
 
 func (c *Repository) getManifests(ctx context.Context, tag string) (mediaType string, _ io.ReadCloser, _ error) {
-	resp, err := c.fetchManifests(ctx, http.MethodGet, tag)
-	if err != nil {
-		return "", nil, err
-	}
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return "", nil, ErrPullRateLimitExceeded
-	} else if resp.StatusCode != http.StatusOK {
-		return "", nil, fmt.Errorf(resp.Status)
+	var resp *http.Response
+	err := retryPolicy.Do(ctx, func() error {
+		var err error
+		resp, err = c.fetchManifests(ctx, http.MethodGet, tag)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return ErrPullRateLimitExceeded
+		} else if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf(resp.Status)
+		}
+		return nil
+	})
+	if err != nil || resp == nil {
+		return "", nil, fmt.Errorf("failed to fetch manifests: %w", err)
 	}
 	mediaType = parseContentType(resp.Header.Get("Content-Type"))
 	return mediaType, resp.Body, nil
