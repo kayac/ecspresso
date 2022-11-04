@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"os"
+	"os/signal"
 
 	"github.com/kayac/ecspresso"
 )
@@ -10,5 +13,15 @@ var Version string
 
 func main() {
 	ecspresso.Version = Version
-	os.Exit(ecspresso.Main(trapSignals))
+	ctx, stop := signal.NotifyContext(context.Background(), trapSignals...)
+	defer stop()
+	exitCode, err := ecspresso.CLI(ctx)
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			ecspresso.Log("[WARNING] Interrupted")
+		} else {
+			ecspresso.Log("[ERROR] FAILED. %s", err)
+		}
+	}
+	os.Exit(exitCode)
 }

@@ -2,17 +2,15 @@ package ecspresso
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"os/signal"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/fatih/color"
 	isatty "github.com/mattn/go-isatty"
 )
 
-func Main(trapSignals []os.Signal) int {
+func CLI(ctx context.Context) (int, error) {
 	kingpin.Command("version", "show version")
 
 	configFilePath := kingpin.Flag("config", "config file").String()
@@ -194,19 +192,15 @@ func Main(trapSignals []os.Signal) int {
 	sub := kingpin.Parse()
 	if sub == "version" {
 		fmt.Println("ecspresso", Version)
-		return 0
+		return 0, nil
 	}
 
 	color.NoColor = !*colorOpt
 	for _, envFile := range *envFiles {
 		if err := ExportEnvFile(envFile); err != nil {
-			Log("[ERROR] Failed to load envfile: %s", err)
-			return 1
+			return 1, fmt.Errorf("failed to load envfile: %w", err)
 		}
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), trapSignals...)
-	defer stop()
 
 	opt := &Option{
 		ConfigFilePath: *configFilePath,
@@ -220,8 +214,7 @@ func Main(trapSignals []os.Signal) int {
 	}
 	app, err := New(ctx, opt)
 	if err != nil {
-		Log("[ERROR] %s", err)
-		return 1
+		return 1, err
 	}
 
 	switch sub {
@@ -277,18 +270,9 @@ func Main(trapSignals []os.Signal) int {
 		err = app.Exec(ctx, execOption)
 	default:
 		kingpin.Usage()
-		return 1
+		return 1, nil
 	}
-	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			Log("[WARNING] Interrupted")
-		} else {
-			Log("[ERROR] %s FAILED. %s", sub, err)
-		}
-		return 1
-	}
-
-	return 0
+	return 0, nil
 }
 
 func boolp(b bool) *bool {
