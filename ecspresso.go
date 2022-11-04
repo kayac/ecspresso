@@ -27,6 +27,7 @@ const DefaultDesiredCount = -1
 const DefaultConfigFilePath = "ecspresso.yml"
 const dryRunStr = "DRY RUN"
 
+var Version string
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
 
@@ -84,7 +85,7 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 			return nil, fmt.Errorf("failed to initialize config: %w", err)
 		}
 	} else {
-		conf, err = loader.Load(ctx, opt.ConfigFilePath, opt.Version)
+		conf, err = loader.Load(ctx, opt.ConfigFilePath, Version)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
 		}
@@ -133,7 +134,6 @@ func (d *App) Start(ctx context.Context) (context.Context, context.CancelFunc) {
 type Option struct {
 	InitOption     *InitOption
 	ConfigFilePath string
-	Version        string
 	Debug          bool
 	ExtStr         map[string]string
 	ExtCode        map[string]string
