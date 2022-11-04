@@ -57,6 +57,8 @@ func calcDesiredCount(sv *Service, opt DeployOption) *int32 {
 }
 
 func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
+	d.Log("[DEBUG] deploy")
+	d.LogJSON(opt)
 	ctx, cancel := d.Start(ctx)
 	defer cancel()
 

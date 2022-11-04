@@ -10,6 +10,7 @@ type ScaleOption struct {
 
 func (o *ScaleOption) DeployOption() DeployOption {
 	return DeployOption{
+		DesiredCount:         o.DesiredCount,
 		DryRun:               o.DryRun,
 		SkipTaskDefinition:   ptr(true),
 		ForceNewDeployment:   ptr(false),

@@ -28,6 +28,7 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 	if err != nil {
 		return err
 	}
+	d.LogJSON(sv.DeploymentController)
 	if sv.isCodeDeploy() {
 		err := d.WaitForCodeDeploy(ctx, sv)
 		if err != nil {
@@ -71,6 +72,7 @@ func (d *App) WaitServiceStable(ctx context.Context, sv *Service) error {
 }
 
 func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
+	d.Log("[DEBUG] wait for CodeDeploy")
 	dp, err := d.findDeploymentInfo(ctx)
 	if err != nil {
 		return err

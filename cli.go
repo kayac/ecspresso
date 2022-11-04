@@ -94,7 +94,7 @@ func dispatchCLI(ctx context.Context, sub string, opts *CLIOptions) error {
 	if err != nil {
 		return err
 	}
-
+	app.Log("[DEBUG] dispatching subcommand: %s", sub)
 	switch sub {
 	case "deploy":
 		return app.Deploy(ctx, *opts.Deploy)

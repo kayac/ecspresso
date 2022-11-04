@@ -74,7 +74,7 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 		return err
 	}
 	watchContainer := containerOf(td, opt.WatchContainer)
-	d.Log("Watch container:", *watchContainer.Name)
+	d.Log("Watch container: %s", *watchContainer.Name)
 
 	task, err := d.RunTask(ctx, tdArn, &ov, &opt)
 	if err != nil {
@@ -134,12 +134,15 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 		}
 		d.Log("[DEBUG] propagate tags from service %s", *sv.ServiceArn, out)
 		in.Tags = append(in.Tags, out.Tags...)
-	case "":
-		in.PropagateTags = types.PropagateTagsNone
+	case "", "NONE":
+		// XXX ECS says > InvalidParameterException: Invalid value for propagateTags
+		// in.PropagateTags = types.PropagateTagsNone
+		in.PropagateTags = ""
 	default:
 		in.PropagateTags = types.PropagateTagsTaskDefinition
 	}
 	d.Log("[DEBUG] run task input %v", in)
+	d.LogJSON(in)
 
 	out, err := d.ecs.RunTask(ctx, in)
 	if err != nil {
