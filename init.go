@@ -18,14 +18,14 @@ import (
 var CreateFileMode = os.FileMode(0644)
 
 type InitOption struct {
-	Region                *string
-	Cluster               *string
-	Service               *string
-	TaskDefinitionPath    *string
-	ServiceDefinitionPath *string
+	Region                *string `help:"AWS region" env:"AWS_REGION" default:""`
+	Cluster               *string `help:"ECS cluster name" default:"default"`
+	Service               *string `help:"ECS service name" default:"" required:""`
+	TaskDefinitionPath    *string `help:"path to output task definition file" default:"ecs-task-def.json"`
+	ServiceDefinitionPath *string `help:"path to output service definition file" default:"ecs-service-def.json"`
 	ConfigFilePath        *string
-	ForceOverwrite        *bool
-	Jsonnet               *bool
+	ForceOverwrite        *bool `help:"overwrite existing files" default:"false"`
+	Jsonnet               *bool `help:"output files as jsonnet format" default:"false"`
 }
 
 func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {

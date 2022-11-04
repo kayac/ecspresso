@@ -11,12 +11,12 @@ import (
 )
 
 type TasksOption struct {
-	ID     *string
-	Output *string
-	Find   *bool
-	Stop   *bool
-	Force  *bool
-	Trace  *bool
+	ID     *string `help:"task ID" default:""`
+	Output *string `help:"output format" default:"table" enum:"table,json,tsv" default:"table"`
+	Find   *bool   `help:"find a task from tasks list and dump it as JSON" default:"false"`
+	Stop   *bool   `help:"stop the task" default:"false"`
+	Force  *bool   `help:"stop the task without confirmation" default:"false"`
+	Trace  *bool   `help:"trace the task" default:"false"`
 }
 
 func (o TasksOption) taskID() string {

@@ -18,7 +18,7 @@ import (
 )
 
 type DiffOption struct {
-	Unified *bool
+	Unified *bool `help:"unified diff format" default:"true" negatable:""`
 }
 
 func (d *App) Diff(ctx context.Context, opt DiffOption) error {

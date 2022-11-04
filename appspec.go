@@ -10,8 +10,8 @@ import (
 )
 
 type AppSpecOption struct {
-	TaskDefinition *string
-	UpdateService  *bool
+	TaskDefinition *string `help:"use task definition arn in AppSpec (latest, current or Arn)" default:"latest"`
+	UpdateService  *bool   `help:"update service definition with task definition arn" default:"true" negatable:""`
 }
 
 func (d *App) AppSpec(ctx context.Context, opt AppSpecOption) error {

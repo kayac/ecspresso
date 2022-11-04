@@ -3,8 +3,8 @@ package ecspresso
 import "context"
 
 type RegisterOption struct {
-	DryRun *bool
-	Output *bool
+	DryRun *bool `help:"dry run" default:"false"`
+	Output *bool `help:"output the registered task definition as JSON" default:"false"`
 }
 
 func (opt RegisterOption) DryRunString() string {

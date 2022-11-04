@@ -26,13 +26,13 @@ type CLIOptions struct {
 	Diff       *DiffOption       `cmd:"" help:"show diff between task definition, service definition with current running service and task definition"`
 	Exec       *ExecOption       `cmd:"" help:"execute command on task"`
 	Init       *InitOption       `cmd:"" help:"create configuration files from existing ECS service"`
-	Refresh    *DeployOption     `cmd:"" help:"refresh service. equivalent to deploy --skip-task-definition --force-new-deployment --no-update-service"`
+	Refresh    *RefreshOption    `cmd:"" help:"refresh service. equivalent to deploy --skip-task-definition --force-new-deployment --no-update-service"`
 	Register   *RegisterOption   `cmd:"" help:"register task definition"`
 	Render     *RenderOption     `cmd:"" help:"render config, service definition or task definition file to STDOUT"`
 	Revisions  *RevisionsOption  `cmd:"" help:"show revisions of task definitions"`
 	Rollback   *RollbackOption   `cmd:"" help:"rollback service"`
 	Run        *RunOption        `cmd:"" help:"run task"`
-	Scale      *DeployOption     `cmd:"" help:"scale service. equivalent to deploy --skip-task-definition --no-update-service"`
+	Scale      *ScaleOption      `cmd:"" help:"scale service. equivalent to deploy --skip-task-definition --no-update-service"`
 	Status     *StatusOption     `cmd:"" help:"show status of service"`
 	Tasks      *TasksOption      `cmd:"" help:"list tasks that are in a service or having the same family"`
 	Verify     *VerifyOption     `cmd:"" help:"verify resources in configurations"`
@@ -99,9 +99,9 @@ func dispatchCLI(ctx context.Context, sub string, opts *CLIOptions) error {
 	case "deploy":
 		return app.Deploy(ctx, *opts.Deploy)
 	case "refresh":
-		return app.Deploy(ctx, *opts.Refresh)
+		return app.Deploy(ctx, opts.Refresh.DeployOption())
 	case "scale":
-		return app.Deploy(ctx, *opts.Scale)
+		return app.Deploy(ctx, opts.Scale.DeployOption())
 	case "status":
 		return app.Status(ctx, *opts.Status)
 	case "rollback":
@@ -187,26 +187,17 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 
 	scale := kingpin.Command("scale", "scale service. equivalent to deploy --skip-task-definition --no-update-service")
 	scale.Flag("resume-auto-scaling", "resume application auto-scaling attached with the ECS service").IsSetByUser(&isSetResumeAutoScaling).Bool()
-	opts.Scale = &DeployOption{
-		DryRun:               scale.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Default("-1").Int32(),
-		SkipTaskDefinition:   boolp(true),
-		SuspendAutoScaling:   scale.Flag("suspend-auto-scaling", "suspend application auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
-		ForceNewDeployment:   boolp(false),
-		NoWait:               scale.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		UpdateService:        boolp(false),
-		LatestTaskDefinition: boolp(false),
+	opts.Scale = &ScaleOption{
+		DryRun:             scale.Flag("dry-run", "dry-run").Bool(),
+		DesiredCount:       scale.Flag("tasks", "desired count of tasks").Default("-1").Int32(),
+		SuspendAutoScaling: scale.Flag("suspend-auto-scaling", "suspend application auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
+		NoWait:             scale.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
 	}
 
 	refresh := kingpin.Command("refresh", "refresh service. equivalent to deploy --skip-task-definition --force-new-deployment --no-update-service")
-	opts.Refresh = &DeployOption{
-		DryRun:               refresh.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:         nil,
-		SkipTaskDefinition:   boolp(true),
-		ForceNewDeployment:   boolp(true),
-		NoWait:               refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		UpdateService:        boolp(false),
-		LatestTaskDefinition: boolp(false),
+	opts.Refresh = &RefreshOption{
+		DryRun: refresh.Flag("dry-run", "dry-run").Bool(),
+		NoWait: refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
 	}
 
 	create := kingpin.Command("create", "[DEPRECATED] use deploy command instead")

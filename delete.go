@@ -9,8 +9,8 @@ import (
 )
 
 type DeleteOption struct {
-	DryRun *bool
-	Force  *bool
+	DryRun *bool `help:"dry-run" default:"false"`
+	Force  *bool `help:"delete without confirmation" default:"false"`
 }
 
 func (opt DeleteOption) DryRunString() string {

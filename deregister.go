@@ -13,10 +13,10 @@ import (
 )
 
 type DeregisterOption struct {
-	DryRun   *bool
-	Keeps    *int
-	Revision *int64
-	Force    *bool
+	DryRun   *bool  `help:"dry run" default:"false"`
+	Keeps    *int   `help:"number of task definitions to keep except in-use" default:"0"`
+	Revision *int64 `help:"task definition revision to deregister" default:"0"`
+	Force    *bool  `help:"force deregister without confirmation" default:"false"`
 }
 
 func (opt DeregisterOption) DryRunString() string {
