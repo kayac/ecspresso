@@ -59,7 +59,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	}
 
 	d.Log("deployment controller: %s", sv.DeploymentController.Type)
-	if sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy {
+	if sv.isCodeDeploy() {
 		return d.RollbackByCodeDeploy(ctx, sv, targetArn, opt)
 	}
 
@@ -82,7 +82,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	}
 
 	time.Sleep(delayForServiceChanged) // wait for service updated
-	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
+	if err := d.WaitServiceStable(ctx, nil); err != nil {
 		return err
 	}
 

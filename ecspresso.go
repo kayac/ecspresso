@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -20,7 +21,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
-	"github.com/samber/lo"
 )
 
 const DefaultDesiredCount = -1
@@ -48,6 +48,10 @@ func newServiceFromTypes(sv types.Service) *Service {
 		Service:      sv,
 		DesiredCount: aws.Int32(sv.DesiredCount),
 	}
+}
+
+func (sv *Service) isCodeDeploy() bool {
+	return sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy
 }
 
 type App struct {
@@ -220,7 +224,9 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*Service, 
 	}
 
 	fmt.Println("Events:")
-	lo.Reverse(s.Events)
+	sort.SliceStable(s.Events, func(i, j int) bool {
+		return s.Events[i].CreatedAt.Before(*s.Events[j].CreatedAt)
+	})
 	for i, event := range s.Events {
 		if i >= events {
 			break

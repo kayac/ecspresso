@@ -70,9 +70,8 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 		return nil
 	}
 
-	start := time.Now()
 	time.Sleep(delayForServiceChanged) // wait for service created
-	if err := d.WaitServiceStable(ctx, start); err != nil {
+	if err := d.WaitServiceStable(ctx, nil); err != nil {
 		return fmt.Errorf("failed to wait service stable: %w", err)
 	}
 

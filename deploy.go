@@ -42,8 +42,6 @@ func (opt DeployOption) DryRunString() string {
 	return ""
 }
 
-type deployFunc func(context.Context, string, *int32, *Service, DeployOption) error
-
 func calcDesiredCount(sv *Service, opt DeployOption) *int32 {
 	if sv.SchedulingStrategy == types.SchedulingStrategyDaemon {
 		return nil
@@ -72,14 +70,17 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return err
 	}
 
-	deploy := d.UpdateServiceTasks // default
+	deployFunc := d.UpdateServiceTasks // default
+	waitFunc := d.WaitServiceStable    // default
 	// detect controller
 	if dc := sv.DeploymentController; dc != nil {
 		switch dc.Type {
 		case types.DeploymentControllerTypeCodeDeploy:
-			deploy = d.DeployByCodeDeploy
+			deployFunc = d.DeployByCodeDeploy
+			waitFunc = d.WaitForCodeDeploy
 		case types.DeploymentControllerTypeEcs:
-			deploy = d.UpdateServiceTasks
+			deployFunc = d.UpdateServiceTasks
+			waitFunc = d.WaitServiceStable
 		default:
 			return fmt.Errorf("unsupported deployment controller type: %s", dc.Type)
 		}
@@ -152,7 +153,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		}
 	}
 
-	if err := deploy(ctx, tdArn, count, sv, opt); err != nil {
+	if err := deployFunc(ctx, tdArn, count, sv, opt); err != nil {
 		return err
 	}
 
@@ -161,7 +162,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return nil
 	}
 
-	if err := d.WaitServiceStable(ctx, time.Now()); err != nil {
+	if err := waitFunc(ctx, sv); err != nil {
 		return err
 	}
 
@@ -217,19 +218,22 @@ func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 
 func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, taskDefinitionArn string, opt DeployOption) error {
 	in := svToUpdateServiceInput(sv)
-	if sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy {
+	if sv.isCodeDeploy() {
+		d.Log("[INFO] deployment by CodeDeploy")
 		// unable to update attributes below with a CODE_DEPLOY deployment controller.
 		in.NetworkConfiguration = nil
 		in.PlatformVersion = nil
 		in.ForceNewDeployment = false
 		in.LoadBalancers = nil
 		in.ServiceRegistries = nil
+		in.TaskDefinition = nil
 	} else {
+		d.Log("[INFO] deployment by ECS rolling update")
 		in.ForceNewDeployment = aws.ToBool(opt.ForceNewDeployment)
+		in.TaskDefinition = aws.String(taskDefinitionArn)
 	}
 	in.Service = aws.String(d.Service)
 	in.Cluster = aws.String(d.Cluster)
-	in.TaskDefinition = aws.String(taskDefinitionArn)
 
 	if *opt.DryRun {
 		d.Log("update service input:")
