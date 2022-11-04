@@ -1,4 +1,4 @@
-.PHONY: test create deploy rollback refresh deploy-no-update-service scale down delete help run-task status
+.PHONY: test deploy rollback refresh deploy-no-update-service scale down delete help run-task status
 
 export CLUSTER := ecspresso-test
 export SERVICE := nginx-$(CIRCLE_BRANCH)
@@ -6,14 +6,10 @@ ECSPRESSO := ecspresso --envfile envfile
 
 help:
 
-test: verify create tasks run-task deploy rollback refresh deploy-no-update-service scale down delete
+test: verify deploy tasks run-task deploy rollback refresh deploy-no-update-service scale down delete
 
 status:
 	$(ECSPRESSO) status --events 10 --debug
-
-create:
-	$(ECSPRESSO) create --dry-run
-	$(ECSPRESSO) create --debug
 
 register:
 	$(ECSPRESSO) register --dry-run
