@@ -128,25 +128,25 @@ func (c *Repository) getAvailability(ctx context.Context, tag string) (*http.Res
 }
 
 func (c *Repository) getManifests(ctx context.Context, tag string) (mediaType string, _ io.ReadCloser, _ error) {
-	var resp *http.Response
-	err := retryPolicy.Do(ctx, func() error {
-		var err error
-		resp, err = c.fetchManifests(ctx, http.MethodGet, tag)
-		if err != nil {
-			return err
+	retrier := retryPolicy.Start(ctx)
+	var lastErr error
+	for retrier.Continue() {
+		resp, err := c.fetchManifests(ctx, http.MethodGet, tag)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			mediaType = parseContentType(resp.Header.Get("Content-Type"))
+			return mediaType, resp.Body, nil
 		}
-		if resp.StatusCode == http.StatusTooManyRequests {
-			return ErrPullRateLimitExceeded
-		} else if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf(resp.Status)
+		switch resp.StatusCode {
+		case http.StatusNotFound, http.StatusUnauthorized:
+			// should not be retried
+			return "", nil, fmt.Errorf("faild to fetch manifests: %s", resp.Status)
+		case http.StatusTooManyRequests:
+			lastErr = ErrPullRateLimitExceeded
+		default:
+			lastErr = fmt.Errorf(resp.Status)
 		}
-		return nil
-	})
-	if err != nil || resp == nil {
-		return "", nil, fmt.Errorf("failed to fetch manifests: %w", err)
 	}
-	mediaType = parseContentType(resp.Header.Get("Content-Type"))
-	return mediaType, resp.Body, nil
+	return "", nil, fmt.Errorf("faild to fetch manifests: %w", lastErr)
 }
 
 func (c *Repository) getImageConfig(ctx context.Context, digest string) (io.ReadCloser, error) {
