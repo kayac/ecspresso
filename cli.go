@@ -10,7 +10,32 @@ import (
 	isatty "github.com/mattn/go-isatty"
 )
 
+type cliOptions struct {
+	option *Option
+
+	appSpecOption    *AppSpecOption
+	deleteOption     *DeleteOption
+	deployOption     *DeployOption
+	deregisterOption *DeregisterOption
+	diffOption       *DiffOption
+	execOption       *ExecOption
+	initOption       *InitOption
+	refreshOption    *DeployOption
+	registerOption   *RegisterOption
+	renderOption     *RenderOption
+	revisionsOption  *RevisionsOption
+	rollbackOption   *RollbackOption
+	runOption        *RunOption
+	scaleOption      *DeployOption
+	statusOption     *StatusOption
+	tasksOption      *TasksOption
+	verifyOption     *VerifyOption
+	waitOption       *WaitOption
+}
+
 func CLI(ctx context.Context) (int, error) {
+	opts := &cliOptions{}
+
 	kingpin.Command("version", "show version")
 
 	configFilePath := kingpin.Flag("config", "config file").String()
@@ -28,7 +53,7 @@ func CLI(ctx context.Context) (int, error) {
 	var isSetSuspendAutoScaling, isSetResumeAutoScaling bool
 	deploy := kingpin.Command("deploy", "deploy service")
 	deploy.Flag("resume-auto-scaling", "resume application auto-scaling attached with the ECS service").IsSetByUser(&isSetResumeAutoScaling).Bool()
-	deployOption := DeployOption{
+	opts.deployOption = &DeployOption{
 		DryRun:               deploy.Flag("dry-run", "dry-run").Bool(),
 		DesiredCount:         deploy.Flag("tasks", "desired count of tasks").Default("-1").Int32(),
 		SkipTaskDefinition:   deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
@@ -42,7 +67,7 @@ func CLI(ctx context.Context) (int, error) {
 
 	scale := kingpin.Command("scale", "scale service. equivalent to deploy --skip-task-definition --no-update-service")
 	scale.Flag("resume-auto-scaling", "resume application auto-scaling attached with the ECS service").IsSetByUser(&isSetResumeAutoScaling).Bool()
-	scaleOption := DeployOption{
+	opts.scaleOption = &DeployOption{
 		DryRun:               scale.Flag("dry-run", "dry-run").Bool(),
 		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Default("-1").Int32(),
 		SkipTaskDefinition:   boolp(true),
@@ -54,7 +79,7 @@ func CLI(ctx context.Context) (int, error) {
 	}
 
 	refresh := kingpin.Command("refresh", "refresh service. equivalent to deploy --skip-task-definition --force-new-deployment --no-update-service")
-	refreshOption := DeployOption{
+	opts.refreshOption = &DeployOption{
 		DryRun:               refresh.Flag("dry-run", "dry-run").Bool(),
 		DesiredCount:         nil,
 		SkipTaskDefinition:   boolp(true),
@@ -73,12 +98,12 @@ func CLI(ctx context.Context) (int, error) {
 	}
 
 	status := kingpin.Command("status", "show status of service")
-	statusOption := StatusOption{
+	opts.statusOption = &StatusOption{
 		Events: status.Flag("events", "show events num").Default("2").Int(),
 	}
 
 	rollback := kingpin.Command("rollback", "roll back a service")
-	rollbackOption := RollbackOption{
+	opts.rollbackOption = &RollbackOption{
 		DryRun:                   rollback.Flag("dry-run", "dry-run").Bool(),
 		DeregisterTaskDefinition: rollback.Flag("deregister-task-definition", "deregister a rolled-back task definition. not works with --no-wait").Default("true").Bool(),
 		NoWait:                   rollback.Flag("no-wait", "exit ecspresso immediately after just rolled back without waiting for service stable").Bool(),
@@ -86,13 +111,13 @@ func CLI(ctx context.Context) (int, error) {
 	}
 
 	delete := kingpin.Command("delete", "delete service")
-	deleteOption := DeleteOption{
+	opts.deleteOption = &DeleteOption{
 		DryRun: delete.Flag("dry-run", "dry-run").Bool(),
 		Force:  delete.Flag("force", "delete without confirmation").Bool(),
 	}
 
 	run := kingpin.Command("run", "run task")
-	runOption := RunOption{
+	opts.runOption = &RunOption{
 		DryRun:               run.Flag("dry-run", "dry-run").Bool(),
 		TaskDefinition:       run.Flag("task-def", "task definition json for run task").String(),
 		NoWait:               run.Flag("no-wait", "exit ecspresso after task run").Bool(),
@@ -109,13 +134,13 @@ func CLI(ctx context.Context) (int, error) {
 	}
 
 	register := kingpin.Command("register", "register task definition")
-	registerOption := RegisterOption{
+	opts.registerOption = &RegisterOption{
 		DryRun: register.Flag("dry-run", "dry-run").Bool(),
 		Output: register.Flag("output", "output registered task definition").Bool(),
 	}
 
 	deregister := kingpin.Command("deregister", "deregister task definition")
-	deregisterOption := DeregisterOption{
+	opts.deregisterOption = &DeregisterOption{
 		DryRun:   deregister.Flag("dry-run", "dry-run").Bool(),
 		Revision: deregister.Flag("revision", "revision number to deregister").Int64(),
 		Keeps:    deregister.Flag("keeps", "numbers of keep latest revisions except in-use").Int(),
@@ -123,16 +148,16 @@ func CLI(ctx context.Context) (int, error) {
 	}
 
 	revisions := kingpin.Command("revisions", "show revisions of task definitions")
-	revisionsOption := RevisionsOption{
+	opts.revisionsOption = &RevisionsOption{
 		Output:   revisions.Flag("output", "output format (table|json|tsv)").Default("table").Enum("table", "json", "tsv"),
 		Revision: revisions.Flag("revision", "revision number to output task definition as JSON").Int64(),
 	}
 
 	_ = kingpin.Command("wait", "wait until service stable")
-	waitOption := WaitOption{}
+	opts.waitOption = &WaitOption{}
 
 	init := kingpin.Command("init", "create service/task definition files by existing ECS service")
-	initOption := InitOption{
+	opts.initOption = &InitOption{
 		Region:                init.Flag("region", "AWS region name").Default(os.Getenv("AWS_REGION")).String(),
 		Cluster:               init.Flag("cluster", "cluster name").Default("default").String(),
 		Service:               init.Flag("service", "service name").Required().String(),
@@ -144,24 +169,24 @@ func CLI(ctx context.Context) (int, error) {
 	}
 
 	diff := kingpin.Command("diff", "display diff for task definition compared with latest one on ECS")
-	diffOption := DiffOption{
+	opts.diffOption = &DiffOption{
 		Unified: diff.Flag("unified", "display diff in unified format").Default("t").Bool(),
 	}
 
 	appspec := kingpin.Command("appspec", "output AppSpec YAML for CodeDeploy to STDOUT")
-	appspecOption := AppSpecOption{
+	opts.appSpecOption = &AppSpecOption{
 		TaskDefinition: appspec.Flag("task-definition", "use task definition arn in AppSpec (latest, current or Arn)").Default("latest").String(),
 		UpdateService:  appspec.Flag("update-service", "update service attributes by service definition").Default("true").Bool(),
 	}
 
 	verify := kingpin.Command("verify", "verify resources in configurations")
-	verifyOption := VerifyOption{
+	opts.verifyOption = &VerifyOption{
 		GetSecrets: verify.Flag("get-secrets", "get secrets from ParameterStore or SecretsManager").Default("true").Bool(),
 		PutLogs:    verify.Flag("put-logs", "put verification logs to CloudWatch Logs").Default("true").Bool(),
 	}
 
 	render := kingpin.Command("render", "render config, service definition or task definition file to stdout")
-	renderOption := RenderOption{
+	opts.renderOption = &RenderOption{
 		Targets: render.Arg("targets", "render targets (config, servicedef, taskdef)").Required().Enums(
 			"config",
 			"servicedef", "service-definition",
@@ -170,7 +195,7 @@ func CLI(ctx context.Context) (int, error) {
 	}
 
 	tasks := kingpin.Command("tasks", "list tasks that are in a service or having the same family")
-	tasksOption := TasksOption{
+	opts.tasksOption = &TasksOption{
 		ID:     tasks.Flag("id", "task ID").Default("").String(),
 		Output: tasks.Flag("output", "output format (table|json|tsv)").Default("table").Enum("table", "json", "tsv"),
 		Find:   tasks.Flag("find", "find a task from tasks list and dump it as JSON").Bool(),
@@ -180,7 +205,7 @@ func CLI(ctx context.Context) (int, error) {
 	}
 
 	exec := kingpin.Command("exec", "execute command in a task")
-	execOption := ExecOption{
+	opts.execOption = &ExecOption{
 		ID:          exec.Flag("id", "task ID").Default("").String(),
 		Command:     exec.Flag("command", "command").Default("sh").String(),
 		Container:   exec.Flag("container", "container name").String(),
@@ -202,7 +227,7 @@ func CLI(ctx context.Context) (int, error) {
 		}
 	}
 
-	opt := &Option{
+	opts.option = &Option{
 		ConfigFilePath: *configFilePath,
 		Version:        Version,
 		Debug:          *debug,
@@ -210,9 +235,9 @@ func CLI(ctx context.Context) (int, error) {
 		ExtCode:        *extCode,
 	}
 	if sub == "init" {
-		opt.InitOption = &initOption
+		opts.option.InitOption = opts.initOption
 	}
-	app, err := New(ctx, opt)
+	app, err := New(ctx, opts.option)
 	if err != nil {
 		return 1, err
 	}
@@ -220,57 +245,60 @@ func CLI(ctx context.Context) (int, error) {
 	switch sub {
 	case "deploy":
 		if !isSetSuspendAutoScaling {
-			deployOption.SuspendAutoScaling = nil
+			opts.deployOption.SuspendAutoScaling = nil
 		}
 		if isSetResumeAutoScaling {
-			deployOption.SuspendAutoScaling = boolp(false)
+			opts.deployOption.SuspendAutoScaling = boolp(false)
 		}
-		err = app.Deploy(ctx, deployOption)
+		err = app.Deploy(ctx, *opts.deployOption)
 	case "refresh":
-		err = app.Deploy(ctx, refreshOption)
+		err = app.Deploy(ctx, *opts.refreshOption)
 	case "scale":
 		if !isSetSuspendAutoScaling {
-			scaleOption.SuspendAutoScaling = nil
+			opts.scaleOption.SuspendAutoScaling = nil
 		}
 		if isSetResumeAutoScaling {
-			scaleOption.SuspendAutoScaling = boolp(false)
+			opts.scaleOption.SuspendAutoScaling = boolp(false)
 		}
-		err = app.Deploy(ctx, scaleOption)
+		err = app.Deploy(ctx, *opts.scaleOption)
 	case "status":
-		err = app.Status(ctx, statusOption)
+		err = app.Status(ctx, *opts.statusOption)
 	case "rollback":
-		err = app.Rollback(ctx, rollbackOption)
+		err = app.Rollback(ctx, *opts.rollbackOption)
 	case "create":
 		err = fmt.Errorf("create command is deprecated. use deploy command instead")
 	case "delete":
-		err = app.Delete(ctx, deleteOption)
+		err = app.Delete(ctx, *opts.deleteOption)
 	case "run":
-		err = app.Run(ctx, runOption)
+		err = app.Run(ctx, *opts.runOption)
 	case "wait":
-		err = app.Wait(ctx, waitOption)
+		err = app.Wait(ctx, *opts.waitOption)
 	case "register":
-		err = app.Register(ctx, registerOption)
+		err = app.Register(ctx, *opts.registerOption)
 	case "deregister":
-		err = app.Deregister(ctx, deregisterOption)
+		err = app.Deregister(ctx, *opts.deregisterOption)
 	case "revisions":
-		err = app.Revesions(ctx, revisionsOption)
+		err = app.Revesions(ctx, *opts.revisionsOption)
 	case "init":
-		err = app.Init(ctx, initOption)
+		err = app.Init(ctx, *opts.initOption)
 	case "diff":
-		err = app.Diff(ctx, diffOption)
+		err = app.Diff(ctx, *opts.diffOption)
 	case "appspec":
-		err = app.AppSpec(ctx, appspecOption)
+		err = app.AppSpec(ctx, *opts.appSpecOption)
 	case "verify":
-		err = app.Verify(ctx, verifyOption)
+		err = app.Verify(ctx, *opts.verifyOption)
 	case "render":
-		err = app.Render(ctx, renderOption)
+		err = app.Render(ctx, *opts.renderOption)
 	case "tasks":
-		err = app.Tasks(ctx, tasksOption)
+		err = app.Tasks(ctx, *opts.tasksOption)
 	case "exec":
-		err = app.Exec(ctx, execOption)
+		err = app.Exec(ctx, *opts.execOption)
 	default:
 		kingpin.Usage()
 		return 1, nil
+	}
+	if err != nil {
+		return 1, err
 	}
 	return 0, nil
 }
