@@ -63,6 +63,22 @@ var cliTests = []struct {
 		},
 	},
 	{
+		args: []string{
+			"--envfile", "tests/envfile",
+			"status",
+			"--envfile", "tests/envfile2",
+		},
+		sub: "status",
+		fn: func(t *testing.T) {
+			if v := os.Getenv("ECSPRESSO_TEST"); v != "ok2" {
+				t.Errorf("unexpected ECSPRESSO_TEST expected: %s, got: %s", "ok2", v)
+			}
+			if v := os.Getenv("ECSPRESSO_TEST2"); v != "ok2" {
+				t.Errorf("unexpected ECSPRESSO_TEST2 expected: %s, got: %s", "ok2", v)
+			}
+		},
+	},
+	{
 		args: []string{"status"},
 		sub:  "status",
 		subOption: &ecspresso.StatusOption{

@@ -11,6 +11,12 @@ import (
 )
 
 type CLIOptions struct {
+	Envfile []string          `help:"environment files"`
+	Debug   bool              `help:"enable debug log"`
+	ExtStr  map[string]string `help:"external string values for Jsonnet"`
+	ExtCode map[string]string `help:"external code values for Jsonnet"`
+	Config  string            `help:"config file" default:"ecspresso.yml"`
+
 	Option *Option
 
 	Appspec    *AppSpecOption    `cmd:"" help:"output AppSpec YAML for CodeDeploy to STDOUT"`
@@ -135,8 +141,10 @@ func dispatchCLI(ctx context.Context, sub string, opts *CLIOptions) error {
 	return nil
 }
 
-func CLI(ctx context.Context) (int, error) {
-	sub, opts, err := ParseCLI(os.Args[1:])
+type CLIParseFunc func([]string) (string, *CLIOptions, error)
+
+func CLI(ctx context.Context, parse CLIParseFunc) (int, error) {
+	sub, opts, err := parse(os.Args[1:])
 	if err != nil {
 		return 1, err
 	}
