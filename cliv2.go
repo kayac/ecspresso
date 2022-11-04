@@ -7,15 +7,19 @@ import (
 )
 
 func ParseCLIv2(args []string) (string, *CLIOptions, error) {
+	// compatible with v1
+	if len(args) == 0 || len(args) > 0 && args[0] == "help" {
+		args = []string{"--help"}
+	}
+
 	var opts CLIOptions
 	parser, err := kong.New(&opts, kong.Vars{"version": Version})
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("failed to new kong: %w", err)
 	}
 	c, err := parser.Parse(args)
 	if err != nil {
-		parser.FatalIfErrorf(err)
-		return "", nil, err
+		return "", nil, fmt.Errorf("failed to parse args: %w", err)
 	}
 	sub := c.Command()
 
@@ -31,7 +35,8 @@ func ParseCLIv2(args []string) (string, *CLIOptions, error) {
 		ExtStr:         opts.ExtStr,
 		ExtCode:        opts.ExtCode,
 	}
-	if sub == "init" {
+	switch sub {
+	case "init":
 		opts.Option.InitOption = opts.Init
 	}
 	return sub, &opts, nil

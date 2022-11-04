@@ -37,6 +37,7 @@ type CLIOptions struct {
 	Tasks      *TasksOption      `cmd:"" help:"list tasks that are in a service or having the same family"`
 	Verify     *VerifyOption     `cmd:"" help:"verify resources in configurations"`
 	Wait       *WaitOption       `cmd:"" help:"wait until service stable"`
+	Version    struct{}          `cmd:"" help:"show version"`
 }
 
 func (opts *CLIOptions) ForSubCommand(sub string) interface{} {
@@ -83,10 +84,8 @@ func (opts *CLIOptions) ForSubCommand(sub string) interface{} {
 }
 
 func dispatchCLI(ctx context.Context, sub string, opts *CLIOptions) error {
-	if sub == "" {
-		// usage already printed
-		return nil
-	} else if sub == "version" {
+	switch sub {
+	case "version", "":
 		fmt.Println("ecspresso", Version)
 		return nil
 	}

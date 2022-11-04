@@ -17,9 +17,9 @@ func main() {
 	defer stop()
 
 	// switch cli parser
-	parse := ecspresso.ParseCLI
-	if v2 := os.Getenv("V2"); v2 != "" {
-		parse = ecspresso.ParseCLIv2
+	parse := ecspresso.ParseCLIv2
+	if v1 := os.Getenv("V1"); v1 != "" {
+		parse = ecspresso.ParseCLI
 	}
 
 	exitCode, err := ecspresso.CLI(ctx, parse)
