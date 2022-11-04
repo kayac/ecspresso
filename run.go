@@ -215,64 +215,6 @@ func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool)
 	return nil
 }
 
-func (d *App) taskDefinitionForRun(ctx context.Context, opt RunOption) (tdArn string, watchContainer *types.ContainerDefinition, err error) {
-	tdPath := aws.ToString(opt.TaskDefinition)
-	if tdPath == "" {
-		tdPath = d.config.TaskDefinitionPath
-	}
-	var td *TaskDefinitionInput
-	td, err = d.LoadTaskDefinition(tdPath)
-	if err != nil {
-		return
-	}
-	family := *td.Family
-	defer func() {
-		if err != nil {
-			return
-		}
-		watchContainer = containerOf(td, opt.WatchContainer)
-		d.Log("Task definition ARN: %s", tdArn)
-		d.Log("Watch container: %s", *watchContainer.Name)
-	}()
-
-	if *opt.LatestTaskDefinition {
-		tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
-		return
-	} else if *opt.SkipTaskDefinition {
-		if aws.ToInt64(opt.Revision) != 0 {
-			tdArn = fmt.Sprintf("%s:%d", family, aws.ToInt64(opt.Revision))
-			return
-		}
-		if d.config.Service != "" {
-			if sv, _err := d.DescribeServiceStatus(ctx, 0); _err != nil {
-				err = _err
-			} else {
-				tdArn = *sv.TaskDefinition
-				td, err = d.DescribeTaskDefinition(ctx, tdArn)
-			}
-			return
-		} else {
-			d.Log("Revision is not specified. Use latest task definition")
-			tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
-			return
-		}
-	} else {
-		// register
-		if *opt.DryRun {
-			err = nil
-			return
-		}
-		if newTd, _err := d.RegisterTaskDefinition(ctx, td); _err != nil {
-			err = _err
-			return
-		} else {
-			tdArn = *newTd.TaskDefinitionArn
-			td, err = d.DescribeTaskDefinition(ctx, tdArn)
-			return
-		}
-	}
-}
-
 func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (string, error) {
 	switch {
 	case *opt.SkipTaskDefinition, *opt.LatestTaskDefinition:
