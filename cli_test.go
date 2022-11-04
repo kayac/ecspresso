@@ -10,35 +10,83 @@ import (
 )
 
 var cliTests = []struct {
-	args   []string
-	sub    string
-	option interface{}
+	args      []string
+	sub       string
+	option    *ecspresso.Option
+	subOption any
+	fn        func(*testing.T)
 }{
+	{
+		args: []string{"status",
+			"--config", "config.yml",
+			"--debug",
+			"--envfile", "tests/envfile",
+			"--ext-str", "s1=v1",
+			"--ext-str", "s2=v2",
+			"--ext-code", "c1=123",
+			"--ext-code", "c2=1+2",
+		},
+		sub: "status",
+		option: &ecspresso.Option{
+			ConfigFilePath: "config.yml",
+			Debug:          true,
+			ExtStr:         map[string]string{"s1": "v1", "s2": "v2"},
+			ExtCode:        map[string]string{"c1": "123", "c2": "1+2"},
+			InitOption:     nil,
+		},
+		subOption: &ecspresso.StatusOption{
+			Events: ptr(2),
+		},
+		fn: func(t *testing.T) {
+			if v := os.Getenv("ECSPRESSO_TEST"); v != "ok" {
+				t.Errorf("unexpected ECSPRESSO_TEST expected: %s, got: %s", "ok", v)
+			}
+		},
+	},
+	{
+		args: []string{
+			"--config", "config.yml",
+			"--debug",
+			"status",
+			"--events=10",
+		},
+		sub: "status",
+		option: &ecspresso.Option{
+			ConfigFilePath: "config.yml",
+			Debug:          true,
+			ExtStr:         map[string]string{},
+			ExtCode:        map[string]string{},
+			InitOption:     nil,
+		},
+		subOption: &ecspresso.StatusOption{
+			Events: ptr(10),
+		},
+	},
 	{
 		args: []string{"status"},
 		sub:  "status",
-		option: &ecspresso.StatusOption{
+		subOption: &ecspresso.StatusOption{
 			Events: ptr(2),
 		},
 	},
 	{
 		args: []string{"status", "--events=10"},
 		sub:  "status",
-		option: &ecspresso.StatusOption{
+		subOption: &ecspresso.StatusOption{
 			Events: ptr(10),
 		},
 	},
 	{
 		args: []string{"status", "--events", "10"},
 		sub:  "status",
-		option: &ecspresso.StatusOption{
+		subOption: &ecspresso.StatusOption{
 			Events: ptr(10),
 		},
 	},
 	{
 		args: []string{"deploy"},
 		sub:  "deploy",
-		option: &ecspresso.DeployOption{
+		subOption: &ecspresso.DeployOption{
 			DryRun:               ptr(false),
 			DesiredCount:         ptr(int32(-1)),
 			SkipTaskDefinition:   ptr(false),
@@ -54,7 +102,7 @@ var cliTests = []struct {
 			"--skip-task-definition", "--force-new-deployment",
 			"--no-wait", "--latest-task-definition"},
 		sub: "deploy",
-		option: &ecspresso.DeployOption{
+		subOption: &ecspresso.DeployOption{
 			DryRun:               ptr(true),
 			DesiredCount:         ptr(int32(10)),
 			SkipTaskDefinition:   ptr(true),
@@ -68,7 +116,7 @@ var cliTests = []struct {
 	{
 		args: []string{"deploy", "--resume-auto-scaling"},
 		sub:  "deploy",
-		option: &ecspresso.DeployOption{
+		subOption: &ecspresso.DeployOption{
 			SuspendAutoScaling:   ptr(false),
 			DryRun:               ptr(false),
 			DesiredCount:         ptr(int32(-1)),
@@ -83,7 +131,7 @@ var cliTests = []struct {
 	{
 		args: []string{"deploy", "--suspend-auto-scaling"},
 		sub:  "deploy",
-		option: &ecspresso.DeployOption{
+		subOption: &ecspresso.DeployOption{
 			SuspendAutoScaling:   ptr(true),
 			DryRun:               ptr(false),
 			DesiredCount:         ptr(int32(-1)),
@@ -98,7 +146,7 @@ var cliTests = []struct {
 	{
 		args: []string{"scale", "--tasks=5"},
 		sub:  "scale",
-		option: &ecspresso.DeployOption{
+		subOption: &ecspresso.DeployOption{
 			DryRun:               ptr(false),
 			DesiredCount:         ptr(int32(5)),
 			SkipTaskDefinition:   ptr(true),
@@ -111,7 +159,7 @@ var cliTests = []struct {
 	{
 		args: []string{"refresh"},
 		sub:  "refresh",
-		option: &ecspresso.DeployOption{
+		subOption: &ecspresso.DeployOption{
 			DryRun:               ptr(false),
 			DesiredCount:         nil,
 			SkipTaskDefinition:   ptr(true),
@@ -124,7 +172,7 @@ var cliTests = []struct {
 	{
 		args: []string{"rollback"},
 		sub:  "rollback",
-		option: &ecspresso.RollbackOption{
+		subOption: &ecspresso.RollbackOption{
 			DryRun:                   ptr(false),
 			DeregisterTaskDefinition: ptr(true), // v2
 			NoWait:                   ptr(false),
@@ -134,7 +182,7 @@ var cliTests = []struct {
 	{
 		args: []string{"rollback", "--no-deregister-task-definition"},
 		sub:  "rollback",
-		option: &ecspresso.RollbackOption{
+		subOption: &ecspresso.RollbackOption{
 			DryRun:                   ptr(false),
 			DeregisterTaskDefinition: ptr(false),
 			NoWait:                   ptr(false),
@@ -144,7 +192,7 @@ var cliTests = []struct {
 	{
 		args: []string{"delete"},
 		sub:  "delete",
-		option: &ecspresso.DeleteOption{
+		subOption: &ecspresso.DeleteOption{
 			DryRun: ptr(false),
 			Force:  ptr(false),
 		},
@@ -152,7 +200,7 @@ var cliTests = []struct {
 	{
 		args: []string{"delete", "--force"},
 		sub:  "delete",
-		option: &ecspresso.DeleteOption{
+		subOption: &ecspresso.DeleteOption{
 			DryRun: ptr(false),
 			Force:  ptr(true),
 		},
@@ -160,7 +208,7 @@ var cliTests = []struct {
 	{
 		args: []string{"run"},
 		sub:  "run",
-		option: &ecspresso.RunOption{
+		subOption: &ecspresso.RunOption{
 			DryRun:               ptr(false),
 			TaskDefinition:       ptr(""),
 			NoWait:               ptr(false),
@@ -185,7 +233,7 @@ var cliTests = []struct {
 			"--wait-until", "running", "--revision", "1",
 		},
 		sub: "run",
-		option: &ecspresso.RunOption{
+		subOption: &ecspresso.RunOption{
 			DryRun:               ptr(false),
 			TaskDefinition:       ptr("foo.json"),
 			NoWait:               ptr(false),
@@ -204,7 +252,7 @@ var cliTests = []struct {
 	{
 		args: []string{"register"},
 		sub:  "register",
-		option: &ecspresso.RegisterOption{
+		subOption: &ecspresso.RegisterOption{
 			DryRun: ptr(false),
 			Output: ptr(false),
 		},
@@ -212,7 +260,7 @@ var cliTests = []struct {
 	{
 		args: []string{"register", "--output", "--dry-run"},
 		sub:  "register",
-		option: &ecspresso.RegisterOption{
+		subOption: &ecspresso.RegisterOption{
 			DryRun: ptr(true),
 			Output: ptr(true),
 		},
@@ -220,7 +268,7 @@ var cliTests = []struct {
 	{
 		args: []string{"deregister"},
 		sub:  "deregister",
-		option: &ecspresso.DeregisterOption{
+		subOption: &ecspresso.DeregisterOption{
 			DryRun:   ptr(false),
 			Revision: ptr(int64(0)),
 			Keeps:    ptr(0),
@@ -231,7 +279,7 @@ var cliTests = []struct {
 		args: []string{"deregister",
 			"--dry-run", "--revision", "123", "--keeps", "23", "--force"},
 		sub: "deregister",
-		option: &ecspresso.DeregisterOption{
+		subOption: &ecspresso.DeregisterOption{
 			DryRun:   ptr(true),
 			Revision: ptr(int64(123)),
 			Keeps:    ptr(23),
@@ -241,7 +289,7 @@ var cliTests = []struct {
 	{
 		args: []string{"revisions"},
 		sub:  "revisions",
-		option: &ecspresso.RevisionsOption{
+		subOption: &ecspresso.RevisionsOption{
 			Revision: ptr(int64(0)),
 			Output:   ptr("table"),
 		},
@@ -249,20 +297,50 @@ var cliTests = []struct {
 	{
 		args: []string{"revisions", "--revision", "123", "--output", "json"},
 		sub:  "revisions",
-		option: &ecspresso.RevisionsOption{
+		subOption: &ecspresso.RevisionsOption{
 			Revision: ptr(int64(123)),
 			Output:   ptr("json"),
 		},
 	},
 	{
-		args:   []string{"wait"},
-		sub:    "wait",
-		option: &ecspresso.WaitOption{},
+		args:      []string{"wait"},
+		sub:       "wait",
+		subOption: &ecspresso.WaitOption{},
 	},
 	{
 		args: []string{"init", "--service", "myservice", "--config", "myconfig.yml"},
 		sub:  "init",
-		option: &ecspresso.InitOption{
+		subOption: &ecspresso.InitOption{
+			Region:                ptr(os.Getenv("AWS_REGION")),
+			Cluster:               ptr("default"),
+			ConfigFilePath:        ptr("myconfig.yml"),
+			Service:               ptr("myservice"),
+			TaskDefinitionPath:    ptr("ecs-task-def.json"),
+			ServiceDefinitionPath: ptr("ecs-service-def.json"),
+			ForceOverwrite:        ptr(false),
+			Jsonnet:               ptr(false),
+		},
+	},
+	{
+		args: []string{"init", "--service", "myservice", "--config", "myconfig.yml"},
+		sub:  "init",
+		option: &ecspresso.Option{
+			InitOption: &ecspresso.InitOption{
+				Region:                ptr(os.Getenv("AWS_REGION")),
+				Cluster:               ptr("default"),
+				ConfigFilePath:        ptr("myconfig.yml"),
+				Service:               ptr("myservice"),
+				TaskDefinitionPath:    ptr("ecs-task-def.json"),
+				ServiceDefinitionPath: ptr("ecs-service-def.json"),
+				ForceOverwrite:        ptr(false),
+				Jsonnet:               ptr(false),
+			},
+			ConfigFilePath: "myconfig.yml",
+			Debug:          false,
+			ExtStr:         map[string]string{},
+			ExtCode:        map[string]string{},
+		},
+		subOption: &ecspresso.InitOption{
 			Region:                ptr(os.Getenv("AWS_REGION")),
 			Cluster:               ptr("default"),
 			ConfigFilePath:        ptr("myconfig.yml"),
@@ -281,7 +359,7 @@ var cliTests = []struct {
 			"--force-overwrite", "--jsonnet",
 		},
 		sub: "init",
-		option: &ecspresso.InitOption{
+		subOption: &ecspresso.InitOption{
 			Region:                ptr(os.Getenv("AWS_REGION")),
 			Cluster:               ptr("mycluster"),
 			ConfigFilePath:        ptr("myconfig.jsonnet"),
@@ -295,21 +373,21 @@ var cliTests = []struct {
 	{
 		args: []string{"diff"},
 		sub:  "diff",
-		option: &ecspresso.DiffOption{
+		subOption: &ecspresso.DiffOption{
 			Unified: ptr(true),
 		},
 	},
 	{
 		args: []string{"diff", "--no-unified"},
 		sub:  "diff",
-		option: &ecspresso.DiffOption{
+		subOption: &ecspresso.DiffOption{
 			Unified: ptr(false),
 		},
 	},
 	{
 		args: []string{"appspec"},
 		sub:  "appspec",
-		option: &ecspresso.AppSpecOption{
+		subOption: &ecspresso.AppSpecOption{
 			TaskDefinition: ptr("latest"),
 			UpdateService:  ptr(true),
 		},
@@ -317,7 +395,7 @@ var cliTests = []struct {
 	{
 		args: []string{"appspec", "--task-definition", "current", "--no-update-service"},
 		sub:  "appspec",
-		option: &ecspresso.AppSpecOption{
+		subOption: &ecspresso.AppSpecOption{
 			TaskDefinition: ptr("current"),
 			UpdateService:  ptr(false),
 		},
@@ -325,7 +403,7 @@ var cliTests = []struct {
 	{
 		args: []string{"verify"},
 		sub:  "verify",
-		option: &ecspresso.VerifyOption{
+		subOption: &ecspresso.VerifyOption{
 			GetSecrets: ptr(true),
 			PutLogs:    ptr(true),
 		},
@@ -333,7 +411,7 @@ var cliTests = []struct {
 	{
 		args: []string{"verify", "--no-get-secrets", "--no-put-logs"},
 		sub:  "verify",
-		option: &ecspresso.VerifyOption{
+		subOption: &ecspresso.VerifyOption{
 			GetSecrets: ptr(false),
 			PutLogs:    ptr(false),
 		},
@@ -341,14 +419,14 @@ var cliTests = []struct {
 	{
 		args: []string{"render", "config", "taskdef", "servicedef"},
 		sub:  "render",
-		option: &ecspresso.RenderOption{
+		subOption: &ecspresso.RenderOption{
 			Targets: ptr([]string{"config", "taskdef", "servicedef"}),
 		},
 	},
 	{
 		args: []string{"tasks"},
 		sub:  "tasks",
-		option: &ecspresso.TasksOption{
+		subOption: &ecspresso.TasksOption{
 			ID:     ptr(""),
 			Output: ptr("table"),
 			Find:   ptr(false),
@@ -362,7 +440,7 @@ var cliTests = []struct {
 			"--find", "--stop", "--force", "--trace",
 		},
 		sub: "tasks",
-		option: &ecspresso.TasksOption{
+		subOption: &ecspresso.TasksOption{
 			ID:     ptr("abcdefff"),
 			Output: ptr("json"),
 			Find:   ptr(true),
@@ -374,7 +452,7 @@ var cliTests = []struct {
 	{
 		args: []string{"exec"},
 		sub:  "exec",
-		option: &ecspresso.ExecOption{
+		subOption: &ecspresso.ExecOption{
 			ID:          ptr(""),
 			Command:     ptr("sh"),
 			Container:   ptr(""),
@@ -392,8 +470,8 @@ var cliTests = []struct {
 			"--port", "80",
 			"--port-forward",
 		},
-		sub:  "exec",
-		option: &ecspresso.ExecOption{
+		sub: "exec",
+		subOption: &ecspresso.ExecOption{
 			ID:          ptr("abcdefff"),
 			Command:     ptr("ls -la"),
 			Container:   ptr("mycontainer"),
@@ -414,8 +492,18 @@ func TestParseCLI(t *testing.T) {
 			if sub != tt.sub {
 				t.Errorf("unexpected subcommand: expected %s, got %s", tt.sub, sub)
 			}
-			if diff := cmp.Diff(opt.ForSubCommand(sub), tt.option); diff != "" {
-				t.Errorf("unexpected option: diff %s", diff)
+			if tt.option != nil {
+				if diff := cmp.Diff(tt.option, opt.Option); diff != "" {
+					t.Errorf("unexpected option: diff %s", diff)
+				}
+			}
+			if tt.subOption != nil {
+				if diff := cmp.Diff(opt.ForSubCommand(sub), tt.subOption); diff != "" {
+					t.Errorf("unexpected subOption: diff %s", diff)
+				}
+			}
+			if tt.fn != nil {
+				tt.fn(t)
 			}
 		})
 	}

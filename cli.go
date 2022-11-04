@@ -342,7 +342,6 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 
 	opts.Option = &Option{
 		ConfigFilePath: *configFilePath,
-		Version:        Version,
 		Debug:          *debug,
 		ExtStr:         *extStr,
 		ExtCode:        *extCode,
