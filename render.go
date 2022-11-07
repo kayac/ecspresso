@@ -10,7 +10,7 @@ import (
 )
 
 type RenderOption struct {
-	Targets *[]string `arg:"" help:"target to render" optional:"" enum:"config,service-definition,servicedef,task-definition,taskdef"`
+	Targets *[]string `arg:"" help:"target to render (config, service-definition, servicedef, task-definition, taskdef)" enum:"config,service-definition,servicedef,task-definition,taskdef"`
 }
 
 func (d *App) Render(ctx context.Context, opt RenderOption) error {

@@ -46,7 +46,6 @@ func ParseCLIv2(args []string) (string, *CLIOptions, error) {
 	case "init":
 		opts.Init.ConfigFilePath = &opts.Config
 		opts.Option.InitOption = opts.Init
-
 	}
 	return sub, &opts, nil
 }
