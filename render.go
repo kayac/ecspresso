@@ -32,7 +32,7 @@ func (d *App) Render(ctx context.Context, opt RenderOption) error {
 				if err != nil {
 					return fmt.Errorf("unable to format config as Jsonnet: %w", err)
 				}
-				if _, err := out.Write([]byte(s)); err != nil {
+				if _, err := out.WriteString(s); err != nil {
 					return err
 				}
 			} else {
@@ -45,15 +45,14 @@ func (d *App) Render(ctx context.Context, opt RenderOption) error {
 			if err != nil {
 				return err
 			}
-			b, _ := MarshalJSONForAPI(sv)
+			s := MustMarshalJSONStringForAPI(sv)
 			if *opt.Jsonnet {
-				s, err := formatter.Format(d.config.ServiceDefinitionPath, string(b), formatter.DefaultOptions())
+				s, err = formatter.Format(d.config.ServiceDefinitionPath, s, formatter.DefaultOptions())
 				if err != nil {
 					return fmt.Errorf("unable to format service definition as Jsonnet: %w", err)
 				}
-				b = []byte(s)
 			}
-			if _, err = out.Write(b); err != nil {
+			if _, err = out.WriteString(s); err != nil {
 				return err
 			}
 		case "task-definition", "taskdef":
@@ -61,15 +60,14 @@ func (d *App) Render(ctx context.Context, opt RenderOption) error {
 			if err != nil {
 				return err
 			}
-			b, _ := MarshalJSONForAPI(td)
+			s := MustMarshalJSONStringForAPI(td)
 			if *opt.Jsonnet {
-				s, err := formatter.Format(d.config.TaskDefinitionPath, string(b), formatter.DefaultOptions())
+				s, err = formatter.Format(d.config.TaskDefinitionPath, s, formatter.DefaultOptions())
 				if err != nil {
 					return fmt.Errorf("unable to format task definition as Jsonnet: %w", err)
 				}
-				b = []byte(s)
 			}
-			if _, err := out.Write(b); err != nil {
+			if _, err := out.WriteString(s); err != nil {
 				return err
 			}
 		default:
