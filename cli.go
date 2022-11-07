@@ -303,6 +303,7 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 			"servicedef", "service-definition",
 			"taskdef", "task-definition",
 		),
+		Jsonnet: render.Flag("jsonnet", "format as jsonnet").Bool(),
 	}
 
 	tasks := kingpin.Command("tasks", "list tasks that are in a service or having the same family")
