@@ -143,8 +143,8 @@ func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionR
 
 // VerifyOption represents options for Verify()
 type VerifyOption struct {
-	GetSecrets *bool
-	PutLogs    *bool
+	GetSecrets *bool `help:"get secrets from ParameterStore or SecretsManager" default:"true" negatable:""`
+	PutLogs    *bool `help:"put logs to CloudWatchLogs" default:"true" negatable:""`
 }
 
 type verifyResourceFunc func(context.Context) error

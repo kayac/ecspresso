@@ -24,15 +24,16 @@ const (
 )
 
 type DeployOption struct {
-	DryRun               *bool
-	DesiredCount         *int32
-	SkipTaskDefinition   *bool
-	ForceNewDeployment   *bool
-	NoWait               *bool
-	SuspendAutoScaling   *bool
-	RollbackEvents       *string
-	UpdateService        *bool
-	LatestTaskDefinition *bool
+	DryRun               *bool   `help:"dry run" default:"false"`
+	DesiredCount         *int32  `name:"tasks" help:"desired count of tasks" default:"-1"`
+	SkipTaskDefinition   *bool   `help:"skip register a new task definition" default:"false"`
+	ForceNewDeployment   *bool   `help:"force a new deployment of the service" default:"false"`
+	NoWait               *bool   `help:"exit ecspresso immediately after just deployed without waiting for service stable" default:"false"`
+	SuspendAutoScaling   *bool   `help:"suspend application auto-scaling attached with the ECS service"`
+	ResumeAutoScaling    *bool   `help:"resume application auto-scaling attached with the ECS service"`
+	RollbackEvents       *string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
+	UpdateService        *bool   `help:"update service attributes by service definition" default:"true" negatable:""`
+	LatestTaskDefinition *bool   `help:"deploy with the latest task definition without registering a new task definition" default:"false"`
 }
 
 func (opt DeployOption) DryRunString() string {
@@ -56,6 +57,8 @@ func calcDesiredCount(sv *Service, opt DeployOption) *int32 {
 }
 
 func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
+	d.Log("[DEBUG] deploy")
+	d.LogJSON(opt)
 	ctx, cancel := d.Start(ctx)
 	defer cancel()
 

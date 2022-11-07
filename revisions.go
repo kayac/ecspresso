@@ -14,8 +14,8 @@ import (
 )
 
 type RevisionsOption struct {
-	Revision *int64
-	Output   *string
+	Revision *int64  `help:"revision number to output" default:"0"`
+	Output   *string `help:"output format (json, table, tsv)" default:"table" enum:"json,table,tsv"`
 }
 
 type revision struct {
@@ -30,12 +30,17 @@ func (rev revision) Cols() []string {
 type revisions []revision
 
 func (revs revisions) OutputJSON(w io.Writer) error {
-	b, err := MarshalJSONForAPI(revs)
-	if err != nil {
-		return err
+	for _, r := range revs {
+		b, err := MarshalJSONForAPI(r)
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(b)
+		if err != nil {
+			return err
+		}
 	}
-	_, err = w.Write(b)
-	return err
+	return nil
 }
 
 func (revs revisions) Header() []string {

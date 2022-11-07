@@ -7,6 +7,10 @@ import (
 	"github.com/kayac/ecspresso"
 )
 
+func ptr[T any](v T) *T {
+	return &v
+}
+
 func TestLoadTaskDefinition(t *testing.T) {
 	ctx := context.Background()
 	for _, path := range []string{

@@ -13,19 +13,19 @@ import (
 )
 
 type RunOption struct {
-	DryRun               *bool
-	TaskDefinition       *string
-	NoWait               *bool
-	TaskOverrideStr      *string
-	TaskOverrideFile     *string
-	SkipTaskDefinition   *bool
-	Count                *int32
-	WatchContainer       *string
-	LatestTaskDefinition *bool
-	PropagateTags        *string
-	Tags                 *string
-	WaitUntil            *string
-	Revision             *int64
+	DryRun               *bool   `help:"dry run" default:"false"`
+	TaskDefinition       *string `name:"task-def" help:"task definition file for run task" default:""`
+	NoWait               *bool   `help:"don't wait for task to complete" default:"false"`
+	TaskOverrideStr      *string `name:"overrides" help:"task override JSON string" default:""`
+	TaskOverrideFile     *string `name:"overrides-file" help:"task override JSON file path" default:""`
+	SkipTaskDefinition   *bool   `help:"skip register a new task definition" default:"false"`
+	Count                *int32  `help:"number of tasks to run (max 10)" default:"1"`
+	WatchContainer       *string `help:"container name for watching exit code" default:""`
+	LatestTaskDefinition *bool   `help:"use the latest task definition without registering a new task definition" default:"false"`
+	PropagateTags        *string `help:"propagate the tags for the task (SERVICE or TASK_DEFINITION)" default:""`
+	Tags                 *string `help:"tags for the task: format is KeyFoo=ValueFoo,KeyBar=ValueBar" default:""`
+	WaitUntil            *string `help:"wait until invoked tasks status reached to (running or stopped)" default:"stopped" enum:"running,stopped"`
+	Revision             *int64  `help:"revision of the task definition to run when --skip-task-definition" default:"0"`
 }
 
 func (opt RunOption) waitUntilRunning() bool {
@@ -74,7 +74,7 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 		return err
 	}
 	watchContainer := containerOf(td, opt.WatchContainer)
-	d.Log("Watch container:", *watchContainer.Name)
+	d.Log("Watch container: %s", *watchContainer.Name)
 
 	task, err := d.RunTask(ctx, tdArn, &ov, &opt)
 	if err != nil {
@@ -134,12 +134,15 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 		}
 		d.Log("[DEBUG] propagate tags from service %s", *sv.ServiceArn, out)
 		in.Tags = append(in.Tags, out.Tags...)
-	case "":
-		in.PropagateTags = types.PropagateTagsNone
+	case "", "NONE":
+		// XXX ECS says > InvalidParameterException: Invalid value for propagateTags
+		// in.PropagateTags = types.PropagateTagsNone
+		in.PropagateTags = ""
 	default:
 		in.PropagateTags = types.PropagateTagsTaskDefinition
 	}
 	d.Log("[DEBUG] run task input %v", in)
+	d.LogJSON(in)
 
 	out, err := d.ecs.RunTask(ctx, in)
 	if err != nil {

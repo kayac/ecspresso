@@ -31,6 +31,10 @@ var Version string
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
 
+func ptr[T any](v T) *T {
+	return &v
+}
+
 type TaskDefinition = types.TaskDefinition
 
 type TaskDefinitionInput = ecs.RegisterTaskDefinitionInput
@@ -142,7 +146,6 @@ type Option struct {
 func (opt *Option) resolveDefaultConfigFilePath() (path string) {
 	path = DefaultConfigFilePath
 	defer func() {
-		log.Println("resolved config file path:", path)
 		opt.ConfigFilePath = path
 		if opt.InitOption != nil {
 			opt.InitOption.ConfigFilePath = &path
@@ -192,8 +195,12 @@ func (d *App) DescribeService(ctx context.Context) (*Service, error) {
 	if len(out.Services) == 0 {
 		return nil, ErrNotFound(fmt.Sprintf("service %s is not found", d.Service))
 	}
-	if s := aws.ToString(out.Services[0].Status); s == "INACTIVE" {
-		return nil, ErrNotFound(fmt.Sprintf("service %s is %s", d.Service, s))
+	status := aws.ToString(out.Services[0].Status)
+	switch status {
+	case "DRAINING":
+		d.Log("[WARNING] service %s is %s", d.Service, status)
+	case "INACTIVE":
+		return nil, ErrNotFound(fmt.Sprintf("service %s is %s", d.Service, status))
 	}
 	return newServiceFromTypes(out.Services[0]), nil
 }

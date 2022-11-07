@@ -9,13 +9,13 @@ import (
 )
 
 type ExecOption struct {
-	ID        *string
-	Command   *string
-	Container *string
+	ID        *string `help:"task ID" default:""`
+	Command   *string `help:"command to execute" default:"sh"`
+	Container *string `help:"container name" default:""`
 
-	PortForward *bool
-	LocalPort   *int
-	Port        *int
+	PortForward *bool `help:"enable port forward" default:"false"`
+	LocalPort   *int  `help:"local port number" default:"0"`
+	Port        *int  `help:"remote port number (required for --port-forward)" default:"0"`
 }
 
 func (d *App) NewEcsta(ctx context.Context) (*ecsta.Ecsta, error) {

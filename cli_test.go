@@ -63,6 +63,22 @@ var cliTests = []struct {
 		},
 	},
 	{
+		args: []string{
+			"--envfile", "tests/envfile",
+			"status",
+			"--envfile", "tests/envfile2",
+		},
+		sub: "status",
+		fn: func(t *testing.T) {
+			if v := os.Getenv("ECSPRESSO_TEST"); v != "ok2" {
+				t.Errorf("unexpected ECSPRESSO_TEST expected: %s, got: %s", "ok2", v)
+			}
+			if v := os.Getenv("ECSPRESSO_TEST2"); v != "ok2" {
+				t.Errorf("unexpected ECSPRESSO_TEST2 expected: %s, got: %s", "ok2", v)
+			}
+		},
+	},
+	{
 		args: []string{"status"},
 		sub:  "status",
 		subOption: &ecspresso.StatusOption{
@@ -117,7 +133,8 @@ var cliTests = []struct {
 		args: []string{"deploy", "--resume-auto-scaling"},
 		sub:  "deploy",
 		subOption: &ecspresso.DeployOption{
-			SuspendAutoScaling:   ptr(false),
+			SuspendAutoScaling:   nil,
+			ResumeAutoScaling:    ptr(true),
 			DryRun:               ptr(false),
 			DesiredCount:         ptr(int32(-1)),
 			SkipTaskDefinition:   ptr(false),
@@ -133,6 +150,7 @@ var cliTests = []struct {
 		sub:  "deploy",
 		subOption: &ecspresso.DeployOption{
 			SuspendAutoScaling:   ptr(true),
+			ResumeAutoScaling:    nil,
 			DryRun:               ptr(false),
 			DesiredCount:         ptr(int32(-1)),
 			SkipTaskDefinition:   ptr(false),
@@ -146,27 +164,18 @@ var cliTests = []struct {
 	{
 		args: []string{"scale", "--tasks=5"},
 		sub:  "scale",
-		subOption: &ecspresso.DeployOption{
-			DryRun:               ptr(false),
-			DesiredCount:         ptr(int32(5)),
-			SkipTaskDefinition:   ptr(true),
-			ForceNewDeployment:   ptr(false),
-			NoWait:               ptr(false),
-			UpdateService:        ptr(false),
-			LatestTaskDefinition: ptr(false),
+		subOption: &ecspresso.ScaleOption{
+			DryRun:       ptr(false),
+			DesiredCount: ptr(int32(5)),
+			NoWait:       ptr(false),
 		},
 	},
 	{
 		args: []string{"refresh"},
 		sub:  "refresh",
-		subOption: &ecspresso.DeployOption{
-			DryRun:               ptr(false),
-			DesiredCount:         nil,
-			SkipTaskDefinition:   ptr(true),
-			ForceNewDeployment:   ptr(true),
-			NoWait:               ptr(false),
-			UpdateService:        ptr(false),
-			LatestTaskDefinition: ptr(false),
+		subOption: &ecspresso.RefreshOption{
+			DryRun: ptr(false),
+			NoWait: ptr(false),
 		},
 	},
 	{
@@ -509,6 +518,29 @@ func TestParseCLI(t *testing.T) {
 	}
 }
 
-func ptr[T any](v T) *T {
-	return &v
+func TestParseCLIv2(t *testing.T) {
+	for _, tt := range cliTests {
+		t.Run(strings.Join(tt.args, "_"), func(t *testing.T) {
+			sub, opt, err := ecspresso.ParseCLIv2(tt.args)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if sub != tt.sub {
+				t.Errorf("unexpected subcommand: expected %s, got %s", tt.sub, sub)
+			}
+			if tt.option != nil {
+				if diff := cmp.Diff(tt.option, opt.Option); diff != "" {
+					t.Errorf("unexpected option: diff %s", diff)
+				}
+			}
+			if tt.subOption != nil {
+				if diff := cmp.Diff(opt.ForSubCommand(sub), tt.subOption); diff != "" {
+					t.Errorf("unexpected subOption: diff %s", diff)
+				}
+			}
+			if tt.fn != nil {
+				tt.fn(t)
+			}
+		})
+	}
 }

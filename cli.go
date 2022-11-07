@@ -11,76 +11,81 @@ import (
 )
 
 type CLIOptions struct {
+	Envfile []string          `help:"environment files"`
+	Debug   bool              `help:"enable debug log"`
+	ExtStr  map[string]string `help:"external string values for Jsonnet"`
+	ExtCode map[string]string `help:"external code values for Jsonnet"`
+	Config  string            `help:"config file" default:"ecspresso.yml"`
+
 	Option *Option
 
-	AppSpecOption    *AppSpecOption
-	DeleteOption     *DeleteOption
-	DeployOption     *DeployOption
-	DeregisterOption *DeregisterOption
-	DiffOption       *DiffOption
-	ExecOption       *ExecOption
-	InitOption       *InitOption
-	RefreshOption    *DeployOption
-	RegisterOption   *RegisterOption
-	RenderOption     *RenderOption
-	RevisionsOption  *RevisionsOption
-	RollbackOption   *RollbackOption
-	RunOption        *RunOption
-	ScaleOption      *DeployOption
-	StatusOption     *StatusOption
-	TasksOption      *TasksOption
-	VerifyOption     *VerifyOption
-	WaitOption       *WaitOption
+	Appspec    *AppSpecOption    `cmd:"" help:"output AppSpec YAML for CodeDeploy to STDOUT"`
+	Delete     *DeleteOption     `cmd:"" help:"delete service"`
+	Deploy     *DeployOption     `cmd:"" help:"deploy service"`
+	Deregister *DeregisterOption `cmd:"" help:"deregister task definition"`
+	Diff       *DiffOption       `cmd:"" help:"show diff between task definition, service definition with current running service and task definition"`
+	Exec       *ExecOption       `cmd:"" help:"execute command on task"`
+	Init       *InitOption       `cmd:"" help:"create configuration files from existing ECS service"`
+	Refresh    *RefreshOption    `cmd:"" help:"refresh service. equivalent to deploy --skip-task-definition --force-new-deployment --no-update-service"`
+	Register   *RegisterOption   `cmd:"" help:"register task definition"`
+	Render     *RenderOption     `cmd:"" help:"render config, service definition or task definition file to STDOUT"`
+	Revisions  *RevisionsOption  `cmd:"" help:"show revisions of task definitions"`
+	Rollback   *RollbackOption   `cmd:"" help:"rollback service"`
+	Run        *RunOption        `cmd:"" help:"run task"`
+	Scale      *ScaleOption      `cmd:"" help:"scale service. equivalent to deploy --skip-task-definition --no-update-service"`
+	Status     *StatusOption     `cmd:"" help:"show status of service"`
+	Tasks      *TasksOption      `cmd:"" help:"list tasks that are in a service or having the same family"`
+	Verify     *VerifyOption     `cmd:"" help:"verify resources in configurations"`
+	Wait       *WaitOption       `cmd:"" help:"wait until service stable"`
+	Version    struct{}          `cmd:"" help:"show version"`
 }
 
 func (opts *CLIOptions) ForSubCommand(sub string) interface{} {
 	switch sub {
 	case "appspec":
-		return opts.AppSpecOption
+		return opts.Appspec
 	case "delete":
-		return opts.DeleteOption
+		return opts.Delete
 	case "deploy":
-		return opts.DeployOption
+		return opts.Deploy
 	case "deregister":
-		return opts.DeregisterOption
+		return opts.Deregister
 	case "diff":
-		return opts.DiffOption
+		return opts.Diff
 	case "exec":
-		return opts.ExecOption
+		return opts.Exec
 	case "init":
-		return opts.InitOption
+		return opts.Init
 	case "refresh":
-		return opts.RefreshOption
+		return opts.Refresh
 	case "register":
-		return opts.RegisterOption
+		return opts.Register
 	case "render":
-		return opts.RenderOption
+		return opts.Render
 	case "revisions":
-		return opts.RevisionsOption
+		return opts.Revisions
 	case "rollback":
-		return opts.RollbackOption
+		return opts.Rollback
 	case "run":
-		return opts.RunOption
+		return opts.Run
 	case "scale":
-		return opts.ScaleOption
+		return opts.Scale
 	case "status":
-		return opts.StatusOption
+		return opts.Status
 	case "tasks":
-		return opts.TasksOption
+		return opts.Tasks
 	case "verify":
-		return opts.VerifyOption
+		return opts.Verify
 	case "wait":
-		return opts.WaitOption
+		return opts.Wait
 	default:
 		return nil
 	}
 }
 
 func dispatchCLI(ctx context.Context, sub string, opts *CLIOptions) error {
-	if sub == "" {
-		// usage already printed
-		return nil
-	} else if sub == "version" {
+	switch sub {
+	case "version", "":
 		fmt.Println("ecspresso", Version)
 		return nil
 	}
@@ -89,54 +94,56 @@ func dispatchCLI(ctx context.Context, sub string, opts *CLIOptions) error {
 	if err != nil {
 		return err
 	}
-
+	app.Log("[DEBUG] dispatching subcommand: %s", sub)
 	switch sub {
 	case "deploy":
-		return app.Deploy(ctx, *opts.DeployOption)
+		return app.Deploy(ctx, *opts.Deploy)
 	case "refresh":
-		return app.Deploy(ctx, *opts.RefreshOption)
+		return app.Deploy(ctx, opts.Refresh.DeployOption())
 	case "scale":
-		return app.Deploy(ctx, *opts.ScaleOption)
+		return app.Deploy(ctx, opts.Scale.DeployOption())
 	case "status":
-		return app.Status(ctx, *opts.StatusOption)
+		return app.Status(ctx, *opts.Status)
 	case "rollback":
-		return app.Rollback(ctx, *opts.RollbackOption)
+		return app.Rollback(ctx, *opts.Rollback)
 	case "create":
 		return fmt.Errorf("create command is deprecated. use deploy command instead")
 	case "delete":
-		return app.Delete(ctx, *opts.DeleteOption)
+		return app.Delete(ctx, *opts.Delete)
 	case "run":
-		return app.Run(ctx, *opts.RunOption)
+		return app.Run(ctx, *opts.Run)
 	case "wait":
-		return app.Wait(ctx, *opts.WaitOption)
+		return app.Wait(ctx, *opts.Wait)
 	case "register":
-		return app.Register(ctx, *opts.RegisterOption)
+		return app.Register(ctx, *opts.Register)
 	case "deregister":
-		return app.Deregister(ctx, *opts.DeregisterOption)
+		return app.Deregister(ctx, *opts.Deregister)
 	case "revisions":
-		return app.Revesions(ctx, *opts.RevisionsOption)
+		return app.Revesions(ctx, *opts.Revisions)
 	case "init":
-		return app.Init(ctx, *opts.InitOption)
+		return app.Init(ctx, *opts.Init)
 	case "diff":
-		return app.Diff(ctx, *opts.DiffOption)
+		return app.Diff(ctx, *opts.Diff)
 	case "appspec":
-		return app.AppSpec(ctx, *opts.AppSpecOption)
+		return app.AppSpec(ctx, *opts.Appspec)
 	case "verify":
-		return app.Verify(ctx, *opts.VerifyOption)
+		return app.Verify(ctx, *opts.Verify)
 	case "render":
-		return app.Render(ctx, *opts.RenderOption)
+		return app.Render(ctx, *opts.Render)
 	case "tasks":
-		return app.Tasks(ctx, *opts.TasksOption)
+		return app.Tasks(ctx, *opts.Tasks)
 	case "exec":
-		return app.Exec(ctx, *opts.ExecOption)
+		return app.Exec(ctx, *opts.Exec)
 	default:
 		kingpin.Usage()
 	}
 	return nil
 }
 
-func CLI(ctx context.Context) (int, error) {
-	sub, opts, err := ParseCLI(os.Args[1:])
+type CLIParseFunc func([]string) (string, *CLIOptions, error)
+
+func CLI(ctx context.Context, parse CLIParseFunc) (int, error) {
+	sub, opts, err := parse(os.Args[1:])
 	if err != nil {
 		return 1, err
 	}
@@ -166,7 +173,7 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 	var isSetSuspendAutoScaling, isSetResumeAutoScaling bool
 	deploy := kingpin.Command("deploy", "deploy service")
 	deploy.Flag("resume-auto-scaling", "resume application auto-scaling attached with the ECS service").IsSetByUser(&isSetResumeAutoScaling).Bool()
-	opts.DeployOption = &DeployOption{
+	opts.Deploy = &DeployOption{
 		DryRun:               deploy.Flag("dry-run", "dry-run").Bool(),
 		DesiredCount:         deploy.Flag("tasks", "desired count of tasks").Default("-1").Int32(),
 		SkipTaskDefinition:   deploy.Flag("skip-task-definition", "skip register a new task definition").Bool(),
@@ -180,26 +187,17 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 
 	scale := kingpin.Command("scale", "scale service. equivalent to deploy --skip-task-definition --no-update-service")
 	scale.Flag("resume-auto-scaling", "resume application auto-scaling attached with the ECS service").IsSetByUser(&isSetResumeAutoScaling).Bool()
-	opts.ScaleOption = &DeployOption{
-		DryRun:               scale.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:         scale.Flag("tasks", "desired count of tasks").Default("-1").Int32(),
-		SkipTaskDefinition:   boolp(true),
-		SuspendAutoScaling:   scale.Flag("suspend-auto-scaling", "suspend application auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
-		ForceNewDeployment:   boolp(false),
-		NoWait:               scale.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		UpdateService:        boolp(false),
-		LatestTaskDefinition: boolp(false),
+	opts.Scale = &ScaleOption{
+		DryRun:             scale.Flag("dry-run", "dry-run").Bool(),
+		DesiredCount:       scale.Flag("tasks", "desired count of tasks").Default("-1").Int32(),
+		SuspendAutoScaling: scale.Flag("suspend-auto-scaling", "suspend application auto-scaling attached with the ECS service").IsSetByUser(&isSetSuspendAutoScaling).Bool(),
+		NoWait:             scale.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
 	}
 
 	refresh := kingpin.Command("refresh", "refresh service. equivalent to deploy --skip-task-definition --force-new-deployment --no-update-service")
-	opts.RefreshOption = &DeployOption{
-		DryRun:               refresh.Flag("dry-run", "dry-run").Bool(),
-		DesiredCount:         nil,
-		SkipTaskDefinition:   boolp(true),
-		ForceNewDeployment:   boolp(true),
-		NoWait:               refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
-		UpdateService:        boolp(false),
-		LatestTaskDefinition: boolp(false),
+	opts.Refresh = &RefreshOption{
+		DryRun: refresh.Flag("dry-run", "dry-run").Bool(),
+		NoWait: refresh.Flag("no-wait", "exit ecspresso immediately after just deployed without waiting for service stable").Bool(),
 	}
 
 	create := kingpin.Command("create", "[DEPRECATED] use deploy command instead")
@@ -211,12 +209,12 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 	}
 
 	status := kingpin.Command("status", "show status of service")
-	opts.StatusOption = &StatusOption{
+	opts.Status = &StatusOption{
 		Events: status.Flag("events", "show events num").Default("2").Int(),
 	}
 
 	rollback := kingpin.Command("rollback", "roll back a service")
-	opts.RollbackOption = &RollbackOption{
+	opts.Rollback = &RollbackOption{
 		DryRun:                   rollback.Flag("dry-run", "dry-run").Bool(),
 		DeregisterTaskDefinition: rollback.Flag("deregister-task-definition", "deregister a rolled-back task definition. not works with --no-wait").Default("true").Bool(),
 		NoWait:                   rollback.Flag("no-wait", "exit ecspresso immediately after just rolled back without waiting for service stable").Bool(),
@@ -224,13 +222,13 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 	}
 
 	delete := kingpin.Command("delete", "delete service")
-	opts.DeleteOption = &DeleteOption{
+	opts.Delete = &DeleteOption{
 		DryRun: delete.Flag("dry-run", "dry-run").Bool(),
 		Force:  delete.Flag("force", "delete without confirmation").Bool(),
 	}
 
 	run := kingpin.Command("run", "run task")
-	opts.RunOption = &RunOption{
+	opts.Run = &RunOption{
 		DryRun:               run.Flag("dry-run", "dry-run").Bool(),
 		TaskDefinition:       run.Flag("task-def", "task definition json for run task").String(),
 		NoWait:               run.Flag("no-wait", "exit ecspresso after task run").Bool(),
@@ -247,13 +245,13 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 	}
 
 	register := kingpin.Command("register", "register task definition")
-	opts.RegisterOption = &RegisterOption{
+	opts.Register = &RegisterOption{
 		DryRun: register.Flag("dry-run", "dry-run").Bool(),
 		Output: register.Flag("output", "output registered task definition").Bool(),
 	}
 
 	deregister := kingpin.Command("deregister", "deregister task definition")
-	opts.DeregisterOption = &DeregisterOption{
+	opts.Deregister = &DeregisterOption{
 		DryRun:   deregister.Flag("dry-run", "dry-run").Bool(),
 		Revision: deregister.Flag("revision", "revision number to deregister").Int64(),
 		Keeps:    deregister.Flag("keeps", "numbers of keep latest revisions except in-use").Int(),
@@ -261,16 +259,16 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 	}
 
 	revisions := kingpin.Command("revisions", "show revisions of task definitions")
-	opts.RevisionsOption = &RevisionsOption{
+	opts.Revisions = &RevisionsOption{
 		Output:   revisions.Flag("output", "output format (table|json|tsv)").Default("table").Enum("table", "json", "tsv"),
 		Revision: revisions.Flag("revision", "revision number to output task definition as JSON").Int64(),
 	}
 
 	_ = kingpin.Command("wait", "wait until service stable")
-	opts.WaitOption = &WaitOption{}
+	opts.Wait = &WaitOption{}
 
 	init := kingpin.Command("init", "create service/task definition files by existing ECS service")
-	opts.InitOption = &InitOption{
+	opts.Init = &InitOption{
 		Region:                init.Flag("region", "AWS region name").Default(os.Getenv("AWS_REGION")).String(),
 		Cluster:               init.Flag("cluster", "cluster name").Default("default").String(),
 		Service:               init.Flag("service", "service name").Required().String(),
@@ -282,24 +280,24 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 	}
 
 	diff := kingpin.Command("diff", "display diff for task definition compared with latest one on ECS")
-	opts.DiffOption = &DiffOption{
+	opts.Diff = &DiffOption{
 		Unified: diff.Flag("unified", "display diff in unified format").Default("t").Bool(),
 	}
 
 	appspec := kingpin.Command("appspec", "output AppSpec YAML for CodeDeploy to STDOUT")
-	opts.AppSpecOption = &AppSpecOption{
+	opts.Appspec = &AppSpecOption{
 		TaskDefinition: appspec.Flag("task-definition", "use task definition arn in AppSpec (latest, current or Arn)").Default("latest").String(),
 		UpdateService:  appspec.Flag("update-service", "update service attributes by service definition").Default("true").Bool(),
 	}
 
 	verify := kingpin.Command("verify", "verify resources in configurations")
-	opts.VerifyOption = &VerifyOption{
+	opts.Verify = &VerifyOption{
 		GetSecrets: verify.Flag("get-secrets", "get secrets from ParameterStore or SecretsManager").Default("true").Bool(),
 		PutLogs:    verify.Flag("put-logs", "put verification logs to CloudWatch Logs").Default("true").Bool(),
 	}
 
 	render := kingpin.Command("render", "render config, service definition or task definition file to stdout")
-	opts.RenderOption = &RenderOption{
+	opts.Render = &RenderOption{
 		Targets: render.Arg("targets", "render targets (config, servicedef, taskdef)").Required().Enums(
 			"config",
 			"servicedef", "service-definition",
@@ -308,7 +306,7 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 	}
 
 	tasks := kingpin.Command("tasks", "list tasks that are in a service or having the same family")
-	opts.TasksOption = &TasksOption{
+	opts.Tasks = &TasksOption{
 		ID:     tasks.Flag("id", "task ID").Default("").String(),
 		Output: tasks.Flag("output", "output format (table|json|tsv)").Default("table").Enum("table", "json", "tsv"),
 		Find:   tasks.Flag("find", "find a task from tasks list and dump it as JSON").Bool(),
@@ -318,7 +316,7 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 	}
 
 	exec := kingpin.Command("exec", "execute command in a task")
-	opts.ExecOption = &ExecOption{
+	opts.Exec = &ExecOption{
 		ID:          exec.Flag("id", "task ID").Default("").String(),
 		Command:     exec.Flag("command", "command").Default("sh").String(),
 		Container:   exec.Flag("container", "container name").String(),
@@ -347,21 +345,23 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 		ExtCode:        *extCode,
 	}
 	if sub == "init" {
-		opts.Option.InitOption = opts.InitOption
+		opts.Option.InitOption = opts.Init
 	}
 
-	if !isSetSuspendAutoScaling {
-		opts.DeployOption.SuspendAutoScaling = nil
-		opts.ScaleOption.SuspendAutoScaling = nil
+	if isSetSuspendAutoScaling {
+		opts.Deploy.SuspendAutoScaling = ptr(true)
+		opts.Scale.SuspendAutoScaling = ptr(true)
+	} else {
+		opts.Deploy.SuspendAutoScaling = nil
+		opts.Scale.SuspendAutoScaling = nil
 	}
 	if isSetResumeAutoScaling {
-		opts.DeployOption.SuspendAutoScaling = boolp(false)
-		opts.ScaleOption.SuspendAutoScaling = boolp(false)
+		opts.Deploy.ResumeAutoScaling = ptr(true)
+		opts.Scale.ResumeAutoScaling = ptr(true)
+	} else {
+		opts.Deploy.ResumeAutoScaling = nil
+		opts.Scale.ResumeAutoScaling = nil
 	}
 
 	return sub, opts, nil
-}
-
-func boolp(b bool) *bool {
-	return &b
 }
