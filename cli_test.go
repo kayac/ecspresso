@@ -430,6 +430,7 @@ var cliTests = []struct {
 		sub:  "render",
 		subOption: &ecspresso.RenderOption{
 			Targets: ptr([]string{"config", "taskdef", "servicedef"}),
+			Jsonnet: ptr(false),
 		},
 	},
 	{
