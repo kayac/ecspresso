@@ -189,6 +189,7 @@ func _main() int {
 		Command:     exec.Flag("command", "command").Default("sh").String(),
 		Container:   exec.Flag("container", "container name").String(),
 		LocalPort:   exec.Flag("local-port", "local port number").Default("0").Int(),
+		Host:        exec.Flag("host", "remote host to connect").Default("").String(),
 		Port:        exec.Flag("port", "remote port number (required for --port-forward)").Default("0").Int(),
 		PortForward: exec.Flag("port-forward", "enable port forward").Default("false").Bool(),
 	}

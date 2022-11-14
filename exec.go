@@ -35,6 +35,7 @@ type ExecOption struct {
 	PortForward *bool
 	LocalPort   *int
 	Port        *int
+	Host        *string
 }
 
 func (o ExecOption) taskID() string {
@@ -87,7 +88,14 @@ func (d *App) Exec(opt ExecOption) error {
 	}
 
 	if aws.BoolValue(opt.PortForward) {
-		return d.portForward(ctx, task, targetContainer, *opt.LocalPort, *opt.Port)
+		tg := portForwardTarget{
+			task:          task,
+			containerName: *targetContainer,
+			localPort:     *opt.LocalPort,
+			remotePort:    *opt.Port,
+			remoteHost:    *opt.Host,
+		}
+		return d.portForward(ctx, &tg)
 	}
 
 	out, err := d.ecs.ExecuteCommand(&ecs.ExecuteCommandInput{
@@ -241,24 +249,41 @@ func runInternalFilter(src io.Reader, title string) (string, error) {
 	}
 }
 
-func (d *App) portForward(ctx context.Context, task *ecs.Task, targetContainer *string, localPort, remotePort int) error {
-	if remotePort == 0 {
+type portForwardTarget struct {
+	task          *ecs.Task
+	containerName string
+	localPort     int
+	remotePort    int
+	remoteHost    string
+}
+
+func (d *App) portForward(ctx context.Context, tg *portForwardTarget) error {
+	if tg.remotePort == 0 {
 		return fmt.Errorf("--port is required")
 	}
 
 	ssmclient := ssm.New(d.sess)
-	ssmReq, err := d.buildSsmRequestParameters(task, targetContainer)
+	ssmReq, err := d.buildSsmRequestParameters(tg.task, &tg.containerName)
 	if err != nil {
 		return err
 	}
+
+	documentName := "AWS-StartPortForwardingSession"
+	params := map[string][]*string{
+		"portNumber":      {aws.String(strconv.Itoa(tg.remotePort))},
+		"localPortNumber": {aws.String(strconv.Itoa(tg.localPort))},
+	}
+	if tg.remoteHost != "" {
+		// remote forward
+		documentName = "AWS-StartPortForwardingSessionToRemoteHost"
+		params["host"] = []*string{aws.String(tg.remoteHost)}
+	}
+
 	res, err := ssmclient.StartSession(&ssm.StartSessionInput{
 		Target:       aws.String(ssmReq.Target),
-		DocumentName: aws.String("AWS-StartPortForwardingSession"),
-		Parameters: map[string][]*string{
-			"portNumber":      {aws.String(strconv.Itoa(remotePort))},
-			"localPortNumber": {aws.String(strconv.Itoa(localPort))},
-		},
-		Reason: aws.String("port forwarding by ecspresso"),
+		DocumentName: aws.String(documentName),
+		Parameters:   params,
+		Reason:       aws.String("port forwarding by ecspresso"),
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to start SSM session")
