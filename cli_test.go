@@ -469,6 +469,7 @@ var cliTests = []struct {
 			LocalPort:   ptr(0),
 			Port:        ptr(0),
 			PortForward: ptr(false),
+			Host:        ptr(""),
 		},
 	},
 	{
@@ -478,6 +479,7 @@ var cliTests = []struct {
 			"--container", "mycontainer",
 			"--local-port", "8080",
 			"--port", "80",
+			"--host", "example.com",
 			"--port-forward",
 		},
 		sub: "exec",
@@ -488,6 +490,7 @@ var cliTests = []struct {
 			LocalPort:   ptr(8080),
 			Port:        ptr(80),
 			PortForward: ptr(true),
+			Host:        ptr("example.com"),
 		},
 	},
 }
