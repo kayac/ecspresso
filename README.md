@@ -550,6 +550,14 @@ If `--id` is not set, the command shows the list of tasks, which could be used t
 
 When `--local-port` is not specified, ephemeral port will be used for the local port.
 
+#### remort port forwarding
+
+ecspresso also supports "remote port forwarding". `--host` flag accepts remote hostname to port forwarding.
+
+```
+$ ecspresso exec --port-forward --port 80 --local-port 8080 --host example.com
+```
+
 ### suspend / resume application auto scaling
 
 `ecspresso deploy` and `scale` can suspend / resume application auto scaling.
