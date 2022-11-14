@@ -2,7 +2,7 @@ name: test action
 on:
   push:
     branches:
-      - v1
+      - v2
   workflow_dispatch:
 
 jobs:
@@ -29,4 +29,14 @@ jobs:
         with:
           version: latest
       - run: |
-          ecspresso version
+          ecspresso version 2>&1 | fgrep -q v1.7.
+      - uses: kayac/ecspresso@v2
+        with:
+          version: latest
+      - run: |
+          ecspresso version 2>&1 | fgrep -q v1.99.
+      - uses: kayac/ecspresso@v2
+        with:
+          version: v1.7.14
+      - run: |
+          ecspresso version 2>&1 | fgrep -q v1.7.14
