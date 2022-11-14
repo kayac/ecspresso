@@ -324,6 +324,7 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 		LocalPort:   exec.Flag("local-port", "local port number").Default("0").Int(),
 		Port:        exec.Flag("port", "remote port number (required for --port-forward)").Default("0").Int(),
 		PortForward: exec.Flag("port-forward", "enable port forward").Default("false").Bool(),
+		Host:        exec.Flag("host", "remote host name (required for --port-forward)").Default("").String(),
 	}
 
 	sub := kingpin.MustParse(kingpin.CommandLine.Parse(args))

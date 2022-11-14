@@ -22,7 +22,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.16.19
 	github.com/fatih/color v1.13.0
 	github.com/fujiwara/cfn-lookup v1.0.0
-	github.com/fujiwara/ecsta v0.0.5
+	github.com/fujiwara/ecsta v0.0.6
 	github.com/fujiwara/logutils v1.1.0
 	github.com/fujiwara/tfstate-lookup v1.0.0
 	github.com/goccy/go-yaml v1.9.5
@@ -78,7 +78,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.23 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.13.5 // indirect
 	github.com/aws/smithy-go v1.13.3 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/fujiwara/tracer v1.0.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
@@ -105,9 +104,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
-	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/urfave/cli/v2 v2.16.3 // indirect
-	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
 	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
