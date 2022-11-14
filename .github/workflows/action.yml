@@ -14,19 +14,19 @@ jobs:
         with:
           version: v1.5.0
       - run: |
-          ecspresso version 2>&1 | fgrep -q v1.5.0
+          ecspresso version 2>&1 | fgrep v1.5.0
       - uses: kayac/ecspresso@v1
         with:
           version: v1.5.0
       - run: |
-          ecspresso version 2>&1 | fgrep -q v1.5.0
+          ecspresso version 2>&1 | fgrep v1.5.0
       - uses: kayac/ecspresso@v1
         with:
           version: v1.6.0
       - run: |
-          ecspresso version 2>&1 | fgrep -q v1.6.0
+          ecspresso version 2>&1 | fgrep v1.6.0
       - uses: kayac/ecspresso@v1
         with:
           version: latest
       - run: |
-          ecspresso version
+          ecspresso version 2>&1 | fgrep v1.7.
