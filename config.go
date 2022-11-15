@@ -125,6 +125,12 @@ func (c *Config) Restrict(ctx context.Context) error {
 		}
 		c.versionConstraints = constraints
 	}
+	if c.Timeout == nil {
+		c.Timeout = &Duration{Duration: DefaultTimeout}
+	}
+	if c.Region == "" {
+		c.Region = os.Getenv("AWS_REGION")
+	}
 	var err error
 	c.awsv2Config, err = awsConfig.LoadDefaultConfig(ctx, awsConfig.WithRegion(c.Region))
 	if err != nil {

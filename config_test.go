@@ -246,3 +246,27 @@ func TestConfigWithInvalidRequiredVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadConfigWithoutTimeout(t *testing.T) {
+	region := os.Getenv("AWS_REGION")
+	os.Setenv("AWS_REGION", "ap-northeast-2")
+	defer func() { os.Setenv("AWS_REGION", region) }()
+
+	ctx := context.Background()
+	loader := ecspresso.NewConfigLoader(nil, nil)
+	conf, err := loader.Load(ctx, "tests/notimeout.yml", "")
+	if err != nil {
+		t.Log("unexpected an error", err)
+		t.FailNow()
+	}
+	if conf.Timeout == nil {
+		t.Error("expected default timeout, but nil")
+	}
+	if conf.Timeout.Duration != ecspresso.DefaultTimeout {
+		t.Errorf("expected default timeout, but %v", conf.Timeout.Duration)
+	}
+
+	if conf.Region != "ap-northeast-2" {
+		t.Errorf("expected region from AWS_REGION, but %v", conf.Region)
+	}
+}
