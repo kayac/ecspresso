@@ -208,6 +208,7 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 	case *opt.SkipTaskDefinition, *opt.LatestTaskDefinition:
 		var family string
 		if d.config.Service != "" {
+			d.DebugLog("loading service")
 			sv, err := d.DescribeService(ctx)
 			if err != nil {
 				return "", err
@@ -216,6 +217,7 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 			p := strings.SplitN(arnToName(tdArn), ":", 2)
 			family = p[0]
 		} else {
+			d.DebugLog("loading task definition")
 			in, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 			if err != nil {
 				return "", err
