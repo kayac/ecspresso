@@ -58,13 +58,14 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 			return fmt.Errorf("failed to read overrides-file %s: %w", ovFile, err)
 		}
 	}
-	d.Log("[DEBUG] Overrides: %v", ov)
+	d.Log("[DEBUG] Overrides")
+	d.LogJSON(ov)
 
 	tdArn, err := d.taskDefinitionArnForRun(ctx, opt)
 	if err != nil {
 		return err
 	}
-	d.Log("Task definition ARN:", tdArn)
+	d.Log("Task definition ARN: %s", tdArn)
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
@@ -132,7 +133,8 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 		if err != nil {
 			return nil, fmt.Errorf("failed to list tags for service: %w", err)
 		}
-		d.Log("[DEBUG] propagate tags from service %s", *sv.ServiceArn, out)
+		d.Log("[DEBUG] propagate tags from service %s", *sv.ServiceArn)
+		d.LogJSON(out)
 		in.Tags = append(in.Tags, out.Tags...)
 	case "", "NONE":
 		// XXX ECS says > InvalidParameterException: Invalid value for propagateTags
@@ -141,7 +143,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 	default:
 		in.PropagateTags = types.PropagateTagsTaskDefinition
 	}
-	d.Log("[DEBUG] run task input %v", in)
+	d.Log("[DEBUG] run task input")
 	d.LogJSON(in)
 
 	out, err := d.ecs.RunTask(ctx, in)
@@ -151,7 +153,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 	if len(out.Failures) > 0 {
 		f := out.Failures[0]
 		if f.Arn != nil {
-			d.Log("Task ARN: " + *f.Arn)
+			d.Log("Task ARN: %s", *f.Arn)
 		}
 		return nil, fmt.Errorf("failed to run task: %s %s", *f.Reason, *f.Detail)
 	}
