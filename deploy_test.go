@@ -5,7 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/kayac/ecspresso"
+	"github.com/kayac/ecspresso/v2"
 )
 
 type desiredCountTestCase struct {

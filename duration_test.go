@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/goccy/go-yaml"
-	"github.com/kayac/ecspresso"
+	"github.com/kayac/ecspresso/v2"
 )
 
 var testDurations = []struct {

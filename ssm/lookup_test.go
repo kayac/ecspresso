@@ -9,7 +9,7 @@ import (
 	awsssm "github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/google/go-cmp/cmp"
-	"github.com/kayac/ecspresso/ssm"
+	"github.com/kayac/ecspresso/v2/ssm"
 )
 
 type mockSSM struct {

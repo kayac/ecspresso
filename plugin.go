@@ -11,7 +11,7 @@ import (
 	"github.com/fujiwara/cfn-lookup/cfn"
 	"github.com/fujiwara/tfstate-lookup/tfstate"
 
-	"github.com/kayac/ecspresso/ssm"
+	"github.com/kayac/ecspresso/v2/ssm"
 )
 
 type ConfigPlugin struct {
