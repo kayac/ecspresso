@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/kayac/ecspresso/appspec"
+	"github.com/kayac/ecspresso/v2/appspec"
 )
 
 type AppSpecOption struct {

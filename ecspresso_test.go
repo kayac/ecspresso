@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kayac/ecspresso"
+	"github.com/kayac/ecspresso/v2"
 )
 
 func ptr[T any](v T) *T {

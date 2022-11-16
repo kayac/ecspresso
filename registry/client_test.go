@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kayac/ecspresso/registry"
+	"github.com/kayac/ecspresso/v2/registry"
 )
 
 var testImages = []struct {

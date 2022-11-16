@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/kayac/ecspresso"
+	"github.com/kayac/ecspresso/v2"
 )
 
 var Version string

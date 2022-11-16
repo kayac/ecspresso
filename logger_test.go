@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/kayac/ecspresso"
+	"github.com/kayac/ecspresso/v2"
 )
 
 var logLevels = []string{"DEBUG", "INFO", "WARNING", "ERROR"}
