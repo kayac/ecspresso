@@ -270,3 +270,21 @@ func TestLoadConfigWithoutTimeout(t *testing.T) {
 		t.Errorf("expected region from AWS_REGION, but %v", conf.Region)
 	}
 }
+
+func TestLoadConfigForCodeDeploy(t *testing.T) {
+	ctx := context.Background()
+	loader := ecspresso.NewConfigLoader(nil, nil)
+	for _, ext := range []string{"yml", "json", "jsonnet"} {
+		name := "tests/config_codedeploy." + ext
+		conf, err := loader.Load(ctx, name, "")
+		if err != nil {
+			t.Error(err)
+		}
+		if conf.CodeDeploy.ApplicationName != "myapp" {
+			t.Errorf("expected application name, but %v", conf.CodeDeploy.ApplicationName)
+		}
+		if conf.CodeDeploy.DeploymentGroupName != "mydeployment" {
+			t.Errorf("expected deployment group name, but %v", conf.CodeDeploy.DeploymentGroupName)
+		}
+	}
+}
