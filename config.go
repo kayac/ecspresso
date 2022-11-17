@@ -54,12 +54,18 @@ type Config struct {
 	AppSpec               *appspec.AppSpec `yaml:"appspec,omitempty" json:"appspec,omitempty"`
 	FilterCommand         string           `yaml:"filter_command,omitempty" json:"filter_command,omitempty"`
 	Timeout               *Duration        `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	CodeDeploy            CodeDeployConfig `yaml:"codedeploy,omitempty" json:"codedeploy,omitempty"`
 
 	path               string
 	templateFuncs      []template.FuncMap
 	dir                string
 	versionConstraints goVersion.Constraints
 	awsv2Config        aws.Config
+}
+
+type CodeDeployConfig struct {
+	ApplicationName     string `yaml:"application_name" json:"application_name"`
+	DeploymentGroupName string `yaml:"deployment_group_name" json:"deployment_group_name"`
 }
 
 // Load loads configuration file from file path.

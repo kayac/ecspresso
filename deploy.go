@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kayac/ecspresso/v2/appspec"
+	"github.com/samber/lo"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/codedeploy"
@@ -277,58 +278,27 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 
 func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, error) {
 	// search deploymentGroup in CodeDeploy
-	d.Log("[DEBUG] find all applications in CodeDeploy")
-	la, err := d.codedeploy.ListApplications(ctx, &codedeploy.ListApplicationsInput{})
+	d.Log("[DEBUG] find applications in CodeDeploy")
+	apps, err := d.findCodeDeployApplications(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list applications in CodeDeploy: %w", err)
+		return nil, err
 	}
-	if len(la.Applications) == 0 {
-		return nil, ErrNotFound("no any applications in CodeDeploy")
-	}
-	// BatchGetApplications accepts applications less than 100
-	for i := 0; i < len(la.Applications); i += 100 {
-		end := i + 100
-		if end > len(la.Applications) {
-			end = len(la.Applications)
-		}
-		apps, err := d.codedeploy.BatchGetApplications(ctx, &codedeploy.BatchGetApplicationsInput{
-			ApplicationNames: la.Applications[i:end],
-		})
+	d.Log("[DEBUG] CodeDeploy applications: %v", apps)
+
+	for _, app := range apps {
+		groups, err := d.findCodeDeployDeploymentGroups(ctx, *app.ApplicationName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to batch get applications in CodeDeploy: %w", err)
+			return nil, err
 		}
-		for _, info := range apps.ApplicationsInfo {
-			d.Log("[DEBUG] application %v", info)
-			if info.ComputePlatform != cdTypes.ComputePlatformEcs {
-				continue
-			}
-			lg, err := d.codedeploy.ListDeploymentGroups(ctx, &codedeploy.ListDeploymentGroupsInput{
-				ApplicationName: info.ApplicationName,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to list deployment groups in CodeDeploy: %w", err)
-			}
-			if len(lg.DeploymentGroups) == 0 {
-				d.Log("[DEBUG] no deploymentGroups in application %s", *info.ApplicationName)
-				continue
-			}
-			groups, err := d.codedeploy.BatchGetDeploymentGroups(ctx, &codedeploy.BatchGetDeploymentGroupsInput{
-				ApplicationName:      info.ApplicationName,
-				DeploymentGroupNames: lg.DeploymentGroups,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to batch get deployment groups in CodeDeploy: %w", err)
-			}
-			for _, dg := range groups.DeploymentGroupsInfo {
-				d.Log("[DEBUG] deploymentGroup %v", dg)
-				for _, ecsService := range dg.EcsServices {
-					if *ecsService.ClusterName == d.config.Cluster && *ecsService.ServiceName == d.config.Service {
-						return &cdTypes.DeploymentInfo{
-							ApplicationName:      aws.String(*info.ApplicationName),
-							DeploymentGroupName:  aws.String(*dg.DeploymentGroupName),
-							DeploymentConfigName: aws.String(*dg.DeploymentConfigName),
-						}, nil
-					}
+		for _, dg := range groups {
+			d.Log("[DEBUG] deploymentGroup %v", dg)
+			for _, ecsService := range dg.EcsServices {
+				if *ecsService.ClusterName == d.config.Cluster && *ecsService.ServiceName == d.config.Service {
+					return &cdTypes.DeploymentInfo{
+						ApplicationName:      app.ApplicationName,
+						DeploymentGroupName:  dg.DeploymentGroupName,
+						DeploymentConfigName: dg.DeploymentConfigName,
+					}, nil
 				}
 			}
 		}
@@ -338,6 +308,74 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 		d.config.Service,
 		d.config.Cluster,
 	)
+}
+
+func (d *App) findCodeDeployApplications(ctx context.Context) ([]cdTypes.ApplicationInfo, error) {
+	var appNames []string
+	if d.config.CodeDeploy.ApplicationName != "" {
+		appNames = []string{d.config.CodeDeploy.ApplicationName}
+	} else {
+		pager := codedeploy.NewListApplicationsPaginator(d.codedeploy, &codedeploy.ListApplicationsInput{})
+		for pager.HasMorePages() {
+			p, err := pager.NextPage(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list applications: %w", err)
+			}
+			appNames = append(appNames, p.Applications...)
+		}
+	}
+
+	var apps []cdTypes.ApplicationInfo
+	// BatchGetApplications accepts applications less than 100
+	for _, names := range lo.Chunk(appNames, 100) {
+		res, err := d.codedeploy.BatchGetApplications(ctx, &codedeploy.BatchGetApplicationsInput{
+			ApplicationNames: names,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to batch get applications in CodeDeploy: %w", err)
+		}
+		for _, info := range res.ApplicationsInfo {
+			d.Log("[DEBUG] application %v", info)
+			if info.ComputePlatform != cdTypes.ComputePlatformEcs {
+				continue
+			}
+			apps = append(apps, info)
+		}
+	}
+	return apps, nil
+}
+
+func (d *App) findCodeDeployDeploymentGroups(ctx context.Context, appName string) ([]cdTypes.DeploymentGroupInfo, error) {
+	var groupNames []string
+	if d.config.CodeDeploy.DeploymentGroupName != "" {
+		groupNames = []string{d.config.CodeDeploy.DeploymentGroupName}
+	} else {
+		pager := codedeploy.NewListDeploymentGroupsPaginator(d.codedeploy, &codedeploy.ListDeploymentGroupsInput{
+			ApplicationName: &appName,
+		})
+		for pager.HasMorePages() {
+			p, err := pager.NextPage(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list deployment groups in CodeDeploy: %w", err)
+			}
+			groupNames = append(groupNames, p.DeploymentGroups...)
+		}
+	}
+	d.Log("[DEBUG] CodeDeploy deploymentGroups: %v", groupNames)
+
+	var groups []cdTypes.DeploymentGroupInfo
+	// BatchGetDeploymentGroups accepts applications less than 100
+	for _, names := range lo.Chunk(groupNames, 100) {
+		gs, err := d.codedeploy.BatchGetDeploymentGroups(ctx, &codedeploy.BatchGetDeploymentGroupsInput{
+			ApplicationName:      &appName,
+			DeploymentGroupNames: names,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to batch get deployment groups in CodeDeploy: %w", err)
+		}
+		groups = append(groups, gs.DeploymentGroupsInfo...)
+	}
+	return groups, nil
 }
 
 func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionArn string, rollbackEvents *string) error {
