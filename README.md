@@ -228,6 +228,18 @@ Events:
 
 Currently, ecspresso doesn't create any resources on CodeDeploy. You must create an application and a deployment group for your ECS service on CodeDeploy in the other way.
 
+ecspresso finds a CodeDeploy deployment setting for the ECS service automatically.
+But, if you have too many CodeDeploy applications, API calls of that finding process may cause throttling.
+
+In this case, you may specify CodeDeploy application_name and deployment_group_name in a config file.
+
+```yaml
+# ecspresso.yml
+codedeploy:
+  application_name: myapp
+  deployment_group_name: mydeployment
+```
+
 `ecspresso deploy` creates a new deployment for CodeDeploy, and it continues on CodeDeploy.
 
 ```console

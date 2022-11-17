@@ -20,7 +20,7 @@ var CreateFileMode = os.FileMode(0644)
 type InitOption struct {
 	Region                *string `help:"AWS region" env:"AWS_REGION" default:""`
 	Cluster               *string `help:"ECS cluster name" default:"default"`
-	Service               *string `help:"ECS service name" default:"" required:""`
+	Service               *string `help:"ECS service name" required:""`
 	TaskDefinitionPath    *string `help:"path to output task definition file" default:"ecs-task-def.json"`
 	ServiceDefinitionPath *string `help:"path to output service definition file" default:"ecs-service-def.json"`
 	ConfigFilePath        *string
@@ -129,6 +129,18 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 	}
 
 	// config
+	if sv.isCodeDeploy() {
+		info, err := d.findDeploymentInfo(ctx)
+		if err != nil {
+			Log("[WARNING] failed to find CodeDeploy deployment info: %s", err)
+			Log("[WARNING] you need to set config.codedeploy section manually")
+		} else {
+			conf.CodeDeploy = ConfigCodeDeploy{
+				ApplicationName:     *info.ApplicationName,
+				DeploymentGroupName: *info.DeploymentGroupName,
+			}
+		}
+	}
 	{
 		var b []byte
 		var err error

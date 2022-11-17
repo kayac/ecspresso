@@ -54,7 +54,7 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 		if err != nil {
 			return fmt.Errorf("failed to read overrides-file %s: %w", ovFile, err)
 		}
-		if err := d.unmarshalJSON(src, &ov, ovFile); err != nil {
+		if err := unmarshalJSON(src, &ov, ovFile); err != nil {
 			return fmt.Errorf("failed to read overrides-file %s: %w", ovFile, err)
 		}
 	}

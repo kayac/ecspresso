@@ -21,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/goccy/go-yaml"
 )
 
 const DefaultDesiredCount = -1
@@ -417,7 +418,15 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 	return &td, nil
 }
 
-func (d *App) unmarshalJSON(src []byte, v interface{}, path string) error {
+func unmarshalYAML(src []byte, v interface{}, path string) error {
+	b, err := yaml.YAMLToJSON(src)
+	if err != nil {
+		return fmt.Errorf("failed to parse %s: %w", path, err)
+	}
+	return unmarshalJSON(b, v, path)
+}
+
+func unmarshalJSON(src []byte, v interface{}, path string) error {
 	strict := json.NewDecoder(bytes.NewReader(src))
 	strict.DisallowUnknownFields()
 	if err := strict.Decode(&v); err != nil {
@@ -442,7 +451,7 @@ func (d *App) LoadServiceDefinition(path string) (*Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load service definition %s: %w", path, err)
 	}
-	if err := d.unmarshalJSON(src, &sv, path); err != nil {
+	if err := unmarshalJSON(src, &sv, path); err != nil {
 		return nil, fmt.Errorf("failed to load service definition %s: %w", path, err)
 	}
 
