@@ -15,9 +15,9 @@ import (
 )
 
 type ConfigPlugin struct {
-	Name       string                 `yaml:"name"`
-	Config     map[string]interface{} `yaml:"config"`
-	FuncPrefix string                 `yaml:"func_prefix"`
+	Name       string                 `yaml:"name" json:"name"`
+	Config     map[string]interface{} `yaml:"config" json:"config"`
+	FuncPrefix string                 `yaml:"func_prefix,omitempty" json:"func_prefix,omitempty"`
 }
 
 func (p ConfigPlugin) Setup(ctx context.Context, c *Config) error {

@@ -135,7 +135,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 			Log("[WARNING] failed to find CodeDeploy deployment info: %s", err)
 			Log("[WARNING] you need to set config.codedeploy section manually")
 		} else {
-			conf.CodeDeploy = CodeDeployConfig{
+			conf.CodeDeploy = ConfigCodeDeploy{
 				ApplicationName:     *info.ApplicationName,
 				DeploymentGroupName: *info.DeploymentGroupName,
 			}
