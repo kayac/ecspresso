@@ -231,6 +231,9 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 				return "", err
 			}
 			tdArn := *sv.TaskDefinition
+			if *opt.SkipTaskDefinition {
+				return tdArn, nil
+			}
 			p := strings.SplitN(arnToName(tdArn), ":", 2)
 			family = p[0]
 		} else {
