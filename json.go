@@ -40,7 +40,7 @@ func (d *App) UnmarshalJSONForStruct(src []byte, v interface{}, path string) err
 	if b, err := json.Marshal(m); err != nil {
 		return err
 	} else {
-		return d.unmarshalJSON(b, v, path)
+		return unmarshalJSON(b, v, path)
 	}
 }
 

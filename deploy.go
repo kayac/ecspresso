@@ -283,7 +283,6 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 	if err != nil {
 		return nil, err
 	}
-	d.Log("[DEBUG] CodeDeploy applications: %v", apps)
 
 	for _, app := range apps {
 		groups, err := d.findCodeDeployDeploymentGroups(ctx, *app.ApplicationName)
@@ -324,6 +323,7 @@ func (d *App) findCodeDeployApplications(ctx context.Context) ([]cdTypes.Applica
 			appNames = append(appNames, p.Applications...)
 		}
 	}
+	d.Log("[DEBUG] found CodeDeploy applications: %v", appNames)
 
 	var apps []cdTypes.ApplicationInfo
 	// BatchGetApplications accepts applications less than 100
@@ -335,7 +335,7 @@ func (d *App) findCodeDeployApplications(ctx context.Context) ([]cdTypes.Applica
 			return nil, fmt.Errorf("failed to batch get applications in CodeDeploy: %w", err)
 		}
 		for _, info := range res.ApplicationsInfo {
-			d.Log("[DEBUG] application %v", info)
+			d.Log("[DEBUG] application %s compute platform %s", *info.ApplicationName, info.ComputePlatform)
 			if info.ComputePlatform != cdTypes.ComputePlatformEcs {
 				continue
 			}
@@ -361,7 +361,7 @@ func (d *App) findCodeDeployDeploymentGroups(ctx context.Context, appName string
 			groupNames = append(groupNames, p.DeploymentGroups...)
 		}
 	}
-	d.Log("[DEBUG] CodeDeploy deploymentGroups: %v", groupNames)
+	d.Log("[DEBUG] CodeDeploy found deploymentGroups: %v", groupNames)
 
 	var groups []cdTypes.DeploymentGroupInfo
 	// BatchGetDeploymentGroups accepts applications less than 100

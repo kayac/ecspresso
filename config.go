@@ -2,7 +2,6 @@ package ecspresso
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/goccy/go-yaml"
 	"github.com/google/go-jsonnet"
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/kayac/ecspresso/v2/appspec"
@@ -78,7 +76,7 @@ func (l *configLoader) Load(ctx context.Context, path string, version string) (*
 		if err != nil {
 			return nil, err
 		}
-		if err := yaml.Unmarshal(b, conf); err != nil {
+		if err := unmarshalYAML(b, conf, path); err != nil {
 			return nil, fmt.Errorf("failed to parse yaml: %w", err)
 		}
 	case jsonExt, jsonnetExt:
@@ -90,7 +88,7 @@ func (l *configLoader) Load(ctx context.Context, path string, version string) (*
 		if err != nil {
 			return nil, fmt.Errorf("failed to read template file: %w", err)
 		}
-		if err := json.Unmarshal(b, conf); err != nil {
+		if err := unmarshalJSON(b, conf, path); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal json: %w", err)
 		}
 	default:
