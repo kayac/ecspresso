@@ -206,13 +206,27 @@ func (d *App) waitTask(ctx context.Context, task *ecs.Task, untilRunning bool) e
 func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (string, error) {
 	switch {
 	case *opt.SkipTaskDefinition, *opt.LatestTaskDefinition:
-		sv, err := d.DescribeService(ctx)
-		if err != nil {
-			return "", err
+		var family string
+		if d.config.Service != "" {
+			d.DebugLog("loading service")
+			sv, err := d.DescribeService(ctx)
+			if err != nil {
+				return "", err
+			}
+			tdArn := *sv.TaskDefinition
+			if *opt.SkipTaskDefinition {
+				return tdArn, nil
+			}
+			p := strings.SplitN(arnToName(tdArn), ":", 2)
+			family = p[0]
+		} else {
+			d.DebugLog("loading task definition")
+			in, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+			if err != nil {
+				return "", err
+			}
+			family = *in.Family
 		}
-		tdArn := *sv.TaskDefinition
-		p := strings.SplitN(arnToName(tdArn), ":", 2)
-		family := p[0]
 		if rev := aws.Int64Value(opt.Revision); rev > 0 {
 			return fmt.Sprintf("%s:%d", family, rev), nil
 		}
