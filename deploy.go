@@ -106,8 +106,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 			return err
 		}
 		if *opt.DryRun {
-			d.Log("task definition:")
-			d.LogJSON(td)
+			d.Log("[INFO] task definition: %s", MustMarshalJSONStringForAPI(td))
 		} else {
 			newTd, err := d.RegisterTaskDefinition(ctx, td)
 			if err != nil {
@@ -240,8 +239,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, taskDefi
 	in.Cluster = aws.String(d.Cluster)
 
 	if *opt.DryRun {
-		d.Log("update service input:")
-		d.LogJSON(in)
+		d.Log("[INFO] update service input: %s", MustMarshalJSONStringForAPI(in))
 		return nil
 	}
 	d.Log("Updating service attributes...")

@@ -35,10 +35,22 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 		return nil
 	}
 
-	newTd, err := d.RegisterTaskDefinition(ctx, td)
-	if err != nil {
-		return err
+	var tdArn string
+	if aws.ToBool(opt.LatestTaskDefinition) || aws.ToBool(opt.SkipTaskDefinition) {
+		var err error
+		tdArn, err = d.findLatestTaskDefinitionArn(ctx, aws.ToString(td.Family))
+		if err != nil {
+			return err
+		}
+		d.Log("Using latest task definition %s", tdArn)
+	} else {
+		newTd, err := d.RegisterTaskDefinition(ctx, td)
+		if err != nil {
+			return err
+		}
+		tdArn = *newTd.TaskDefinitionArn
 	}
+
 	createServiceInput := &ecs.CreateServiceInput{
 		Cluster:                       aws.String(d.config.Cluster),
 		CapacityProviderStrategy:      svd.CapacityProviderStrategy,
@@ -59,7 +71,7 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 		ServiceName:                   svd.ServiceName,
 		ServiceRegistries:             svd.ServiceRegistries,
 		Tags:                          svd.Tags,
-		TaskDefinition:                newTd.TaskDefinitionArn,
+		TaskDefinition:                aws.String(tdArn),
 	}
 	if _, err := d.ecs.CreateService(ctx, createServiceInput); err != nil {
 		return fmt.Errorf("failed to create service: %w", err)
