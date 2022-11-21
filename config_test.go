@@ -288,3 +288,28 @@ func TestLoadConfigForCodeDeploy(t *testing.T) {
 		}
 	}
 }
+
+var FilterCommandTests = []struct {
+	Env      string
+	Expected string
+}{
+	{"", "fzf"},
+	{"peco", "peco"},
+}
+
+func TestFilterCommandDeprecated(t *testing.T) {
+	ctx := context.Background()
+	defer os.Setenv("ECSPRESSO_FILTER_COMMAND", "")
+	for _, ts := range FilterCommandTests {
+		os.Setenv("ECSPRESSO_FILTER_COMMAND", ts.Env)
+		app, err := ecspresso.New(ctx, &ecspresso.Option{
+			ConfigFilePath: "tests/filter_command.yml",
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if app.FilterCommand() != ts.Expected {
+			t.Errorf("expected %s, but got %s", ts.Expected, app.FilterCommand())
+		}
+	}
+}
