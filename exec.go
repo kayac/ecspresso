@@ -24,7 +24,7 @@ func (d *App) NewEcsta(ctx context.Context) (*ecsta.Ecsta, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ecsta application: %w", err)
 	}
-	if fc := d.config.FilterCommand; fc != "" {
+	if fc := d.FilterCommand(); fc != "" {
 		app.Config.Set("filter_command", fc)
 	}
 	return app, nil

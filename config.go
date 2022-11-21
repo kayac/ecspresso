@@ -143,6 +143,10 @@ func (c *Config) Restrict(ctx context.Context) error {
 	if err := c.setupPlugins(ctx); err != nil {
 		return fmt.Errorf("failed to setup plugins: %w", err)
 	}
+
+	if c.FilterCommand != "" {
+		Log("[WARNING] filter_command is deprecated. Use %s environment variable instead.", FilterCommandEnv)
+	}
 	return nil
 }
 
