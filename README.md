@@ -10,6 +10,8 @@ ecspresso is a deployment tool for Amazon ECS.
 
 [ecspresso Advent Calendar 2020](https://adventar.org/calendars/5916) (Japanese)
 
+[Differences of v1 between v2](docs/v1-v2.md).
+
 ## Install
 
 ### Homebrew (macOS and Linux)
@@ -29,17 +31,25 @@ https://circleci.com/orbs/registry/orb/fujiwara/ecspresso
 ```yaml
 version: 2.1
 orbs:
-  ecspresso: fujiwara/ecspresso@0.0.15
+  ecspresso: fujiwara/ecspresso@2.0.0
 jobs:
   install:
     steps:
       - checkout
       - ecspresso/install:
-          version: v1.6.0 # or latest
+          version: v2.0.0 # or latest
       - run:
           command: |
             ecspresso version
 ```
+
+ `version: latest` installs different versions of ecspresso for each Orb version.
+- fujiwara/ecspresso@0.0.15
+  - The latest release version (v2 or later)
+- fujiwara/ecspresso@1.0.0
+  - The latest version of v1.x
+- fujiwara/ecspresso@2.0.0
+  - The latest version of v2.x
 
 ### GitHub Actions
 
@@ -50,10 +60,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: kayac/ecspresso@v1
+      - uses: actions/checkout@v3
+      - uses: kayac/ecspresso@v2
         with:
-          version: v1.6.0
+          version: v2.0.0 # or latest
       - run: |
           ecspresso deploy --config ecspresso.yml
 ```
@@ -66,78 +76,87 @@ Pass the parameter "latest" to use the latest version of ecspresso.
           version: latest
 ```
 
+ `version: latest` installs different versions of ecspresso for each Action version.
+- kayac/ecspresso@v1
+  - The latest version of v1.x
+- kayac/ecspresso@v2
+  - The latest version (v1.99 or later) that includes prerelease version.
+  - After v2.0.0 is released, This behavior will be changed to install stable versions only.
+
 ## Usage
 
 ```
-usage: ecspresso [<flags>] <command> [<args> ...]
+Usage: ecspresso <command>
 
 Flags:
-  --help                 Show context-sensitive help (also try --help-long and
-                         --help-man).
-  --config=CONFIG        config file
-  --debug                enable debug log
-  --envfile=ENVFILE ...  environment files
-  --color                enable colored output
+  -h, --help                      Show context-sensitive help.
+      --envfile=ENVFILE,...       environment files
+      --debug                     enable debug log
+      --ext-str=KEY=VALUE;...     external string values for Jsonnet
+      --ext-code=KEY=VALUE;...    external code values for Jsonnet
+      --config="ecspresso.yml"    config file
+      --option=OPTION
 
 Commands:
-  help [<command>...]
-    Show help.
+  appspec
+    output AppSpec YAML for CodeDeploy to STDOUT
 
-  version
-    show version
+  delete
+    delete service
 
-  deploy [<flags>]
+  deploy
     deploy service
 
-  scale [<flags>]
-    scale service. equivalent to deploy --skip-task-definition
-    --no-update-service
+  deregister
+    deregister task definition
 
-  refresh [<flags>]
+  diff
+    show diff between task definition, service definition with current running
+    service and task definition
+
+  exec
+    execute command on task
+
+  init --service=SERVICE
+    create configuration files from existing ECS service
+
+  refresh
     refresh service. equivalent to deploy --skip-task-definition
     --force-new-deployment --no-update-service
 
-  create [<flags>]
-    create service
+  register
+    register task definition
 
-  status [<flags>]
-    show status of service
+  render <targets>
+    render config, service definition or task definition file to STDOUT
 
-  rollback [<flags>]
+  revisions
+    show revisions of task definitions
+
+  rollback
     rollback service
 
-  delete [<flags>]
-    delete service
-
-  run [<flags>]
+  run
     run task
 
-  register [<flags>]
-    register task definition
+  scale
+    scale service. equivalent to deploy --skip-task-definition
+    --no-update-service
+
+  status
+    show status of service
+
+  tasks
+    list tasks that are in a service or having the same family
+
+  verify
+    verify resources in configurations
 
   wait
     wait until service stable
 
-  init --service=SERVICE [<flags>]
-    create service/task definition files by existing ECS service
-
-  diff
-    display diff for task definition compared with latest one on ECS
-
-  appspec [<flags>]
-    output AppSpec YAML for CodeDeploy to STDOUT
-
-  verify [<flags>]
-    verify resources in configurations
-
-  render [<flags>]
-    render config, service definition or task definition file to stdout
-
-  tasks [<flags>]
-    list tasks that are in a service or having the same family
-
-  exec [<flags>]
-    execute command in a task
+  version
+    show version
 ```
 
 For more options for sub-commands, See `ecspresso sub-command --help`.
@@ -165,29 +184,25 @@ $ ecspresso deploy --config ecspresso.yml
 
 ## Configuration file
 
-YAML format.
+A configuration file of ecspresso (YAML or JSON, or Jsonnet format).
 
 ```yaml
-region: ap-northeast-1
+region: ap-northeast-1 # or AWS_REGION environment variable
 cluster: default
-service: myService
-task_definition: myTask.json
-timeout: 5m
+service: myservice
+task_definition: taskdef.json
+timeout: 5m # default 10m
 ```
 
-ecspresso deploy works as below.
+`ecspresso deploy` works as below.
 
-- Register a new task definition from JSON file.
-  - JSON file is allowed in both formats as below.
-    - `aws ecs describe-task-definition` output.
-    - `aws ecs register-task-definition --cli-input-json` input.
+- Register a new task definition from `task-definition` file (JSON or Jsonnet).
   - Replace ```{{ env `FOO` `bar` }}``` syntax in the JSON file to environment variable "FOO".
     - If "FOO" is not defined, replaced by "bar"
   - Replace ```{{ must_env `FOO` }}``` syntax in the JSON file to environment variable "FOO".
     - If "FOO" is not defined, abort immediately.
-- Update service tasks.
-  - When `--update-service` option set, update service attributes by service definition.
-- Wait for a service to be stable.
+- Update service tasks by the `service_definition` file (JSON or Jsonnet).
+- Wait for the service to be stable.
 
 Configuration files and task/service definition files are read by [go-config](https://github.com/kayac/go-config). go-config has template functions `env`, `must_env` and `json_escape`.
 
@@ -215,18 +230,18 @@ Events:
 
 ### Blue/Green deployment (with AWS CodeDeploy)
 
-`ecspresso create` can create a service having CODE_DEPLOY deployment controller. See ecs-service-def.json below.
+`ecspresso deploy` can deploy service having CODE_DEPLOY deployment controller. See ecs-service-def.json below.
 
-```json5
+```json
 {
   "deploymentController": {
     "type": "CODE_DEPLOY"
   },
-  # ...
+  // ...
 }
 ```
 
-Currently, ecspresso doesn't create any resources on CodeDeploy. You must create an application and a deployment group for your ECS service on CodeDeploy in the other way.
+ecspresso doesn't create and modify any resources about CodeDeploy. You must create an application and a deployment group for your ECS service on CodeDeploy in the other way.
 
 ecspresso finds a CodeDeploy deployment setting for the ECS service automatically.
 But, if you have too many CodeDeploy applications, API calls of that finding process may cause throttling.
@@ -285,9 +300,9 @@ $ ecspresso scale --config ecspresso.yml --tasks 10
 
 `scale` command is equivalent to `deploy --skip-task-definition --no-update-service`.
 
-## Example of create
+## Example of deploy
 
-escpresso can create a service by `service_definition` JSON file and `task_definition`.
+escpresso can deploy a service by `service_definition` JSON file and `task_definition`.
 
 ```console
 $ ecspresso create --config ecspresso.yml
@@ -342,11 +357,17 @@ Other options for RunTask API are set by service attributes(CapacityProviderStra
 
 ecspresso v1.7 or later can use [Jsonnet](https://jsonnet.org/) file format for service and task definition.
 
+v2.0 or later can use Jsonnet for configuration file too.
+
 If the file extension is .jsonnet, ecspresso will process Jsonnet first, convert it to JSON, and then load it.
 
-```yaml
-service_definition: ecs-service-def.jsonnet
-task_definition: ecs-task-def.jsonnet
+```jsonnet
+{
+  cluser: 'default',
+  service: 'myservice',
+  service_definition: 'ecs-service-def.jsonnet',
+  task_definition: 'ecs-task-def.jsonnet',
+}
 ```
 
 ecspresso includes [github.com/google/go-jsonnet](https://github.com/google/go-jsonnet) as a library, we don't need the jsonnet command.
@@ -376,7 +397,7 @@ For task definitions,
 - memory (required)
 - executionRoleArn (optional)
 
-```json5
+```json
 {
   "taskDefinition": {
     "networkMode": "awsvpc",
@@ -418,7 +439,7 @@ For service-definition,
 1. Set capacityProviders and defaultCapacityProviderStrategy to ECS cluster.
 1. If you hope to migrate existing service to use Fargate Spot, define capacityProviderStrategy into service definition as below. `ecspresso deploy --update-service` applies the settings to the service.
 
-```json5
+```json
 {
   "capacityProviderStrategy": [
     {
@@ -432,7 +453,7 @@ For service-definition,
       "weight": 1
     }
   ],
-  # ...
+  // ...
 ```
 
 ## How to check diff and verify service/task definitions before deploy.
@@ -444,7 +465,7 @@ ecspresso supports `diff` and `verify` subcommands.
 Shows differences between local task/service definitions and remote (on ECS) definitions.
 
 ```diff
-$ ecspresso --config ecspresso.yml diff
+$ ecspresso diff
 --- arn:aws:ecs:ap-northeast-1:123456789012:service/ecspresso-test/nginx-local
 +++ ecs-service-def.json
 @@ -38,5 +38,5 @@
@@ -486,7 +507,7 @@ For example,
 ecspresso verify tries to assume the task execution role defined in task definitions to verify these items. If failed to assume the role, it continues to verify with the current sessions.
 
 ```console
-$ ecspresso --config ecspresso.yml verify
+$ ecspresso verify
 2020/12/08 11:43:10 nginx-local/ecspresso-test Starting verify
   TaskDefinition
     ExecutionRole[arn:aws:iam::123456789012:role/ecsTaskRole]
@@ -513,11 +534,12 @@ task command lists tasks run by a service or having the same family to a task de
 
 ```
 Flags:
-  --id=""                task ID
-  --output=table         output format (table|json|tsv)
-  --find                 find a task from tasks list and dump it as JSON
-  --stop                 stop a task
-  --force                stop a task without confirmation prompt
+      --id=                       task ID
+      --output=table              output format
+      --find=false                find a task from tasks list and dump it as JSON
+      --stop=false                stop the task
+      --force=false               stop the task without confirmation
+      --trace=false               trace the task
 ```
 
 When `--find` option is set, you can select a task in a list of tasks and show the task as JSON.
@@ -538,9 +560,13 @@ exec command executes a command on task.
 
 ```
 Flags:
-  --id=""                task ID
-  --command="sh"         command
-  --container=CONTAINER  container name
+      --id=                       task ID
+      --command=sh                command to execute
+      --container=                container name
+      --port-forward=false        enable port forward
+      --local-port=0              local port number
+      --port=0                    remote port number (required for --port-forward)
+      --host=                     remote host (required for --port-forward)
 ```
 
 If `--id` is not set, the command shows a list of tasks to select a task to execute.
@@ -615,7 +641,33 @@ ecs-service-def.json
 {{ tfstatef `aws_subnet.ecs['%s'].id` (must_env `SERVICE`) }}
 ```
 
-## cloudformation
+### Multiple tfstate support
+
+`func_prefix` adds a prefix to template function names for each plugin configuration.
+
+```yaml
+# ecspresso.yml
+plugins:
+   - name: tfstate
+     config:
+       url: s3://tfstate/first.tfstate
+     func_prefix: first_
+   - name: tfstate
+     config:
+       url: s3://tfstate/second.tfstate
+     func_prefix: second_
+```
+
+So in templates, functions are called with prefixes.
+
+```json
+[
+  "{{ first_tfstate `aws_s3_bucket.main.arn` }}",
+  "{{ second_tfstate `aws_s3_bucket.main.arn` }}"
+]
+``
+
+## CloudFormation
 
 cloudformation plugin introduces template functions `cfn_output` and `cfn_export`.
 
