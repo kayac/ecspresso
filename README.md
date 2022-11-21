@@ -639,6 +639,32 @@ ecs-service-def.json
 {{ tfstatef `aws_subnet.ecs['%s'].id` (must_env `SERVICE`) }}
 ```
 
+### Multiple tfstate support
+
+`func_prefix` adds a prefix to template function names for each plugin configuration.
+
+```yaml
+# ecspresso.yml
+plugins:
+   - name: tfstate
+     config:
+       url: s3://tfstate/first.tfstate
+     func_prefix: first_
+   - name: tfstate
+     config:
+       url: s3://tfstate/second.tfstate
+     func_prefix: second_
+```
+
+So in templates, functions are called with prefixes.
+
+```json
+[
+  "{{ first_tfstate `aws_s3_bucket.main.arn` }}",
+  "{{ second_tfstate `aws_s3_bucket.main.arn` }}"
+]
+``
+
 ## CloudFormation
 
 cloudformation plugin introduces template functions `cfn_output` and `cfn_export`.
