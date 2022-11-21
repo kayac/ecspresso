@@ -1,0 +1,5 @@
+cluster: default
+service: test
+service_definition: ecs-service-def.json
+task_definition: ecs-task-def.json
+filter_command: fzf

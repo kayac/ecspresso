@@ -544,10 +544,10 @@ Flags:
 
 When `--find` option is set, you can select a task in a list of tasks and show the task as JSON.
 
-`filter_command` in ecspresso.yml can define a command to filter tasks. For example [peco](https://github.com/peco/peco), [fzf](https://github.com/junegunn/fzf) and etc.
+`ECSPRESSO_FILTER_COMMAND` environment variable can define a command to filter tasks. For example [peco](https://github.com/peco/peco), [fzf](https://github.com/junegunn/fzf) and etc.
 
-```yaml
-filter_command: peco
+```console
+$ ECSPRESSO_FILTER_COMMAND=peco ecspresso tasks --find
 ```
 
 When `--stop` option is set, you can select a task in a list of tasks and stop the task.
@@ -570,6 +570,8 @@ Flags:
 ```
 
 If `--id` is not set, the command shows a list of tasks to select a task to execute.
+
+`ECSPRESSO_FILTER_COMMAND` environment variable works the same as tasks command.
 
 See also the official document [Using Amazon ECS Exec for debugging](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html).
 

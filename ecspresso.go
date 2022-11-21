@@ -27,6 +27,7 @@ import (
 const DefaultDesiredCount = -1
 const DefaultConfigFilePath = "ecspresso.yml"
 const dryRunStr = "DRY RUN"
+const FilterCommandEnv = "ECSPRESSO_FILTER_COMMAND"
 
 var Version string
 var delayForServiceChanged = 3 * time.Second
@@ -517,4 +518,11 @@ func (d *App) suspendAutoScaling(ctx context.Context, suspendState bool) error {
 		}
 	}
 	return nil
+}
+
+func (d *App) FilterCommand() string {
+	if fc := os.Getenv(FilterCommandEnv); fc != "" {
+		return fc
+	}
+	return d.config.FilterCommand
 }
