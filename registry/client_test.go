@@ -70,7 +70,8 @@ func TestFailImages(t *testing.T) {
 	for _, c := range testFailImages {
 		t.Logf("testing (will be fail) %s:%s", c.image, c.tag)
 		client := registry.New(c.image, "", "")
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		if ok, err := client.HasImage(ctx, c.tag); err == nil {
 			t.Errorf("HasImage %s:%s error %s", c.image, c.tag, err)
 		} else if ok {
