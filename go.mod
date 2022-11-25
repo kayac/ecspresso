@@ -27,7 +27,7 @@ require (
 	github.com/fujiwara/tfstate-lookup v1.0.0
 	github.com/goccy/go-yaml v1.9.5
 	github.com/google/go-cmp v0.5.9
-	github.com/google/go-jsonnet v0.18.0
+	github.com/google/go-jsonnet v0.19.1
 	github.com/hashicorp/go-envparse v0.1.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
@@ -39,7 +39,7 @@ require (
 	github.com/samber/lo v1.35.0
 	github.com/schollz/progressbar/v3 v3.11.0
 	github.com/shogo82148/go-retry v1.1.1
-	golang.org/x/sys v0.0.0-20220927170352-d9d178bc13c6
+	golang.org/x/sys v0.1.0
 )
 
 require (
