@@ -495,34 +495,6 @@ var cliTests = []struct {
 	},
 }
 
-func TestParseCLI(t *testing.T) {
-	for _, tt := range cliTests {
-		t.Run(strings.Join(tt.args, "_"), func(t *testing.T) {
-			sub, opt, _, err := ecspresso.ParseCLI(tt.args)
-			if err != nil {
-				t.Errorf("unexpected error: %v", err)
-				return
-			}
-			if sub != tt.sub {
-				t.Errorf("unexpected subcommand: expected %s, got %s", tt.sub, sub)
-			}
-			if tt.option != nil {
-				if diff := cmp.Diff(tt.option, opt.Option); diff != "" {
-					t.Errorf("unexpected option: diff %s", diff)
-				}
-			}
-			if tt.subOption != nil {
-				if diff := cmp.Diff(opt.ForSubCommand(sub), tt.subOption); diff != "" {
-					t.Errorf("unexpected subOption: diff %s", diff)
-				}
-			}
-			if tt.fn != nil {
-				tt.fn(t)
-			}
-		})
-	}
-}
-
 func TestParseCLIv2(t *testing.T) {
 	for _, tt := range cliTests {
 		t.Run(strings.Join(tt.args, "_"), func(t *testing.T) {

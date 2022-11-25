@@ -103,15 +103,9 @@ github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAE
 github.com/Songmu/prompter v0.5.1 h1:IAsttKsOZWSDw7bV1mtGn9TAmLFAjXbp9I/eYmUUogo=
 github.com/Songmu/prompter v0.5.1/go.mod h1:CS3jEPD6h9IaLaG6afrl1orTgII9+uDWuw95dr6xHSw=
 github.com/alecthomas/assert/v2 v2.1.0 h1:tbredtNcQnoSd3QBhQWI7QZ3XHOVkw1Moklp2ojoH/0=
-github.com/alecthomas/kingpin v1.3.8-0.20190930021037-0a108b7f5563 h1:en74MYF4/T3bxeT3QRhSSlv3LT54JEunh7Q1BupAimc=
-github.com/alecthomas/kingpin v1.3.8-0.20190930021037-0a108b7f5563/go.mod h1:idxgS9pV6OOpAhZvx+gcoGRMX9/tt0iqkw/pNxI0C14=
 github.com/alecthomas/kong v0.7.0 h1:YIjJUiR7AcmHxL87UlbPn0gyIGwl4+nYND0OQ4ojP7k=
 github.com/alecthomas/kong v0.7.0/go.mod h1:n1iCIO2xS46oE8ZfYCNDqdR0b0wZNrXAIAqro/2132U=
 github.com/alecthomas/repr v0.1.0 h1:ENn2e1+J3k09gyj2shc0dHr/yjaWSHRlrJ4DPMevDqE=
-github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc h1:cAKDfWh5VpdgMhJosfJnn5/FoN2SRZ4p7fJNX58YPaU=
-github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
-github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf h1:qet1QNfXsQxTZqLG4oE62mJzwPIB8+Tee4RNCL9ulrY=
-github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/aws/aws-sdk-go-v2 v1.16.15/go.mod h1:SwiyXi/1zTUZ6KIAmLK5V5ll8SiURNUYOqTerZPaF9k=
 github.com/aws/aws-sdk-go-v2 v1.16.16 h1:M1fj4FE2lB4NzRb9Y0xdWsn2P0+2UHVxwKyOa4YJNjk=

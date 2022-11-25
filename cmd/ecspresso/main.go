@@ -16,13 +16,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), trapSignals...)
 	defer stop()
 
-	// switch cli parser
-	parse := ecspresso.ParseCLIv2
-	if v1 := os.Getenv("V1"); v1 != "" {
-		parse = ecspresso.ParseCLI
-	}
-
-	exitCode, err := ecspresso.CLI(ctx, parse)
+	exitCode, err := ecspresso.CLI(ctx, ecspresso.ParseCLIv2)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			ecspresso.Log("[WARNING] Interrupted")
