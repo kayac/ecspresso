@@ -79,7 +79,7 @@ type App struct {
 }
 
 func New(ctx context.Context, opt *Option) (*App, error) {
-	opt.resolveDefaultConfigFilePath()
+	opt.resolveConfigFilePath()
 	loader := newConfigLoader(opt.ExtStr, opt.ExtCode)
 	var (
 		conf *Config
@@ -118,6 +118,7 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 		loader: loader,
 		logger: logger,
 	}
+	d.Log("[DEBUG] config file path: %s", opt.ConfigFilePath)
 	return d, nil
 }
 
@@ -145,7 +146,7 @@ type Option struct {
 	ExtCode        map[string]string
 }
 
-func (opt *Option) resolveDefaultConfigFilePath() (path string) {
+func (opt *Option) resolveConfigFilePath() (path string) {
 	path = DefaultConfigFilePath
 	defer func() {
 		opt.ConfigFilePath = path
@@ -153,7 +154,7 @@ func (opt *Option) resolveDefaultConfigFilePath() (path string) {
 			opt.InitOption.ConfigFilePath = &path
 		}
 	}()
-	if opt.ConfigFilePath != "" {
+	if opt.ConfigFilePath != "" && opt.ConfigFilePath != DefaultConfigFilePath {
 		path = opt.ConfigFilePath
 		return
 	}
