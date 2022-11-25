@@ -7,7 +7,7 @@ import (
 	"github.com/alecthomas/kong"
 )
 
-func ParseCLIv2(args []string) (string, *CLIOptions, error) {
+func ParseCLIv2(args []string) (string, *CLIOptions, func(), error) {
 	// compatible with v1
 	if len(args) == 0 || len(args) > 0 && args[0] == "help" {
 		args = []string{"--help"}
@@ -16,17 +16,17 @@ func ParseCLIv2(args []string) (string, *CLIOptions, error) {
 	var opts CLIOptions
 	parser, err := kong.New(&opts, kong.Vars{"version": Version})
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to new kong: %w", err)
+		return "", nil, nil, fmt.Errorf("failed to new kong: %w", err)
 	}
 	c, err := parser.Parse(args)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to parse args: %w", err)
+		return "", nil, nil, fmt.Errorf("failed to parse args: %w", err)
 	}
 	sub := strings.Fields(c.Command())[0]
 
 	for _, envFile := range opts.Envfile {
 		if err := ExportEnvFile(envFile); err != nil {
-			return sub, &opts, fmt.Errorf("failed to load envfile: %w", err)
+			return sub, &opts, nil, fmt.Errorf("failed to load envfile: %w", err)
 		}
 	}
 
@@ -47,5 +47,5 @@ func ParseCLIv2(args []string) (string, *CLIOptions, error) {
 		opts.Init.ConfigFilePath = &opts.Config
 		opts.Option.InitOption = opts.Init
 	}
-	return sub, &opts, nil
+	return sub, &opts, func() { c.PrintUsage(true) }, nil
 }

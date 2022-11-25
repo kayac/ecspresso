@@ -83,7 +83,7 @@ func (opts *CLIOptions) ForSubCommand(sub string) interface{} {
 	}
 }
 
-func dispatchCLI(ctx context.Context, sub string, opts *CLIOptions) error {
+func dispatchCLI(ctx context.Context, sub string, usage func(), opts *CLIOptions) error {
 	switch sub {
 	case "version", "":
 		fmt.Println("ecspresso", Version)
@@ -135,25 +135,25 @@ func dispatchCLI(ctx context.Context, sub string, opts *CLIOptions) error {
 	case "exec":
 		return app.Exec(ctx, *opts.Exec)
 	default:
-		kingpin.Usage()
+		usage()
 	}
 	return nil
 }
 
-type CLIParseFunc func([]string) (string, *CLIOptions, error)
+type CLIParseFunc func([]string) (string, *CLIOptions, func(), error)
 
 func CLI(ctx context.Context, parse CLIParseFunc) (int, error) {
-	sub, opts, err := parse(os.Args[1:])
+	sub, opts, usage, err := parse(os.Args[1:])
 	if err != nil {
 		return 1, err
 	}
-	if err := dispatchCLI(ctx, sub, opts); err != nil {
+	if err := dispatchCLI(ctx, sub, usage, opts); err != nil {
 		return 1, err
 	}
 	return 0, nil
 }
 
-func ParseCLI(args []string) (string, *CLIOptions, error) {
+func ParseCLI(args []string) (string, *CLIOptions, func(), error) {
 	opts := &CLIOptions{}
 
 	kingpin.Command("version", "show version")
@@ -329,14 +329,13 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 
 	sub := kingpin.MustParse(kingpin.CommandLine.Parse(args))
 	if sub == "" {
-		kingpin.Usage()
-		return "", nil, nil
+		return "", nil, kingpin.Usage, nil
 	}
 
 	color.NoColor = !*colorOpt
 	for _, envFile := range *envFiles {
 		if err := ExportEnvFile(envFile); err != nil {
-			return sub, opts, fmt.Errorf("failed to load envfile: %w", err)
+			return sub, opts, nil, fmt.Errorf("failed to load envfile: %w", err)
 		}
 	}
 
@@ -365,5 +364,5 @@ func ParseCLI(args []string) (string, *CLIOptions, error) {
 		opts.Scale.ResumeAutoScaling = nil
 	}
 
-	return sub, opts, nil
+	return sub, opts, kingpin.Usage, nil
 }
