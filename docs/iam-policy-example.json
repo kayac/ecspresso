@@ -1,0 +1,26 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "ecspresso",
+			"Effect": "Allow",
+			"Action": [
+				"ecs:*",
+				"iam:PassRole",
+				"logs:GetLogEvents",
+				"codedeploy:List*",
+				"codedeploy:CreateDeployment",
+				"codedeploy:BatchGet*",
+				"application-autoscaling:Describe*",
+				"application-autoscaling:Register*",
+				"iam:GetRole",
+				"sts:AssumeRole",
+				"ecr:ListImages",
+				"elasticloadbalancing:DescribeTargetGroups",
+				"ssm:GetParameter",
+				"secretsmanager:GetSecretValue"
+			],
+			"Resource": "*"
+		}
+	]
+}
