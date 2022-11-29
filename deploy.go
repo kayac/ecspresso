@@ -166,6 +166,12 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 	}
 
 	if err := waitFunc(ctx, sv); err != nil {
+		var e ErrNotFound
+		if errors.As(err, &e) {
+			d.Log("[INFO] %s", err)
+			// no need to wait
+			return nil
+		}
 		return err
 	}
 
@@ -288,7 +294,7 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 			return nil, err
 		}
 		for _, dg := range groups {
-			d.Log("[DEBUG] deploymentGroup %v", dg)
+			d.LogJSON(dg)
 			for _, ecsService := range dg.EcsServices {
 				if *ecsService.ClusterName == d.config.Cluster && *ecsService.ServiceName == d.config.Service {
 					return &cdTypes.DeploymentInfo{

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -21,6 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/smithy-go"
 	"github.com/goccy/go-yaml"
 )
 
@@ -257,6 +259,11 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) error {
 		},
 	)
 	if err != nil {
+		var oe *smithy.OperationError
+		if errors.As(err, &oe) {
+			d.Log("[WARNING] failed to describe scalable targets: %s", oe)
+			return nil
+		}
 		return fmt.Errorf("failed to describe scalable targets: %w", err)
 	}
 	if len(tout.ScalableTargets) == 0 {
@@ -277,6 +284,11 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) error {
 		},
 	)
 	if err != nil {
+		var oe *smithy.OperationError
+		if errors.As(err, &oe) {
+			d.Log("[WARNING] failed to describe scaling policies: %s", oe)
+			return nil
+		}
 		return fmt.Errorf("failed to describe scaling policies: %w", err)
 	}
 	for _, policy := range pout.ScalingPolicies {
