@@ -217,6 +217,7 @@ func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 		PlacementStrategy:             sv.PlacementStrategy,
 		PlatformVersion:               sv.PlatformVersion,
 		PropagateTags:                 sv.PropagateTags,
+		ServiceConnectConfiguration:   sv.ServiceConnectConfiguration,
 		ServiceRegistries:             sv.ServiceRegistries,
 	}
 	if sv.SchedulingStrategy == types.SchedulingStrategyDaemon {

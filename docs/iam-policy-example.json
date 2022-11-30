@@ -5,20 +5,21 @@
 			"Sid": "ecspresso",
 			"Effect": "Allow",
 			"Action": [
-				"ecs:*",
-				"iam:PassRole",
-				"logs:GetLogEvents",
-				"codedeploy:List*",
-				"codedeploy:CreateDeployment",
-				"codedeploy:BatchGet*",
 				"application-autoscaling:Describe*",
 				"application-autoscaling:Register*",
-				"iam:GetRole",
-				"sts:AssumeRole",
+				"codedeploy:BatchGet*",
+				"codedeploy:CreateDeployment",
+				"codedeploy:List*",
 				"ecr:ListImages",
+				"ecs:*",
 				"elasticloadbalancing:DescribeTargetGroups",
+				"iam:GetRole",
+				"iam:PassRole",
+				"logs:GetLogEvents",
+				"secretsmanager:GetSecretValue",
+				"servicediscovery:GetNamespace",
 				"ssm:GetParameter",
-				"secretsmanager:GetSecretValue"
+				"sts:AssumeRole"
 			],
 			"Resource": "*"
 		}

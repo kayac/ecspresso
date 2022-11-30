@@ -76,7 +76,10 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 		return ErrNotFound("service is not found")
 	}
 
-	sv := newServiceFromTypes(out.Services[0])
+	sv, err := d.newServiceFromTypes(ctx, out.Services[0])
+	if err != nil {
+		return fmt.Errorf("failed to describe service: %w", err)
+	}
 	td, err := d.DescribeTaskDefinition(ctx, *sv.TaskDefinition)
 	if err != nil {
 		return err

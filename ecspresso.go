@@ -22,6 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/servicediscovery"
 	"github.com/aws/smithy-go"
 	"github.com/goccy/go-yaml"
 )
@@ -49,14 +50,45 @@ func taskDefinitionName(t *TaskDefinition) string {
 
 type Service struct {
 	types.Service
-	DesiredCount *int32
+	ServiceConnectConfiguration *types.ServiceConnectConfiguration
+	DesiredCount                *int32
 }
 
-func newServiceFromTypes(sv types.Service) *Service {
-	return &Service{
-		Service:      sv,
-		DesiredCount: aws.Int32(sv.DesiredCount),
+func (d *App) newServiceFromTypes(ctx context.Context, in types.Service) (*Service, error) {
+	sv := Service{
+		Service:      in,
+		DesiredCount: aws.Int32(in.DesiredCount),
 	}
+	for _, dp := range in.Deployments {
+		d.Log("[DEBUG] deployment: %s %s", *dp.Id, *dp.Status)
+		if aws.ToString(dp.Status) != "PRIMARY" {
+			continue
+		}
+		scc := dp.ServiceConnectConfiguration
+		sv.ServiceConnectConfiguration = scc
+		if scc == nil {
+			break
+		}
+		// resolve sd namespace arn to name
+		id := arnToName(aws.ToString(scc.Namespace))
+		res, err := d.sd.GetNamespace(ctx, &servicediscovery.GetNamespaceInput{
+			Id: &id,
+		})
+		if err != nil {
+			var oe *smithy.OperationError
+			if errors.As(err, &oe) {
+				d.Log("[WARNING] failed to get namespace: %s", oe)
+				break
+			} else {
+				return nil, fmt.Errorf("failed to get namespace: %w", err)
+			}
+		}
+		if res.Namespace != nil {
+			scc.Namespace = res.Namespace.Name
+		}
+		break
+	}
+	return &sv, nil
 }
 
 func (sv *Service) isCodeDeploy() bool {
@@ -73,6 +105,7 @@ type App struct {
 	cwl         *cloudwatchlogs.Client
 	iam         *iam.Client
 	elbv2       *elasticloadbalancingv2.Client
+	sd          *servicediscovery.Client
 	verifier    *verifier
 
 	config *Config
@@ -115,6 +148,7 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 		cwl:         cloudwatchlogs.NewFromConfig(conf.awsv2Config),
 		iam:         iam.NewFromConfig(conf.awsv2Config),
 		elbv2:       elasticloadbalancingv2.NewFromConfig(conf.awsv2Config),
+		sd:          servicediscovery.NewFromConfig(conf.awsv2Config),
 
 		config: conf,
 		loader: loader,
@@ -207,7 +241,7 @@ func (d *App) DescribeService(ctx context.Context) (*Service, error) {
 	case "INACTIVE":
 		return nil, ErrNotFound(fmt.Sprintf("service %s is %s", d.Service, status))
 	}
-	return newServiceFromTypes(out.Services[0]), nil
+	return d.newServiceFromTypes(ctx, out.Services[0])
 }
 
 func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*Service, error) {
