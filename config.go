@@ -42,17 +42,17 @@ func newConfigLoader(extStr, extCode map[string]string) *configLoader {
 
 // Config represents a configuration.
 type Config struct {
-	RequiredVersion       string           `yaml:"required_version,omitempty" json:"required_version,omitempty"`
-	Region                string           `yaml:"region" json:"region"`
-	Cluster               string           `yaml:"cluster" json:"cluster"`
-	Service               string           `yaml:"service" json:"service"`
-	ServiceDefinitionPath string           `yaml:"service_definition" json:"service_definition"`
-	TaskDefinitionPath    string           `yaml:"task_definition" json:"task_definition"`
-	Plugins               []ConfigPlugin   `yaml:"plugins,omitempty" json:"plugins,omitempty"`
-	AppSpec               *appspec.AppSpec `yaml:"appspec,omitempty" json:"appspec,omitempty"`
-	FilterCommand         string           `yaml:"filter_command,omitempty" json:"filter_command,omitempty"`
-	Timeout               *Duration        `yaml:"timeout,omitempty" json:"timeout,omitempty"`
-	CodeDeploy            ConfigCodeDeploy `yaml:"codedeploy,omitempty" json:"codedeploy,omitempty"`
+	RequiredVersion       string            `yaml:"required_version,omitempty" json:"required_version,omitempty"`
+	Region                string            `yaml:"region" json:"region"`
+	Cluster               string            `yaml:"cluster" json:"cluster"`
+	Service               string            `yaml:"service" json:"service"`
+	ServiceDefinitionPath string            `yaml:"service_definition" json:"service_definition"`
+	TaskDefinitionPath    string            `yaml:"task_definition" json:"task_definition"`
+	Plugins               []ConfigPlugin    `yaml:"plugins,omitempty" json:"plugins,omitempty"`
+	AppSpec               *appspec.AppSpec  `yaml:"appspec,omitempty" json:"appspec,omitempty"`
+	FilterCommand         string            `yaml:"filter_command,omitempty" json:"filter_command,omitempty"`
+	Timeout               *Duration         `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	CodeDeploy            *ConfigCodeDeploy `yaml:"codedeploy,omitempty" json:"codedeploy,omitempty"`
 
 	path               string
 	templateFuncs      []template.FuncMap
@@ -62,8 +62,8 @@ type Config struct {
 }
 
 type ConfigCodeDeploy struct {
-	ApplicationName     string `yaml:"application_name" json:"application_name"`
-	DeploymentGroupName string `yaml:"deployment_group_name" json:"deployment_group_name"`
+	ApplicationName     string `yaml:"application_name,omitempty" json:"application_name,omitempty"`
+	DeploymentGroupName string `yaml:"deployment_group_name,omitempty" json:"deployment_group_name,omitempty"`
 }
 
 // Load loads configuration file from file path.
