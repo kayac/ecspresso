@@ -450,7 +450,7 @@ $ ecspresso --config ecspresso.yml diff --unified
 -  "platformVersion": "1.3.0"
 +  "platformVersion": "LATEST"
  }
-  
+ 
 --- arn:aws:ecs:ap-northeast-1:123456789012:task-definition/ecspresso-test:202
 +++ ecs-task-def.json
 @@ -1,6 +1,10 @@
