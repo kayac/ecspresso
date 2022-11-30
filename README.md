@@ -715,6 +715,14 @@ ecs-service-def.json
 }
 ```
 
+## ECS Service Connect
+
+ecspresso supports [ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html).
+
+You can define `serviceConnectConfiguration` in service definition files, `portMappings` attributes in task definition files.
+
+For more details, see also [Service Connect parameters](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html#service-connect-parameters)
+
 # LICENCE
 
 MIT
