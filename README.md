@@ -305,7 +305,7 @@ $ ecspresso scale --config ecspresso.yml --tasks 10
 escpresso can deploy a service by `service_definition` JSON file and `task_definition`.
 
 ```console
-$ ecspresso create --config ecspresso.yml
+$ ecspresso deploy --config ecspresso.yml
 ...
 ```
 
