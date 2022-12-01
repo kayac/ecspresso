@@ -23,7 +23,7 @@ require (
 	github.com/aws/smithy-go v1.13.4
 	github.com/fatih/color v1.13.0
 	github.com/fujiwara/cfn-lookup v1.0.0
-	github.com/fujiwara/ecsta v0.1.1
+	github.com/fujiwara/ecsta v0.1.2
 	github.com/fujiwara/logutils v1.1.0
 	github.com/fujiwara/tfstate-lookup v1.0.0
 	github.com/goccy/go-yaml v1.9.5
@@ -37,7 +37,7 @@ require (
 	github.com/mattn/go-isatty v0.0.16
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/image-spec v1.0.2
-	github.com/samber/lo v1.35.0
+	github.com/samber/lo v1.36.0
 	github.com/schollz/progressbar/v3 v3.11.0
 	github.com/shogo82148/go-retry v1.1.1
 	golang.org/x/sys v0.1.0
