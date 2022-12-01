@@ -38,6 +38,14 @@ func (d *App) Exec(ctx context.Context, opt ExecOption) error {
 	if err != nil {
 		return err
 	}
+	family, err := d.taskDefinitionFamily(ctx)
+	if err != nil {
+		return err
+	}
+	var service *string
+	if d.config.Service != "" {
+		service = &d.config.Service
+	}
 
 	if aws.ToBool(opt.PortForward) {
 		return ecstaApp.RunPortforward(ctx, &ecsta.PortforwardOption{
@@ -46,12 +54,16 @@ func (d *App) Exec(ctx context.Context, opt ExecOption) error {
 			LocalPort:  aws.ToInt(opt.LocalPort),
 			RemotePort: aws.ToInt(opt.Port),
 			RemoteHost: aws.ToString(opt.Host),
+			Family:     &family,
+			Service:    service,
 		})
 	} else {
 		return ecstaApp.RunExec(ctx, &ecsta.ExecOption{
 			ID:        aws.ToString(opt.ID),
 			Command:   aws.ToString(opt.Command),
 			Container: aws.ToString(opt.Container),
+			Family:    &family,
+			Service:   service,
 		})
 	}
 }

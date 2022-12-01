@@ -33,27 +33,39 @@ func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
 	}
 	ecstaApp.Config.Set("output", aws.ToString(opt.Output))
 
+	family, err := d.taskDefinitionFamily(ctx)
+	if err != nil {
+		return err
+	}
+	var service *string
+	if d.config.Service != "" {
+		service = &d.config.Service
+	}
+
 	if aws.ToBool(opt.Find) {
 		return ecstaApp.RunDescribe(ctx, &ecsta.DescribeOption{
-			ID: opt.taskID(),
+			ID:      opt.taskID(),
+			Family:  &family,
+			Service: service,
 		})
 	} else if aws.ToBool(opt.Stop) {
 		return ecstaApp.RunStop(ctx, &ecsta.StopOption{
-			ID:    opt.taskID(),
-			Force: aws.ToBool(opt.Force),
+			ID:      opt.taskID(),
+			Force:   aws.ToBool(opt.Force),
+			Family:  &family,
+			Service: service,
 		})
 	} else if aws.ToBool(opt.Trace) {
 		return ecstaApp.RunTrace(ctx, &ecsta.TraceOption{
 			ID:       opt.taskID(),
 			Duration: time.Minute,
+			Family:   &family,
+			Service:  service,
 		})
 	} else {
-		family, err := d.taskDefinitionFamily(ctx)
-		if err != nil {
-			return err
-		}
 		return ecstaApp.RunList(ctx, &ecsta.ListOption{
-			Family: family,
+			Family:  &family,
+			Service: service,
 		})
 	}
 }
