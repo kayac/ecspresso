@@ -1,0 +1,6 @@
+region: ap-northeast-1
+cluster: ecspresso-test
+service: nginx
+service_definition: nginx-service.jsonnet
+task_definition: nginx-taskdef.jsonnet
+timeout: 10m0s

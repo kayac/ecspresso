@@ -1,0 +1,6 @@
+region: ap-northeast-1
+cluster: ecspresso-test
+service: bash
+service_definition: bash-service.jsonnet
+task_definition: bash-taskdef.jsonnet
+timeout: 10m0s
