@@ -20,6 +20,14 @@ ecspresso is a deployment tool for Amazon ECS.
 $ brew install kayac/tap/ecspresso
 ```
 
+### asdf (macOS and Linux)
+
+```console
+$ asdf plugin add ecspresso https://github.com/koluku/asdf-ecspresso.git
+$ asdf install ecspresso 1.7.14
+$ asdf global ecspresso 1.7.14
+```
+
 ### Binary packages
 
 [Releases](https://github.com/kayac/ecspresso/releases)
