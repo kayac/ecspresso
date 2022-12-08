@@ -359,9 +359,9 @@ When `--task-def` is not set, use a task definition included in a service.
 
 Other options for RunTask API are set by service attributes(CapacityProviderStrategy, LaunchType, PlacementConstraints, PlacementStrategy and PlatformVersion).
 
-# Notes
+## Notes
 
-## Version constraint.
+### Version constraint.
 
 `required_version` in the configuration file is for fixing the version of ecspresso.
 
@@ -373,7 +373,7 @@ This description allows execution if the version is greater than or equal to 2.0
 
 This feature is implemented by [go-version](github.com/hashicorp/go-version).
 
-## Suspend and Resume application auto scaling.
+### Suspend and Resume application auto scaling.
 
 `ecspresso deploy` and `scale` can suspend and resume application auto scaling.
 
@@ -382,7 +382,7 @@ This feature is implemented by [go-version](github.com/hashicorp/go-version).
 
 When you want to change the suspended state simply, try `ecspresso scale --suspend-auto-scaling` or `ecspresso scale --resume-auto-scaling`. That operation will change suspended state only.
 
-## Use Jsonnet instead of JSON.
+### Use Jsonnet instead of JSON and YAML.
 
 ecspresso v1.7 or later can use [Jsonnet](https://jsonnet.org/) file format for service and task definition.
 
@@ -414,7 +414,7 @@ $ ecspresso --ext-str Foo=foo --ext-code "Bar=1+1" ...
 }
 ```
 
-## Deploy to Fargate
+### Deploy to Fargate
 
 If you want to deploy services to Fargate, task definitions and service definitions require some settings.
 
@@ -463,7 +463,7 @@ For service-definition,
 }
 ```
 
-## Fargate Spot support
+### Fargate Spot support
 
 1. Set capacityProviders and defaultCapacityProviderStrategy to ECS cluster.
 1. If you hope to migrate existing service to use Fargate Spot, define capacityProviderStrategy into service definition as below. `ecspresso deploy --update-service` applies the settings to the service.
@@ -485,7 +485,7 @@ For service-definition,
   // ...
 ```
 
-## ECS Service Connect support
+### ECS Service Connect support
 
 ecspresso supports [ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html).
 
@@ -493,11 +493,11 @@ You can define `serviceConnectConfiguration` in service definition files and `po
 
 For more details, see also [Service Connect parameters](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html#service-connect-parameters)
 
-## How to check diff and verify service/task definitions before deploy.
+### How to check diff and verify service/task definitions before deploy.
 
 ecspresso supports `diff` and `verify` subcommands.
 
-### diff
+#### diff
 
 Shows differences between local task/service definitions and remote (on ECS) definitions.
 
@@ -529,7 +529,7 @@ $ ecspresso diff
          "options": {
 ```
 
-### verify
+#### verify
 
 Verify resources related with service/task definitions.
 
@@ -565,7 +565,7 @@ $ ecspresso verify
 2020/12/08 11:43:14 nginx-local/ecspresso-test Verify OK!
 ```
 
-## Manipulate ECS tasks.
+### Manipulate ECS tasks.
 
 ecspresso can manipulate ECS tasks. Use `tasks` and `exec` command.
 
@@ -573,7 +573,7 @@ After v2.0, These operations are provided by [ecsta](https://github.com/fujiwara
 
 Consider using ecsta as a CLI command.
 
-### tasks
+#### tasks
 
 task command lists tasks run by a service or having the same family to a task definition.
 
@@ -597,7 +597,7 @@ $ ECSPRESSO_FILTER_COMMAND=peco ecspresso tasks --find
 
 When `--stop` option is set, you can select a task in a list of tasks and stop the task.
 
-### exec
+#### exec
 
 exec command executes a command on task.
 
@@ -620,7 +620,7 @@ If `--id` is not set, the command shows a list of tasks to select a task to exec
 
 See also the official document [Using Amazon ECS Exec for debugging](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html).
 
-### port forwarding
+#### port forwarding
 
 `ecspresso exec --port-forward` forwards local port to ECS tasks port.
 
@@ -633,11 +633,11 @@ If `--id` is not set, the command shows a list of tasks to select a task to forw
 
 When `--local-port` is not specified, use the ephemeral port for local port.
 
-# Plugins
+## Plugins
 
 ecspresso has some plugins to extend template functions.
 
-## tfstate
+### tfstate
 
 The tfstate plugin introduces template functions `tfstate` and `tfstatef`.
 
@@ -679,7 +679,7 @@ ecs-service-def.json
 {{ tfstatef `aws_subnet.ecs['%s'].id` (must_env `SERVICE`) }}
 ```
 
-### Multiple tfstate support
+#### Multiple tfstate support
 
 `func_prefix` adds a prefix to template function names for each plugin configuration.
 
@@ -705,7 +705,7 @@ So in templates, functions are called with prefixes.
 ]
 ```
 
-## CloudFormation
+### CloudFormation
 
 The cloudformation plugin introduces template functions `cfn_output` and `cfn_export`.
 
@@ -753,7 +753,7 @@ ecs-service-def.json
 }
 ```
 
-## ssm
+### ssm
 
 The ssm plugin introduces a template function, `ssm` to read parameters from AWS Systems Manager(SSM) Parameter Store.
 
@@ -788,10 +788,10 @@ will be rendered into this.
 }
 ```
 
-# LICENCE
+## LICENCE
 
 MIT
 
-# Author
+## Author
 
 KAYAC Inc.
