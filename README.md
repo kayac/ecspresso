@@ -635,9 +635,11 @@ When `--local-port` is not specified, use the ephemeral port for local port.
 
 # Plugins
 
+ecspresso has some plugins to extend template functions.
+
 ## tfstate
 
-tfstate plugin introduces a template function `tfstate`.
+The tfstate plugin introduces template functions `tfstate` and `tfstatef`.
 
 ecspresso.yml
 ```yaml
@@ -649,8 +651,8 @@ task_definition: ecs-task-def.json
 plugins:
   - name: tfstate
     config:
-      path: terraform.tfstate    # path to tfstate file
-      # or url: s3://my-bucket/terraform.tfstate
+      url: s3://my-bucket/terraform.tfstate
+      # or path: terraform.tfstate    # path to local file
 ```
 
 ecs-service-def.json
@@ -701,11 +703,11 @@ So in templates, functions are called with prefixes.
   "{{ first_tfstate `aws_s3_bucket.main.arn` }}",
   "{{ second_tfstate `aws_s3_bucket.main.arn` }}"
 ]
-``
+```
 
 ## CloudFormation
 
-cloudformation plugin introduces template functions `cfn_output` and `cfn_export`.
+The cloudformation plugin introduces template functions `cfn_output` and `cfn_export`.
 
 An example of CloudFormation stack template defines Outputs and Exports.
 
@@ -751,6 +753,40 @@ ecs-service-def.json
 }
 ```
 
+## ssm
+
+The ssm plugin introduces a template function, `ssm` to read parameters from AWS Systems Manager(SSM) Parameter Store.
+
+```yaml
+plugins:
+  - name: ssm
+```
+
+Suppose ssm parameter store has the following parameters:
+
+- name: '/path/to/string', type: String, value: "ImString"
+- name: '/path/to/stringlist', type: StringList, value: "ImStringList0,ImStringList1"
+- name: '/path/to/securestring', type: SecureString, value: "ImSecureString"
+
+Then this template,
+
+```json
+{
+  "string": "{{ ssm `/path/to/string` }}",
+  "stringlist": "{{ ssm `/path/to/stringlist` 1 }}",  *1
+  "securestring": "{{ ssm `/path/to/securestring` }}"
+}
+```
+
+will be rendered into this.
+
+```json
+{
+  "string": "ImString",
+  "stringlist": "ImStringList1",
+  "securestring": "ImSecureStriing"
+}
+```
 
 # LICENCE
 
