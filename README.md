@@ -361,7 +361,28 @@ Other options for RunTask API are set by service attributes(CapacityProviderStra
 
 # Notes
 
-## Use Jsonnet instead of JSON
+## Version constraint.
+
+`required_version` in the configuration file is for fixing the version of ecspresso.
+
+```yaml
+required_version: ">= 2.0.0, < 3"
+```
+
+This description allows execution if the version is greater than or equal to 2.0.0 and less than or equal to 3. If this configuration file is read in any other version, execution will fail at that point.
+
+This feature is implemented by [go-version](github.com/hashicorp/go-version).
+
+## Suspend and Resume application auto scaling.
+
+`ecspresso deploy` and `scale` can suspend and resume application auto scaling.
+
+- `--suspend-auto-scaling` sets suspended state true.
+- `--resume-auto-scaling` sets suspended state false.
+
+When you want to change the suspended state simply, try `ecspresso scale --suspend-auto-scaling` or `ecspresso scale --resume-auto-scaling`. That operation will change suspended state only.
+
+## Use Jsonnet instead of JSON.
 
 ecspresso v1.7 or later can use [Jsonnet](https://jsonnet.org/) file format for service and task definition.
 
@@ -464,6 +485,14 @@ For service-definition,
   // ...
 ```
 
+## ECS Service Connect support
+
+ecspresso supports [ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html).
+
+You can define `serviceConnectConfiguration` in service definition files and `portMappings` attributes in task definition files.
+
+For more details, see also [Service Connect parameters](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html#service-connect-parameters)
+
 ## How to check diff and verify service/task definitions before deploy.
 
 ecspresso supports `diff` and `verify` subcommands.
@@ -536,6 +565,14 @@ $ ecspresso verify
 2020/12/08 11:43:14 nginx-local/ecspresso-test Verify OK!
 ```
 
+## Manipulate ECS tasks.
+
+ecspresso can manipulate ECS tasks. Use `tasks` and `exec` command.
+
+After v2.0, These operations are provided by [ecsta](https://github.com/fujiwara/ecsta) as a library. ecsta CLI can manipulate any ECS tasks (not limited to deployed by ecspresso).
+
+Consider using ecsta as a CLI command.
+
 ### tasks
 
 task command lists tasks run by a service or having the same family to a task definition.
@@ -595,15 +632,6 @@ $ ecspresso exec --port-forward --port 80 --local-port 8080
 If `--id` is not set, the command shows a list of tasks to select a task to forward port.
 
 When `--local-port` is not specified, use the ephemeral port for local port.
-
-### suspend / resume application auto scaling
-
-`ecspresso deploy` and `scale` can suspend / resume application auto scaling.
-
-`--suspend-auto-scaling` sets suspended state true.
-`--resume-auto-scaling` sets suspended state false.
-
-When you want to change the suspended state simply, try `ecspresso scale --suspend-auto-scaling` or `ecspresso scale --resume-auto-scaling`. That operation will change suspended state only.
 
 # Plugins
 
@@ -723,13 +751,6 @@ ecs-service-def.json
 }
 ```
 
-## ECS Service Connect
-
-ecspresso supports [ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html).
-
-You can define `serviceConnectConfiguration` in service definition files and `portMappings` attributes in task definition files.
-
-For more details, see also [Service Connect parameters](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html#service-connect-parameters)
 
 # LICENCE
 
