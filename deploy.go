@@ -237,6 +237,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, taskDefi
 		in.LoadBalancers = nil
 		in.ServiceRegistries = nil
 		in.TaskDefinition = nil
+		in.CapacityProviderStrategy = nil
 	} else {
 		d.Log("[INFO] deployment by ECS rolling update")
 		in.ForceNewDeployment = aws.ToBool(opt.ForceNewDeployment)
