@@ -197,6 +197,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *ecs.Service, opt 
 		in.ForceNewDeployment = nil
 		in.LoadBalancers = nil
 		in.ServiceRegistries = nil
+		in.CapacityProviderStrategy = nil
 	} else {
 		in.ForceNewDeployment = opt.ForceNewDeployment
 	}
