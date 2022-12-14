@@ -317,8 +317,8 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 
 func (d *App) findCodeDeployApplications(ctx context.Context) ([]cdTypes.ApplicationInfo, error) {
 	var appNames []string
-	if d.config.CodeDeploy.ApplicationName != "" {
-		appNames = []string{d.config.CodeDeploy.ApplicationName}
+	if cd := d.config.CodeDeploy; cd != nil && cd.ApplicationName != "" {
+		appNames = []string{cd.ApplicationName}
 	} else {
 		pager := codedeploy.NewListApplicationsPaginator(d.codedeploy, &codedeploy.ListApplicationsInput{})
 		for pager.HasMorePages() {
@@ -353,8 +353,8 @@ func (d *App) findCodeDeployApplications(ctx context.Context) ([]cdTypes.Applica
 
 func (d *App) findCodeDeployDeploymentGroups(ctx context.Context, appName string) ([]cdTypes.DeploymentGroupInfo, error) {
 	var groupNames []string
-	if d.config.CodeDeploy.DeploymentGroupName != "" {
-		groupNames = []string{d.config.CodeDeploy.DeploymentGroupName}
+	if cd := d.config.CodeDeploy; cd != nil && cd.DeploymentGroupName != "" {
+		groupNames = []string{cd.DeploymentGroupName}
 	} else {
 		pager := codedeploy.NewListDeploymentGroupsPaginator(d.codedeploy, &codedeploy.ListDeploymentGroupsInput{
 			ApplicationName: &appName,
