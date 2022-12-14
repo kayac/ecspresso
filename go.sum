@@ -228,8 +228,8 @@ github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYF
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/fujiwara/cfn-lookup v1.0.0 h1:oDhBXaEvT27B0dFB4z3zbjuTzA3E6m8t8Sge9mffAzU=
 github.com/fujiwara/cfn-lookup v1.0.0/go.mod h1:HI8F4hlW+nN9KRTWNzdwvnOUQFrN8jX9puyfhtAVgwU=
-github.com/fujiwara/ecsta v0.1.2 h1:ID3W5WiGrnwy+vo7IwswZbRmgrlum+LFcmlTjwydjzw=
-github.com/fujiwara/ecsta v0.1.2/go.mod h1:dizMf4vttV1G+X8aHST112P7RTpNUE1+Ka1e34segdk=
+github.com/fujiwara/ecsta v0.1.3 h1:sPh2N/HHrbMSNV0zzcYksne7qLtX99S9ndrnsiJ858o=
+github.com/fujiwara/ecsta v0.1.3/go.mod h1:dizMf4vttV1G+X8aHST112P7RTpNUE1+Ka1e34segdk=
 github.com/fujiwara/logutils v1.1.0 h1:JAYmqW40d/ZjzouB01sfZiaTxwNe4hwmB6lLajZqm1s=
 github.com/fujiwara/logutils v1.1.0/go.mod h1:pdb/Uk70rjQWEmFm/OvYH7OG8meZt1fEIqC0qZbvro4=
 github.com/fujiwara/tfstate-lookup v1.0.0 h1:Ii2F3Y1KASnLcMf+rod7HVn1VuiY6mTKoHgKPNnK31A=
