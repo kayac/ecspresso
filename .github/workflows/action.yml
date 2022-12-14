@@ -34,7 +34,7 @@ jobs:
         with:
           version: latest
       - run: |
-          ecspresso version 2>&1 | fgrep -q v1.99.
+          ecspresso version 2>&1 | fgrep -q v2.
       - uses: kayac/ecspresso@v2
         with:
           version: v1.7.14
