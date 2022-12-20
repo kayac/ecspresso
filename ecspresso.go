@@ -25,6 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/servicediscovery"
 	"github.com/aws/smithy-go"
 	"github.com/goccy/go-yaml"
+	"github.com/samber/lo"
 )
 
 const DefaultDesiredCount = -1
@@ -273,11 +274,9 @@ func (d *App) DescribeServiceStatus(ctx context.Context, events int) (*Service, 
 	sort.SliceStable(s.Events, func(i, j int) bool {
 		return s.Events[i].CreatedAt.Before(*s.Events[j].CreatedAt)
 	})
-	for i, event := range s.Events {
-		if i >= events {
-			break
-		}
-		fmt.Println(formatEvent(event))
+	head := lo.Max([]int{len(s.Events) - events, 0})
+	for i := head; i < len(s.Events); i++ {
+		fmt.Println(formatEvent(s.Events[i]))
 	}
 	return s, nil
 }
