@@ -72,6 +72,7 @@ jobs:
       - uses: kayac/ecspresso@v2
         with:
           version: v2.0.0 # or latest
+          # version-file: .ecspresso-version
       - run: |
           ecspresso deploy --config ecspresso.yml
 ```
