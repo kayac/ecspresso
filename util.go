@@ -10,6 +10,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
+func arnToName(s string) string {
+	ns := strings.Split(s, "/")
+	return ns[len(ns)-1]
+}
+
 func isLongArnFormat(a string) (bool, error) {
 	an, err := arn.Parse(a)
 	if err != nil {
