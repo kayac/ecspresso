@@ -35,7 +35,7 @@ var cliTests = []struct {
 			InitOption:     nil,
 		},
 		subOption: &ecspresso.StatusOption{
-			Events: ptr(2),
+			Events: ptr(10),
 		},
 		fn: func(t *testing.T) {
 			if v := os.Getenv("ECSPRESSO_TEST"); v != "ok" {
@@ -48,7 +48,7 @@ var cliTests = []struct {
 			"--config", "config.yml",
 			"--debug",
 			"status",
-			"--events=10",
+			"--events=100",
 		},
 		sub: "status",
 		option: &ecspresso.Option{
@@ -59,7 +59,7 @@ var cliTests = []struct {
 			InitOption:     nil,
 		},
 		subOption: &ecspresso.StatusOption{
-			Events: ptr(10),
+			Events: ptr(100),
 		},
 	},
 	{
@@ -82,21 +82,21 @@ var cliTests = []struct {
 		args: []string{"status"},
 		sub:  "status",
 		subOption: &ecspresso.StatusOption{
-			Events: ptr(2),
-		},
-	},
-	{
-		args: []string{"status", "--events=10"},
-		sub:  "status",
-		subOption: &ecspresso.StatusOption{
 			Events: ptr(10),
 		},
 	},
 	{
-		args: []string{"status", "--events", "10"},
+		args: []string{"status", "--events=100"},
 		sub:  "status",
 		subOption: &ecspresso.StatusOption{
-			Events: ptr(10),
+			Events: ptr(100),
+		},
+	},
+	{
+		args: []string{"status", "--events", "20"},
+		sub:  "status",
+		subOption: &ecspresso.StatusOption{
+			Events: ptr(20),
 		},
 	},
 	{
