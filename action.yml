@@ -10,7 +10,6 @@ runs:
   using: "composite"
   steps:
     - shell: bash
-      working-directory: /tmp
       run: |
         set -e
         VERSION="${{ inputs.version }}"
