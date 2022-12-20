@@ -10,10 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
-func arnToName(s string) string {
-	ns := strings.Split(s, "/")
-	return ns[len(ns)-1]
-}
+var EventTimeFormat = "2006/01/02 15:04:05"
 
 func formatDeployment(d types.Deployment) string {
 	return fmt.Sprintf(
@@ -35,7 +32,7 @@ func formatTaskSet(d types.TaskSet) string {
 
 func formatEvent(e types.ServiceEvent) string {
 	return fmt.Sprintf("%s %s",
-		e.CreatedAt.In(time.Local).Format("2006/01/02 15:04:05"),
+		e.CreatedAt.In(time.Local).Format(EventTimeFormat),
 		*e.Message,
 	)
 }
@@ -43,7 +40,7 @@ func formatEvent(e types.ServiceEvent) string {
 func formatLogEvent(e logsTypes.OutputLogEvent) string {
 	t := time.Unix((*e.Timestamp / int64(1000)), 0)
 	return fmt.Sprintf("%s %s",
-		t.In(time.Local).Format("2006/01/02 15:04:05"),
+		t.In(time.Local).Format(EventTimeFormat),
 		*e.Message,
 	)
 }

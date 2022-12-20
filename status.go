@@ -3,7 +3,7 @@ package ecspresso
 import "context"
 
 type StatusOption struct {
-	Events *int `help:"show events num" default:"2"`
+	Events *int `help:"show events num" default:"10"`
 }
 
 func (d *App) Status(ctx context.Context, opt StatusOption) error {
