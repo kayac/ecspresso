@@ -14,7 +14,7 @@ runs:
         set -e
         VERSION="${{ inputs.version }}"
         if [ -n "${{ inputs.version-file }}" ]; then
-          VERSION=$(cat ${{ inputs.version-file }})
+          VERSION="v$(cat ${{ inputs.version-file }})"
         fi
         if [ "${VERSION}" = "latest" ]; then
           DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases | jq -r '[.[]|select(.tag_name > "v2.0")|select(.prerelease==false)][0].assets[].browser_download_url|select(match("linux.amd64."))')
