@@ -24,8 +24,8 @@ $ brew install kayac/tap/ecspresso
 
 ```console
 $ asdf plugin add ecspresso https://github.com/koluku/asdf-ecspresso.git
-$ asdf install ecspresso 1.7.14
-$ asdf global ecspresso 1.7.14
+$ asdf install ecspresso 2.0.0
+$ asdf global ecspresso 2.0.0
 ```
 
 ### Binary packages
@@ -46,12 +46,13 @@ jobs:
       - checkout
       - ecspresso/install:
           version: v2.0.0 # or latest
+          # version-file: .ecspresso-version
       - run:
           command: |
             ecspresso version
 ```
 
- `version: latest` installs different versions of ecspresso for each Orb version.
+`version: latest` installs different versions of ecspresso for each Orb version.
 - fujiwara/ecspresso@0.0.15
   - The latest release version (v2 or later)
 - fujiwara/ecspresso@1.0.0
@@ -59,9 +60,11 @@ jobs:
 - fujiwara/ecspresso@2.0.0
   - The latest version of v2.x
 
+`version-file: path/to/file` installs ecspresso that version written is in the file. This version number does not have `v` prefix, For example, `2.0.0`.
+
 ### GitHub Actions
 
-Action kayac/ecspresso@v1 installs ecspresso binary for Linux into /usr/local/bin. This action runs install only.
+Action kayac/ecspresso@v2 installs an ecspresso binary for Linux(x86_64) into /usr/local/bin. This action runs install only.
 
 ```yml
 jobs:
@@ -80,17 +83,18 @@ jobs:
 Pass the parameter "latest" to use the latest version of ecspresso.
 
 ```yaml
-      - uses: kayac/ecspresso@v1
+      - uses: kayac/ecspresso@v2
         with:
           version: latest
 ```
 
- `version: latest` installs different versions of ecspresso for each Action version.
+`version: latest` installs different versions of ecspresso for each Action version.
 - kayac/ecspresso@v1
   - The latest version of v1.x
 - kayac/ecspresso@v2
-  - The latest version (v1.99 or later) that includes prerelease version.
-  - After v2.0.0 is released, This behavior will be changed to install stable versions only.
+  - The latst version of v2.x
+
+`version-file: path/to/file` installs ecspresso that version wrote is in the file. This version number does not have `v` prefix, For example `2.0.0`.
 
 ## Usage
 
