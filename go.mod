@@ -5,14 +5,14 @@ go 1.18
 require (
 	github.com/Songmu/prompter v0.5.1
 	github.com/alecthomas/kong v0.7.0
-	github.com/aws/aws-sdk-go-v2 v1.17.1
+	github.com/aws/aws-sdk-go-v2 v1.17.3
 	github.com/aws/aws-sdk-go-v2/config v1.17.7
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.20
 	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.15.17
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.19
 	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.14.17
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.17.17
-	github.com/aws/aws-sdk-go-v2/service/ecs v1.20.0
+	github.com/aws/aws-sdk-go-v2/service/ecs v1.22.0
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.18.18
 	github.com/aws/aws-sdk-go-v2/service/iam v1.18.18
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.27.11
@@ -20,7 +20,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/servicediscovery v1.18.2
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.28.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.16.19
-	github.com/aws/smithy-go v1.13.4
+	github.com/aws/smithy-go v1.13.5
 	github.com/fatih/color v1.13.0
 	github.com/fujiwara/cfn-lookup v1.0.0
 	github.com/fujiwara/ecsta v0.1.3
@@ -65,8 +65,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.8 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.17 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.11.33 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.25 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.27 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.21 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.24 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.14 // indirect
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.22.9 // indirect

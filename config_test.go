@@ -35,6 +35,20 @@ func TestLoadServiceDefinition(t *testing.T) {
 			*sv.Tags[0].Value != "default2" {
 			t.Errorf("unexpected service definition %#v", sv)
 		}
+		if dc := sv.DeploymentConfiguration; dc == nil {
+			t.Error("deployment configuration is nil")
+		} else {
+			if *dc.MaximumPercent != 200 || *dc.MinimumHealthyPercent != 50 {
+				t.Errorf("unexpected deployment configuration %#v", dc)
+			}
+			if dc.Alarms == nil {
+				t.Errorf("deployment configuration alarms is nil")
+			} else {
+				if len(dc.Alarms.AlarmNames) != 1 || dc.Alarms.AlarmNames[0] != "HighResponseLatencyAlarm" {
+					t.Errorf("unexpected alarms %#v", dc.Alarms)
+				}
+			}
+		}
 	}
 }
 

@@ -1,4 +1,19 @@
 {
+  "deploymentConfiguration": {
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    },
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 50,
+    "alarms": {
+      "alarmNames": [
+        "HighResponseLatencyAlarm"
+      ],
+      "enable": true,
+      "rollback": true
+    }
+  },
   "desiredCount": 2,
   "loadBalancers": [
     {
