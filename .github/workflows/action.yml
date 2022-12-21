@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - v2
+      - v2-action-testing
   workflow_dispatch:
 
 jobs:
@@ -10,33 +11,39 @@ jobs:
     name: test action
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - uses: kayac/ecspresso@v0
         with:
           version: v1.5.0
       - run: |
-          ecspresso version 2>&1 | fgrep -q v1.5.0
+          ecspresso version 2>&1 | fgrep v1.5.0
       - uses: kayac/ecspresso@v1
         with:
           version: v1.5.0
       - run: |
-          ecspresso version 2>&1 | fgrep -q v1.5.0
+          ecspresso version 2>&1 | fgrep v1.5.0
       - uses: kayac/ecspresso@v1
         with:
           version: v1.6.0
       - run: |
-          ecspresso version 2>&1 | fgrep -q v1.6.0
+          ecspresso version 2>&1 | fgrep v1.6.0
       - uses: kayac/ecspresso@v1
         with:
           version: latest
       - run: |
-          ecspresso version 2>&1 | fgrep -q v1.7.
+          ecspresso version 2>&1 | fgrep v1.7.
       - uses: kayac/ecspresso@v2
         with:
           version: latest
       - run: |
-          ecspresso version 2>&1 | fgrep -q v2.
+          ecspresso version 2>&1 | fgrep v2.
       - uses: kayac/ecspresso@v2
         with:
           version: v1.7.14
       - run: |
-          ecspresso version 2>&1 | fgrep -q v1.7.14
+          ecspresso version 2>&1 | fgrep v1.7.14
+      - uses: kayac/ecspresso@v2-action-testing
+        with:
+          version-file: tests/.ecspresso-version
+      - run: |
+          ecspresso version 2>&1 | fgrep v2.0.0
