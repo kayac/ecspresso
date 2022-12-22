@@ -42,7 +42,7 @@ jobs:
           version: v1.7.14
       - run: |
           ecspresso version 2>&1 | fgrep v1.7.14
-      - uses: kayac/ecspresso@v2-action-testing
+      - uses: kayac/ecspresso@v2
         with:
           version-file: tests/.ecspresso-version
       - run: |
