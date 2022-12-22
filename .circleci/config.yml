@@ -1,0 +1,38 @@
+version: 2.1
+
+orbs:
+  ecspresso2.0.2: fujiwara/ecspresso@2.0.2
+  ecspresso2.0.0: fujiwara/ecspresso@2.0.0
+
+jobs:
+  install:
+    docker:
+      - image: cimg/base:2022.12
+    steps:
+      - checkout
+      - ecspresso2.0.0/install:
+          version: latest
+      - run:
+          command: |
+            ecspresso version | fgrep v2.
+      - ecspresso2.0.0/install:
+          version: v1.7.15
+      - run:
+          command: |
+            ecspresso version | fgrep v1.7.15
+      - ecspresso2.0.2/install:
+          version-file: tests/.ecspresso-version
+      - run:
+          command: |
+            ecspresso version | fgrep v2.0.0
+
+workflows:
+  version: 2
+  deploy:
+    jobs:
+      - install:
+          filters:
+            branches:
+              only:
+                - v2
+                - v2-action-testing
