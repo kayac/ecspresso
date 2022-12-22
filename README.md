@@ -39,7 +39,7 @@ https://circleci.com/orbs/registry/orb/fujiwara/ecspresso
 ```yaml
 version: 2.1
 orbs:
-  ecspresso: fujiwara/ecspresso@2.0.0
+  ecspresso: fujiwara/ecspresso@2.0.2
 jobs:
   install:
     steps:
@@ -57,10 +57,10 @@ jobs:
   - The latest release version (v2 or later)
 - fujiwara/ecspresso@1.0.0
   - The latest version of v1.x
-- fujiwara/ecspresso@2.0.0
+- fujiwara/ecspresso@2.0.2
   - The latest version of v2.x
 
-`version-file: path/to/file` installs ecspresso that version written is in the file. This version number does not have `v` prefix, For example, `2.0.0`.
+Orb `fujiwara/ecspresso@2.0.2` supports `version-file: path/to/file` installs ecspresso that version written in the file. This version number does not have `v` prefix, For example, `2.0.0`.
 
 ### GitHub Actions
 
@@ -94,7 +94,7 @@ Pass the parameter "latest" to use the latest version of ecspresso.
 - kayac/ecspresso@v2
   - The latst version of v2.x
 
-`version-file: path/to/file` installs ecspresso that version wrote is in the file. This version number does not have `v` prefix, For example `2.0.0`.
+GitHub Action `kayac/ecspresso@v2` supports `version-file: path/to/file` installs ecspresso that version written in the file. This version number does not have `v` prefix, For example `2.0.0`.
 
 ## Usage
 
