@@ -39,7 +39,7 @@ https://circleci.com/orbs/registry/orb/fujiwara/ecspresso
 ```yaml
 version: 2.1
 orbs:
-  ecspresso: fujiwara/ecspresso@2.0.2
+  ecspresso: fujiwara/ecspresso@2.0.3
 jobs:
   install:
     steps:
@@ -57,7 +57,7 @@ jobs:
   - The latest release version (v2 or later)
 - fujiwara/ecspresso@1.0.0
   - The latest version of v1.x
-- fujiwara/ecspresso@2.0.2
+- fujiwara/ecspresso@2.0.3
   - The latest version of v2.x
 
 Orb `fujiwara/ecspresso@2.0.2` supports `version-file: path/to/file` installs ecspresso that version written in the file. This version number does not have `v` prefix, For example, `2.0.0`.
