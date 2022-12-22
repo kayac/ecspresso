@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - v1
-      - v1-fixed-url
+      - v1-action-testing
   workflow_dispatch:
 
 jobs:
