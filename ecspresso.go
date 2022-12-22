@@ -241,6 +241,8 @@ func (d *App) DescribeService(ctx context.Context) (*Service, error) {
 		d.Log("[WARNING] service %s is %s", d.Service, status)
 	case "INACTIVE":
 		return nil, ErrNotFound(fmt.Sprintf("service %s is %s", d.Service, status))
+	default:
+		d.Log("[DEBUG] service %s is %s", d.Service, status)
 	}
 	return d.newServiceFromTypes(ctx, out.Services[0])
 }
