@@ -18,5 +18,7 @@ func (o *ScaleOption) DeployOption() DeployOption {
 		RollbackEvents:       ptr(""),
 		UpdateService:        ptr(false),
 		LatestTaskDefinition: ptr(false),
+		SuspendAutoScaling:   o.SuspendAutoScaling,
+		ResumeAutoScaling:    o.ResumeAutoScaling,
 	}
 }
