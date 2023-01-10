@@ -59,20 +59,16 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	}
 
 	d.Log("deployment controller: %s", sv.DeploymentController.Type)
-	if sv.isCodeDeploy() {
-		return d.RollbackByCodeDeploy(ctx, sv, targetArn, opt)
+	doRollback, err := d.RollbackFunc(sv)
+	if err != nil {
+		return err
+	}
+	doWait, err := d.WaitFunc(sv)
+	if err != nil {
+		return err
 	}
 
-	if err := d.UpdateServiceTasks(
-		ctx,
-		targetArn,
-		nil,
-		sv,
-		DeployOption{
-			ForceNewDeployment: aws.Bool(false),
-			UpdateService:      aws.Bool(false),
-		},
-	); err != nil {
+	if err := doRollback(ctx, sv, targetArn, opt); err != nil {
 		return err
 	}
 
@@ -82,7 +78,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	}
 
 	time.Sleep(delayForServiceChanged) // wait for service updated
-	if err := d.WaitServiceStable(ctx, nil); err != nil {
+	if err := doWait(ctx, sv); err != nil {
 		return err
 	}
 
@@ -103,6 +99,19 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	}
 
 	return nil
+}
+
+func (d *App) RollbackServiceTasks(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) error {
+	return d.UpdateServiceTasks(
+		ctx,
+		tdArn,
+		nil,
+		sv,
+		DeployOption{
+			ForceNewDeployment: aws.Bool(false),
+			UpdateService:      aws.Bool(false),
+		},
+	)
 }
 
 func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) error {
@@ -183,4 +192,24 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 			}
 		}
 	}
+}
+
+type rollbackFunc func(ctx context.Context, sv *Service, taskDefinitionArn string, opt RollbackOption) error
+
+func (d *App) RollbackFunc(sv *Service) (rollbackFunc, error) {
+	defaultFunc := d.RollbackServiceTasks
+	if sv == nil || sv.DeploymentController == nil {
+		return defaultFunc, nil
+	}
+	if dc := sv.DeploymentController; dc != nil {
+		switch dc.Type {
+		case types.DeploymentControllerTypeCodeDeploy:
+			return d.RollbackByCodeDeploy, nil
+		case types.DeploymentControllerTypeEcs:
+			return d.RollbackServiceTasks, nil
+		default:
+			return nil, fmt.Errorf("unsupported deployment controller type: %s", dc.Type)
+		}
+	}
+	return defaultFunc, nil
 }

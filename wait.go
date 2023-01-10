@@ -50,16 +50,14 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 		return err
 	}
 	d.LogJSON(sv.DeploymentController)
-	if sv.isCodeDeploy() {
-		err := d.WaitForCodeDeploy(ctx, sv)
-		if err != nil {
-			return fmt.Errorf("failed to wait for a deployment successfully: %w", err)
-		}
-	} else {
-		if err := d.WaitServiceStable(ctx, sv); err != nil {
-			return err
-		}
+	doWait, err := d.WaitFunc(sv)
+	if err != nil {
+		return err
 	}
+	if err := doWait(ctx, sv); err != nil {
+		return err
+	}
+
 	d.Log("Service is stable now. Completed!")
 	return nil
 }

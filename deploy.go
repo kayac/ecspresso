@@ -74,20 +74,13 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return err
 	}
 
-	deployFunc := d.UpdateServiceTasks // default
-	waitFunc := d.WaitServiceStable    // default
-	// detect controller
-	if dc := sv.DeploymentController; dc != nil {
-		switch dc.Type {
-		case types.DeploymentControllerTypeCodeDeploy:
-			deployFunc = d.DeployByCodeDeploy
-			waitFunc = d.WaitForCodeDeploy
-		case types.DeploymentControllerTypeEcs:
-			deployFunc = d.UpdateServiceTasks
-			waitFunc = d.WaitServiceStable
-		default:
-			return fmt.Errorf("unsupported deployment controller type: %s", dc.Type)
-		}
+	doDeploy, err := d.DeployFunc(sv)
+	if err != nil {
+		return err
+	}
+	doWait, err := d.WaitFunc(sv)
+	if err != nil {
+		return err
 	}
 
 	var tdArn string
@@ -156,7 +149,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		}
 	}
 
-	if err := deployFunc(ctx, tdArn, count, sv, opt); err != nil {
+	if err := doDeploy(ctx, tdArn, count, sv, opt); err != nil {
 		return err
 	}
 
@@ -165,7 +158,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return nil
 	}
 
-	if err := waitFunc(ctx, sv); err != nil {
+	if err := doWait(ctx, sv); err != nil {
 		var e ErrNotFound
 		if errors.As(err, &e) {
 			d.Log("[INFO] %s", err)
