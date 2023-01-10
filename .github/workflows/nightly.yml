@@ -17,7 +17,7 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
         with:
-          ref: v1
+          ref: v2
           fetch-depth: 0 # it is required for the changelog to work correctly.
 
       - name: Set env
