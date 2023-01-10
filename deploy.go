@@ -453,3 +453,23 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 	}
 	return nil
 }
+
+type deployFunc func(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) error
+
+func (d *App) DeployFunc(sv *Service) (deployFunc, error) {
+	defaultFunc := d.UpdateServiceTasks
+	if sv == nil || sv.DeploymentController == nil {
+		return defaultFunc, nil
+	}
+	if dc := sv.DeploymentController; dc != nil {
+		switch dc.Type {
+		case types.DeploymentControllerTypeCodeDeploy:
+			return d.DeployByCodeDeploy, nil
+		case types.DeploymentControllerTypeEcs:
+			return d.UpdateServiceTasks, nil
+		default:
+			return nil, fmt.Errorf("unsupported deployment controller type: %s", dc.Type)
+		}
+	}
+	return defaultFunc, nil
+}

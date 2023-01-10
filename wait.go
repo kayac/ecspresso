@@ -12,8 +12,29 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/codedeploy"
 	cdTypes "github.com/aws/aws-sdk-go-v2/service/codedeploy/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/schollz/progressbar/v3"
 )
+
+type waitFunc func(ctx context.Context, sv *Service) error
+
+func (d *App) WaitFunc(sv *Service) (waitFunc, error) {
+	defaultFunc := d.WaitServiceStable
+	if sv == nil || sv.DeploymentController == nil {
+		return defaultFunc, nil
+	}
+	if dc := sv.DeploymentController; dc != nil {
+		switch dc.Type {
+		case types.DeploymentControllerTypeCodeDeploy:
+			return d.WaitForCodeDeploy, nil
+		case types.DeploymentControllerTypeEcs:
+			return d.WaitServiceStable, nil
+		default:
+			return nil, fmt.Errorf("unsupported deployment controller type: %s", dc.Type)
+		}
+	}
+	return defaultFunc, nil
+}
 
 type WaitOption struct {
 }
