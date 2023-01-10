@@ -113,7 +113,8 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 		return err
 	}
 	if len(out.Deployments) == 0 {
-		return ErrNotFound("no deployments found in progress")
+		d.Log("No deployments found in progress on CodeDeploy")
+		return d.WaitTaskSetStable(ctx, sv)
 	}
 
 	dpID := out.Deployments[0]
@@ -218,4 +219,32 @@ func (d *App) codeDeployProgressBar(ctx context.Context, dpID string) error {
 	bar.Set(100)
 	fmt.Println()
 	return nil
+}
+
+func (d *App) WaitTaskSetStable(ctx context.Context, sv *Service) error {
+	var prev types.StabilityStatus
+	for {
+		sv, err := d.DescribeService(ctx)
+		if err != nil {
+			return err
+		}
+		switch len(sv.TaskSets) {
+		case 0:
+			d.Log("Waiting for task sets")
+		case 1:
+			ts := sv.TaskSets[0]
+			if aws.ToString(ts.Status) == "PRIMARY" {
+				if prev != ts.StabilityStatus {
+					d.Log("Waiting a task set PRIMARY stable: %s", ts.StabilityStatus)
+				}
+				if ts.StabilityStatus == types.StabilityStatusSteadyState {
+					return nil
+				}
+				prev = ts.StabilityStatus
+			}
+		default:
+			d.Log("Waiting for a PRIMARY taskset available only")
+		}
+		time.Sleep(10 * time.Second)
+	}
 }
