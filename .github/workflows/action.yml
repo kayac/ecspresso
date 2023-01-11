@@ -42,3 +42,8 @@ jobs:
           version-file: tests/.ecspresso-version
       - run: |
           ecspresso version 2>&1 | fgrep v2.0.0
+      - uses: kayac/ecspresso@v2-action-testing
+        with:
+          version: latest
+      - run: |
+          ecspresso version 2>&1 | fgrep v2.0
