@@ -244,7 +244,7 @@ func (d *App) WaitTaskSetStable(ctx context.Context, sv *Service) error {
 						d.Log("Waiting a PRIMARY taskset available only")
 					}
 				}
-				if ts.StabilityStatus == types.StabilityStatusSteadyState {
+				if ts.StabilityStatus == types.StabilityStatusSteadyState && n == 1 {
 					d.Log("Service is stable now. Completed!")
 					return nil
 				}
