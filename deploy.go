@@ -159,8 +159,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 	}
 
 	if err := doWait(ctx, sv); err != nil {
-		var e ErrNotFound
-		if errors.As(err, &e) {
+		if errors.As(err, &errNotFound) {
 			d.Log("[INFO] %s", err)
 			// no need to wait
 			return nil

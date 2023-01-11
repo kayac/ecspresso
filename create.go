@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -96,7 +97,11 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 	}
 
 	if err := doWait(ctx, sv); err != nil {
-		return fmt.Errorf("failed to wait service stable: %w", err)
+		if errors.As(err, &errNotFound) && sv.isCodeDeploy() {
+			d.Log("[INFO] %s", err)
+			return d.WaitTaskSetStable(ctx, sv)
+		}
+		return err
 	}
 
 	d.Log("Service is stable now. Completed!")

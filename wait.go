@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -55,6 +56,10 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 		return err
 	}
 	if err := doWait(ctx, sv); err != nil {
+		if errors.As(err, &errNotFound) && sv.isCodeDeploy() {
+			d.Log("[INFO] %s", err)
+			return d.WaitTaskSetStable(ctx, sv)
+		}
 		return err
 	}
 
@@ -113,8 +118,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 		return err
 	}
 	if len(out.Deployments) == 0 {
-		d.Log("No deployments found in progress on CodeDeploy")
-		return d.WaitTaskSetStable(ctx, sv)
+		return ErrNotFound("No deployments found in progress on CodeDeploy")
 	}
 
 	dpID := out.Deployments[0]
@@ -228,22 +232,24 @@ func (d *App) WaitTaskSetStable(ctx context.Context, sv *Service) error {
 		if err != nil {
 			return err
 		}
-		switch len(sv.TaskSets) {
+		switch n := len(sv.TaskSets); n {
 		case 0:
-			d.Log("Waiting for task sets")
-		case 1:
+			d.Log("Waiting task sets available")
+		default:
 			ts := sv.TaskSets[0]
 			if aws.ToString(ts.Status) == "PRIMARY" {
 				if prev != ts.StabilityStatus {
 					d.Log("Waiting a task set PRIMARY stable: %s", ts.StabilityStatus)
+					if n > 1 {
+						d.Log("Waiting a PRIMARY taskset available only")
+					}
 				}
 				if ts.StabilityStatus == types.StabilityStatusSteadyState {
+					d.Log("Service is stable now. Completed!")
 					return nil
 				}
 				prev = ts.StabilityStatus
 			}
-		default:
-			d.Log("Waiting for a PRIMARY taskset available only")
 		}
 		time.Sleep(10 * time.Second)
 	}
