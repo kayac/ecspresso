@@ -182,7 +182,6 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 		if len(out.TaskDefinitionArns) == 0 {
 			return "", ErrNotFound(fmt.Sprintf("rollback target is not found: %s", err))
 		}
-		nextToken = out.NextToken
 		for _, tdArn := range out.TaskDefinitionArns {
 			if found {
 				return tdArn, nil
@@ -191,7 +190,12 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 				found = true
 			}
 		}
+		nextToken = out.NextToken
+		if nextToken == nil {
+			break
+		}
 	}
+	return "", ErrNotFound("rollback target is not found")
 }
 
 type rollbackFunc func(ctx context.Context, sv *Service, taskDefinitionArn string, opt RollbackOption) error
