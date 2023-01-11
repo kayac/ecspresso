@@ -6,18 +6,28 @@ inputs:
   version-file:
     description: "File containing the ecspresso version. Example: .ecspresso-version"
     required: false
+  github-token:
+    description: "The token used when calling GitHub API"
+    required: false
+    default: ${{ github.token }}
 runs:
   using: "composite"
   steps:
     - shell: bash
+      env:
+        github_token: ${{ inputs.github-token }}
       run: |
         set -e
         VERSION="${{ inputs.version }}"
         if [ -n "${{ inputs.version-file }}" ]; then
           VERSION="v$(cat ${{ inputs.version-file }})"
         fi
+        api_request_args="-sS"
+        if [[ -n "$github_token" ]]; then
+          api_request_args="${api_request_args} -H 'authorization: token $github_token'"
+        fi
         if [ "${VERSION}" = "latest" ]; then
-          DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases | jq -r '[.[]|select(.tag_name > "v2.0")|select(.prerelease==false)][0].assets[].browser_download_url|select(match("linux.amd64."))')
+          DOWNLOAD_URL=$(curl ${api_request_args} https://api.github.com/repos/kayac/ecspresso/releases | jq -r '[.[]|select(.tag_name > "v2.0")|select(.prerelease==false)][0].assets[].browser_download_url|select(match("linux.amd64."))')
         else
           DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/ecspresso_${VERSION:1}_linux_amd64.tar.gz
         fi
