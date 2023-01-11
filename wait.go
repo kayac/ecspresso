@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -12,8 +13,29 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/codedeploy"
 	cdTypes "github.com/aws/aws-sdk-go-v2/service/codedeploy/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/schollz/progressbar/v3"
 )
+
+type waitFunc func(ctx context.Context, sv *Service) error
+
+func (d *App) WaitFunc(sv *Service) (waitFunc, error) {
+	defaultFunc := d.WaitServiceStable
+	if sv == nil || sv.DeploymentController == nil {
+		return defaultFunc, nil
+	}
+	if dc := sv.DeploymentController; dc != nil {
+		switch dc.Type {
+		case types.DeploymentControllerTypeCodeDeploy:
+			return d.WaitForCodeDeploy, nil
+		case types.DeploymentControllerTypeEcs:
+			return d.WaitServiceStable, nil
+		default:
+			return nil, fmt.Errorf("unsupported deployment controller type: %s", dc.Type)
+		}
+	}
+	return defaultFunc, nil
+}
 
 type WaitOption struct {
 }
@@ -29,16 +51,18 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 		return err
 	}
 	d.LogJSON(sv.DeploymentController)
-	if sv.isCodeDeploy() {
-		err := d.WaitForCodeDeploy(ctx, sv)
-		if err != nil {
-			return fmt.Errorf("failed to wait for a deployment successfully: %w", err)
-		}
-	} else {
-		if err := d.WaitServiceStable(ctx, sv); err != nil {
-			return err
-		}
+	doWait, err := d.WaitFunc(sv)
+	if err != nil {
+		return err
 	}
+	if err := doWait(ctx, sv); err != nil {
+		if errors.As(err, &errNotFound) && sv.isCodeDeploy() {
+			d.Log("[INFO] %s", err)
+			return d.WaitTaskSetStable(ctx, sv)
+		}
+		return err
+	}
+
 	d.Log("Service is stable now. Completed!")
 	return nil
 }
@@ -94,7 +118,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 		return err
 	}
 	if len(out.Deployments) == 0 {
-		return ErrNotFound("no deployments found in progress")
+		return ErrNotFound("No deployments found in progress on CodeDeploy")
 	}
 
 	dpID := out.Deployments[0]
@@ -199,4 +223,34 @@ func (d *App) codeDeployProgressBar(ctx context.Context, dpID string) error {
 	bar.Set(100)
 	fmt.Println()
 	return nil
+}
+
+func (d *App) WaitTaskSetStable(ctx context.Context, sv *Service) error {
+	var prev types.StabilityStatus
+	for {
+		sv, err := d.DescribeService(ctx)
+		if err != nil {
+			return err
+		}
+		switch n := len(sv.TaskSets); n {
+		case 0:
+			d.Log("Waiting task sets available")
+		default:
+			ts := sv.TaskSets[0]
+			if aws.ToString(ts.Status) == "PRIMARY" {
+				if prev != ts.StabilityStatus {
+					d.Log("Waiting a task set PRIMARY stable: %s", ts.StabilityStatus)
+					if n > 1 {
+						d.Log("Waiting a PRIMARY taskset available only")
+					}
+				}
+				if ts.StabilityStatus == types.StabilityStatusSteadyState && n == 1 {
+					d.Log("Service is stable now. Completed!")
+					return nil
+				}
+				prev = ts.StabilityStatus
+			}
+		}
+		time.Sleep(10 * time.Second)
+	}
 }

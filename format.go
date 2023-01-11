@@ -13,22 +13,23 @@ import (
 
 var EventTimeFormat = "2006/01/02 15:04:05"
 
-func formatDeployment(d types.Deployment) string {
+func formatDeployment(dp types.Deployment) string {
 	return fmt.Sprintf(
 		"%8s %s desired:%d pending:%d running:%d %s(%s)",
-		*d.Status,
-		arnToName(*d.TaskDefinition),
-		d.DesiredCount, d.PendingCount, d.RunningCount,
-		d.RolloutState, aws.ToString(d.RolloutStateReason),
+		aws.ToString(dp.Status),
+		arnToName(aws.ToString(dp.TaskDefinition)),
+		dp.DesiredCount, dp.PendingCount, dp.RunningCount,
+		dp.RolloutState, aws.ToString(dp.RolloutStateReason),
 	)
 }
 
-func formatTaskSet(d types.TaskSet) string {
+func formatTaskSet(ts types.TaskSet) string {
 	return fmt.Sprintf(
-		"%8s %s desired:%d pending:%d running:%d",
-		*d.Status,
-		arnToName(*d.TaskDefinition),
-		d.ComputedDesiredCount, d.PendingCount, d.RunningCount,
+		"%8s %s desired:%d pending:%d running:%d %s",
+		aws.ToString(ts.Status),
+		arnToName(aws.ToString(ts.TaskDefinition)),
+		ts.ComputedDesiredCount, ts.PendingCount, ts.RunningCount,
+		ts.StabilityStatus,
 	)
 }
 

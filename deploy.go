@@ -74,20 +74,13 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return err
 	}
 
-	deployFunc := d.UpdateServiceTasks // default
-	waitFunc := d.WaitServiceStable    // default
-	// detect controller
-	if dc := sv.DeploymentController; dc != nil {
-		switch dc.Type {
-		case types.DeploymentControllerTypeCodeDeploy:
-			deployFunc = d.DeployByCodeDeploy
-			waitFunc = d.WaitForCodeDeploy
-		case types.DeploymentControllerTypeEcs:
-			deployFunc = d.UpdateServiceTasks
-			waitFunc = d.WaitServiceStable
-		default:
-			return fmt.Errorf("unsupported deployment controller type: %s", dc.Type)
-		}
+	doDeploy, err := d.DeployFunc(sv)
+	if err != nil {
+		return err
+	}
+	doWait, err := d.WaitFunc(sv)
+	if err != nil {
+		return err
 	}
 
 	var tdArn string
@@ -156,7 +149,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		}
 	}
 
-	if err := deployFunc(ctx, tdArn, count, sv, opt); err != nil {
+	if err := doDeploy(ctx, tdArn, count, sv, opt); err != nil {
 		return err
 	}
 
@@ -165,9 +158,8 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return nil
 	}
 
-	if err := waitFunc(ctx, sv); err != nil {
-		var e ErrNotFound
-		if errors.As(err, &e) {
+	if err := doWait(ctx, sv); err != nil {
+		if errors.As(err, &errNotFound) {
 			d.Log("[INFO] %s", err)
 			// no need to wait
 			return nil
@@ -452,4 +444,24 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 		}
 	}
 	return nil
+}
+
+type deployFunc func(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) error
+
+func (d *App) DeployFunc(sv *Service) (deployFunc, error) {
+	defaultFunc := d.UpdateServiceTasks
+	if sv == nil || sv.DeploymentController == nil {
+		return defaultFunc, nil
+	}
+	if dc := sv.DeploymentController; dc != nil {
+		switch dc.Type {
+		case types.DeploymentControllerTypeCodeDeploy:
+			return d.DeployByCodeDeploy, nil
+		case types.DeploymentControllerTypeEcs:
+			return d.UpdateServiceTasks, nil
+		default:
+			return nil, fmt.Errorf("unsupported deployment controller type: %s", dc.Type)
+		}
+	}
+	return defaultFunc, nil
 }

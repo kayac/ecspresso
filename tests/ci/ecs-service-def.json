@@ -12,12 +12,11 @@
     }
   ],
   "deploymentConfiguration": {
-    "deploymentCircuitBreaker": {
-      "enable": true,
-      "rollback": true
-    },
     "maximumPercent": 200,
     "minimumHealthyPercent": 100
+  },
+  "deploymentController": {
+    "type": "{{ env `DEPLOYMENT_CONTROLLER` `ECS` }}"
   },
   "desiredCount": 1,
   "enableECSManagedTags": false,
