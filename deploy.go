@@ -142,9 +142,15 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return nil
 	}
 
-	// manage auto scaling only when set option --suspend-auto-scaling or --no-suspend-auto-scaling explicitly
-	if suspendState := opt.SuspendAutoScaling; suspendState != nil {
-		if err := d.suspendAutoScaling(ctx, *suspendState); err != nil {
+	// manage auto scaling only when set option --suspend-auto-scaling or --resume-auto-scaling explicitly
+	if opt.SuspendAutoScaling != nil && *opt.SuspendAutoScaling {
+		d.Log("suspending auto scaling")
+		if err := d.suspendAutoScaling(ctx, true); err != nil {
+			return err
+		}
+	} else if opt.ResumeAutoScaling != nil && *opt.ResumeAutoScaling {
+		d.Log("resuming auto scaling")
+		if err := d.suspendAutoScaling(ctx, false); err != nil {
 			return err
 		}
 	}

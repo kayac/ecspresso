@@ -543,7 +543,12 @@ func (d *App) suspendAutoScaling(ctx context.Context, suspendState bool) error {
 		return fmt.Errorf("failed to describe scalable targets: %w", err)
 	}
 	if len(out.ScalableTargets) == 0 {
-		d.Log("No scalable target for %s", resourceId)
+		d.Log("[WARNING] No scalable target for %s", resourceId)
+		if suspendState {
+			d.Log("[WARNING] Skip suspend auto scaling")
+		} else {
+			d.Log("[WARNING] Skip resume auto scaling")
+		}
 		return nil
 	}
 	for _, target := range out.ScalableTargets {
