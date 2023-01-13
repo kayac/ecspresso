@@ -306,11 +306,11 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 			}
 		}
 	}
-	return nil, fmt.Errorf(
+	return nil, ErrNotFound(fmt.Sprintf(
 		"failed to find CodeDeploy Application/DeploymentGroup for ECS service %s on cluster %s",
 		d.config.Service,
 		d.config.Cluster,
-	)
+	))
 }
 
 func (d *App) findCodeDeployApplications(ctx context.Context) ([]cdTypes.ApplicationInfo, error) {
@@ -326,6 +326,9 @@ func (d *App) findCodeDeployApplications(ctx context.Context) ([]cdTypes.Applica
 			}
 			appNames = append(appNames, p.Applications...)
 		}
+	}
+	if len(appNames) == 0 {
+		return nil, ErrNotFound("no CodeDeploy applications found")
 	}
 	d.Log("[DEBUG] found CodeDeploy applications: %v", appNames)
 
@@ -345,6 +348,9 @@ func (d *App) findCodeDeployApplications(ctx context.Context) ([]cdTypes.Applica
 			}
 			apps = append(apps, info)
 		}
+	}
+	if len(apps) == 0 {
+		return nil, ErrNotFound("no CodeDeploy applications found")
 	}
 	return apps, nil
 }
