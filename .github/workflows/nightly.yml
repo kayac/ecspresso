@@ -23,7 +23,10 @@ jobs:
       - name: Set env
         run: |
           git fetch --tags
-          echo "NIGHTLY_VERSION=$(git describe --abbrev --tags --always)" >> $GITHUB_ENV
+          full=$(git describe --abbrev --tags --always)
+          version=$(echo "$full" | cut -d- -f1)
+          rev=$(echo "$full" | cut -d- -f2- | sha1sum | cut -d' ' -f1)
+          echo "NIGHTLY_VERSION=${version}-nightly-${rev}" >> $GITHUB_ENV
 
       - name: Check for same revision exists
         env:
