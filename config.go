@@ -54,11 +54,12 @@ type Config struct {
 	Timeout               *Duration         `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 	CodeDeploy            *ConfigCodeDeploy `yaml:"codedeploy,omitempty" json:"codedeploy,omitempty"`
 
-	path               string
-	templateFuncs      []template.FuncMap
-	dir                string
-	versionConstraints goVersion.Constraints
-	awsv2Config        aws.Config
+	path                       string
+	templateFuncs              []template.FuncMap
+	dir                        string
+	versionConstraints         goVersion.Constraints
+	awsv2Config                aws.Config
+	awsv2ConfigLoadOptionsFunc []func(*awsConfig.LoadOptions) error
 }
 
 type ConfigCodeDeploy struct {
@@ -136,7 +137,13 @@ func (c *Config) Restrict(ctx context.Context) error {
 		c.Region = os.Getenv("AWS_REGION")
 	}
 	var err error
-	c.awsv2Config, err = awsConfig.LoadDefaultConfig(ctx, awsConfig.WithRegion(c.Region))
+	if len(c.awsv2ConfigLoadOptionsFunc) == 0 {
+		// default
+		c.awsv2ConfigLoadOptionsFunc = []func(*awsConfig.LoadOptions) error{
+			awsConfig.WithRegion(c.Region),
+		}
+	}
+	c.awsv2Config, err = awsConfig.LoadDefaultConfig(ctx, c.awsv2ConfigLoadOptionsFunc...)
 	if err != nil {
 		return fmt.Errorf("failed to load aws config: %w", err)
 	}
