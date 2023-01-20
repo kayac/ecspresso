@@ -10,9 +10,10 @@ import (
 )
 
 var testTaskDefinitionArnForRunSuite = []struct {
-	config string
-	opts   []string
-	td     string
+	config   string
+	opts     []string
+	td       string
+	raiseErr bool
 }{
 	{
 		config: "tests/run-with-sv.yaml",
@@ -49,6 +50,41 @@ var testTaskDefinitionArnForRunSuite = []struct {
 		opts:   []string{"--task-def=tests/run-test-td.json"},
 		td:     "family test will be registered",
 	},
+	{
+		config:   "tests/run-without-sv.yaml",
+		opts:     []string{"--skip-task-definition"},
+		raiseErr: true, // without service, --skip-task-definition is not allowed
+	},
+	{
+		config: "tests/run-without-sv.yaml",
+		opts:   []string{"--skip-task-definition", "--revision=42"},
+		td:     "katsubushi:42",
+	},
+	{
+		config: "tests/run-without-sv.yaml",
+		opts:   []string{"--latest-task-definition"},
+		td:     "katsubushi:45",
+	},
+	{
+		config:   "tests/run-without-sv.yaml",
+		opts:     []string{"--latest-task-definition", "--skip-task-definition"},
+		raiseErr: true, // without service, --skip-task-definition is not allowed
+	},
+	{
+		config: "tests/run-without-sv.yaml",
+		opts:   []string{"--latest-task-definition", "--revision=42"},
+		td:     "katsubushi:42",
+	},
+	{
+		config: "tests/run-without-sv.yaml",
+		opts:   nil,
+		td:     "family katsubushi will be registered",
+	},
+	{
+		config: "tests/run-without-sv.yaml",
+		opts:   []string{"--task-def=tests/run-test-td.json"},
+		td:     "family test will be registered",
+	},
 }
 
 func TestTaskDefinitionArnForRun(t *testing.T) {
@@ -76,10 +112,10 @@ func TestTaskDefinitionArnForRun(t *testing.T) {
 		opts := *cliopts.Run
 		tdArn, err := app.TaskDefinitionArnForRun(ctx, opts)
 		if err != nil {
-			t.Errorf("%s unexpected error: %s", args, err)
+			t.Errorf("%s %s unexpected error: %s", s.config, args, err)
 		}
 		if ecspresso.ArnToName(tdArn) != s.td {
-			t.Errorf("%s expected %s, got %s", args, s.td, tdArn)
+			t.Errorf("%s %s expected %s, got %s", s.config, args, s.td, tdArn)
 		}
 	}
 }
