@@ -18,6 +18,18 @@ var middlewareResults = map[string]interface{}{
 			},
 		},
 	},
+	"ListTaskDefinitions": &ecs.ListTaskDefinitionsOutput{
+		TaskDefinitionArns: []string{
+			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:45",
+			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:44",
+			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:43",
+			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:42",
+			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:41",
+			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:40",
+			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:39",
+			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:38",
+		},
+	},
 }
 
 func SDKTestingMiddleware() func(*middleware.Stack) error {

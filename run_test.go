@@ -10,16 +10,44 @@ import (
 )
 
 var testTaskDefinitionArnForRunSuite = []struct {
-	opts []string
-	td   string
+	config string
+	opts   []string
+	td     string
 }{
 	{
-		opts: []string{"--skip-task-definition"},
-		td:   "test:39",
+		config: "tests/run-with-sv.yaml",
+		opts:   []string{"--skip-task-definition"},
+		td:     "test:39",
 	},
 	{
-		opts: []string{"--skip-task-definition", "--revision=42"},
-		td:   "test:42",
+		config: "tests/run-with-sv.yaml",
+		opts:   []string{"--skip-task-definition", "--revision=42"},
+		td:     "test:42",
+	},
+	{
+		config: "tests/run-with-sv.yaml",
+		opts:   []string{"--latest-task-definition"},
+		td:     "test:45",
+	},
+	{
+		config: "tests/run-with-sv.yaml",
+		opts:   []string{"--latest-task-definition", "--skip-task-definition"},
+		td:     "test:45",
+	},
+	{
+		config: "tests/run-with-sv.yaml",
+		opts:   []string{"--latest-task-definition", "--skip-task-definition", "--revision=42"},
+		td:     "test:42",
+	},
+	{
+		config: "tests/run-with-sv.yaml",
+		opts:   nil,
+		td:     "family katsubushi will be registered",
+	},
+	{
+		config: "tests/run-with-sv.yaml",
+		opts:   []string{"--task-def=tests/run-test-td.json"},
+		td:     "family test will be registered",
 	},
 }
 
@@ -33,12 +61,12 @@ func TestTaskDefinitionArnForRun(t *testing.T) {
 	})
 	defer ecspresso.ResetAWSV2ConfigLoadOptionsFunc()
 
-	app, err := ecspresso.New(ctx, &ecspresso.Option{ConfigFilePath: "tests/run-with-sv.yaml"})
-	if err != nil {
-		t.Error(err)
-	}
-
 	for _, s := range testTaskDefinitionArnForRunSuite {
+		app, err := ecspresso.New(ctx, &ecspresso.Option{ConfigFilePath: s.config})
+		if err != nil {
+			t.Error(err)
+			continue
+		}
 		args := []string{"run", "--dry-run"}
 		args = append(args, s.opts...)
 		_, cliopts, _, err := ecspresso.ParseCLIv2(args)
