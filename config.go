@@ -141,12 +141,12 @@ func (c *Config) Restrict(ctx context.Context) error {
 	var optsFunc []func(*awsConfig.LoadOptions) error
 	if len(awsv2ConfigLoadOptionsFunc) == 0 {
 		// default
-		Log("[INFO] use default aws config load options")
+		// Log("[INFO] use default aws config load options")
 		optsFunc = []func(*awsConfig.LoadOptions) error{
 			awsConfig.WithRegion(c.Region),
 		}
 	} else {
-		Log("[INFO] override aws config load options")
+		// Log("[INFO] override aws config load options")
 		optsFunc = awsv2ConfigLoadOptionsFunc
 	}
 	c.awsv2Config, err = awsConfig.LoadDefaultConfig(ctx, optsFunc...)

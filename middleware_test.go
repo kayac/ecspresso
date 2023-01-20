@@ -2,6 +2,7 @@ package ecspresso_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
@@ -10,29 +11,29 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-var middlewareResults = map[string]interface{}{
-	"DescribeServices": &ecs.DescribeServicesOutput{
-		Services: []types.Service{
-			{
-				TaskDefinition: ptr("arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:39"),
+var middlewareResults = map[string]func(string) any{
+	"DescribeServices": func(_ string) any {
+		return &ecs.DescribeServicesOutput{
+			Services: []types.Service{
+				{
+					TaskDefinition: ptr("arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:39"),
+				},
 			},
-		},
+		}
 	},
-	"ListTaskDefinitions": &ecs.ListTaskDefinitionsOutput{
-		TaskDefinitionArns: []string{
-			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:45",
-			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:44",
-			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:43",
-			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:42",
-			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:41",
-			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:40",
-			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:39",
-			"arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:38",
-		},
+	"ListTaskDefinitions": func(family string) any {
+		td := func(rev int) string {
+			return fmt.Sprintf("arn:aws:ecs:ap-northeast-1:123456789012:task-definition/%s:%d", family, rev)
+		}
+		return &ecs.ListTaskDefinitionsOutput{
+			TaskDefinitionArns: []string{
+				td(45), td(44), td(43), td(42), td(41), td(40), td(39), td(38), td(37), td(36),
+			},
+		}
 	},
 }
 
-func SDKTestingMiddleware() func(*middleware.Stack) error {
+func SDKTestingMiddleware(family string) func(*middleware.Stack) error {
 	return func(stack *middleware.Stack) error {
 		return stack.Finalize.Add(
 			middleware.FinalizeMiddlewareFunc(
@@ -41,7 +42,7 @@ func SDKTestingMiddleware() func(*middleware.Stack) error {
 					req := in.Request.(*smithyhttp.Request)
 					target := strings.SplitN(req.Header.Get("X-Amz-Target"), ".", 2)[1]
 					return middleware.FinalizeOutput{
-						Result: middlewareResults[target],
+						Result: middlewareResults[target](family),
 					}, middleware.Metadata{}, nil
 				},
 			),
