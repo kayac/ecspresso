@@ -12,11 +12,11 @@ import (
 )
 
 var middlewareResults = map[string]func(string) any{
-	"DescribeServices": func(_ string) any {
+	"DescribeServices": func(family string) any {
 		return &ecs.DescribeServicesOutput{
 			Services: []types.Service{
 				{
-					TaskDefinition: ptr("arn:aws:ecs:ap-northeast-1:123456789012:task-definition/test:39"),
+					TaskDefinition: ptr(fmt.Sprintf("arn:aws:ecs:ap-northeast-1:123456789012:task-definition/%s:39", family)),
 				},
 			},
 		}

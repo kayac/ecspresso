@@ -19,15 +19,15 @@ var testTaskDefinitionArnForRunSuite = map[string][]taskDefinitionArnForRunSuite
 	"tests/run-with-sv.yaml": {
 		{
 			opts: []string{"--skip-task-definition"},
-			td:   "test:39",
+			td:   "katsubushi:39",
 		},
 		{
 			opts: []string{"--skip-task-definition", "--revision=42"},
-			td:   "test:42",
+			td:   "katsubushi:42",
 		},
 		{
 			opts: []string{"--latest-task-definition"},
-			td:   "test:45",
+			td:   "katsubushi:45",
 		},
 		{
 			opts:     []string{"--latest-task-definition", "--skip-task-definition"},
@@ -84,7 +84,9 @@ func TestTaskDefinitionArnForRun(t *testing.T) {
 	// mock aws sdk
 	ecspresso.SetAWSV2ConfigLoadOptionsFunc([]func(*config.LoadOptions) error{
 		config.WithRegion("ap-northeast-1"),
-		config.WithAPIOptions([]func(*middleware.Stack) error{SDKTestingMiddleware("test")}),
+		config.WithAPIOptions([]func(*middleware.Stack) error{
+			SDKTestingMiddleware("katsubushi"), // tests/td.json .taskDefinition.family
+		}),
 	})
 	defer ecspresso.ResetAWSV2ConfigLoadOptionsFunc()
 	for config, suites := range testTaskDefinitionArnForRunSuite {
@@ -102,11 +104,17 @@ func TestTaskDefinitionArnForRun(t *testing.T) {
 			}
 			opts := *cliopts.Run
 			tdArn, err := app.TaskDefinitionArnForRun(ctx, opts)
-			if s.raiseErr && err == nil {
-				t.Errorf("%s %s expected error, but got nil", config, args)
-			} else if err != nil {
+			if s.raiseErr {
+				if err == nil {
+					t.Errorf("%s %s expected error, but got nil", config, args)
+				}
+				continue
+			}
+			if err != nil {
 				t.Errorf("%s %s unexpected error: %s", config, args, err)
-			} else if td := ecspresso.ArnToName(tdArn); td != s.td {
+				continue
+			}
+			if td := ecspresso.ArnToName(tdArn); td != s.td {
 				t.Errorf("%s %s expected %s, got %s", config, args, s.td, td)
 			}
 		}
