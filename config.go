@@ -21,6 +21,8 @@ const (
 	DefaultTimeout     = 10 * time.Minute
 )
 
+var awsv2ConfigLoadOptionsFunc []func(*awsConfig.LoadOptions) error
+
 type configLoader struct {
 	*goConfig.Loader
 	VM *jsonnet.VM
@@ -54,12 +56,11 @@ type Config struct {
 	Timeout               *Duration         `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 	CodeDeploy            *ConfigCodeDeploy `yaml:"codedeploy,omitempty" json:"codedeploy,omitempty"`
 
-	path                       string
-	templateFuncs              []template.FuncMap
-	dir                        string
-	versionConstraints         goVersion.Constraints
-	awsv2Config                aws.Config
-	awsv2ConfigLoadOptionsFunc []func(*awsConfig.LoadOptions) error
+	path               string
+	templateFuncs      []template.FuncMap
+	dir                string
+	versionConstraints goVersion.Constraints
+	awsv2Config        aws.Config
 }
 
 type ConfigCodeDeploy struct {
@@ -137,13 +138,18 @@ func (c *Config) Restrict(ctx context.Context) error {
 		c.Region = os.Getenv("AWS_REGION")
 	}
 	var err error
-	if len(c.awsv2ConfigLoadOptionsFunc) == 0 {
+	var optsFunc []func(*awsConfig.LoadOptions) error
+	if len(awsv2ConfigLoadOptionsFunc) == 0 {
 		// default
-		c.awsv2ConfigLoadOptionsFunc = []func(*awsConfig.LoadOptions) error{
+		Log("[INFO] use default aws config load options")
+		optsFunc = []func(*awsConfig.LoadOptions) error{
 			awsConfig.WithRegion(c.Region),
 		}
+	} else {
+		Log("[INFO] override aws config load options")
+		optsFunc = awsv2ConfigLoadOptionsFunc
 	}
-	c.awsv2Config, err = awsConfig.LoadDefaultConfig(ctx, c.awsv2ConfigLoadOptionsFunc...)
+	c.awsv2Config, err = awsConfig.LoadDefaultConfig(ctx, optsFunc...)
 	if err != nil {
 		return fmt.Errorf("failed to load aws config: %w", err)
 	}

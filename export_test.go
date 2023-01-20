@@ -21,6 +21,7 @@ var (
 	NewLogger                    = newLogger
 	NewLogFilter                 = newLogFilter
 	NewConfigLoader              = newConfigLoader
+	ArnToName                    = arnToName
 )
 
 func (d *App) SetLogger(logger *log.Logger) {
@@ -31,8 +32,12 @@ func SetLogger(logger *log.Logger) {
 	commonLogger = logger
 }
 
-func (c *Config) SetAWSv2ConfigLoadOptionsFunc(fns []func(*config.LoadOptions) error) {
-	c.awsv2ConfigLoadOptionsFunc = fns
+func SetAWSV2ConfigLoadOptionsFunc(f []func(*config.LoadOptions) error) {
+	awsv2ConfigLoadOptionsFunc = f
+}
+
+func ResetAWSV2ConfigLoadOptionsFunc() {
+	awsv2ConfigLoadOptionsFunc = nil
 }
 
 func (d *App) TaskDefinitionArnForRun(ctx context.Context, opt RunOption) (string, error) {
