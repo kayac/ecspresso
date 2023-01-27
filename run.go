@@ -221,25 +221,16 @@ func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool)
 }
 
 func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (string, error) {
-	if *opt.SkipTaskDefinition && *opt.LatestTaskDefinition {
-		return "", fmt.Errorf("skip-task-definition and latest-task-definition are exclusive")
-	}
 	switch {
 	case *opt.Revision > 0:
+		if aws.ToBool(opt.LatestTaskDefinition) {
+			return "", fmt.Errorf("revision and latest-task-definition are exclusive")
+		}
 		family, _, err := d.resolveTaskdefinition(ctx)
 		if err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("%s:%d", family, *opt.Revision), nil
-	case *opt.SkipTaskDefinition:
-		family, rev, err := d.resolveTaskdefinition(ctx)
-		if err != nil {
-			return "", err
-		}
-		if rev == "" {
-			return "", fmt.Errorf("revision is not specified")
-		}
-		return fmt.Sprintf("%s:%s", family, rev), nil
 	case *opt.LatestTaskDefinition:
 		family, _, err := d.resolveTaskdefinition(ctx)
 		if err != nil {
@@ -251,6 +242,15 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 			return "", err
 		}
 		return latestTdArn, nil
+	case *opt.SkipTaskDefinition:
+		family, rev, err := d.resolveTaskdefinition(ctx)
+		if err != nil {
+			return "", err
+		}
+		if rev == "" {
+			return "", fmt.Errorf("revision is not specified")
+		}
+		return fmt.Sprintf("%s:%s", family, rev), nil
 	default:
 		tdPath := aws.ToString(opt.TaskDefinition)
 		if tdPath == "" {

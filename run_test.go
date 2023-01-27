@@ -30,12 +30,12 @@ var testTaskDefinitionArnForRunSuite = map[string][]taskDefinitionArnForRunSuite
 			td:   "katsubushi:45",
 		},
 		{
-			opts:     []string{"--latest-task-definition", "--skip-task-definition"},
-			raiseErr: true,
+			opts: []string{"--latest-task-definition", "--skip-task-definition"},
+			td:   "katsubushi:45",
 		},
 		{
-			opts:     []string{"--latest-task-definition", "--skip-task-definition", "--revision=42"},
-			raiseErr: true,
+			opts:     []string{"--latest-task-definition", "--skip-task-definition", "--revision=41"},
+			raiseErr: true, // latest-task-definition and revision are exclusive
 		},
 		{
 			opts: nil,
@@ -60,12 +60,12 @@ var testTaskDefinitionArnForRunSuite = map[string][]taskDefinitionArnForRunSuite
 			td:   "katsubushi:45",
 		},
 		{
-			opts:     []string{"--latest-task-definition", "--skip-task-definition"},
-			raiseErr: true, // without service, --skip-task-definition is not allowed
+			opts: []string{"--latest-task-definition", "--skip-task-definition"},
+			td:   "katsubushi:45",
 		},
 		{
-			opts: []string{"--latest-task-definition", "--revision=42"},
-			td:   "katsubushi:42",
+			opts:     []string{"--latest-task-definition", "--revision=42"},
+			raiseErr: true, // latest-task-definition and revision are exclusive
 		},
 		{
 			opts: nil,
