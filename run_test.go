@@ -38,6 +38,10 @@ var testTaskDefinitionArnForRunSuite = map[string][]taskDefinitionArnForRunSuite
 			raiseErr: true, // latest-task-definition and revision are exclusive
 		},
 		{
+			opts:     []string{"--latest-task-definition", "--revision=41"},
+			raiseErr: true, // latest-task-definition and revision are exclusive
+		},
+		{
 			opts: nil,
 			td:   "family katsubushi will be registered",
 		},
