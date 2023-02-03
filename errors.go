@@ -12,6 +12,12 @@ func (e ErrNotFound) Error() string {
 	return string(e)
 }
 
+type ErrConflictOptions string
+
+func (e ErrConflictOptions) Error() string {
+	return string(e)
+}
+
 var (
 	errNotFound   = ErrNotFound("not found")
 	errSkipVerify = ErrSkipVerify("skip verify")
