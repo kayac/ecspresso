@@ -23,7 +23,7 @@ require (
 	github.com/aws/smithy-go v1.13.5
 	github.com/fatih/color v1.13.0
 	github.com/fujiwara/cfn-lookup v1.0.0
-	github.com/fujiwara/ecsta v0.1.3
+	github.com/fujiwara/ecsta v0.2.0
 	github.com/fujiwara/logutils v1.1.0
 	github.com/fujiwara/tfstate-lookup v1.0.0
 	github.com/goccy/go-yaml v1.9.5
@@ -40,7 +40,7 @@ require (
 	github.com/samber/lo v1.36.0
 	github.com/schollz/progressbar/v3 v3.11.0
 	github.com/shogo82148/go-retry v1.1.1
-	golang.org/x/sys v0.1.0
+	golang.org/x/sys v0.2.0
 )
 
 require (
@@ -91,12 +91,12 @@ require (
 	github.com/hashicorp/go-slug v0.10.0 // indirect
 	github.com/hashicorp/go-tfe v1.10.0 // indirect
 	github.com/hashicorp/jsonapi v0.0.0-20210826224640-ee7dae0fb22d // indirect
-	github.com/itchyny/gojq v0.12.9 // indirect
-	github.com/itchyny/timefmt-go v0.1.4 // indirect
+	github.com/itchyny/gojq v0.12.11 // indirect
+	github.com/itchyny/timefmt-go v0.1.5 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
