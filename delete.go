@@ -9,8 +9,9 @@ import (
 )
 
 type DeleteOption struct {
-	DryRun *bool `help:"dry-run" default:"false"`
-	Force  *bool `help:"delete without confirmation" default:"false"`
+	DryRun    *bool `help:"dry-run" default:"false"`
+	Force     *bool `help:"delete without confirmation" default:"false"`
+	Terminate *bool `help:"delete with terminate tasks" default:"false"`
 }
 
 func (opt DeleteOption) DryRunString() string {
@@ -42,10 +43,10 @@ func (d *App) Delete(ctx context.Context, opt DeleteOption) error {
 			return fmt.Errorf("confirmation failed")
 		}
 	}
-
 	dsi := &ecs.DeleteServiceInput{
 		Cluster: &d.config.Cluster,
 		Service: sv.ServiceName,
+		Force:   opt.Terminate, // == aws ecs delete-service --force
 	}
 	if _, err := d.ecs.DeleteService(ctx, dsi); err != nil {
 		return fmt.Errorf("failed to delete service: %w", err)

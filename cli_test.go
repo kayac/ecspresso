@@ -283,16 +283,27 @@ var cliTests = []struct {
 		args: []string{"delete"},
 		sub:  "delete",
 		subOption: &ecspresso.DeleteOption{
-			DryRun: ptr(false),
-			Force:  ptr(false),
+			DryRun:    ptr(false),
+			Force:     ptr(false),
+			Terminate: ptr(false),
 		},
 	},
 	{
 		args: []string{"delete", "--force"},
 		sub:  "delete",
 		subOption: &ecspresso.DeleteOption{
-			DryRun: ptr(false),
-			Force:  ptr(true),
+			DryRun:    ptr(false),
+			Force:     ptr(true),
+			Terminate: ptr(false),
+		},
+	},
+	{
+		args: []string{"delete", "--terminate"},
+		sub:  "delete",
+		subOption: &ecspresso.DeleteOption{
+			DryRun:    ptr(false),
+			Force:     ptr(false),
+			Terminate: ptr(true),
 		},
 	},
 	{
