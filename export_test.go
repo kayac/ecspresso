@@ -1,6 +1,11 @@
 package ecspresso
 
-import "log"
+import (
+	"context"
+	"log"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+)
 
 var (
 	SortTaskDefinitionForDiff    = sortTaskDefinitionForDiff
@@ -16,6 +21,7 @@ var (
 	NewLogger                    = newLogger
 	NewLogFilter                 = newLogFilter
 	NewConfigLoader              = newConfigLoader
+	ArnToName                    = arnToName
 )
 
 func (d *App) SetLogger(logger *log.Logger) {
@@ -24,4 +30,16 @@ func (d *App) SetLogger(logger *log.Logger) {
 
 func SetLogger(logger *log.Logger) {
 	commonLogger = logger
+}
+
+func SetAWSV2ConfigLoadOptionsFunc(f []func(*config.LoadOptions) error) {
+	awsv2ConfigLoadOptionsFunc = f
+}
+
+func ResetAWSV2ConfigLoadOptionsFunc() {
+	awsv2ConfigLoadOptionsFunc = nil
+}
+
+func (d *App) TaskDefinitionArnForRun(ctx context.Context, opt RunOption) (string, error) {
+	return d.taskDefinitionArnForRun(ctx, opt)
 }

@@ -21,6 +21,8 @@ const (
 	DefaultTimeout     = 10 * time.Minute
 )
 
+var awsv2ConfigLoadOptionsFunc []func(*awsConfig.LoadOptions) error
+
 type configLoader struct {
 	*goConfig.Loader
 	VM *jsonnet.VM
@@ -136,7 +138,18 @@ func (c *Config) Restrict(ctx context.Context) error {
 		c.Region = os.Getenv("AWS_REGION")
 	}
 	var err error
-	c.awsv2Config, err = awsConfig.LoadDefaultConfig(ctx, awsConfig.WithRegion(c.Region))
+	var optsFunc []func(*awsConfig.LoadOptions) error
+	if len(awsv2ConfigLoadOptionsFunc) == 0 {
+		// default
+		// Log("[INFO] use default aws config load options")
+		optsFunc = []func(*awsConfig.LoadOptions) error{
+			awsConfig.WithRegion(c.Region),
+		}
+	} else {
+		// Log("[INFO] override aws config load options")
+		optsFunc = awsv2ConfigLoadOptionsFunc
+	}
+	c.awsv2Config, err = awsConfig.LoadDefaultConfig(ctx, optsFunc...)
 	if err != nil {
 		return fmt.Errorf("failed to load aws config: %w", err)
 	}

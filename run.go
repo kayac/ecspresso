@@ -222,32 +222,36 @@ func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool)
 
 func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (string, error) {
 	switch {
-	case *opt.SkipTaskDefinition, *opt.LatestTaskDefinition:
-		var family string
-		if d.config.Service != "" {
-			d.Log("[DEBUG] loading service")
-			sv, err := d.DescribeService(ctx)
-			if err != nil {
-				return "", err
-			}
-			tdArn := *sv.TaskDefinition
-			if *opt.SkipTaskDefinition {
-				return tdArn, nil
-			}
-			p := strings.SplitN(arnToName(tdArn), ":", 2)
-			family = p[0]
-		} else {
-			d.Log("[DEBUG] loading task definition")
-			td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-			if err != nil {
-				return "", err
-			}
-			family = *td.Family
+	case *opt.Revision > 0:
+		if aws.ToBool(opt.LatestTaskDefinition) {
+			err := ErrConflictOptions("revision and latest-task-definition are exclusive")
+			// TODO: v2.1 raise error
+			d.Log("[WARNING] %s", err)
 		}
-		if rev := aws.ToInt64(opt.Revision); rev > 0 {
-			return fmt.Sprintf("%s:%d", family, rev), nil
+		family, _, err := d.resolveTaskdefinition(ctx)
+		if err != nil {
+			return "", err
 		}
-
+		return fmt.Sprintf("%s:%d", family, *opt.Revision), nil
+	case *opt.LatestTaskDefinition:
+		family, _, err := d.resolveTaskdefinition(ctx)
+		if err != nil {
+			return "", err
+		}
+		d.Log("Revision is not specified. Use latest task definition family" + family)
+		latestTdArn, err := d.findLatestTaskDefinitionArn(ctx, family)
+		if err != nil {
+			return "", err
+		}
+		return latestTdArn, nil
+	case *opt.SkipTaskDefinition:
+		family, rev, err := d.resolveTaskdefinition(ctx)
+		if err != nil {
+			return "", err
+		}
+		if rev != "" {
+			return fmt.Sprintf("%s:%s", family, rev), nil
+		}
 		d.Log("Revision is not specified. Use latest task definition family" + family)
 		latestTdArn, err := d.findLatestTaskDefinitionArn(ctx, family)
 		if err != nil {
@@ -271,5 +275,29 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 			return "", err
 		}
 		return *newTd.TaskDefinitionArn, nil
+	}
+}
+
+func (d *App) resolveTaskdefinition(ctx context.Context) (family string, revision string, err error) {
+	if d.config.Service != "" {
+		d.Log("[DEBUG] loading service")
+		sv, err := d.DescribeService(ctx)
+		if err != nil {
+			return "", "", err
+		}
+		tdArn := *sv.TaskDefinition
+		p := strings.SplitN(arnToName(tdArn), ":", 2)
+		if len(p) != 2 {
+			return "", "", fmt.Errorf("invalid task definition arn: %s", tdArn)
+		}
+		return p[0], p[1], nil
+	} else {
+		d.Log("[DEBUG] loading task definition")
+		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+		if err != nil {
+			return "", "", err
+		}
+		family = *td.Family
+		return family, "", nil
 	}
 }
