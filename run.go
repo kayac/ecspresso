@@ -224,7 +224,9 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 	switch {
 	case *opt.Revision > 0:
 		if aws.ToBool(opt.LatestTaskDefinition) {
-			return "", fmt.Errorf("revision and latest-task-definition are exclusive")
+			err := ErrConflictOptions("revision and latest-task-definition are exclusive")
+			// TODO: v2.1 raise error
+			d.Log("[WARNING] %s", err)
 		}
 		family, _, err := d.resolveTaskdefinition(ctx)
 		if err != nil {
@@ -247,10 +249,15 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 		if err != nil {
 			return "", err
 		}
-		if rev == "" {
-			return "", fmt.Errorf("revision is not specified")
+		if rev != "" {
+			return fmt.Sprintf("%s:%s", family, rev), nil
 		}
-		return fmt.Sprintf("%s:%s", family, rev), nil
+		d.Log("Revision is not specified. Use latest task definition family" + family)
+		latestTdArn, err := d.findLatestTaskDefinitionArn(ctx, family)
+		if err != nil {
+			return "", err
+		}
+		return latestTdArn, nil
 	default:
 		tdPath := aws.ToString(opt.TaskDefinition)
 		if tdPath == "" {
