@@ -2,8 +2,19 @@ package ecspresso
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"strings"
 )
+
+func (d *App) OutputJSONForAPI(w io.Writer, v interface{}) error {
+	b, err := MarshalJSONForAPI(v)
+	if err != nil {
+		fmt.Errorf("failed to marshal json: %w", err)
+	}
+	_, err = w.Write(b)
+	return err
+}
 
 func MustMarshalJSONStringForAPI(v interface{}) string {
 	b, err := MarshalJSONForAPI(v)
