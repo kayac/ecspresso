@@ -191,14 +191,14 @@ func (d *App) verifyResource(ctx context.Context, resourceType string, verifyFun
 		fmt.Printf(indent+f+"\n", args...)
 	}
 	print("%s", resourceType)
-	err := verifyFunc(ctx)
-	if err != nil {
-		if errors.As(err, &errSkipVerify) {
-			print("--> %s [%s] %s", resourceType, color.CyanString("SKIP"), color.CyanString(err.Error()))
+	verifyErr := verifyFunc(ctx)
+	if verifyErr != nil {
+		if errors.As(verifyErr, &errSkipVerify) {
+			print("--> %s [%s] %s", resourceType, color.CyanString("SKIP"), color.CyanString(verifyErr.Error()))
 			return nil
 		}
-		print("--> %s [%s] %s", resourceType, color.RedString("NG"), color.RedString(err.Error()))
-		return fmt.Errorf("verify %s failed: %w", resourceType, err)
+		print("--> %s [%s] %s", resourceType, color.RedString("NG"), color.RedString(verifyErr.Error()))
+		return fmt.Errorf("verify %s failed: %w", resourceType, verifyErr)
 	}
 	print("--> [%s]", color.GreenString("OK"))
 	return nil
