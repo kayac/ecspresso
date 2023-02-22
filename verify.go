@@ -184,38 +184,49 @@ func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
 	return nil
 }
 
-func initVerifyState(cache bool) {
-	if cache {
-		verifyCache = make(map[string]error)
-	} else {
-		verifyCache = nil
-	}
-	verifyResourceNestLevel = 0
+var verifyState = struct {
+	cache verifyCache
+	level int
+}{
+	cache: nil,
+	level: 0,
 }
 
-var verifyCache map[string]error
-var verifyResourceNestLevel int
+func initVerifyState(cache bool) {
+	if cache {
+		verifyState.cache = make(verifyCache, 100)
+	} else {
+		verifyState.cache = verifyCache(nil)
+	}
+	verifyState.level = 0
+}
+
+type verifyCache map[string]error
+
+func (v verifyCache) Do(ctx context.Context, name string, fn verifyResourceFunc) (error, bool) {
+	if v == nil {
+		return fn(ctx), false
+	}
+	if err, ok := v[name]; ok {
+		return err, true
+	}
+	err := fn(ctx)
+	v[name] = err
+	return err, false
+}
 
 func verifyResource(ctx context.Context, name string, verifyFunc func(context.Context) error) error {
-	verifyResourceNestLevel++
-	defer func() { verifyResourceNestLevel-- }()
-	indent := strings.Repeat("  ", verifyResourceNestLevel)
+	verifyState.level++
+	defer func() { verifyState.level-- }()
+	indent := strings.Repeat("  ", verifyState.level)
 	print := func(f string, args ...interface{}) {
 		fmt.Printf(indent+f+"\n", args...)
 	}
 	print("%s", name)
-	var verifyErr error
 	var cached string
-	if verifyCache != nil {
-		if e, ok := verifyCache[name]; ok {
-			verifyErr = e
-			cached = color.CyanString("(cached)")
-		} else {
-			verifyErr = verifyFunc(ctx)
-			verifyCache[name] = verifyErr
-		}
-	} else {
-		verifyErr = verifyFunc(ctx)
+	verifyErr, hit := verifyState.cache.Do(ctx, name, verifyFunc)
+	if hit {
+		cached = color.CyanString("(cached)")
 	}
 	if verifyErr != nil {
 		if errors.As(verifyErr, &errSkipVerify) {
