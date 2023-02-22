@@ -230,10 +230,10 @@ func verifyResource(ctx context.Context, name string, verifyFunc func(context.Co
 	}
 	if verifyErr != nil {
 		if errors.As(verifyErr, &errSkipVerify) {
-			print("--> %s [%s]%s %s", name, color.CyanString("SKIP"), cached, color.CyanString(verifyErr.Error()))
+			print("--> [%s]%s %s", color.CyanString("SKIP"), cached, color.CyanString(verifyErr.Error()))
 			return nil
 		}
-		print("--> %s [%s]%s %s", name, color.RedString("NG"), cached, color.RedString(verifyErr.Error()))
+		print("--> [%s]%s %s", color.RedString("NG"), cached, color.RedString(verifyErr.Error()))
 		return fmt.Errorf("verify %s failed: %w", name, verifyErr)
 	}
 	print("--> [%s]%s", color.GreenString("OK"), cached)
