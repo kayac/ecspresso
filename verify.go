@@ -145,6 +145,7 @@ func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionR
 type VerifyOption struct {
 	GetSecrets *bool `help:"get secrets from ParameterStore or SecretsManager" default:"true" negatable:""`
 	PutLogs    *bool `help:"put logs to CloudWatchLogs" default:"true" negatable:""`
+	Cache      *bool `help:"use cache" default:"false" negatable:""`
 }
 
 type verifyResourceFunc func(context.Context) error
@@ -159,6 +160,13 @@ func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
 	if err != nil {
 		return err
 	}
+	// reset variables
+	if *opt.Cache {
+		verifyCache = make(map[string]error)
+	} else {
+		verifyCache = nil
+	}
+	verifyResourceNestLevel = 0
 
 	ctx, cancel := d.Start(ctx)
 	defer cancel()
@@ -181,6 +189,7 @@ func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
 	return nil
 }
 
+var verifyCache map[string]error
 var verifyResourceNestLevel = 0
 
 func (d *App) verifyResource(ctx context.Context, name string, verifyFunc func(context.Context) error) error {
@@ -191,16 +200,28 @@ func (d *App) verifyResource(ctx context.Context, name string, verifyFunc func(c
 		fmt.Printf(indent+f+"\n", args...)
 	}
 	print("%s", name)
-	verifyErr := verifyFunc(ctx)
+	var verifyErr error
+	var cached string
+	if verifyCache != nil {
+		if e, ok := verifyCache[name]; ok {
+			verifyErr = e
+			cached = color.CyanString("(cached)")
+		} else {
+			verifyErr = verifyFunc(ctx)
+			verifyCache[name] = verifyErr
+		}
+	} else {
+		verifyErr = verifyFunc(ctx)
+	}
 	if verifyErr != nil {
 		if errors.As(verifyErr, &errSkipVerify) {
-			print("--> %s [%s] %s", name, color.CyanString("SKIP"), color.CyanString(verifyErr.Error()))
+			print("--> %s [%s]%s %s", name, color.CyanString("SKIP"), cached, color.CyanString(verifyErr.Error()))
 			return nil
 		}
-		print("--> %s [%s] %s", name, color.RedString("NG"), color.RedString(verifyErr.Error()))
+		print("--> %s [%s]%s %s", name, color.RedString("NG"), cached, color.RedString(verifyErr.Error()))
 		return fmt.Errorf("verify %s failed: %w", name, verifyErr)
 	}
-	print("--> [%s]", color.GreenString("OK"))
+	print("--> [%s]%s", color.GreenString("OK"), cached)
 	return nil
 }
 
@@ -462,7 +483,8 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition,
 		}
 	}
 	if c.LogConfiguration != nil && c.LogConfiguration.LogDriver == types.LogDriverAwslogs {
-		err := d.verifyResource(ctx, "LogConfiguration[awslogs]", func(ctx context.Context) error {
+		name := fmt.Sprintf("LogConfiguration[%s]", map2str(c.LogConfiguration.Options))
+		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifyLogConfiguration(ctx, c)
 		})
 		if err != nil {
