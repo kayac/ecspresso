@@ -183,22 +183,22 @@ func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
 
 var verifyResourceNestLevel = 0
 
-func (d *App) verifyResource(ctx context.Context, resourceType string, verifyFunc func(context.Context) error) error {
+func (d *App) verifyResource(ctx context.Context, name string, verifyFunc func(context.Context) error) error {
 	verifyResourceNestLevel++
 	defer func() { verifyResourceNestLevel-- }()
 	indent := strings.Repeat("  ", verifyResourceNestLevel)
 	print := func(f string, args ...interface{}) {
 		fmt.Printf(indent+f+"\n", args...)
 	}
-	print("%s", resourceType)
+	print("%s", name)
 	verifyErr := verifyFunc(ctx)
 	if verifyErr != nil {
 		if errors.As(verifyErr, &errSkipVerify) {
-			print("--> %s [%s] %s", resourceType, color.CyanString("SKIP"), color.CyanString(verifyErr.Error()))
+			print("--> %s [%s] %s", name, color.CyanString("SKIP"), color.CyanString(verifyErr.Error()))
 			return nil
 		}
-		print("--> %s [%s] %s", resourceType, color.RedString("NG"), color.RedString(verifyErr.Error()))
-		return fmt.Errorf("verify %s failed: %w", resourceType, verifyErr)
+		print("--> %s [%s] %s", name, color.RedString("NG"), color.RedString(verifyErr.Error()))
+		return fmt.Errorf("verify %s failed: %w", name, verifyErr)
 	}
 	print("--> [%s]", color.GreenString("OK"))
 	return nil
