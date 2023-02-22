@@ -228,8 +228,8 @@ github.com/fujiwara/cfn-lookup v1.0.0 h1:oDhBXaEvT27B0dFB4z3zbjuTzA3E6m8t8Sge9mf
 github.com/fujiwara/cfn-lookup v1.0.0/go.mod h1:HI8F4hlW+nN9KRTWNzdwvnOUQFrN8jX9puyfhtAVgwU=
 github.com/fujiwara/ecsta v0.2.0 h1:plUDvsA09PGH/hpYq8PdcYiaproLxZlcWJ0xubS5ilM=
 github.com/fujiwara/ecsta v0.2.0/go.mod h1:BZMnz+fIatuerKO0MxaowUf+zXS1sS14TVai06hT4Y0=
-github.com/fujiwara/logutils v1.1.0 h1:JAYmqW40d/ZjzouB01sfZiaTxwNe4hwmB6lLajZqm1s=
-github.com/fujiwara/logutils v1.1.0/go.mod h1:pdb/Uk70rjQWEmFm/OvYH7OG8meZt1fEIqC0qZbvro4=
+github.com/fujiwara/logutils v1.1.1 h1:5Z6C25FMSNxcO8sKZFyYWggp4vd9hCQsok41dLwPf1c=
+github.com/fujiwara/logutils v1.1.1/go.mod h1:pdb/Uk70rjQWEmFm/OvYH7OG8meZt1fEIqC0qZbvro4=
 github.com/fujiwara/tfstate-lookup v1.0.0 h1:Ii2F3Y1KASnLcMf+rod7HVn1VuiY6mTKoHgKPNnK31A=
 github.com/fujiwara/tfstate-lookup v1.0.0/go.mod h1:Nm70Qg8xsZWZi3EQkFYQOo7in6/6gHap6LNc/BVXeNc=
 github.com/fujiwara/tracer v1.0.0 h1:W4mpppxZZIa2tClQMvmUvFKC4/6+nBWe6P4agP3eID4=
