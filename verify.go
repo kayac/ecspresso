@@ -152,6 +152,8 @@ type verifyResourceFunc func(context.Context) error
 
 // Verify verifies service / task definitions related resources are valid.
 func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
+	initVerifyState(aws.ToBool(opt.Cache))
+
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
 		return err
@@ -160,13 +162,6 @@ func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
 	if err != nil {
 		return err
 	}
-	// reset variables
-	if *opt.Cache {
-		verifyCache = make(map[string]error)
-	} else {
-		verifyCache = nil
-	}
-	verifyResourceNestLevel = 0
 
 	ctx, cancel := d.Start(ctx)
 	defer cancel()
@@ -181,7 +176,7 @@ func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
 		{name: "Cluster", fn: d.verifyCluster},
 	}
 	for _, r := range resources {
-		if err := d.verifyResource(ctx, r.name, r.fn); err != nil {
+		if err := verifyResource(ctx, r.name, r.fn); err != nil {
 			return err
 		}
 	}
@@ -189,10 +184,19 @@ func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
 	return nil
 }
 
-var verifyCache map[string]error
-var verifyResourceNestLevel = 0
+func initVerifyState(cache bool) {
+	if cache {
+		verifyCache = make(map[string]error)
+	} else {
+		verifyCache = nil
+	}
+	verifyResourceNestLevel = 0
+}
 
-func (d *App) verifyResource(ctx context.Context, name string, verifyFunc func(context.Context) error) error {
+var verifyCache map[string]error
+var verifyResourceNestLevel int
+
+func verifyResource(ctx context.Context, name string, verifyFunc func(context.Context) error) error {
 	verifyResourceNestLevel++
 	defer func() { verifyResourceNestLevel-- }()
 	indent := strings.Repeat("  ", verifyResourceNestLevel)
@@ -263,7 +267,7 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 	// LB
 	for i, lb := range sv.LoadBalancers {
 		name := fmt.Sprintf("LoadBalancer[%d]", i)
-		err := d.verifyResource(ctx, name, func(context.Context) error {
+		err := verifyResource(ctx, name, func(context.Context) error {
 			out, err := d.elbv2.DescribeTargetGroups(ctx, &elasticloadbalancingv2.DescribeTargetGroupsInput{
 				TargetGroupArns: []string{*lb.TargetGroupArn},
 			})
@@ -312,7 +316,7 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 
 	if execRole := td.ExecutionRoleArn; execRole != nil {
 		name := fmt.Sprintf("ExecutionRole[%s]", *execRole)
-		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+		err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifyRole(ctx, *execRole)
 		})
 		if err != nil {
@@ -321,7 +325,7 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 	}
 	if taskRole := td.TaskRoleArn; taskRole != nil {
 		name := fmt.Sprintf("TaskRole[%s]", *taskRole)
-		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+		err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifyRole(ctx, *taskRole)
 		})
 		if err != nil {
@@ -331,7 +335,7 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 
 	for _, c := range td.ContainerDefinitions {
 		name := fmt.Sprintf("ContainerDefinition[%s]", aws.ToString(c.Name))
-		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+		err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifyContainer(ctx, &c, td)
 		})
 		if err != nil {
@@ -467,7 +471,7 @@ func (d *App) verifyImage(ctx context.Context, image string) error {
 func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition, td *ecs.RegisterTaskDefinitionInput) error {
 	image := aws.ToString(c.Image)
 	name := fmt.Sprintf("Image[%s]", image)
-	err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+	err := verifyResource(ctx, name, func(ctx context.Context) error {
 		return d.verifyImage(ctx, image)
 	})
 	if err != nil {
@@ -475,7 +479,7 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition,
 	}
 	for _, secret := range c.Secrets {
 		name := fmt.Sprintf("Secret %s[%s]", *secret.Name, *secret.ValueFrom)
-		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+		err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifier.existsSecretValue(ctx, *secret.ValueFrom)
 		})
 		if err != nil {
@@ -484,7 +488,7 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition,
 	}
 	if c.LogConfiguration != nil && c.LogConfiguration.LogDriver == types.LogDriverAwslogs {
 		name := fmt.Sprintf("LogConfiguration[%s]", map2str(c.LogConfiguration.Options))
-		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+		err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifyLogConfiguration(ctx, c)
 		})
 		if err != nil {
@@ -493,7 +497,7 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition,
 	}
 	for _, envFile := range c.EnvironmentFiles {
 		name := fmt.Sprintf("EnvironmentFile[%s %s]", envFile.Type, aws.ToString(envFile.Value))
-		if err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+		if err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifier.existsEnvironmentFile(ctx, envFile)
 		}); err != nil {
 			return err

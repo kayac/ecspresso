@@ -1,9 +1,13 @@
 package ecspresso_test
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/fatih/color"
 	"github.com/kayac/ecspresso/v2"
 )
 
@@ -153,6 +157,92 @@ func TestIsECRImage(t *testing.T) {
 		isECR := ecspresso.ECRImageURLRegex.MatchString(s.image)
 		if isECR != s.isECR {
 			t.Errorf("invalid detect ECR image %s got:%t expected:%t", s.image, isECR, s.isECR)
+		}
+	}
+}
+
+func TestVerifyOKResource(t *testing.T) {
+	color.NoColor = true
+	for _, cache := range []bool{false, true} {
+		ecspresso.InitVerifyState(cache)
+		for i := 0; i < 3; i++ {
+			out := extractStdout(t, func() {
+				err := ecspresso.VerifyResource(context.TODO(), "ok resource", func(_ context.Context) error {
+					return nil
+				})
+				if err != nil {
+					t.Error("unexpected error for ok resource", err)
+				}
+			})
+			if !bytes.Contains(out, []byte("ok resource")) {
+				t.Error("unexpected output for ok resource")
+			}
+			if !bytes.Contains(out, []byte("[OK]")) {
+				t.Error("unexpected output [OK] for ok resource")
+			}
+			if cache && i >= 1 {
+				if !bytes.Contains(out, []byte("(cached)")) {
+					t.Error("unexpected output (cached) for ok resource")
+				}
+			}
+		}
+	}
+}
+
+func TestVerifyNGResource(t *testing.T) {
+	color.NoColor = true
+	for _, cache := range []bool{false, true} {
+		ecspresso.InitVerifyState(cache)
+		for i := 0; i < 3; i++ {
+			out := extractStdout(t, func() {
+				err := ecspresso.VerifyResource(context.TODO(), "ng resource", func(_ context.Context) error {
+					return errors.New("XXX")
+				})
+				if err == nil {
+					t.Error("error must be returned for ng resource")
+				}
+			})
+			if !bytes.Contains(out, []byte("ng resource")) {
+				t.Error("unexpected output for ng resource")
+			}
+			if cache && i >= 1 {
+				if !bytes.Contains(out, []byte("[NG](cached) XXX")) {
+					t.Errorf("unexpected output (cached) for ng resource")
+				}
+			} else {
+				if !bytes.Contains(out, []byte("[NG] XXX")) {
+					t.Error("unexpected output [NG] for ng resource")
+				}
+			}
+		}
+	}
+}
+
+func TestVerifySkipResource(t *testing.T) {
+	color.NoColor = true
+	for _, cache := range []bool{false, true} {
+		ecspresso.InitVerifyState(cache)
+		for i := 0; i < 3; i++ {
+			out := extractStdout(t, func() {
+				err := ecspresso.VerifyResource(context.TODO(), "skip resource", func(_ context.Context) error {
+					return ecspresso.ErrSkipVerify("hello")
+				})
+				if err != nil {
+					t.Error("unexpected error for skip resource", err)
+				}
+			})
+			if !bytes.Contains(out, []byte("skip resource")) {
+				t.Error("unexpected output for skip resource")
+			}
+			if cache && i >= 1 {
+				if !bytes.Contains(out, []byte("[SKIP](cached) hello")) {
+					t.Error("unexpected output (cached) for skip resource")
+				}
+			} else {
+				if !bytes.Contains(out, []byte("[SKIP] hello")) {
+					t.Error("unexpected output [SKIP] for skip resource")
+				}
+			}
 		}
 	}
 }

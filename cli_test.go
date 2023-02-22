@@ -507,6 +507,7 @@ var cliTests = []struct {
 		subOption: &ecspresso.VerifyOption{
 			GetSecrets: ptr(true),
 			PutLogs:    ptr(true),
+			Cache:      ptr(false),
 		},
 	},
 	{
@@ -515,6 +516,16 @@ var cliTests = []struct {
 		subOption: &ecspresso.VerifyOption{
 			GetSecrets: ptr(false),
 			PutLogs:    ptr(false),
+			Cache:      ptr(false),
+		},
+	},
+	{
+		args: []string{"verify", "--no-get-secrets", "--no-put-logs", "--cache"},
+		sub:  "verify",
+		subOption: &ecspresso.VerifyOption{
+			GetSecrets: ptr(false),
+			PutLogs:    ptr(false),
+			Cache:      ptr(true),
 		},
 	},
 	{
