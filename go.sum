@@ -155,8 +155,8 @@ github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.19 h1:IKo9W8WugueXbrKG
 github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.19/go.mod h1:QCJvGbW2hX4qp/i3oxX6hpVrK8JMww5TcWwXI0H+z/Y=
 github.com/aws/aws-sdk-go-v2/service/codedeploy v1.14.17 h1:1UNOFx344QTl/JeqDdx3noPRJq0rdqyzEuDaAQaI0DQ=
 github.com/aws/aws-sdk-go-v2/service/codedeploy v1.14.17/go.mod h1:tyW2nFb8zz3S+knv893rdripKwKiYzMqz91xJpeKU6I=
-github.com/aws/aws-sdk-go-v2/service/ecr v1.17.17 h1:YYz2Y9LpPVaD37BuWCx4UOw6IhLfHhBDCaTadF5cuB0=
-github.com/aws/aws-sdk-go-v2/service/ecr v1.17.17/go.mod h1:ZvTqPpFjMbF5zJa4RSkNC1ybPbz28sfCbjVmPESsS7Y=
+github.com/aws/aws-sdk-go-v2/service/ecr v1.18.5 h1:tGA4ZoAsrYhGBypKAo2jwoX/Z5ponBZOTEUMNN/rHP4=
+github.com/aws/aws-sdk-go-v2/service/ecr v1.18.5/go.mod h1:cDZh+PHP8Adt9E0zfZT9cK4qadbtIuU/czLpEJtm4wc=
 github.com/aws/aws-sdk-go-v2/service/ecs v1.22.0 h1:Z5jcr24fuBhpA4uHRyU0jJ1pfzyFqzUrWvQ4Iwl5EGw=
 github.com/aws/aws-sdk-go-v2/service/ecs v1.22.0/go.mod h1:YXZ3cd8LDvvQytFpWjqbgdmHRAyJi4qbIT5dYdyhfeM=
 github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.18.18 h1:9RjkJnlsEk7R2qkDgPZEUAU84XO9N6WTh1wGGmk9Z6s=
