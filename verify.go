@@ -145,7 +145,7 @@ func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionR
 type VerifyOption struct {
 	GetSecrets *bool `help:"get secrets from ParameterStore or SecretsManager" default:"true" negatable:""`
 	PutLogs    *bool `help:"put logs to CloudWatchLogs" default:"true" negatable:""`
-	Cache      *bool `help:"use cache" default:"false" negatable:""`
+	Cache      *bool `help:"use cache" default:"true" negatable:""`
 }
 
 type verifyResourceFunc func(context.Context) error
