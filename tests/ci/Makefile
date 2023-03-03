@@ -6,7 +6,7 @@ ECSPRESSO := ecspresso --envfile envfile
 
 help:
 
-test: verify deploy tasks run-task deploy rollback refresh deploy-no-update-service scale down delete
+test: verify deploy tasks run-task deploy rollback refresh deploy-no-update-service scale down up delete
 
 status:
 	$(ECSPRESSO) status --events 10 --debug
@@ -39,9 +39,12 @@ down:
 	$(ECSPRESSO) scale --tasks 0 --dry-run
 	$(ECSPRESSO) scale --tasks 0 --debug
 
+up:
+	$(ECSPRESSO) scale --tasks 1
+
 delete:
 	$(ECSPRESSO) delete --dry-run
-	$(ECSPRESSO) delete --force --debug
+	$(ECSPRESSO) delete --force --terminate --debug
 
 run-task:
 	$(ECSPRESSO) --envfile envfile.override run \
