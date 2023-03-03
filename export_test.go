@@ -22,6 +22,8 @@ var (
 	NewLogFilter                 = newLogFilter
 	NewConfigLoader              = newConfigLoader
 	ArnToName                    = arnToName
+	InitVerifyState              = initVerifyState
+	VerifyResource               = verifyResource
 )
 
 func (d *App) SetLogger(logger *log.Logger) {

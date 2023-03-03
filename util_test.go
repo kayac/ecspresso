@@ -1,6 +1,9 @@
 package ecspresso_test
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -119,4 +122,19 @@ func TestParseTags(t *testing.T) {
 			}
 		}
 	}
+}
+
+func extractStdout(t *testing.T, fn func()) []byte {
+	t.Helper()
+	org := os.Stdout
+	defer func() {
+		os.Stdout = org
+	}()
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	fn()
+	w.Close()
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	return buf.Bytes()
 }

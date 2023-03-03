@@ -66,3 +66,11 @@ func parseTags(s string) ([]types.Tag, error) {
 	}
 	return tags, nil
 }
+
+func map2str(m map[string]string) string {
+	var p []string
+	for k, v := range m {
+		p = append(p, fmt.Sprintf("%s=%s", k, v))
+	}
+	return strings.Join(p, ",")
+}
