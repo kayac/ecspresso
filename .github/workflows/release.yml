@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0 # it is required for the changelog to work correctly.
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v3
         with:
           version: latest
           args: release --rm-dist
