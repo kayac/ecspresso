@@ -528,7 +528,7 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition,
 
 func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefinition) error {
 	options := c.LogConfiguration.Options
-	d.Log("LogConfiguration[awslogs] options=%v", options)
+	d.Log("[DEBUG] LogConfiguration[awslogs] options=%v", options)
 	group, region, prefix := options["awslogs-group"], options["awslogs-region"], options["awslogs-stream-prefix"]
 	if group == "" {
 		return errors.New("awslogs-group is required")
