@@ -391,16 +391,18 @@ var cliTests = []struct {
 		args: []string{"revisions"},
 		sub:  "revisions",
 		subOption: &ecspresso.RevisionsOption{
-			Revision: ptr(int64(0)),
-			Output:   ptr("table"),
+			Revision:    ptr(int64(0)),
+			Output:      ptr("table"),
+			DumpRunning: ptr(false),
 		},
 	},
 	{
-		args: []string{"revisions", "--revision", "123", "--output", "json"},
+		args: []string{"revisions", "--revision", "123", "--output", "json", "--dump-running"},
 		sub:  "revisions",
 		subOption: &ecspresso.RevisionsOption{
-			Revision: ptr(int64(123)),
-			Output:   ptr("json"),
+			Revision:    ptr(int64(123)),
+			Output:      ptr("json"),
+			DumpRunning: ptr(true),
 		},
 	},
 	{

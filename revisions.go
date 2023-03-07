@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,8 +15,9 @@ import (
 )
 
 type RevisionsOption struct {
-	Revision *int64  `help:"revision number to output" default:"0"`
-	Output   *string `help:"output format (json, table, tsv)" default:"table" enum:"json,table,tsv"`
+	Revision    *int64  `help:"revision number to output" default:"0"`
+	Output      *string `help:"output format (json, table, tsv)" default:"table" enum:"json,table,tsv"`
+	DumpRunning *bool   `help:"dump the task definition which is running" default:"false"`
 }
 
 type revision struct {
@@ -75,6 +77,29 @@ func (d *App) Revesions(ctx context.Context, opt RevisionsOption) error {
 	inUse, err := d.inUseRevisions(ctx)
 	if err != nil {
 		return err
+	}
+	if *opt.DumpRunning {
+		for taskDef, status := range inUse {
+			if status == "RUNNING task" {
+				res, err := d.ecs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
+					TaskDefinition: &taskDef,
+					Include:        []types.TaskDefinitionField{types.TaskDefinitionFieldTags},
+				})
+				if err != nil {
+					return fmt.Errorf("failed to describe task definition %s: %w", taskDef, err)
+				}
+				b, err := MarshalJSONForAPI(res.TaskDefinition)
+				if err != nil {
+					return err
+				}
+				_, err = os.Stdout.Write(b)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+		}
+		return errors.New("there is no task definition which is marked as RUNNING")
 	}
 
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
