@@ -35,6 +35,7 @@ func ParseCLIv2(args []string) (string, *CLIOptions, func(), error) {
 		Debug:          opts.Debug,
 		ExtStr:         opts.ExtStr,
 		ExtCode:        opts.ExtCode,
+		AssumeRoleARN:  opts.AssumeRoleARN,
 	}
 	if opts.Option.ExtStr == nil {
 		opts.Option.ExtStr = map[string]string{}

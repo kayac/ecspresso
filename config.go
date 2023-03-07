@@ -10,6 +10,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/google/go-jsonnet"
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/kayac/ecspresso/v2/appspec"
@@ -69,7 +71,7 @@ type ConfigCodeDeploy struct {
 }
 
 // Load loads configuration file from file path.
-func (l *configLoader) Load(ctx context.Context, path string, version string) (*Config, error) {
+func (l *configLoader) Load(ctx context.Context, path string, version string, assumeRoleARN string) (*Config, error) {
 	conf := &Config{path: path}
 	ext := filepath.Ext(path)
 	switch ext {
@@ -98,7 +100,7 @@ func (l *configLoader) Load(ctx context.Context, path string, version string) (*
 	}
 
 	conf.dir = filepath.Dir(path)
-	if err := conf.Restrict(ctx); err != nil {
+	if err := conf.Restrict(ctx, assumeRoleARN); err != nil {
 		return nil, err
 	}
 	if err := conf.ValidateVersion(version); err != nil {
@@ -111,7 +113,7 @@ func (l *configLoader) Load(ctx context.Context, path string, version string) (*
 }
 
 // Restrict restricts a configuration.
-func (c *Config) Restrict(ctx context.Context) error {
+func (c *Config) Restrict(ctx context.Context, assumeRoleARN string) error {
 	if c.Cluster == "" {
 		c.Cluster = DefaultClusterName
 	}
@@ -149,10 +151,17 @@ func (c *Config) Restrict(ctx context.Context) error {
 		// Log("[INFO] override aws config load options")
 		optsFunc = awsv2ConfigLoadOptionsFunc
 	}
+
 	c.awsv2Config, err = awsConfig.LoadDefaultConfig(ctx, optsFunc...)
 	if err != nil {
 		return fmt.Errorf("failed to load aws config: %w", err)
 	}
+	if assumeRoleARN != "" {
+		stsClient := sts.NewFromConfig(c.awsv2Config)
+		assumeRoleProvider := stscreds.NewAssumeRoleProvider(stsClient, assumeRoleARN)
+		c.awsv2Config.Credentials = aws.NewCredentialsCache(assumeRoleProvider)
+	}
+
 	if err := c.setupPlugins(ctx); err != nil {
 		return fmt.Errorf("failed to setup plugins: %w", err)
 	}

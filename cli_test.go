@@ -25,6 +25,7 @@ var cliTests = []struct {
 			"--ext-str", "s2=v2",
 			"--ext-code", "c1=123",
 			"--ext-code", "c2=1+2",
+			"--assume-role-arn", "arn:aws:iam::123456789012:role/exampleRole",
 		},
 		sub: "status",
 		option: &ecspresso.Option{
@@ -33,6 +34,7 @@ var cliTests = []struct {
 			ExtStr:         map[string]string{"s1": "v1", "s2": "v2"},
 			ExtCode:        map[string]string{"c1": "123", "c2": "1+2"},
 			InitOption:     nil,
+			AssumeRoleARN:  "arn:aws:iam::123456789012:role/exampleRole",
 		},
 		subOption: &ecspresso.StatusOption{
 			Events: ptr(10),
@@ -57,6 +59,7 @@ var cliTests = []struct {
 			ExtStr:         map[string]string{},
 			ExtCode:        map[string]string{},
 			InitOption:     nil,
+			AssumeRoleARN:  "",
 		},
 		subOption: &ecspresso.StatusOption{
 			Events: ptr(100),
