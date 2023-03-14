@@ -65,11 +65,23 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 			return errors.New("invalid arn format")
 		}
 		secretArn := strings.Join(part[0:7], ":")
-		_, err := v.secretsmanager.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
+		res, err := v.secretsmanager.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 			SecretId: &secretArn,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to get secret value from %s secret id %s: %w", from, secretArn, err)
+		}
+		key := part[7]
+		if key == "" {
+			return nil
+		}
+		var m map[string]interface{}
+		if err := json.Unmarshal([]byte(*res.SecretString), &m); err != nil {
+			return fmt.Errorf("failed to parse secret string from %s secret id %s: %w", from, secretArn, err)
+		}
+
+		if _, ok := m[key]; !ok {
+			return fmt.Errorf("failed to find key %s on secret json value from %s secret id %s", key, from, secretArn)
 		}
 		return nil
 	}
