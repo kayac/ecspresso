@@ -71,6 +71,9 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 		if err != nil {
 			return fmt.Errorf("failed to get secret value from %s secret id %s: %w", from, secretArn, err)
 		}
+		if len(part) < 8 {
+			return nil
+		}
 		key := part[7]
 		if key == "" {
 			return nil
