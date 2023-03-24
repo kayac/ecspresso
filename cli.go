@@ -118,7 +118,6 @@ func dispatchCLI(ctx context.Context, sub string, usage func(), opts *CLIOptions
 	case "revisions":
 		return app.Revesions(ctx, *opts.Revisions)
 	case "init":
-		opts.Init.assumeRoleARN = opts.AssumeRoleARN
 		return app.Init(ctx, *opts.Init)
 	case "diff":
 		return app.Diff(ctx, *opts.Diff)

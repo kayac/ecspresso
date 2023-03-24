@@ -26,8 +26,6 @@ type InitOption struct {
 	ConfigFilePath        *string
 	ForceOverwrite        *bool `help:"overwrite existing files" default:"false"`
 	Jsonnet               *bool `help:"output files as jsonnet format" default:"false"`
-
-	assumeRoleARN string `arg:""`
 }
 
 func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
@@ -41,7 +39,6 @@ func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
 	if err := conf.Restrict(ctx); err != nil {
 		return nil, err
 	}
-	conf.AssumeRole(opt.assumeRoleARN)
 	return conf, nil
 }
 
