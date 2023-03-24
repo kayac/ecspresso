@@ -122,15 +122,18 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 		err  error
 	)
 	if opt.InitOption != nil {
-		conf, err = opt.InitOption.NewConfig(ctx, opt.AssumeRoleARN)
+		conf, err = opt.InitOption.NewConfig(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize config: %w", err)
 		}
 	} else {
-		conf, err = loader.Load(ctx, opt.ConfigFilePath, Version, opt.AssumeRoleARN)
+		conf, err = loader.Load(ctx, opt.ConfigFilePath, Version)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
 		}
+	}
+	if err := conf.AssumeRole(ctx, opt.AssumeRoleARN); err != nil {
+		return nil, fmt.Errorf("failed to assume role: %w", err)
 	}
 
 	logger := newLogger()

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kayac/ecspresso/v2"
 )
 
@@ -602,6 +603,9 @@ var cliTests = []struct {
 }
 
 func TestParseCLIv2(t *testing.T) {
+	cmpOption := cmp.Options{
+		cmpopts.IgnoreUnexported(ecspresso.InitOption{}),
+	}
 	for _, tt := range cliTests {
 		t.Run(strings.Join(tt.args, "_"), func(t *testing.T) {
 			sub, opt, _, err := ecspresso.ParseCLIv2(tt.args)
@@ -613,12 +617,12 @@ func TestParseCLIv2(t *testing.T) {
 				t.Errorf("unexpected subcommand: expected %s, got %s", tt.sub, sub)
 			}
 			if tt.option != nil {
-				if diff := cmp.Diff(tt.option, opt.Option); diff != "" {
+				if diff := cmp.Diff(tt.option, opt.Option, cmpOption); diff != "" {
 					t.Errorf("unexpected option: diff %s", diff)
 				}
 			}
 			if tt.subOption != nil {
-				if diff := cmp.Diff(opt.ForSubCommand(sub), tt.subOption); diff != "" {
+				if diff := cmp.Diff(opt.ForSubCommand(sub), tt.subOption, cmpOption); diff != "" {
 					t.Errorf("unexpected subOption: diff %s", diff)
 				}
 			}

@@ -26,9 +26,11 @@ type InitOption struct {
 	ConfigFilePath        *string
 	ForceOverwrite        *bool `help:"overwrite existing files" default:"false"`
 	Jsonnet               *bool `help:"output files as jsonnet format" default:"false"`
+
+	assumeRoleARN string `arg:""`
 }
 
-func (opt *InitOption) NewConfig(ctx context.Context, assumeRoleARN string) (*Config, error) {
+func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
 	conf := NewDefaultConfig()
 	conf.path = *opt.ConfigFilePath
 	conf.Region = *opt.Region
@@ -36,9 +38,10 @@ func (opt *InitOption) NewConfig(ctx context.Context, assumeRoleARN string) (*Co
 	conf.Service = *opt.Service
 	conf.TaskDefinitionPath = *opt.TaskDefinitionPath
 	conf.ServiceDefinitionPath = *opt.ServiceDefinitionPath
-	if err := conf.Restrict(ctx, assumeRoleARN); err != nil {
+	if err := conf.Restrict(ctx); err != nil {
 		return nil, err
 	}
+	conf.AssumeRole(ctx, opt.assumeRoleARN)
 	return conf, nil
 }
 
@@ -49,7 +52,7 @@ var (
 	yamlExt    = ".yaml"
 )
 
-func (d *App) Init(ctx context.Context, opt InitOption, assumeRoleARN string) error {
+func (d *App) Init(ctx context.Context, opt InitOption) error {
 	conf := d.config
 	d.LogJSON(opt)
 	if *opt.Jsonnet {
@@ -64,7 +67,7 @@ func (d *App) Init(ctx context.Context, opt InitOption, assumeRoleARN string) er
 			opt.ConfigFilePath = &p
 		}
 	}
-	if err := conf.Restrict(ctx, assumeRoleARN); err != nil {
+	if err := conf.Restrict(ctx); err != nil {
 		return err
 	}
 

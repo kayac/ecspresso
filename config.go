@@ -71,7 +71,7 @@ type ConfigCodeDeploy struct {
 }
 
 // Load loads configuration file from file path.
-func (l *configLoader) Load(ctx context.Context, path string, version string, assumeRoleARN string) (*Config, error) {
+func (l *configLoader) Load(ctx context.Context, path string, version string) (*Config, error) {
 	conf := &Config{path: path}
 	ext := filepath.Ext(path)
 	switch ext {
@@ -100,7 +100,7 @@ func (l *configLoader) Load(ctx context.Context, path string, version string, as
 	}
 
 	conf.dir = filepath.Dir(path)
-	if err := conf.Restrict(ctx, assumeRoleARN); err != nil {
+	if err := conf.Restrict(ctx); err != nil {
 		return nil, err
 	}
 	if err := conf.ValidateVersion(version); err != nil {
@@ -113,7 +113,7 @@ func (l *configLoader) Load(ctx context.Context, path string, version string, as
 }
 
 // Restrict restricts a configuration.
-func (c *Config) Restrict(ctx context.Context, assumeRoleARN string) error {
+func (c *Config) Restrict(ctx context.Context) error {
 	if c.Cluster == "" {
 		c.Cluster = DefaultClusterName
 	}
@@ -156,11 +156,6 @@ func (c *Config) Restrict(ctx context.Context, assumeRoleARN string) error {
 	if err != nil {
 		return fmt.Errorf("failed to load aws config: %w", err)
 	}
-	if assumeRoleARN != "" {
-		stsClient := sts.NewFromConfig(c.awsv2Config)
-		assumeRoleProvider := stscreds.NewAssumeRoleProvider(stsClient, assumeRoleARN)
-		c.awsv2Config.Credentials = aws.NewCredentialsCache(assumeRoleProvider)
-	}
 
 	if err := c.setupPlugins(ctx); err != nil {
 		return fmt.Errorf("failed to setup plugins: %w", err)
@@ -169,6 +164,16 @@ func (c *Config) Restrict(ctx context.Context, assumeRoleARN string) error {
 	if c.FilterCommand != "" {
 		Log("[WARNING] filter_command is deprecated. Use %s environment variable instead.", FilterCommandEnv)
 	}
+	return nil
+}
+
+func (c *Config) AssumeRole(ctx context.Context, assumeRoleARN string) error {
+	if assumeRoleARN == "" {
+		return nil
+	}
+	stsClient := sts.NewFromConfig(c.awsv2Config)
+	assumeRoleProvider := stscreds.NewAssumeRoleProvider(stsClient, assumeRoleARN)
+	c.awsv2Config.Credentials = aws.NewCredentialsCache(assumeRoleProvider)
 	return nil
 }
 
