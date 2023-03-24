@@ -169,6 +169,7 @@ func (c *Config) AssumeRole(assumeRoleARN string) {
 	if assumeRoleARN == "" {
 		return
 	}
+	Log("[INFO] assume role: %s", assumeRoleARN)
 	stsClient := sts.NewFromConfig(c.awsv2Config)
 	assumeRoleProvider := stscreds.NewAssumeRoleProvider(stsClient, assumeRoleARN)
 	c.awsv2Config.Credentials = aws.NewCredentialsCache(assumeRoleProvider)
