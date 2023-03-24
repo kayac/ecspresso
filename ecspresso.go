@@ -132,9 +132,7 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
 		}
 	}
-	if err := conf.AssumeRole(ctx, opt.AssumeRoleARN); err != nil {
-		return nil, fmt.Errorf("failed to assume role: %w", err)
-	}
+	conf.AssumeRole(opt.AssumeRoleARN)
 
 	logger := newLogger()
 	if opt.Debug {

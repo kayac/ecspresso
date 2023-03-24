@@ -41,7 +41,7 @@ func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
 	if err := conf.Restrict(ctx); err != nil {
 		return nil, err
 	}
-	conf.AssumeRole(ctx, opt.assumeRoleARN)
+	conf.AssumeRole(opt.assumeRoleARN)
 	return conf, nil
 }
 

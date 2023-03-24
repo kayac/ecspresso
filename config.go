@@ -151,12 +151,10 @@ func (c *Config) Restrict(ctx context.Context) error {
 		// Log("[INFO] override aws config load options")
 		optsFunc = awsv2ConfigLoadOptionsFunc
 	}
-
 	c.awsv2Config, err = awsConfig.LoadDefaultConfig(ctx, optsFunc...)
 	if err != nil {
 		return fmt.Errorf("failed to load aws config: %w", err)
 	}
-
 	if err := c.setupPlugins(ctx); err != nil {
 		return fmt.Errorf("failed to setup plugins: %w", err)
 	}
@@ -167,14 +165,13 @@ func (c *Config) Restrict(ctx context.Context) error {
 	return nil
 }
 
-func (c *Config) AssumeRole(ctx context.Context, assumeRoleARN string) error {
+func (c *Config) AssumeRole(assumeRoleARN string) {
 	if assumeRoleARN == "" {
-		return nil
+		return
 	}
 	stsClient := sts.NewFromConfig(c.awsv2Config)
 	assumeRoleProvider := stscreds.NewAssumeRoleProvider(stsClient, assumeRoleARN)
 	c.awsv2Config.Credentials = aws.NewCredentialsCache(assumeRoleProvider)
-	return nil
 }
 
 func (c *Config) setupPlugins(ctx context.Context) error {
