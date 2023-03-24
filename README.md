@@ -108,6 +108,7 @@ Flags:
       --ext-str=KEY=VALUE;...     external string values for Jsonnet
       --ext-code=KEY=VALUE;...    external code values for Jsonnet
       --config="ecspresso.yml"    config file
+      --assume-role-arn=""        the ARN of the role to assume
       --option=OPTION
 
 Commands:

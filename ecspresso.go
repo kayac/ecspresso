@@ -132,6 +132,7 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
 		}
 	}
+	conf.AssumeRole(opt.AssumeRoleARN)
 
 	logger := newLogger()
 	if opt.Debug {
@@ -181,6 +182,7 @@ type Option struct {
 	Debug          bool
 	ExtStr         map[string]string
 	ExtCode        map[string]string
+	AssumeRoleARN  string
 }
 
 func (opt *Option) resolveConfigFilePath() (path string) {
