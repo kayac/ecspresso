@@ -28,7 +28,7 @@ type InitOption struct {
 	Jsonnet               *bool `help:"output files as jsonnet format" default:"false"`
 }
 
-func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
+func (opt *InitOption) NewConfig(ctx context.Context, assumeRoleARN string) (*Config, error) {
 	conf := NewDefaultConfig()
 	conf.path = *opt.ConfigFilePath
 	conf.Region = *opt.Region
@@ -36,7 +36,7 @@ func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
 	conf.Service = *opt.Service
 	conf.TaskDefinitionPath = *opt.TaskDefinitionPath
 	conf.ServiceDefinitionPath = *opt.ServiceDefinitionPath
-	if err := conf.Restrict(ctx); err != nil {
+	if err := conf.Restrict(ctx, assumeRoleARN); err != nil {
 		return nil, err
 	}
 	return conf, nil
@@ -49,7 +49,7 @@ var (
 	yamlExt    = ".yaml"
 )
 
-func (d *App) Init(ctx context.Context, opt InitOption) error {
+func (d *App) Init(ctx context.Context, opt InitOption, assumeRoleARN string) error {
 	conf := d.config
 	d.LogJSON(opt)
 	if *opt.Jsonnet {
@@ -64,7 +64,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 			opt.ConfigFilePath = &p
 		}
 	}
-	if err := conf.Restrict(ctx); err != nil {
+	if err := conf.Restrict(ctx, assumeRoleARN); err != nil {
 		return err
 	}
 

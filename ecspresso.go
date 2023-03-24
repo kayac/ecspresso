@@ -122,12 +122,12 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 		err  error
 	)
 	if opt.InitOption != nil {
-		conf, err = opt.InitOption.NewConfig(ctx)
+		conf, err = opt.InitOption.NewConfig(ctx, opt.AssumeRoleARN)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize config: %w", err)
 		}
 	} else {
-		conf, err = loader.Load(ctx, opt.ConfigFilePath, Version)
+		conf, err = loader.Load(ctx, opt.ConfigFilePath, Version, opt.AssumeRoleARN)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
 		}
@@ -181,6 +181,7 @@ type Option struct {
 	Debug          bool
 	ExtStr         map[string]string
 	ExtCode        map[string]string
+	AssumeRoleARN  string
 }
 
 func (opt *Option) resolveConfigFilePath() (path string) {

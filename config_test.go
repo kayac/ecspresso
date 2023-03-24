@@ -65,7 +65,7 @@ func TestLoadConfigWithPluginDuplicate(t *testing.T) {
 	os.Setenv("JSON", `{"foo":"bar"}`)
 	ctx := context.Background()
 	loader := ecspresso.NewConfigLoader(nil, nil)
-	_, err := loader.Load(ctx, "tests/config_duplicate_plugins.yaml", "")
+	_, err := loader.Load(ctx, "tests/config_duplicate_plugins.yaml", "", "")
 	if err == nil {
 		t.Log("expected an error to occur, but it didn't.")
 		t.FailNow()
@@ -216,7 +216,7 @@ func TestConfigWithRequiredVersionUnsatisfied(t *testing.T) {
 		t.Run(c.CurrentVersion+":"+c.RequiredVersion, func(t *testing.T) {
 			conf := ecspresso.NewDefaultConfig()
 			conf.RequiredVersion = c.RequiredVersion
-			if err := conf.Restrict(ctx); err != nil {
+			if err := conf.Restrict(ctx, ""); err != nil {
 				t.Error(err)
 				return
 			}
@@ -249,7 +249,7 @@ func TestConfigWithInvalidRequiredVersion(t *testing.T) {
 		t.Run(c.CurrentVersion+":"+c.RequiredVersion, func(t *testing.T) {
 			conf := ecspresso.NewDefaultConfig()
 			conf.RequiredVersion = c.RequiredVersion
-			err := conf.Restrict(ctx)
+			err := conf.Restrict(ctx, "")
 			if err == nil {
 				t.Error("expected any error, but no error")
 				return
@@ -268,7 +268,7 @@ func TestLoadConfigWithoutTimeout(t *testing.T) {
 
 	ctx := context.Background()
 	loader := ecspresso.NewConfigLoader(nil, nil)
-	conf, err := loader.Load(ctx, "tests/notimeout.yml", "")
+	conf, err := loader.Load(ctx, "tests/notimeout.yml", "", "")
 	if err != nil {
 		t.Log("unexpected an error", err)
 		t.FailNow()
@@ -290,7 +290,7 @@ func TestLoadConfigForCodeDeploy(t *testing.T) {
 	loader := ecspresso.NewConfigLoader(nil, nil)
 	for _, ext := range []string{"yml", "json", "jsonnet"} {
 		name := "tests/config_codedeploy." + ext
-		conf, err := loader.Load(ctx, name, "")
+		conf, err := loader.Load(ctx, name, "", "")
 		if err != nil {
 			t.Error(err)
 		}

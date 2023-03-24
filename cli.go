@@ -7,11 +7,12 @@ import (
 )
 
 type CLIOptions struct {
-	Envfile []string          `help:"environment files"`
-	Debug   bool              `help:"enable debug log"`
-	ExtStr  map[string]string `help:"external string values for Jsonnet"`
-	ExtCode map[string]string `help:"external code values for Jsonnet"`
-	Config  string            `help:"config file" default:"ecspresso.yml"`
+	Envfile       []string          `help:"environment files"`
+	Debug         bool              `help:"enable debug log"`
+	ExtStr        map[string]string `help:"external string values for Jsonnet"`
+	ExtCode       map[string]string `help:"external code values for Jsonnet"`
+	Config        string            `help:"config file" default:"ecspresso.yml"`
+	AssumeRoleARN string            `help:"the ARN of the role to assume" default:""`
 
 	Option *Option
 
@@ -117,7 +118,7 @@ func dispatchCLI(ctx context.Context, sub string, usage func(), opts *CLIOptions
 	case "revisions":
 		return app.Revesions(ctx, *opts.Revisions)
 	case "init":
-		return app.Init(ctx, *opts.Init)
+		return app.Init(ctx, *opts.Init, opts.AssumeRoleARN)
 	case "diff":
 		return app.Diff(ctx, *opts.Diff)
 	case "appspec":
