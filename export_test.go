@@ -24,6 +24,7 @@ var (
 	ArnToName                    = arnToName
 	InitVerifyState              = initVerifyState
 	VerifyResource               = verifyResource
+	Map2str                      = map2str
 )
 
 func (d *App) SetLogger(logger *log.Logger) {

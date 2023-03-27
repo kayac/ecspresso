@@ -138,3 +138,21 @@ func extractStdout(t *testing.T, fn func()) []byte {
 	io.Copy(&buf, r)
 	return buf.Bytes()
 }
+
+func TestMap2str(t *testing.T) {
+	cases := []struct {
+		in   map[string]string
+		want string
+	}{
+		{map[string]string{"b": "2", "a": "1"}, "a=1,b=2"},
+		{map[string]string{"foo": "bar", "baz": "qux", "quux": "corge"}, "baz=qux,foo=bar,quux=corge"},
+		{map[string]string{}, ""},
+	}
+
+	for _, c := range cases {
+		got := ecspresso.Map2str(c.in)
+		if got != c.want {
+			t.Errorf("map2str(%v) == %q, want %q", c.in, got, c.want)
+		}
+	}
+}

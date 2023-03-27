@@ -3,11 +3,13 @@ package ecspresso
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/samber/lo"
 )
 
 func arnToName(s string) string {
@@ -69,8 +71,10 @@ func parseTags(s string) ([]types.Tag, error) {
 
 func map2str(m map[string]string) string {
 	var p []string
-	for k, v := range m {
-		p = append(p, fmt.Sprintf("%s=%s", k, v))
+	keys := lo.Keys(m)
+	sort.Strings(keys)
+	for _, k := range keys {
+		p = append(p, fmt.Sprintf("%s=%s", k, m[k]))
 	}
 	return strings.Join(p, ",")
 }
