@@ -6,11 +6,10 @@ ecspresso is a deployment tool for Amazon ECS.
 
 ## Documents
 
-[ecspresso handbook](https://zenn.dev/fujiwara/books/ecspresso-handbook) (Japanese)
-
-[ecspresso Advent Calendar 2020](https://adventar.org/calendars/5916) (Japanese)
-
-[Differences of v1 between v2](docs/v1-v2.md).
+- [Differences of v1 between v2](docs/v1-v2.md).
+- [ecspresso Advent Calendar 2020](https://adventar.org/calendars/5916) (Japanese)
+- [ecspresso handbook](https://zenn.dev/fujiwara/books/ecspresso-handbook-v2) (Japanese)
+- [Command Reference](https://zenn.dev/fujiwara/books/ecspresso-handbook-v2/viewer/reference) (Japanese)
 
 ## Install
 
