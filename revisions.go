@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -14,7 +15,7 @@ import (
 )
 
 type RevisionsOption struct {
-	Revision *int64  `help:"revision number to output" default:"0"`
+	Revision *string `help:"revision number or 'current' or 'latest'" default:""`
 	Output   *string `help:"output format (json, table, tsv)" default:"table" enum:"json,table,tsv"`
 }
 
@@ -72,30 +73,17 @@ func (d *App) Revesions(ctx context.Context, opt RevisionsOption) error {
 	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
-	inUse, err := d.inUseRevisions(ctx)
-	if err != nil {
-		return err
-	}
-
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
 		return err
 	}
 
-	if r := aws.ToInt64(opt.Revision); r > 0 {
-		name := fmt.Sprintf("%s:%d", aws.ToString(td.Family), r)
-		res, err := d.ecs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
-			TaskDefinition: &name,
-			Include:        []types.TaskDefinitionField{types.TaskDefinitionFieldTags},
-		})
-		if err != nil {
-			return fmt.Errorf("failed to describe task definition %s: %w", name, err)
-		}
-		b, err := MarshalJSONForAPI(res.TaskDefinition)
-		if err != nil {
-			return err
-		}
-		_, err = os.Stdout.Write(b)
+	if rv := aws.ToString(opt.Revision); rv != "" {
+		return d.dumpRevision(ctx, aws.ToString(td.Family), rv)
+	}
+
+	inUse, err := d.inUseRevisions(ctx)
+	if err != nil {
 		return err
 	}
 
@@ -132,4 +120,37 @@ func (d *App) Revesions(ctx context.Context, opt RevisionsOption) error {
 		revs.OutputTSV(os.Stdout)
 	}
 	return nil
+}
+
+func (d *App) dumpRevision(ctx context.Context, family string, rv string) error {
+	var name string
+	switch rv {
+	case "current":
+		family, revision, err := d.resolveTaskdefinition(ctx)
+		if err != nil {
+			return err
+		}
+		name = family + ":" + revision
+	case "latest":
+		name = family
+	default:
+		rint64, err := strconv.ParseInt(rv, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision: %s", rv)
+		}
+		name = fmt.Sprintf("%s:%d", family, rint64)
+	}
+	res, err := d.ecs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
+		TaskDefinition: &name,
+		Include:        []types.TaskDefinitionField{types.TaskDefinitionFieldTags},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to describe task definition %s: %w", name, err)
+	}
+	b, err := MarshalJSONForAPI(res.TaskDefinition)
+	if err != nil {
+		return err
+	}
+	_, err = os.Stdout.Write(b)
+	return err
 }
