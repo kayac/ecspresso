@@ -30,8 +30,6 @@ $ asdf install ecspresso 2.0.0
 $ asdf global ecspresso 2.0.0
 ```
 
-
-
 ### Binary packages
 
 [Releases](https://github.com/kayac/ecspresso/releases)
