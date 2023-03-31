@@ -6,7 +6,7 @@ ECSPRESSO := ecspresso --envfile envfile
 
 help:
 
-test: verify deploy tasks diff run-task deploy rollback refresh deploy-no-update-service scale down up delete
+test: verify deploy tasks diff revisions run-task deploy rollback refresh deploy-no-update-service scale down up delete
 
 status:
 	$(ECSPRESSO) status --events 10 --debug
@@ -82,3 +82,8 @@ exec:
 
 diff:
 	$(ECSPRESSO) diff --assume-role-arn arn:aws:iam::$(AWS_ACCOUNT_ID):role/ecspresso-test
+
+revisions:
+	$(ECSPRESSO) revisions
+	$(ECSPRESSO) revisions --revision=current
+	$(ECSPRESSO) revisions --revision=latest
