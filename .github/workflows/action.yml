@@ -46,4 +46,4 @@ jobs:
         with:
           version: latest
       - run: |
-          ecspresso version 2>&1 | fgrep v2.0
+          ecspresso version 2>&1 | fgrep v2.
