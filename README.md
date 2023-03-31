@@ -22,7 +22,10 @@ $ brew install kayac/tap/ecspresso
 ### asdf (macOS and Linux)
 
 ```console
-$ asdf plugin add ecspresso https://github.com/koluku/asdf-ecspresso.git
+$ asdf plugin add ecspresso
+# or
+$ asdf plugin add ecspresso https://github.com/kayac/asdf-ecspresso.git
+
 $ asdf install ecspresso 2.0.0
 $ asdf global ecspresso 2.0.0
 ```
