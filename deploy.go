@@ -140,19 +140,19 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		d.Log("desired count: unchanged")
 	}
 
-	if *opt.DryRun {
-		d.Log("DRY RUN OK")
-		return nil
-	}
-
-	// manage auto scaling only when set option --suspend-auto-scaling or --resume-auto-scaling explicitly
+	// manage auto scaling params
 	asParams := &modifyAutoScalingParams{
 		Suspend:     opt.SuspendAutoScaling,
 		MinCapacity: opt.AutoScalingMin,
 		MaxCapacity: opt.AutoScalingMax,
 	}
-	if err := d.modifyAutoScaling(ctx, asParams); err != nil {
+	if err := d.modifyAutoScaling(ctx, asParams, opt); err != nil {
 		return err
+	}
+
+	if *opt.DryRun {
+		d.Log("DRY RUN OK")
+		return nil
 	}
 
 	if err := doDeploy(ctx, tdArn, count, sv, opt); err != nil {

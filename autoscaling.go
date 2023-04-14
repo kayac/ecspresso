@@ -43,11 +43,11 @@ func (p *modifyAutoScalingParams) SuspendState() *aasTypes.SuspendedState {
 	}
 }
 
-func (d *App) modifyAutoScaling(ctx context.Context, p *modifyAutoScalingParams) error {
+func (d *App) modifyAutoScaling(ctx context.Context, p *modifyAutoScalingParams, opt DeployOption) error {
 	if p.isEmpty() {
 		return nil
 	}
-	d.Log("[INFO] Modifying auto scaling settings %s", p.String())
+	d.Log("[INFO] Modify auto scaling settings %s", p.String())
 
 	resourceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
 	out, err := d.autoScaling.DescribeScalableTargets(
@@ -67,6 +67,9 @@ func (d *App) modifyAutoScaling(ctx context.Context, p *modifyAutoScalingParams)
 		return nil
 	}
 
+	if *opt.DryRun {
+		return nil
+	}
 	for _, target := range out.ScalableTargets {
 		d.Log("[INFO] Register scalable target %s %s", *target.ResourceId, p.String())
 		_, err := d.autoScaling.RegisterScalableTarget(
