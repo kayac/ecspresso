@@ -14,28 +14,18 @@ type modifyAutoScalingParams struct {
 	MaxCapacity *int32
 }
 
-func (m *modifyAutoScalingParams) String() string {
-	var suspendStr, minCapStr, maxCapStr string
-
-	if m.Suspend == nil {
-		suspendStr = "nil"
-	} else {
-		suspendStr = fmt.Sprintf("%v", *m.Suspend)
+func (p *modifyAutoScalingParams) String() string {
+	m := map[string]string{}
+	if p.Suspend != nil {
+		m["Suspend"] = fmt.Sprintf("%v", *p.Suspend)
 	}
-
-	if m.MinCapacity == nil {
-		minCapStr = "nil"
-	} else {
-		minCapStr = fmt.Sprintf("%d", *m.MinCapacity)
+	if p.MinCapacity != nil {
+		m["MinCapacity"] = fmt.Sprintf("%d", *p.MinCapacity)
 	}
-
-	if m.MaxCapacity == nil {
-		maxCapStr = "nil"
-	} else {
-		maxCapStr = fmt.Sprintf("%d", *m.MaxCapacity)
+	if p.MaxCapacity != nil {
+		m["MaxCapacity"] = fmt.Sprintf("%d", *p.MaxCapacity)
 	}
-
-	return fmt.Sprintf("Suspend: %s, MinCapacity: %s, MaxCapacity: %s", suspendStr, minCapStr, maxCapStr)
+	return map2str(m)
 }
 
 func (p *modifyAutoScalingParams) isEmpty() bool {

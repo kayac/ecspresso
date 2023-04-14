@@ -20,33 +20,33 @@ func TestModifyAutoScalingParams_String(t *testing.T) {
 				MinCapacity: aws.Int32(1),
 				MaxCapacity: aws.Int32(5),
 			},
-			expected: "Suspend: false, MinCapacity: 1, MaxCapacity: 5",
+			expected: "MaxCapacity=5,MinCapacity=1,Suspend=false",
 		},
 		{
 			name: "only Suspend set",
 			params: ecspresso.ModifyAutoScalingParams{
 				Suspend: aws.Bool(true),
 			},
-			expected: "Suspend: true, MinCapacity: nil, MaxCapacity: nil",
+			expected: "Suspend=true",
 		},
 		{
 			name: "only MinCapacity set",
 			params: ecspresso.ModifyAutoScalingParams{
 				MinCapacity: aws.Int32(1),
 			},
-			expected: "Suspend: nil, MinCapacity: 1, MaxCapacity: nil",
+			expected: "MinCapacity=1",
 		},
 		{
 			name: "only MaxCapacity set",
 			params: ecspresso.ModifyAutoScalingParams{
 				MaxCapacity: aws.Int32(5),
 			},
-			expected: "Suspend: nil, MinCapacity: nil, MaxCapacity: 5",
+			expected: "MaxCapacity=5",
 		},
 		{
 			name:     "all values nil",
 			params:   ecspresso.ModifyAutoScalingParams{},
-			expected: "Suspend: nil, MinCapacity: nil, MaxCapacity: nil",
+			expected: "",
 		},
 	}
 
