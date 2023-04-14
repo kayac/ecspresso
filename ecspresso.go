@@ -132,6 +132,7 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
 		}
 	}
+	conf.AssumeRole(opt.AssumeRoleARN)
 
 	logger := newLogger()
 	if opt.Debug {
@@ -181,6 +182,7 @@ type Option struct {
 	Debug          bool
 	ExtStr         map[string]string
 	ExtCode        map[string]string
+	AssumeRoleARN  string
 }
 
 func (opt *Option) resolveConfigFilePath() (path string) {
@@ -343,15 +345,20 @@ func (d *App) DescribeTaskStatus(ctx context.Context, task *types.Task, watchCon
 		return fmt.Errorf(*f.Reason)
 	}
 
+	ts := out.Tasks[0]
+	if ts.StopCode == types.TaskStopCodeTaskFailedToStart {
+		return fmt.Errorf("task failed to start: %s", aws.ToString(ts.StoppedReason))
+	}
+
 	var container *types.Container
-	for _, c := range out.Tasks[0].Containers {
+	for _, c := range ts.Containers {
 		if *c.Name == *watchContainer.Name {
 			container = &c
 			break
 		}
 	}
 	if container == nil {
-		container = &(out.Tasks[0].Containers[0])
+		container = &(ts.Containers[0])
 	}
 
 	if container.ExitCode != nil && *container.ExitCode != 0 {

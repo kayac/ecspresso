@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -29,9 +30,9 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 
 	if *opt.DryRun {
 		d.Log("task definition:")
-		d.LogJSON(td)
+		d.OutputJSONForAPI(os.Stderr, td)
 		d.Log("service definition:")
-		d.LogJSON(svd)
+		d.OutputJSONForAPI(os.Stderr, svd)
 		d.Log("DRY RUN OK")
 		return nil
 	}

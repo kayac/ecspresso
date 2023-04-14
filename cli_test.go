@@ -25,6 +25,7 @@ var cliTests = []struct {
 			"--ext-str", "s2=v2",
 			"--ext-code", "c1=123",
 			"--ext-code", "c2=1+2",
+			"--assume-role-arn", "arn:aws:iam::123456789012:role/exampleRole",
 		},
 		sub: "status",
 		option: &ecspresso.Option{
@@ -33,6 +34,7 @@ var cliTests = []struct {
 			ExtStr:         map[string]string{"s1": "v1", "s2": "v2"},
 			ExtCode:        map[string]string{"c1": "123", "c2": "1+2"},
 			InitOption:     nil,
+			AssumeRoleARN:  "arn:aws:iam::123456789012:role/exampleRole",
 		},
 		subOption: &ecspresso.StatusOption{
 			Events: ptr(10),
@@ -57,6 +59,7 @@ var cliTests = []struct {
 			ExtStr:         map[string]string{},
 			ExtCode:        map[string]string{},
 			InitOption:     nil,
+			AssumeRoleARN:  "",
 		},
 		subOption: &ecspresso.StatusOption{
 			Events: ptr(100),
@@ -391,7 +394,7 @@ var cliTests = []struct {
 		args: []string{"revisions"},
 		sub:  "revisions",
 		subOption: &ecspresso.RevisionsOption{
-			Revision: ptr(int64(0)),
+			Revision: ptr(""),
 			Output:   ptr("table"),
 		},
 	},
@@ -399,7 +402,23 @@ var cliTests = []struct {
 		args: []string{"revisions", "--revision", "123", "--output", "json"},
 		sub:  "revisions",
 		subOption: &ecspresso.RevisionsOption{
-			Revision: ptr(int64(123)),
+			Revision: ptr("123"),
+			Output:   ptr("json"),
+		},
+	},
+	{
+		args: []string{"revisions", "--revision", "current", "--output", "json"},
+		sub:  "revisions",
+		subOption: &ecspresso.RevisionsOption{
+			Revision: ptr("current"),
+			Output:   ptr("json"),
+		},
+	},
+	{
+		args: []string{"revisions", "--revision", "latest", "--output", "json"},
+		sub:  "revisions",
+		subOption: &ecspresso.RevisionsOption{
+			Revision: ptr("latest"),
 			Output:   ptr("json"),
 		},
 	},
@@ -507,6 +526,7 @@ var cliTests = []struct {
 		subOption: &ecspresso.VerifyOption{
 			GetSecrets: ptr(true),
 			PutLogs:    ptr(true),
+			Cache:      ptr(true),
 		},
 	},
 	{
@@ -515,6 +535,16 @@ var cliTests = []struct {
 		subOption: &ecspresso.VerifyOption{
 			GetSecrets: ptr(false),
 			PutLogs:    ptr(false),
+			Cache:      ptr(true),
+		},
+	},
+	{
+		args: []string{"verify", "--no-get-secrets", "--no-put-logs", "--no-cache"},
+		sub:  "verify",
+		subOption: &ecspresso.VerifyOption{
+			GetSecrets: ptr(false),
+			PutLogs:    ptr(false),
+			Cache:      ptr(false),
 		},
 	},
 	{

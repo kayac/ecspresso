@@ -1,6 +1,9 @@
 package ecspresso_test
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -117,6 +120,39 @@ func TestParseTags(t *testing.T) {
 			if err == nil {
 				t.Errorf("must be failed %s", ts.src)
 			}
+		}
+	}
+}
+
+func extractStdout(t *testing.T, fn func()) []byte {
+	t.Helper()
+	org := os.Stdout
+	defer func() {
+		os.Stdout = org
+	}()
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	fn()
+	w.Close()
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	return buf.Bytes()
+}
+
+func TestMap2str(t *testing.T) {
+	cases := []struct {
+		in   map[string]string
+		want string
+	}{
+		{map[string]string{"b": "2", "a": "1"}, "a=1,b=2"},
+		{map[string]string{"foo": "bar", "baz": "qux", "quux": "corge"}, "baz=qux,foo=bar,quux=corge"},
+		{map[string]string{}, ""},
+	}
+
+	for _, c := range cases {
+		got := ecspresso.Map2str(c.in)
+		if got != c.want {
+			t.Errorf("map2str(%v) == %q, want %q", c.in, got, c.want)
 		}
 	}
 }

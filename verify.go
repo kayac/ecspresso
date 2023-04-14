@@ -65,11 +65,26 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 			return errors.New("invalid arn format")
 		}
 		secretArn := strings.Join(part[0:7], ":")
-		_, err := v.secretsmanager.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
+		res, err := v.secretsmanager.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 			SecretId: &secretArn,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to get secret value from %s secret id %s: %w", from, secretArn, err)
+		}
+		if len(part) < 8 {
+			return nil
+		}
+		key := part[7]
+		if key == "" {
+			return nil
+		}
+		var m map[string]interface{}
+		if err := json.Unmarshal([]byte(*res.SecretString), &m); err != nil {
+			return fmt.Errorf("failed to parse secret string from %s secret id %s: %w", from, secretArn, err)
+		}
+
+		if _, ok := m[key]; !ok {
+			return fmt.Errorf("failed to find key %s on secret json value from %s secret id %s", key, from, secretArn)
 		}
 		return nil
 	}
@@ -145,12 +160,15 @@ func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionR
 type VerifyOption struct {
 	GetSecrets *bool `help:"get secrets from ParameterStore or SecretsManager" default:"true" negatable:""`
 	PutLogs    *bool `help:"put logs to CloudWatchLogs" default:"true" negatable:""`
+	Cache      *bool `help:"use cache" default:"true" negatable:""`
 }
 
 type verifyResourceFunc func(context.Context) error
 
 // Verify verifies service / task definitions related resources are valid.
 func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
+	initVerifyState(aws.ToBool(opt.Cache))
+
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
 		return err
@@ -173,7 +191,7 @@ func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
 		{name: "Cluster", fn: d.verifyCluster},
 	}
 	for _, r := range resources {
-		if err := d.verifyResource(ctx, r.name, r.fn); err != nil {
+		if err := verifyResource(ctx, r.name, r.fn); err != nil {
 			return err
 		}
 	}
@@ -181,26 +199,59 @@ func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
 	return nil
 }
 
-var verifyResourceNestLevel = 0
+var verifyState = struct {
+	cache verifyCache
+	level int
+}{
+	cache: nil,
+	level: 0,
+}
 
-func (d *App) verifyResource(ctx context.Context, resourceType string, verifyFunc func(context.Context) error) error {
-	verifyResourceNestLevel++
-	defer func() { verifyResourceNestLevel-- }()
-	indent := strings.Repeat("  ", verifyResourceNestLevel)
+func initVerifyState(cache bool) {
+	if cache {
+		verifyState.cache = make(verifyCache, 100)
+	} else {
+		verifyState.cache = verifyCache(nil)
+	}
+	verifyState.level = 0
+}
+
+type verifyCache map[string]error
+
+func (v verifyCache) Do(ctx context.Context, name string, fn verifyResourceFunc) (error, bool) {
+	if v == nil {
+		return fn(ctx), false
+	}
+	if err, ok := v[name]; ok {
+		return err, true
+	}
+	err := fn(ctx)
+	v[name] = err
+	return err, false
+}
+
+func verifyResource(ctx context.Context, name string, verifyFunc func(context.Context) error) error {
+	verifyState.level++
+	defer func() { verifyState.level-- }()
+	indent := strings.Repeat("  ", verifyState.level)
 	print := func(f string, args ...interface{}) {
 		fmt.Printf(indent+f+"\n", args...)
 	}
-	print("%s", resourceType)
-	err := verifyFunc(ctx)
-	if err != nil {
-		if errors.As(err, &errSkipVerify) {
-			print("--> %s [%s] %s", resourceType, color.CyanString("SKIP"), color.CyanString(err.Error()))
+	print("%s", name)
+	var cached string
+	verifyErr, hit := verifyState.cache.Do(ctx, name, verifyFunc)
+	if hit {
+		cached = color.CyanString("(cached)")
+	}
+	if verifyErr != nil {
+		if errors.As(verifyErr, &errSkipVerify) {
+			print("--> [%s]%s %s", color.CyanString("SKIP"), cached, color.CyanString(verifyErr.Error()))
 			return nil
 		}
-		print("--> %s [%s] %s", resourceType, color.RedString("NG"), color.RedString(err.Error()))
-		return fmt.Errorf("verify %s failed: %w", resourceType, err)
+		print("--> [%s]%s %s", color.RedString("NG"), cached, color.RedString(verifyErr.Error()))
+		return fmt.Errorf("verify %s failed: %w", name, verifyErr)
 	}
-	print("--> [%s]", color.GreenString("OK"))
+	print("--> [%s]%s", color.GreenString("OK"), cached)
 	return nil
 }
 
@@ -242,7 +293,7 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 	// LB
 	for i, lb := range sv.LoadBalancers {
 		name := fmt.Sprintf("LoadBalancer[%d]", i)
-		err := d.verifyResource(ctx, name, func(context.Context) error {
+		err := verifyResource(ctx, name, func(context.Context) error {
 			out, err := d.elbv2.DescribeTargetGroups(ctx, &elasticloadbalancingv2.DescribeTargetGroupsInput{
 				TargetGroupArns: []string{*lb.TargetGroupArn},
 			})
@@ -291,7 +342,7 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 
 	if execRole := td.ExecutionRoleArn; execRole != nil {
 		name := fmt.Sprintf("ExecutionRole[%s]", *execRole)
-		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+		err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifyRole(ctx, *execRole)
 		})
 		if err != nil {
@@ -300,7 +351,7 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 	}
 	if taskRole := td.TaskRoleArn; taskRole != nil {
 		name := fmt.Sprintf("TaskRole[%s]", *taskRole)
-		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+		err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifyRole(ctx, *taskRole)
 		})
 		if err != nil {
@@ -310,7 +361,7 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 
 	for _, c := range td.ContainerDefinitions {
 		name := fmt.Sprintf("ContainerDefinition[%s]", aws.ToString(c.Name))
-		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+		err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifyContainer(ctx, &c, td)
 		})
 		if err != nil {
@@ -446,7 +497,7 @@ func (d *App) verifyImage(ctx context.Context, image string) error {
 func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition, td *ecs.RegisterTaskDefinitionInput) error {
 	image := aws.ToString(c.Image)
 	name := fmt.Sprintf("Image[%s]", image)
-	err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+	err := verifyResource(ctx, name, func(ctx context.Context) error {
 		return d.verifyImage(ctx, image)
 	})
 	if err != nil {
@@ -454,7 +505,7 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition,
 	}
 	for _, secret := range c.Secrets {
 		name := fmt.Sprintf("Secret %s[%s]", *secret.Name, *secret.ValueFrom)
-		err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+		err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifier.existsSecretValue(ctx, *secret.ValueFrom)
 		})
 		if err != nil {
@@ -462,7 +513,8 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition,
 		}
 	}
 	if c.LogConfiguration != nil && c.LogConfiguration.LogDriver == types.LogDriverAwslogs {
-		err := d.verifyResource(ctx, "LogConfiguration[awslogs]", func(ctx context.Context) error {
+		name := fmt.Sprintf("LogConfiguration[%s]", map2str(c.LogConfiguration.Options))
+		err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifyLogConfiguration(ctx, c)
 		})
 		if err != nil {
@@ -471,7 +523,7 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition,
 	}
 	for _, envFile := range c.EnvironmentFiles {
 		name := fmt.Sprintf("EnvironmentFile[%s %s]", envFile.Type, aws.ToString(envFile.Value))
-		if err := d.verifyResource(ctx, name, func(ctx context.Context) error {
+		if err := verifyResource(ctx, name, func(ctx context.Context) error {
 			return d.verifier.existsEnvironmentFile(ctx, envFile)
 		}); err != nil {
 			return err
@@ -491,7 +543,7 @@ func (d *App) verifyContainer(ctx context.Context, c *types.ContainerDefinition,
 
 func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefinition) error {
 	options := c.LogConfiguration.Options
-	d.Log("LogConfiguration[awslogs] options=%v", options)
+	d.Log("[DEBUG] LogConfiguration[awslogs] options=%v", options)
 	group, region, prefix := options["awslogs-group"], options["awslogs-region"], options["awslogs-stream-prefix"]
 	if group == "" {
 		return errors.New("awslogs-group is required")
@@ -502,6 +554,22 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 
 	if !aws.ToBool(d.verifier.opt.PutLogs) {
 		return ErrSkipVerify(fmt.Sprintf("putting logs to %s", group))
+	}
+
+	if options["awslogs-create-group"] == "true" {
+		if _, err := d.verifier.cwl.CreateLogGroup(ctx, &cloudwatchlogs.CreateLogGroupInput{
+			LogGroupName: &group,
+		}); err != nil {
+			var ex *cloudwatchlogsTypes.ResourceAlreadyExistsException
+			if errors.As(err, &ex) {
+				// ignore error if log group already exists
+				d.Log("[DEBUG] log group %s already exists, ignored", group)
+			} else {
+				return fmt.Errorf("failed to create log group %s: %w", group, err)
+			}
+		} else {
+			d.Log("[INFO] created log group %s", group)
+		}
 	}
 
 	var stream string

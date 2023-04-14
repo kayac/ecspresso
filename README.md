@@ -6,11 +6,10 @@ ecspresso is a deployment tool for Amazon ECS.
 
 ## Documents
 
-[ecspresso handbook](https://zenn.dev/fujiwara/books/ecspresso-handbook) (Japanese)
-
-[ecspresso Advent Calendar 2020](https://adventar.org/calendars/5916) (Japanese)
-
-[Differences of v1 between v2](docs/v1-v2.md).
+- [Differences of v1 between v2](docs/v1-v2.md).
+- [ecspresso Advent Calendar 2020](https://adventar.org/calendars/5916) (Japanese)
+- [ecspresso handbook](https://zenn.dev/fujiwara/books/ecspresso-handbook-v2) (Japanese)
+- [Command Reference](https://zenn.dev/fujiwara/books/ecspresso-handbook-v2/viewer/reference) (Japanese)
 
 ## Install
 
@@ -23,7 +22,10 @@ $ brew install kayac/tap/ecspresso
 ### asdf (macOS and Linux)
 
 ```console
-$ asdf plugin add ecspresso https://github.com/koluku/asdf-ecspresso.git
+$ asdf plugin add ecspresso
+# or
+$ asdf plugin add ecspresso https://github.com/kayac/asdf-ecspresso.git
+
 $ asdf install ecspresso 2.0.0
 $ asdf global ecspresso 2.0.0
 ```
@@ -108,6 +110,7 @@ Flags:
       --ext-str=KEY=VALUE;...     external string values for Jsonnet
       --ext-code=KEY=VALUE;...    external code values for Jsonnet
       --config="ecspresso.yml"    config file
+      --assume-role-arn=""        the ARN of the role to assume
       --option=OPTION
 
 Commands:

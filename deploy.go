@@ -99,7 +99,8 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 			return err
 		}
 		if *opt.DryRun {
-			d.Log("[INFO] task definition: %s", MustMarshalJSONStringForAPI(td))
+			d.Log("[INFO] task definition:")
+			d.OutputJSONForAPI(os.Stderr, td)
 		} else {
 			newTd, err := d.RegisterTaskDefinition(ctx, td)
 			if err != nil {

@@ -10,6 +10,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/google/go-jsonnet"
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/kayac/ecspresso/v2/appspec"
@@ -161,6 +163,16 @@ func (c *Config) Restrict(ctx context.Context) error {
 		Log("[WARNING] filter_command is deprecated. Use %s environment variable instead.", FilterCommandEnv)
 	}
 	return nil
+}
+
+func (c *Config) AssumeRole(assumeRoleARN string) {
+	if assumeRoleARN == "" {
+		return
+	}
+	Log("[INFO] assume role: %s", assumeRoleARN)
+	stsClient := sts.NewFromConfig(c.awsv2Config)
+	assumeRoleProvider := stscreds.NewAssumeRoleProvider(stsClient, assumeRoleARN)
+	c.awsv2Config.Credentials = aws.NewCredentialsCache(assumeRoleProvider)
 }
 
 func (c *Config) setupPlugins(ctx context.Context) error {

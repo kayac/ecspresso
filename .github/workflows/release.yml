@@ -14,7 +14,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: "1.18"
+          go-version: "1.20"
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0 # it is required for the changelog to work correctly.
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v3
         with:
           version: latest
           args: release --rm-dist

@@ -1,6 +1,9 @@
 package ecspresso
 
-import "context"
+import (
+	"context"
+	"os"
+)
 
 type RegisterOption struct {
 	DryRun *bool `help:"dry run" default:"false"`
@@ -25,7 +28,9 @@ func (d *App) Register(ctx context.Context, opt RegisterOption) error {
 	}
 	if *opt.DryRun {
 		d.Log("task definition:")
-		d.LogJSON(td)
+		if err := d.OutputJSONForAPI(os.Stdout, td); err != nil {
+			return err
+		}
 		d.Log("DRY RUN OK")
 		return nil
 	}
@@ -36,7 +41,7 @@ func (d *App) Register(ctx context.Context, opt RegisterOption) error {
 	}
 
 	if *opt.Output {
-		d.LogJSON(newTd)
+		return d.OutputJSONForAPI(os.Stdout, newTd)
 	}
 	return nil
 }
