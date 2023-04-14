@@ -311,10 +311,20 @@ appspec:
 To change a desired count of the service, specify `scale --tasks`.
 
 ```console
-$ ecspresso scale --config ecspresso.yml --tasks 10
+$ ecspresso scale --tasks 10
 ```
 
 `scale` command is equivalent to `deploy --skip-task-definition --no-update-service`.
+
+### Manage Application Auto Scaling
+
+When you use Application Auto Scaling for ECS service, you can change the min/max count of the auto-scaling settings by `ecspresso scale` command.
+
+To change the service's min/max count by Application Auto Scaling, specify `scale --auto-scaling-min` or `scale --auto-scaling-max`.
+
+```console
+$ ecspresso scale --tasks 5 --autos-caling-min 5 --autos-caling-max 20
+```
 
 ## Example of deploy
 
