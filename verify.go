@@ -556,6 +556,22 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 		return ErrSkipVerify(fmt.Sprintf("putting logs to %s", group))
 	}
 
+	if options["awslogs-create-group"] == "true" {
+		if _, err := d.verifier.cwl.CreateLogGroup(ctx, &cloudwatchlogs.CreateLogGroupInput{
+			LogGroupName: &group,
+		}); err != nil {
+			var ex *cloudwatchlogsTypes.ResourceAlreadyExistsException
+			if errors.As(err, &ex) {
+				// ignore error if log group already exists
+				d.Log("[DEBUG] log group %s already exists, ignored", group)
+			} else {
+				return fmt.Errorf("failed to create log group %s: %w", group, err)
+			}
+		} else {
+			d.Log("[INFO] created log group %s", group)
+		}
+	}
+
 	var stream string
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	if prefix != "" {
