@@ -535,51 +535,6 @@ func (d *App) GetLogInfo(task *types.Task, c *types.ContainerDefinition) (string
 	return logGroup, logStream
 }
 
-func (d *App) suspendAutoScaling(ctx context.Context, suspendState bool) error {
-	resourceId := fmt.Sprintf("service/%s/%s", d.Cluster, d.Service)
-
-	out, err := d.autoScaling.DescribeScalableTargets(
-		ctx,
-		&applicationautoscaling.DescribeScalableTargetsInput{
-			ResourceIds:       []string{resourceId},
-			ServiceNamespace:  aasTypes.ServiceNamespaceEcs,
-			ScalableDimension: aasTypes.ScalableDimensionECSServiceDesiredCount,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to describe scalable targets: %w", err)
-	}
-	if len(out.ScalableTargets) == 0 {
-		d.Log("[WARNING] No scalable target for %s", resourceId)
-		if suspendState {
-			d.Log("[WARNING] Skip suspend auto scaling")
-		} else {
-			d.Log("[WARNING] Skip resume auto scaling")
-		}
-		return nil
-	}
-	for _, target := range out.ScalableTargets {
-		d.Log("Register scalable target %s set suspend state to %t", *target.ResourceId, suspendState)
-		_, err := d.autoScaling.RegisterScalableTarget(
-			ctx,
-			&applicationautoscaling.RegisterScalableTargetInput{
-				ServiceNamespace:  target.ServiceNamespace,
-				ScalableDimension: target.ScalableDimension,
-				ResourceId:        target.ResourceId,
-				SuspendedState: &aasTypes.SuspendedState{
-					DynamicScalingInSuspended:  &suspendState,
-					DynamicScalingOutSuspended: &suspendState,
-					ScheduledScalingSuspended:  &suspendState,
-				},
-			},
-		)
-		if err != nil {
-			return fmt.Errorf("failed to register scalable target %s set suspend state to %t: %w", *target.ResourceId, suspendState, err)
-		}
-	}
-	return nil
-}
-
 func (d *App) FilterCommand() string {
 	if fc := os.Getenv(FilterCommandEnv); fc != "" {
 		return fc
