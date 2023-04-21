@@ -43,7 +43,8 @@ func (p *modifyAutoScalingParams) SuspendState() *aasTypes.SuspendedState {
 	}
 }
 
-func (d *App) modifyAutoScaling(ctx context.Context, p *modifyAutoScalingParams, opt DeployOption) error {
+func (d *App) modifyAutoScaling(ctx context.Context, opt DeployOption) error {
+	p := opt.ModifyAutoScalingParams()
 	if p.isEmpty() {
 		return nil
 	}

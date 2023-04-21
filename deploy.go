@@ -46,6 +46,20 @@ func (opt DeployOption) DryRunString() string {
 	return ""
 }
 
+func (opt DeployOption) ModifyAutoScalingParams() *modifyAutoScalingParams {
+	p := &modifyAutoScalingParams{
+		Suspend:     nil,
+		MinCapacity: opt.AutoScalingMin,
+		MaxCapacity: opt.AutoScalingMax,
+	}
+	if opt.SuspendAutoScaling != nil && *opt.SuspendAutoScaling {
+		p.Suspend = aws.Bool(true)
+	} else if opt.ResumeAutoScaling != nil && *opt.ResumeAutoScaling {
+		p.Suspend = aws.Bool(false)
+	}
+	return p
+}
+
 func calcDesiredCount(sv *Service, opt DeployOption) *int32 {
 	if sv.SchedulingStrategy == types.SchedulingStrategyDaemon {
 		return nil
@@ -140,13 +154,8 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		d.Log("desired count: unchanged")
 	}
 
-	// manage auto scaling params
-	asParams := &modifyAutoScalingParams{
-		Suspend:     opt.SuspendAutoScaling,
-		MinCapacity: opt.AutoScalingMin,
-		MaxCapacity: opt.AutoScalingMax,
-	}
-	if err := d.modifyAutoScaling(ctx, asParams, opt); err != nil {
+	// manage auto scaling
+	if err := d.modifyAutoScaling(ctx, opt); err != nil {
 		return err
 	}
 
