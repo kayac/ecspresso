@@ -1,5 +1,6 @@
 {
   deploymentConfiguration: {
+    // remove deploymentCircuitBreaker when deployment controller is CODE_DEPLOY
     deploymentCircuitBreaker: {
       enable: false,
       rollback: false,
@@ -8,7 +9,7 @@
     minimumHealthyPercent: 100,
   },
   deploymentController: {
-    type: 'ECS',
+    type: 'ECS', // ECS or CODE_DEPLOY
   },
   desiredCount: 1,
   enableECSManagedTags: false,
@@ -36,7 +37,7 @@
     },
   },
   platformFamily: 'Linux',
-  platformVersion: 'LATEST',
+  platformVersion: '1.4.0',
   propagateTags: 'SERVICE',
   schedulingStrategy: 'REPLICA',
   tags: [

@@ -17,7 +17,8 @@ resource "aws_lb" "main" {
 }
 
 resource "aws_lb_target_group" "http" {
-  name                 = "${var.project}-http"
+  for_each             = toset(["alpha", "beta"])
+  name                 = "${var.project}-${each.key}"
   port                 = 80
   target_type          = "ip"
   vpc_id               = aws_vpc.main.id
@@ -34,7 +35,11 @@ resource "aws_lb_target_group" "http" {
     interval            = 6
   }
   tags = {
-    Name = "${var.project}-http"
+    Name = "${var.project}-${each.key}"
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
@@ -45,7 +50,7 @@ resource "aws_lb_listener" "http" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.http.arn
+    target_group_arn = aws_lb_target_group.http["alpha"].arn
   }
 
   tags = {
