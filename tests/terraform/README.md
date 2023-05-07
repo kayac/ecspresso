@@ -30,6 +30,8 @@ After completing the deployment, you can access the service via ALB.
 $ curl -s "http://$(terraform output -raw alb_dns_name)/"
 ```
 
+Note: This example contains availability zone named a, b, and d. If your AWS account does not have some of them, you can change the resources for them from [vpc.tf](./vpc.tf), [alb.tf](./alb.tf) and [ecs-service-def.jsonnet](./ecs-service-def.jsonnet).
+
 ### Usage with AWS CodeDeploy
 
 At first, you must delete an ECS service that having "ECS" deployment controller.
