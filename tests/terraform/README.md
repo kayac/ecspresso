@@ -62,7 +62,7 @@ $ ecspresso deploy
 After completing the deployment, you have to create a CodeDeploy application and deployment group.
 Uncomment [codedeploy.tf](./codedeploy.tf) and run `terraform apply` again.
 
-Finally, now you can deploy the service by ecspresso using CodeDeploy.
+Now you can deploy the service by ecspresso using CodeDeploy.
 
 ```console
 $ ecspresso deploy
