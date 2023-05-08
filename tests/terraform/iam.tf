@@ -34,6 +34,10 @@ resource "aws_iam_policy" "ecs-task" {
   })
 }
 
+resource "aws_iam_role_policy_attachment" "ecs-task" {
+  role       = aws_iam_role.ecs-task.name
+  policy_arn = aws_iam_policy.ecs-task.arn
+}
 
 resource "aws_iam_role" "ecs-task-execution" {
   name = "${var.project}-ecs-task-execution"
