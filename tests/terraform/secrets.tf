@@ -1,12 +1,12 @@
 
 resource "aws_ssm_parameter" "foo" {
-  name  = "/${var.project}/foo"
+  name  = "/${var.project}/foo-${random_string.random.result}"
   type  = "SecureString"
   value = "FOO"
 }
 
 resource "aws_secretsmanager_secret" "bar" {
-  name = "${var.project}-bar"
+  name = "${var.project}-bar-${random_string.random.result}"
 }
 
 resource "aws_secretsmanager_secret_version" "bar" {
@@ -15,7 +15,7 @@ resource "aws_secretsmanager_secret_version" "bar" {
 }
 
 resource "aws_secretsmanager_secret" "json" {
-  name = "${var.project}-json"
+  name = "${var.project}-json-${random_string.random.result}"
 }
 
 resource "aws_secretsmanager_secret_version" "json" {

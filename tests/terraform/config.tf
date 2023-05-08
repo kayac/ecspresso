@@ -25,3 +25,9 @@ terraform {
 
 data "aws_caller_identity" "current" {
 }
+
+resource "random_string" "random" {
+  length  = 8
+  lower   = true
+  special = false
+}
