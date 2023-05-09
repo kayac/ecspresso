@@ -94,7 +94,7 @@ Pass the parameter "latest" to use the latest version of ecspresso.
 - kayac/ecspresso@v1
   - The latest version of v1.x
 - kayac/ecspresso@v2
-  - The latst version of v2.x
+  - The latest version of v2.x
 
 GitHub Action `kayac/ecspresso@v2` supports `version-file: path/to/file` installs ecspresso that version written in the file. This version number does not have `v` prefix, For example `2.0.0`.
 
