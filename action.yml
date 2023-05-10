@@ -12,7 +12,7 @@ runs:
         set -e
         VERSION="${{ inputs.version }}"
         if [ "${VERSION}" = "latest" ]; then
-          DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases | jq -r '[.[]|select(.tag_name < "v1.99")|select(.prerelease == false)][0].assets[].browser_download_url|select(match("linux.amd64."))')
+          DOWNLOAD_URL=$(curl -sS 'https://api.github.com/repos/kayac/ecspresso/releases?per_page=100' | jq -r '[.[]|select(.tag_name < "v1.99")|select(.prerelease == false)][0].assets[].browser_download_url|select(match("linux.amd64."))')
         else
           DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/ecspresso_${VERSION:1}_linux_amd64.tar.gz
         fi
