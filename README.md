@@ -62,6 +62,8 @@ jobs:
 - fujiwara/ecspresso@2.0.3
   - The latest version of v2.x
 
+`version: latest` is not recommended because it may cause unexpected behavior when the new version of ecspresso is released.
+
 Orb `fujiwara/ecspresso@2.0.2` supports `version-file: path/to/file` installs ecspresso that version written in the file. This version number does not have `v` prefix, For example, `2.0.0`.
 
 ### GitHub Actions
@@ -95,6 +97,8 @@ Pass the parameter "latest" to use the latest version of ecspresso.
   - The latest version of v1.x
 - kayac/ecspresso@v2
   - The latest version of v2.x
+
+`version: latest` is not recommended because it may cause unexpected behavior when the new version of ecspresso is released.
 
 GitHub Action `kayac/ecspresso@v2` supports `version-file: path/to/file` installs ecspresso that version written in the file. This version number does not have `v` prefix, For example `2.0.0`.
 
