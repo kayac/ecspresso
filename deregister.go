@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/samber/lo"
 )
 
 type DeregisterOption struct {
@@ -82,26 +83,27 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 		d.Log("DRY RUN OK")
 		return nil
 	}
-	if aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %s ?", name), false) {
-		d.Log("Deregistring %s", name)
-		if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
-			TaskDefinition: aws.String(name),
-		}); err != nil {
-			return fmt.Errorf("failed to deregister task definition: %w", err)
-		}
-		d.Log("%s was deregistered successfully", name)
-		if aws.ToBool(opt.Delete) {
-			d.Log("Deleting %s", name)
-			if _, err := d.ecs.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
-				TaskDefinitions: []string{name},
-			}); err != nil {
-				return fmt.Errorf("failed to delete task definition: %w", err)
-			}
-			d.Log("%s was deleted successfully", name)
-		}
-	} else {
+	confirmed := aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %s ?", name), false)
+	if !confirmed {
 		d.Log("Aborted")
 		return fmt.Errorf("confirmation failed")
+	}
+
+	d.Log("Deregistring %s", name)
+	if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
+		TaskDefinition: aws.String(name),
+	}); err != nil {
+		return fmt.Errorf("failed to deregister task definition: %w", err)
+	}
+	d.Log("%s was deregistered successfully", name)
+	if aws.ToBool(opt.Delete) {
+		d.Log("Deleting %s", name)
+		if _, err := d.ecs.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
+			TaskDefinitions: []string{name},
+		}); err != nil {
+			return fmt.Errorf("failed to delete task definition: %w", err)
+		}
+		d.Log("%s was deleted successfully", name)
 	}
 	return nil
 }
@@ -157,33 +159,34 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 	}
 
 	deregistered := 0
-	if aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %d revisons?", len(deregs)), false) {
-		for _, name := range deregs {
-			d.Log("Deregistring %s", name)
-			if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
-				TaskDefinition: aws.String(name),
-			}); err != nil {
-				return fmt.Errorf("failed to deregister task definition: %w", err)
-			}
-			d.Log("%s was deregistered successfully", name)
-			time.Sleep(time.Second)
-			deregistered++
-		}
-		if aws.ToBool(opt.Delete) {
-			d.Log("Deleting %d task definitions", len(deregs))
-			if _, err := d.ecs.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
-				TaskDefinitions: deregs,
-			}); err != nil {
-				return fmt.Errorf("failed to delete task definition: %w", err)
-			}
-			d.Log("%d task definitions were deleted successfully", len(deregs))
-		}
-	} else {
+	confirmed := aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %d revisons?", len(deregs)), false)
+	if !confirmed {
 		d.Log("Aborted")
 		return fmt.Errorf("confirmation failed")
 	}
+	for _, name := range deregs {
+		d.Log("Deregistring %s", name)
+		if _, err := d.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
+			TaskDefinition: aws.String(name),
+		}); err != nil {
+			return fmt.Errorf("failed to deregister task definition: %w", err)
+		}
+		d.Log("%s was deregistered successfully", name)
+		time.Sleep(time.Second)
+		deregistered++
+	}
 	d.Log("%d task definitions were deregistered", deregistered)
-
+	if aws.ToBool(opt.Delete) {
+		for _, names := range lo.Chunk(deregs, 10) { // 10 is max batch size
+			d.Log("Deleting task definitions %v", names)
+			if _, err := d.ecs.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
+				TaskDefinitions: names,
+			}); err != nil {
+				return fmt.Errorf("failed to delete task definition: %w", err)
+			}
+			d.Log("%d task definitions were deleted successfully", len(names))
+		}
+	}
 	return nil
 }
 
