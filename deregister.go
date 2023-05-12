@@ -19,6 +19,7 @@ type DeregisterOption struct {
 	Keeps    *int    `help:"number of task definitions to keep except in-use" default:"0"`
 	Revision *string `help:"revision number or 'latest'" default:""`
 	Force    *bool   `help:"force deregister without confirmation" default:"false"`
+	Delete   *bool   `help:"delete task definition on deregistered" default:"false"`
 }
 
 func (opt DeregisterOption) DryRunString() string {
@@ -89,6 +90,15 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 			return fmt.Errorf("failed to deregister task definition: %w", err)
 		}
 		d.Log("%s was deregistered successfully", name)
+		if aws.ToBool(opt.Delete) {
+			d.Log("Deleting %s", name)
+			if _, err := d.ecs.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
+				TaskDefinitions: []string{name},
+			}); err != nil {
+				return fmt.Errorf("failed to delete task definition: %w", err)
+			}
+			d.Log("%s was deleted successfully", name)
+		}
 	} else {
 		d.Log("Aborted")
 		return fmt.Errorf("confirmation failed")
@@ -158,6 +168,15 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 			d.Log("%s was deregistered successfully", name)
 			time.Sleep(time.Second)
 			deregistered++
+		}
+		if aws.ToBool(opt.Delete) {
+			d.Log("Deleting %d task definitions", len(deregs))
+			if _, err := d.ecs.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
+				TaskDefinitions: deregs,
+			}); err != nil {
+				return fmt.Errorf("failed to delete task definition: %w", err)
+			}
+			d.Log("%d task definitions were deleted successfully", len(deregs))
 		}
 	} else {
 		d.Log("Aborted")
