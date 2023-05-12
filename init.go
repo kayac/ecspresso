@@ -18,24 +18,24 @@ import (
 var CreateFileMode = os.FileMode(0644)
 
 type InitOption struct {
-	Region                *string `help:"AWS region" env:"AWS_REGION" default:""`
-	Cluster               *string `help:"ECS cluster name" default:"default"`
-	Service               *string `help:"ECS service name" required:""`
-	TaskDefinitionPath    *string `help:"path to output task definition file" default:"ecs-task-def.json"`
-	ServiceDefinitionPath *string `help:"path to output service definition file" default:"ecs-service-def.json"`
-	ConfigFilePath        *string
+	Region                string `help:"AWS region" env:"AWS_REGION" default:""`
+	Cluster               string `help:"ECS cluster name" default:"default"`
+	Service               string `help:"ECS service name" required:""`
+	TaskDefinitionPath    string `help:"path to output task definition file" default:"ecs-task-def.json"`
+	ServiceDefinitionPath string `help:"path to output service definition file" default:"ecs-service-def.json"`
+	ConfigFilePath        string
 	ForceOverwrite        bool `help:"overwrite existing files" default:"false"`
 	Jsonnet               bool `help:"output files as jsonnet format" default:"false"`
 }
 
 func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
 	conf := NewDefaultConfig()
-	conf.path = *opt.ConfigFilePath
-	conf.Region = *opt.Region
-	conf.Cluster = *opt.Cluster
-	conf.Service = *opt.Service
-	conf.TaskDefinitionPath = *opt.TaskDefinitionPath
-	conf.ServiceDefinitionPath = *opt.ServiceDefinitionPath
+	conf.path = opt.ConfigFilePath
+	conf.Region = opt.Region
+	conf.Cluster = opt.Cluster
+	conf.Service = opt.Service
+	conf.TaskDefinitionPath = opt.TaskDefinitionPath
+	conf.ServiceDefinitionPath = opt.ServiceDefinitionPath
 	if err := conf.Restrict(ctx); err != nil {
 		return nil, err
 	}
@@ -59,9 +59,8 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 		if ext := filepath.Ext(conf.TaskDefinitionPath); ext == jsonExt {
 			conf.TaskDefinitionPath = strings.TrimSuffix(conf.TaskDefinitionPath, ext) + jsonnetExt
 		}
-		if ext := filepath.Ext(*opt.ConfigFilePath); ext == ymlExt || ext == yamlExt {
-			p := strings.TrimSuffix(*opt.ConfigFilePath, ext) + jsonnetExt
-			opt.ConfigFilePath = &p
+		if ext := filepath.Ext(opt.ConfigFilePath); ext == ymlExt || ext == yamlExt {
+			opt.ConfigFilePath = strings.TrimSuffix(opt.ConfigFilePath, ext) + jsonnetExt
 		}
 	}
 	if err := conf.Restrict(ctx); err != nil {
@@ -152,7 +151,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 			if err != nil {
 				return fmt.Errorf("unable to marshal config to JSON: %w", err)
 			}
-			out, err := formatter.Format(*opt.ConfigFilePath, string(b), formatter.DefaultOptions())
+			out, err := formatter.Format(opt.ConfigFilePath, string(b), formatter.DefaultOptions())
 			if err != nil {
 				return fmt.Errorf("unable to format config as Jsonnet: %w", err)
 			}
@@ -163,8 +162,8 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 				return fmt.Errorf("unable to marshal config to YAML: %w", err)
 			}
 		}
-		d.Log("save config to %s", *opt.ConfigFilePath)
-		if err := d.saveFile(*opt.ConfigFilePath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
+		d.Log("save config to %s", opt.ConfigFilePath)
+		if err := d.saveFile(opt.ConfigFilePath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
 			return err
 		}
 	}

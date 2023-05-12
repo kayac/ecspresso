@@ -25,18 +25,18 @@ const (
 )
 
 type DeployOption struct {
-	DryRun               bool    `help:"dry run" default:"false"`
-	DesiredCount         *int32  `name:"tasks" help:"desired count of tasks" default:"-1"`
-	SkipTaskDefinition   bool    `help:"skip register a new task definition" default:"false"`
-	ForceNewDeployment   bool    `help:"force a new deployment of the service" default:"false"`
-	Wait                 bool    `help:"wait for service stable" default:"true" negatable:""`
-	SuspendAutoScaling   *bool   `help:"suspend application auto-scaling attached with the ECS service"`
-	ResumeAutoScaling    *bool   `help:"resume application auto-scaling attached with the ECS service"`
-	AutoScalingMin       *int32  `help:"set minimum capacity of application auto-scaling attached with the ECS service"`
-	AutoScalingMax       *int32  `help:"set maximum capacity of application auto-scaling attached with the ECS service"`
-	RollbackEvents       *string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
-	UpdateService        bool    `help:"update service attributes by service definition" default:"true" negatable:""`
-	LatestTaskDefinition bool    `help:"deploy with the latest task definition without registering a new task definition" default:"false"`
+	DryRun               bool   `help:"dry run" default:"false"`
+	DesiredCount         *int32 `name:"tasks" help:"desired count of tasks" default:"-1"`
+	SkipTaskDefinition   bool   `help:"skip register a new task definition" default:"false"`
+	ForceNewDeployment   bool   `help:"force a new deployment of the service" default:"false"`
+	Wait                 bool   `help:"wait for service stable" default:"true" negatable:""`
+	SuspendAutoScaling   *bool  `help:"suspend application auto-scaling attached with the ECS service"`
+	ResumeAutoScaling    *bool  `help:"resume application auto-scaling attached with the ECS service"`
+	AutoScalingMin       *int32 `help:"set minimum capacity of application auto-scaling attached with the ECS service"`
+	AutoScalingMax       *int32 `help:"set maximum capacity of application auto-scaling attached with the ECS service"`
+	RollbackEvents       string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
+	UpdateService        bool   `help:"update service attributes by service definition" default:"true" negatable:""`
+	LatestTaskDefinition bool   `help:"deploy with the latest task definition without registering a new task definition" default:"false"`
 }
 
 func (opt DeployOption) DryRunString() string {
@@ -403,7 +403,7 @@ func (d *App) findCodeDeployDeploymentGroups(ctx context.Context, appName string
 	return groups, nil
 }
 
-func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionArn string, rollbackEvents *string) error {
+func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionArn string, rollbackEvents string) error {
 	spec, err := appspec.NewWithService(&sv.Service, taskDefinitionArn)
 	if err != nil {
 		return fmt.Errorf("failed to create appspec: %w", err)
@@ -429,9 +429,9 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 			},
 		},
 	}
-	if ev := aws.ToString(rollbackEvents); ev != "" {
+	if rollbackEvents != "" {
 		var events []cdTypes.AutoRollbackEvent
-		for _, ev := range strings.Split(ev, ",") {
+		for _, ev := range strings.Split(rollbackEvents, ",") {
 			switch ev {
 			case "DEPLOYMENT_FAILURE":
 				events = append(events, cdTypes.AutoRollbackEventDeploymentFailure)

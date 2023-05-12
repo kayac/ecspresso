@@ -190,7 +190,7 @@ func (opt *Option) resolveConfigFilePath() (path string) {
 	defer func() {
 		opt.ConfigFilePath = path
 		if opt.InitOption != nil {
-			opt.InitOption.ConfigFilePath = &path
+			opt.InitOption.ConfigFilePath = path
 		}
 	}()
 	if opt.ConfigFilePath != "" && opt.ConfigFilePath != DefaultConfigFilePath {

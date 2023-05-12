@@ -15,8 +15,8 @@ import (
 )
 
 type RevisionsOption struct {
-	Revision *string `help:"revision number or 'current' or 'latest'" default:""`
-	Output   *string `help:"output format (json, table, tsv)" default:"table" enum:"json,table,tsv"`
+	Revision string `help:"revision number or 'current' or 'latest'" default:""`
+	Output   string `help:"output format (json, table, tsv)" default:"table" enum:"json,table,tsv"`
 }
 
 type revision struct {
@@ -78,8 +78,8 @@ func (d *App) Revesions(ctx context.Context, opt RevisionsOption) error {
 		return err
 	}
 
-	if rv := aws.ToString(opt.Revision); rv != "" {
-		return d.dumpRevision(ctx, aws.ToString(td.Family), rv)
+	if opt.Revision != "" {
+		return d.dumpRevision(ctx, aws.ToString(td.Family), opt.Revision)
 	}
 
 	inUse, err := d.inUseRevisions(ctx)
@@ -111,7 +111,7 @@ func (d *App) Revesions(ctx context.Context, opt RevisionsOption) error {
 			break
 		}
 	}
-	switch aws.ToString(opt.Output) {
+	switch opt.Output {
 	case "json":
 		revs.OutputJSON(os.Stdout)
 	case "table":

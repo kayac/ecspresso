@@ -16,11 +16,11 @@ import (
 )
 
 type DeregisterOption struct {
-	DryRun   bool    `help:"dry run" default:"false"`
-	Keeps    *int    `help:"number of task definitions to keep except in-use" default:"0"`
-	Revision *string `help:"revision number or 'latest'" default:""`
-	Force    bool    `help:"force deregister without confirmation" default:"false"`
-	Delete   bool    `help:"delete task definition on deregistered" default:"false"`
+	DryRun   bool   `help:"dry run" default:"false"`
+	Keeps    *int   `help:"number of task definitions to keep except in-use"`
+	Revision string `help:"revision number or 'latest'" default:""`
+	Force    bool   `help:"force deregister without confirmation" default:"false"`
+	Delete   bool   `help:"delete task definition on deregistered" default:"false"`
 }
 
 func (opt DeregisterOption) DryRunString() string {
@@ -40,9 +40,9 @@ func (d *App) Deregister(ctx context.Context, opt DeregisterOption) error {
 		return err
 	}
 
-	if aws.ToString(opt.Revision) != "" {
+	if opt.Revision != "" {
 		return d.deregiserRevision(ctx, opt, inUse)
-	} else if aws.ToInt(opt.Keeps) > 0 {
+	} else if opt.Keeps != nil && *opt.Keeps > 0 {
 		return d.deregisterKeeps(ctx, opt, inUse)
 	}
 	return fmt.Errorf("--revision or --keeps required")
@@ -54,7 +54,7 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 		return err
 	}
 	var rv int32
-	switch aws.ToString(opt.Revision) {
+	switch opt.Revision {
 	case "latest":
 		res, err := d.ecs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
 			TaskDefinition: td.Family,
@@ -65,7 +65,7 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 		}
 		rv = res.TaskDefinition.Revision
 	default:
-		if v, err := strconv.ParseInt(aws.ToString(opt.Revision), 10, 64); err != nil {
+		if v, err := strconv.ParseInt(opt.Revision, 10, 64); err != nil {
 			return fmt.Errorf("invalid revision number: %w", err)
 		} else {
 			rv = int32(v)

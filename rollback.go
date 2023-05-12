@@ -14,10 +14,10 @@ import (
 )
 
 type RollbackOption struct {
-	DryRun                   bool    `help:"dry run" default:"false"`
-	DeregisterTaskDefinition bool    `help:"deregister the rolled-back task definition. not works with --no-wait" default:"true" negatable:""`
-	Wait                     bool    `help:"wait for the service stable" default:"true" negatable:""`
-	RollbackEvents           *string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
+	DryRun                   bool   `help:"dry run" default:"false"`
+	DeregisterTaskDefinition bool   `help:"deregister the rolled-back task definition. not works with --no-wait" default:"true" negatable:""`
+	Wait                     bool   `help:"wait for the service stable" default:"true" negatable:""`
+	RollbackEvents           string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
 }
 
 func (opt RollbackOption) DryRunString() string {

@@ -11,16 +11,16 @@ import (
 )
 
 type TasksOption struct {
-	ID     *string `help:"task ID" default:""`
-	Output *string `help:"output format" enum:"table,json,tsv" default:"table"`
-	Find   bool    `help:"find a task from tasks list and dump it as JSON" default:"false"`
-	Stop   bool    `help:"stop the task" default:"false"`
-	Force  bool    `help:"stop the task without confirmation" default:"false"`
-	Trace  bool    `help:"trace the task" default:"false"`
+	ID     string `help:"task ID" default:""`
+	Output string `help:"output format" enum:"table,json,tsv" default:"table"`
+	Find   bool   `help:"find a task from tasks list and dump it as JSON" default:"false"`
+	Stop   bool   `help:"stop the task" default:"false"`
+	Force  bool   `help:"stop the task without confirmation" default:"false"`
+	Trace  bool   `help:"trace the task" default:"false"`
 }
 
 func (o TasksOption) taskID() string {
-	return aws.ToString(o.ID)
+	return o.ID
 }
 
 func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
@@ -31,7 +31,7 @@ func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
 	if err != nil {
 		return err
 	}
-	ecstaApp.Config.Set("output", aws.ToString(opt.Output))
+	ecstaApp.Config.Set("output", opt.Output)
 
 	family, err := d.taskDefinitionFamily(ctx)
 	if err != nil {
