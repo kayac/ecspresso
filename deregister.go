@@ -16,15 +16,15 @@ import (
 )
 
 type DeregisterOption struct {
-	DryRun   *bool   `help:"dry run" default:"false"`
+	DryRun   bool    `help:"dry run" default:"false"`
 	Keeps    *int    `help:"number of task definitions to keep except in-use" default:"0"`
 	Revision *string `help:"revision number or 'latest'" default:""`
-	Force    *bool   `help:"force deregister without confirmation" default:"false"`
-	Delete   *bool   `help:"delete task definition on deregistered" default:"false"`
+	Force    bool    `help:"force deregister without confirmation" default:"false"`
+	Delete   bool    `help:"delete task definition on deregistered" default:"false"`
 }
 
 func (opt DeregisterOption) DryRunString() string {
-	if *opt.DryRun {
+	if opt.DryRun {
 		return dryRunStr
 	}
 	return ""
@@ -78,12 +78,12 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 		return fmt.Errorf("%s is in use by %s", name, s)
 	}
 
-	if aws.ToBool(opt.DryRun) {
+	if opt.DryRun {
 		d.Log("task definition %s will be deregistered", name)
 		d.Log("DRY RUN OK")
 		return nil
 	}
-	confirmed := aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %s ?", name), false)
+	confirmed := opt.Force || prompter.YesNo(fmt.Sprintf("Deregister %s ?", name), false)
 	if !confirmed {
 		d.Log("Aborted")
 		return fmt.Errorf("confirmation failed")
@@ -96,7 +96,7 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 		return fmt.Errorf("failed to deregister task definition: %w", err)
 	}
 	d.Log("%s was deregistered successfully", name)
-	if aws.ToBool(opt.Delete) {
+	if opt.Delete {
 		d.Log("Deleting %s", name)
 		if _, err := d.ecs.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
 			TaskDefinitions: []string{name},
@@ -153,13 +153,13 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 			deregs = append(deregs, name)
 		}
 	}
-	if aws.ToBool(opt.DryRun) {
+	if opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
 	}
 
 	deregistered := 0
-	confirmed := aws.ToBool(opt.Force) || prompter.YesNo(fmt.Sprintf("Deregister %d revisons?", len(deregs)), false)
+	confirmed := opt.Force || prompter.YesNo(fmt.Sprintf("Deregister %d revisons?", len(deregs)), false)
 	if !confirmed {
 		d.Log("Aborted")
 		return fmt.Errorf("confirmation failed")
@@ -176,7 +176,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 		deregistered++
 	}
 	d.Log("%d task definitions were deregistered", deregistered)
-	if aws.ToBool(opt.Delete) {
+	if opt.Delete {
 		for _, names := range lo.Chunk(deregs, 10) { // 10 is max batch size
 			d.Log("Deleting task definitions %s", strings.Join(names, ","))
 			if _, err := d.ecs.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{

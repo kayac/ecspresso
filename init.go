@@ -24,8 +24,8 @@ type InitOption struct {
 	TaskDefinitionPath    *string `help:"path to output task definition file" default:"ecs-task-def.json"`
 	ServiceDefinitionPath *string `help:"path to output service definition file" default:"ecs-service-def.json"`
 	ConfigFilePath        *string
-	ForceOverwrite        *bool `help:"overwrite existing files" default:"false"`
-	Jsonnet               *bool `help:"output files as jsonnet format" default:"false"`
+	ForceOverwrite        bool `help:"overwrite existing files" default:"false"`
+	Jsonnet               bool `help:"output files as jsonnet format" default:"false"`
 }
 
 func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
@@ -52,7 +52,7 @@ var (
 func (d *App) Init(ctx context.Context, opt InitOption) error {
 	conf := d.config
 	d.LogJSON(opt)
-	if *opt.Jsonnet {
+	if opt.Jsonnet {
 		if ext := filepath.Ext(conf.ServiceDefinitionPath); ext == jsonExt {
 			conf.ServiceDefinitionPath = strings.TrimSuffix(conf.ServiceDefinitionPath, ext) + jsonnetExt
 		}
@@ -101,7 +101,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 	if b, err := MarshalJSONForAPI(sv); err != nil {
 		return fmt.Errorf("unable to marshal service definition to JSON: %w", err)
 	} else {
-		if *opt.Jsonnet {
+		if opt.Jsonnet {
 			out, err := formatter.Format(conf.ServiceDefinitionPath, string(b), formatter.DefaultOptions())
 			if err != nil {
 				return fmt.Errorf("unable to format service definition as Jsonnet: %w", err)
@@ -109,7 +109,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 			b = []byte(out)
 		}
 		d.Log("save service definition to %s", conf.ServiceDefinitionPath)
-		if err := d.saveFile(conf.ServiceDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
+		if err := d.saveFile(conf.ServiceDefinitionPath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
 			return err
 		}
 	}
@@ -118,7 +118,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 	if b, err := MarshalJSONForAPI(td); err != nil {
 		return fmt.Errorf("unable to marshal task definition to JSON: %w", err)
 	} else {
-		if *opt.Jsonnet {
+		if opt.Jsonnet {
 			out, err := formatter.Format(conf.TaskDefinitionPath, string(b), formatter.DefaultOptions())
 			if err != nil {
 				return fmt.Errorf("unable to format task definition as Jsonnet: %w", err)
@@ -126,7 +126,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 			b = []byte(out)
 		}
 		d.Log("save task definition to %s", conf.TaskDefinitionPath)
-		if err := d.saveFile(conf.TaskDefinitionPath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
+		if err := d.saveFile(conf.TaskDefinitionPath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
 			return err
 		}
 	}
@@ -147,7 +147,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 	{
 		var b []byte
 		var err error
-		if *opt.Jsonnet {
+		if opt.Jsonnet {
 			b, err = json.MarshalIndent(conf, "", "  ")
 			if err != nil {
 				return fmt.Errorf("unable to marshal config to JSON: %w", err)
@@ -164,7 +164,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 			}
 		}
 		d.Log("save config to %s", *opt.ConfigFilePath)
-		if err := d.saveFile(*opt.ConfigFilePath, b, CreateFileMode, *opt.ForceOverwrite); err != nil {
+		if err := d.saveFile(*opt.ConfigFilePath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
 			return err
 		}
 	}

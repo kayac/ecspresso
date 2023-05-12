@@ -13,7 +13,7 @@ type ExecOption struct {
 	Command   *string `help:"command to execute" default:"sh"`
 	Container *string `help:"container name" default:""`
 
-	PortForward *bool   `help:"enable port forward" default:"false"`
+	PortForward bool    `help:"enable port forward" default:"false"`
 	LocalPort   *int    `help:"local port number" default:"0"`
 	Port        *int    `help:"remote port number (required for --port-forward)" default:"0"`
 	Host        *string `help:"remote host (required for --port-forward)" default:""`
@@ -47,7 +47,7 @@ func (d *App) Exec(ctx context.Context, opt ExecOption) error {
 		service = &d.config.Service
 	}
 
-	if aws.ToBool(opt.PortForward) {
+	if opt.PortForward {
 		return ecstaApp.RunPortforward(ctx, &ecsta.PortforwardOption{
 			ID:         aws.ToString(opt.ID),
 			Container:  aws.ToString(opt.Container),
