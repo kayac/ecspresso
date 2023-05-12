@@ -116,6 +116,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		if err != nil {
 			return err
 		}
+		addedTags, updatedTags, deletedTags := CompareTags(sv.Tags, newSv.Tags)
 		ds, err := diffServices(newSv, sv, "", d.config.ServiceDefinitionPath, true)
 		if err != nil {
 			return fmt.Errorf("failed to diff of service definitions: %w", err)
@@ -127,6 +128,9 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 			sv = newSv // updated
 		} else {
 			d.Log("service attributes will not change")
+		}
+		if err := d.UpdateServiceTags(ctx, sv, addedTags, updatedTags, deletedTags, opt); err != nil {
+			return err
 		}
 		count = calcDesiredCount(newSv, opt)
 	} else {
@@ -251,8 +255,10 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, taskDefi
 	}
 	d.Log("Updating service attributes...")
 
-	if _, err := d.ecs.UpdateService(ctx, in); err != nil {
+	if out, err := d.ecs.UpdateService(ctx, in); err != nil {
 		return fmt.Errorf("failed to update service attributes: %w", err)
+	} else {
+		sv.ServiceArn = out.Service.ServiceArn
 	}
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	return nil
@@ -477,4 +483,48 @@ func (d *App) DeployFunc(sv *Service) (deployFunc, error) {
 		}
 	}
 	return defaultFunc, nil
+}
+
+func (d *App) UpdateServiceTags(ctx context.Context, sv *Service, added, updated, deleted []types.Tag, opt DeployOption) error {
+	if len(added) == 0 && len(updated) == 0 && len(deleted) == 0 {
+		d.Log("[DEBUG] no service tags to update")
+		return nil
+	}
+	var tags []types.Tag
+	tags = append(tags, added...)
+	tags = append(tags, updated...)
+	var untagKeys []string
+	for _, t := range deleted {
+		untagKeys = append(untagKeys, *t.Key)
+	}
+
+	if len(tags) > 0 {
+		for _, t := range tags {
+			d.Log("[INFO] updating service tags: %s=%s", aws.ToString(t.Key), aws.ToString(t.Value))
+		}
+	}
+	if len(untagKeys) > 0 {
+		d.Log("[INFO] deleting service tags: %v", untagKeys)
+	}
+	if *opt.DryRun {
+		return nil
+	}
+
+	if len(tags) > 0 {
+		if _, err := d.ecs.TagResource(ctx, &ecs.TagResourceInput{
+			ResourceArn: sv.ServiceArn,
+			Tags:        tags,
+		}); err != nil {
+			return fmt.Errorf("failed to tag service: %w", err)
+		}
+	}
+	if len(untagKeys) > 0 {
+		if _, err := d.ecs.UntagResource(ctx, &ecs.UntagResourceInput{
+			ResourceArn: sv.ServiceArn,
+			TagKeys:     untagKeys,
+		}); err != nil {
+			return fmt.Errorf("failed to untag service: %w", err)
+		}
+	}
+	return nil
 }

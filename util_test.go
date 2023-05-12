@@ -156,3 +156,54 @@ func TestMap2str(t *testing.T) {
 		}
 	}
 }
+
+func TestCompareTags(t *testing.T) {
+	testCases := []struct {
+		name            string
+		oldTags         []types.Tag
+		newTags         []types.Tag
+		expectedAdded   []types.Tag
+		expectedUpdated []types.Tag
+		expectedDeleted []types.Tag
+	}{
+		{
+			name: "Test 1",
+			oldTags: []types.Tag{
+				{Key: ptr("key1"), Value: ptr("value1")},
+				{Key: ptr("key2"), Value: ptr("value2")},
+				{Key: ptr("key3"), Value: ptr("value3")},
+			},
+			newTags: []types.Tag{
+				{Key: ptr("key1"), Value: ptr("value1_updated")},
+				{Key: ptr("key2"), Value: ptr("value2")},
+				{Key: ptr("key4"), Value: ptr("value4")},
+			},
+			expectedAdded: []types.Tag{
+				{Key: ptr("key4"), Value: ptr("value4")},
+			},
+			expectedUpdated: []types.Tag{
+				{Key: ptr("key1"), Value: ptr("value1_updated")},
+			},
+			expectedDeleted: []types.Tag{
+				{Key: ptr("key3"), Value: ptr("value3")},
+			},
+		},
+		// TODO Add more test cases
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			added, updated, deleted := ecspresso.CompareTags(tc.oldTags, tc.newTags)
+
+			if diff := cmp.Diff(added, tc.expectedAdded, cmp.AllowUnexported(types.Tag{})); diff != "" {
+				t.Errorf("Added mismatch (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(updated, tc.expectedUpdated, cmp.AllowUnexported(types.Tag{})); diff != "" {
+				t.Errorf("Updated mismatch (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(deleted, tc.expectedDeleted, cmp.AllowUnexported(types.Tag{})); diff != "" {
+				t.Errorf("Deleted mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}

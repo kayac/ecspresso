@@ -12,6 +12,10 @@
     }
   ],
   "deploymentConfiguration": {
+    "deploymentCircuitBreaker": {
+      "enable": false,
+      "rollback": false
+    },
     "maximumPercent": 200,
     "minimumHealthyPercent": 100
   },
@@ -50,6 +54,10 @@
   "serviceRegistries": [],
   "propagateTags": "SERVICE",
   "tags": [
+    {
+      "key": "deployed_at",
+      "value": "{{ env `NOW` `` }}"
+    },
     {
       "key": "cluster",
       "value": "ecspresso-test"

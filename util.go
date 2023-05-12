@@ -78,3 +78,32 @@ func map2str(m map[string]string) string {
 	}
 	return strings.Join(p, ",")
 }
+
+func CompareTags(oldTags, newTags []types.Tag) (added, updated, deleted []types.Tag) {
+	oldTagMap := make(map[string]string)
+	newTagMap := make(map[string]string)
+
+	for _, t := range oldTags {
+		oldTagMap[aws.ToString(t.Key)] = aws.ToString(t.Value)
+	}
+	for _, t := range newTags {
+		newTagMap[aws.ToString(t.Key)] = aws.ToString(t.Value)
+	}
+
+	for k, v := range oldTagMap {
+		if newVal, ok := newTagMap[k]; ok {
+			if v != newVal {
+				updated = append(updated, types.Tag{Key: aws.String(k), Value: aws.String(newVal)})
+			}
+			delete(newTagMap, k)
+		} else {
+			deleted = append(deleted, types.Tag{Key: aws.String(k), Value: aws.String(v)})
+		}
+	}
+
+	for k, v := range newTagMap {
+		added = append(added, types.Tag{Key: aws.String(k), Value: aws.String(v)})
+	}
+
+	return
+}

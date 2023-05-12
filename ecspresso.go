@@ -210,6 +210,7 @@ func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
 	return &ecs.DescribeServicesInput{
 		Cluster:  aws.String(d.Cluster),
 		Services: []string{d.Service},
+		Include:  []types.ServiceField{types.ServiceFieldTags},
 	}
 }
 

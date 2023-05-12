@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/fatih/color"
 	"github.com/hexops/gotextdiff"
@@ -71,11 +72,16 @@ func (d *App) Diff(ctx context.Context, opt DiffOption) error {
 	return nil
 }
 
-func diffServices(local, remote *Service, remoteArn string, localPath string, unified bool) (string, error) {
-	sortServiceDefinitionForDiff(local)
-	sortServiceDefinitionForDiff(remote)
+type ServiceForDiff struct {
+	*ecs.UpdateServiceInput
+	Tags []types.Tag
+}
 
-	newSvBytes, err := MarshalJSONForAPI(svToUpdateServiceInput(local))
+func diffServices(local, remote *Service, remoteArn string, localPath string, unified bool) (string, error) {
+	localSvForDiff := ServiceDefinitionForDiff(local)
+	remoteSvForDiff := ServiceDefinitionForDiff(remote)
+
+	newSvBytes, err := MarshalJSONForAPI(localSvForDiff)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal new service definition: %w", err)
 	}
@@ -83,7 +89,7 @@ func diffServices(local, remote *Service, remoteArn string, localPath string, un
 		// ignore DesiredCount when it in local is not defined.
 		remote.DesiredCount = nil
 	}
-	remoteSvBytes, err := MarshalJSONForAPI(svToUpdateServiceInput(remote))
+	remoteSvBytes, err := MarshalJSONForAPI(remoteSvForDiff)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal remote service definition: %w", err)
 	}
@@ -173,27 +179,35 @@ func jsonStr(v interface{}) string {
 	return string(s)
 }
 
-func equalString(a *string, b string) bool {
-	if a == nil {
-		return b == ""
-	}
-	return *a == b
-}
-
-func sortServiceDefinitionForDiff(sv *Service) {
+func ServiceDefinitionForDiff(sv *Service) *ServiceForDiff {
 	sort.SliceStable(sv.PlacementConstraints, func(i, j int) bool {
 		return jsonStr(sv.PlacementConstraints[i]) < jsonStr(sv.PlacementConstraints[j])
 	})
 	sort.SliceStable(sv.PlacementStrategy, func(i, j int) bool {
 		return jsonStr(sv.PlacementStrategy[i]) < jsonStr(sv.PlacementStrategy[j])
 	})
+	sort.SliceStable(sv.Tags, func(i, j int) bool {
+		return aws.ToString(sv.Tags[i].Key) < aws.ToString(sv.Tags[j].Key)
+	})
 	if sv.LaunchType == types.LaunchTypeFargate && sv.PlatformVersion == nil {
 		sv.PlatformVersion = aws.String("LATEST")
 	}
-	if sv.SchedulingStrategy == "" && sv.DeploymentConfiguration == nil {
-		sv.DeploymentConfiguration = &types.DeploymentConfiguration{
-			MaximumPercent:        aws.Int32(200),
-			MinimumHealthyPercent: aws.Int32(100),
+	if sv.SchedulingStrategy == "" || sv.SchedulingStrategy == types.SchedulingStrategyReplica {
+		sv.SchedulingStrategy = types.SchedulingStrategyReplica
+		if sv.DeploymentConfiguration == nil {
+			sv.DeploymentConfiguration = &types.DeploymentConfiguration{
+				DeploymentCircuitBreaker: &types.DeploymentCircuitBreaker{
+					Enable:   false,
+					Rollback: false,
+				},
+				MaximumPercent:        aws.Int32(200),
+				MinimumHealthyPercent: aws.Int32(100),
+			}
+		} else if sv.DeploymentConfiguration.DeploymentCircuitBreaker == nil {
+			sv.DeploymentConfiguration.DeploymentCircuitBreaker = &types.DeploymentCircuitBreaker{
+				Enable:   false,
+				Rollback: false,
+			}
 		}
 	} else if sv.SchedulingStrategy == types.SchedulingStrategyDaemon && sv.DeploymentConfiguration == nil {
 		sv.DeploymentConfiguration = &types.DeploymentConfiguration{
@@ -214,6 +228,10 @@ func sortServiceDefinitionForDiff(sv *Service) {
 				return ac.Subnets[i] < ac.Subnets[j]
 			})
 		}
+	}
+	return &ServiceForDiff{
+		UpdateServiceInput: svToUpdateServiceInput(sv),
+		Tags:               sv.Tags,
 	}
 }
 

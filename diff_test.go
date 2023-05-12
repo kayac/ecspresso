@@ -25,7 +25,7 @@ var testSuiteToNumberMemory = [][]string{
 func TestToNumberCPU(t *testing.T) {
 	for _, s := range testSuiteToNumberCPU {
 		cpu := ecspresso.ToNumberCPU(s[0])
-		if !ecspresso.EqualString(cpu, s[1]) {
+		if aws.ToString(cpu) != s[1] {
 			t.Errorf("unexpected vcpu convertion %s => %s expected %s", s[0], *cpu, s[1])
 		}
 	}
@@ -34,7 +34,7 @@ func TestToNumberCPU(t *testing.T) {
 func TestToNumberMemory(t *testing.T) {
 	for _, s := range testSuiteToNumberMemory {
 		cpu := ecspresso.ToNumberMemory(s[0])
-		if !ecspresso.EqualString(cpu, s[1]) {
+		if aws.ToString(cpu) != s[1] {
 			t.Errorf("unexpected memory convertion %s => %s expected %s", s[0], *cpu, s[1])
 		}
 	}
@@ -163,6 +163,12 @@ var testServiceDefinition1 = &ecspresso.Service{
 				},
 			},
 		},
+		Tags: []types.Tag{
+			{
+				Key:   aws.String("Environment"),
+				Value: aws.String("Dev"),
+			},
+		},
 	},
 }
 
@@ -185,19 +191,24 @@ var testServiceDefinition2 = &ecspresso.Service{
 				AssignPublicIp: types.AssignPublicIpDisabled,
 			},
 		},
-		LaunchType:      types.LaunchTypeFargate,
-		PlatformVersion: aws.String("LATEST"),
+		LaunchType:         types.LaunchTypeFargate,
+		PlatformVersion:    aws.String("LATEST"),
+		SchedulingStrategy: types.SchedulingStrategyReplica,
+		Tags: []types.Tag{
+			{
+				Key:   aws.String("Environment"),
+				Value: aws.String("Dev"),
+			},
+		},
 	},
 }
 
 func TestServiceDefinitionDiffer(t *testing.T) {
-	ecspresso.SortServiceDefinitionForDiff(testServiceDefinition1)
-	ecspresso.SortServiceDefinitionForDiff(testServiceDefinition2)
-	sv1, _ := ecspresso.MarshalJSONForAPI(testServiceDefinition1)
-	sv2, _ := ecspresso.MarshalJSONForAPI(testServiceDefinition2)
-	if diff := cmp.Diff(sv1, sv2); diff != "" {
+	sv1 := ecspresso.ServiceDefinitionForDiff(testServiceDefinition1)
+	sv2 := ecspresso.ServiceDefinitionForDiff(testServiceDefinition2)
+	sv1Bytes, _ := ecspresso.MarshalJSONForAPI(sv1)
+	sv2Bytes, _ := ecspresso.MarshalJSONForAPI(sv2)
+	if diff := cmp.Diff(sv1Bytes, sv2Bytes); diff != "" {
 		t.Error("failed to SortTaskDefinitionForDiff", diff)
-		t.Log(string(sv1))
-		t.Log(string(sv2))
 	}
 }
