@@ -81,7 +81,7 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 	}
 	d.Log("Service is created")
 
-	if opt.NoWait {
+	if !opt.Wait {
 		return nil
 	}
 

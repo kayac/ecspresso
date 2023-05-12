@@ -16,7 +16,7 @@ import (
 type RollbackOption struct {
 	DryRun                   bool    `help:"dry run" default:"false"`
 	DeregisterTaskDefinition bool    `help:"deregister the rolled-back task definition. not works with --no-wait" default:"true" negatable:""`
-	NoWait                   bool    `help:"don't wait for the service stable" default:"false"`
+	Wait                     bool    `help:"wait for the service stable" default:"true" negatable:""`
 	RollbackEvents           *string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
 }
 
@@ -31,7 +31,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
-	if opt.DeregisterTaskDefinition && opt.NoWait {
+	if opt.DeregisterTaskDefinition && !opt.Wait {
 		return fmt.Errorf("--deregister-task-definition not works with --no-wait together. Please use --no-deregister-task-definition with --no-wait")
 	}
 
@@ -72,7 +72,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 		return err
 	}
 
-	if opt.NoWait {
+	if !opt.Wait {
 		d.Log("Service is rolled back.")
 		return nil
 	}

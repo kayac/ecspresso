@@ -15,7 +15,7 @@ import (
 type RunOption struct {
 	DryRun               bool    `help:"dry run" default:"false"`
 	TaskDefinition       *string `name:"task-def" help:"task definition file for run task" default:""`
-	NoWait               bool    `help:"don't wait for task to complete" default:"false"`
+	Wait                 bool    `help:"wait for task to complete" default:"true" negatable:""`
 	TaskOverrideStr      *string `name:"overrides" help:"task override JSON string" default:""`
 	TaskOverrideFile     *string `name:"overrides-file" help:"task override JSON file path" default:""`
 	SkipTaskDefinition   bool    `help:"skip register a new task definition" default:"false"`
@@ -81,7 +81,7 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 	if err != nil {
 		return err
 	}
-	if opt.NoWait {
+	if !opt.Wait {
 		d.Log("Run task invoked")
 		return nil
 	}

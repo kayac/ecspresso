@@ -3,7 +3,7 @@ package ecspresso
 type ScaleOption struct {
 	DryRun             bool   `help:"dry run" default:"false"`
 	DesiredCount       *int32 `name:"tasks" help:"desired count of tasks" default:"-1"`
-	NoWait             bool   `help:"exit ecspresso immediately after just deployed without waiting for service stable" default:"false"`
+	Wait               bool   `help:"wait for service stable" default:"true"`
 	SuspendAutoScaling *bool  `help:"suspend application auto-scaling attached with the ECS service"`
 	ResumeAutoScaling  *bool  `help:"resume application auto-scaling attached with the ECS service"`
 	AutoScalingMin     *int32 `help:"set minimum capacity of application auto-scaling attached with the ECS service"`
@@ -16,7 +16,7 @@ func (o *ScaleOption) DeployOption() DeployOption {
 		DryRun:               o.DryRun,
 		SkipTaskDefinition:   true,
 		ForceNewDeployment:   false,
-		NoWait:               o.NoWait,
+		Wait:                 o.Wait,
 		RollbackEvents:       ptr(""),
 		UpdateService:        false,
 		LatestTaskDefinition: false,

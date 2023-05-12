@@ -110,7 +110,7 @@ var cliTests = []struct {
 			DesiredCount:         ptr(int32(-1)),
 			SkipTaskDefinition:   false,
 			ForceNewDeployment:   false,
-			NoWait:               false,
+			Wait:                 true,
 			RollbackEvents:       ptr(""),
 			UpdateService:        true,
 			LatestTaskDefinition: false,
@@ -126,7 +126,7 @@ var cliTests = []struct {
 			DesiredCount:         ptr(int32(10)),
 			SkipTaskDefinition:   true,
 			ForceNewDeployment:   true,
-			NoWait:               true,
+			Wait:                 false,
 			RollbackEvents:       ptr(""),
 			UpdateService:        true,
 			LatestTaskDefinition: true,
@@ -142,7 +142,7 @@ var cliTests = []struct {
 			DesiredCount:         ptr(int32(-1)),
 			SkipTaskDefinition:   false,
 			ForceNewDeployment:   false,
-			NoWait:               false,
+			Wait:                 true,
 			RollbackEvents:       ptr(""),
 			UpdateService:        true,
 			LatestTaskDefinition: false,
@@ -158,7 +158,7 @@ var cliTests = []struct {
 			DesiredCount:         ptr(int32(-1)),
 			SkipTaskDefinition:   false,
 			ForceNewDeployment:   false,
-			NoWait:               false,
+			Wait:                 true,
 			RollbackEvents:       ptr(""),
 			UpdateService:        true,
 			LatestTaskDefinition: false,
@@ -176,7 +176,7 @@ var cliTests = []struct {
 			DesiredCount:         ptr(int32(-1)),
 			SkipTaskDefinition:   false,
 			ForceNewDeployment:   false,
-			NoWait:               false,
+			Wait:                 true,
 			RollbackEvents:       ptr(""),
 			UpdateService:        true,
 			LatestTaskDefinition: false,
@@ -188,7 +188,7 @@ var cliTests = []struct {
 		subOption: &ecspresso.ScaleOption{
 			DryRun:       false,
 			DesiredCount: ptr(int32(5)),
-			NoWait:       false,
+			Wait:         true,
 		},
 		fn: func(t *testing.T, o any) {
 			do := o.(*ecspresso.ScaleOption).DeployOption()
@@ -197,7 +197,7 @@ var cliTests = []struct {
 				DesiredCount:         ptr(int32(5)),
 				SkipTaskDefinition:   true,
 				ForceNewDeployment:   false,
-				NoWait:               false,
+				Wait:                 true,
 				RollbackEvents:       ptr(""),
 				UpdateService:        false,
 				LatestTaskDefinition: false,
@@ -212,7 +212,7 @@ var cliTests = []struct {
 		subOption: &ecspresso.ScaleOption{
 			DryRun:             false,
 			DesiredCount:       ptr(int32(-1)),
-			NoWait:             false,
+			Wait:               true,
 			SuspendAutoScaling: ptr(true),
 		},
 		fn: func(t *testing.T, o any) {
@@ -222,7 +222,7 @@ var cliTests = []struct {
 				DesiredCount:         ptr(int32(-1)),
 				SkipTaskDefinition:   true,
 				ForceNewDeployment:   false,
-				NoWait:               false,
+				Wait:                 true,
 				RollbackEvents:       ptr(""),
 				UpdateService:        false,
 				LatestTaskDefinition: false,
@@ -238,7 +238,7 @@ var cliTests = []struct {
 		subOption: &ecspresso.ScaleOption{
 			DryRun:            false,
 			DesiredCount:      ptr(int32(-1)),
-			NoWait:            false,
+			Wait:              true,
 			ResumeAutoScaling: ptr(true),
 		},
 		fn: func(t *testing.T, o any) {
@@ -248,7 +248,7 @@ var cliTests = []struct {
 				DesiredCount:         ptr(int32(-1)),
 				SkipTaskDefinition:   true,
 				ForceNewDeployment:   false,
-				NoWait:               false,
+				Wait:                 true,
 				RollbackEvents:       ptr(""),
 				UpdateService:        false,
 				LatestTaskDefinition: false,
@@ -264,7 +264,7 @@ var cliTests = []struct {
 		subOption: &ecspresso.ScaleOption{
 			DryRun:            false,
 			DesiredCount:      ptr(int32(-1)),
-			NoWait:            false,
+			Wait:              true,
 			ResumeAutoScaling: ptr(true),
 			AutoScalingMin:    ptr(int32(3)),
 			AutoScalingMax:    ptr(int32(10)),
@@ -276,7 +276,7 @@ var cliTests = []struct {
 				DesiredCount:         ptr(int32(-1)),
 				SkipTaskDefinition:   true,
 				ForceNewDeployment:   false,
-				NoWait:               false,
+				Wait:                 true,
 				RollbackEvents:       ptr(""),
 				UpdateService:        false,
 				LatestTaskDefinition: false,
@@ -293,7 +293,7 @@ var cliTests = []struct {
 		sub:  "refresh",
 		subOption: &ecspresso.RefreshOption{
 			DryRun: false,
-			NoWait: false,
+			Wait:   true,
 		},
 		fn: func(t *testing.T, o any) {
 			do := o.(*ecspresso.RefreshOption).DeployOption()
@@ -301,7 +301,7 @@ var cliTests = []struct {
 				DryRun:               false,
 				SkipTaskDefinition:   true,
 				ForceNewDeployment:   true,
-				NoWait:               false,
+				Wait:                 true,
 				RollbackEvents:       ptr(""),
 				UpdateService:        false,
 				LatestTaskDefinition: false,
@@ -316,7 +316,17 @@ var cliTests = []struct {
 		subOption: &ecspresso.RollbackOption{
 			DryRun:                   false,
 			DeregisterTaskDefinition: true, // v2
-			NoWait:                   false,
+			Wait:                     true,
+			RollbackEvents:           ptr(""),
+		},
+	},
+	{
+		args: []string{"rollback", "--no-wait"},
+		sub:  "rollback",
+		subOption: &ecspresso.RollbackOption{
+			DryRun:                   false,
+			DeregisterTaskDefinition: true, // v2
+			Wait:                     false,
 			RollbackEvents:           ptr(""),
 		},
 	},
@@ -326,7 +336,7 @@ var cliTests = []struct {
 		subOption: &ecspresso.RollbackOption{
 			DryRun:                   false,
 			DeregisterTaskDefinition: false,
-			NoWait:                   false,
+			Wait:                     true,
 			RollbackEvents:           ptr(""),
 		},
 	},
@@ -363,7 +373,26 @@ var cliTests = []struct {
 		subOption: &ecspresso.RunOption{
 			DryRun:               false,
 			TaskDefinition:       ptr(""),
-			NoWait:               false,
+			Wait:                 true,
+			Count:                ptr(int32(1)),
+			WatchContainer:       ptr(""),
+			PropagateTags:        ptr(""),
+			TaskOverrideStr:      ptr(""),
+			TaskOverrideFile:     ptr(""),
+			SkipTaskDefinition:   false,
+			LatestTaskDefinition: false,
+			Tags:                 ptr(""),
+			WaitUntil:            ptr("stopped"),
+			Revision:             ptr(int64(0)),
+		},
+	},
+	{
+		args: []string{"run", "--no-wait", "--dry-run"},
+		sub:  "run",
+		subOption: &ecspresso.RunOption{
+			DryRun:               true,
+			TaskDefinition:       ptr(""),
+			Wait:                 false,
 			Count:                ptr(int32(1)),
 			WatchContainer:       ptr(""),
 			PropagateTags:        ptr(""),
@@ -388,7 +417,7 @@ var cliTests = []struct {
 		subOption: &ecspresso.RunOption{
 			DryRun:               false,
 			TaskDefinition:       ptr("foo.json"),
-			NoWait:               false,
+			Wait:                 true,
 			Count:                ptr(int32(2)),
 			WatchContainer:       ptr("app"),
 			PropagateTags:        ptr("SERVICE"),

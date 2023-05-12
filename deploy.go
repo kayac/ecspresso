@@ -29,7 +29,7 @@ type DeployOption struct {
 	DesiredCount         *int32  `name:"tasks" help:"desired count of tasks" default:"-1"`
 	SkipTaskDefinition   bool    `help:"skip register a new task definition" default:"false"`
 	ForceNewDeployment   bool    `help:"force a new deployment of the service" default:"false"`
-	NoWait               bool    `help:"exit ecspresso immediately after just deployed without waiting for service stable" default:"false"`
+	Wait                 bool    `help:"wait for service stable" default:"true" negatable:""`
 	SuspendAutoScaling   *bool   `help:"suspend application auto-scaling attached with the ECS service"`
 	ResumeAutoScaling    *bool   `help:"resume application auto-scaling attached with the ECS service"`
 	AutoScalingMin       *int32  `help:"set minimum capacity of application auto-scaling attached with the ECS service"`
@@ -172,7 +172,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return err
 	}
 
-	if opt.NoWait {
+	if !opt.Wait {
 		d.Log("Service is deployed.")
 		return nil
 	}

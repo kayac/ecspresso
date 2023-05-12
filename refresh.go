@@ -2,7 +2,7 @@ package ecspresso
 
 type RefreshOption struct {
 	DryRun bool `help:"dry run" default:"false"`
-	NoWait bool `help:"exit ecspresso immediately after just deployed without waiting for service stable" default:"false"`
+	Wait   bool `help:"wait for service stable" default:"true"`
 }
 
 func (o *RefreshOption) DeployOption() DeployOption {
@@ -11,7 +11,7 @@ func (o *RefreshOption) DeployOption() DeployOption {
 		DesiredCount:         nil,
 		SkipTaskDefinition:   true,
 		ForceNewDeployment:   true,
-		NoWait:               o.NoWait,
+		Wait:                 o.Wait,
 		RollbackEvents:       ptr(""),
 		UpdateService:        false,
 		LatestTaskDefinition: false,
