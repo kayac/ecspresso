@@ -43,7 +43,7 @@ runs:
           unzip ${FILENAME}.zip
           sudo install ${FILENAME} ${RUNNER_TOOL_CACHE}/ecspresso/ecspresso
         fi
-        chmod +x ${RUNNER_TOOL_CACHE}/ecspresso/ecspresso
+        # chmod +x ${RUNNER_TOOL_CACHE}/ecspresso/ecspresso
         
         echo "Adding ${RUNNER_TOOL_CACHE}/ecspresso to path..."
         echo "${RUNNER_TOOL_CACHE}/ecspresso" >> $GITHUB_PATH
