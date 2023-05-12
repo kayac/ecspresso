@@ -37,7 +37,7 @@ var cliTests = []struct {
 			AssumeRoleARN:  "arn:aws:iam::123456789012:role/exampleRole",
 		},
 		subOption: &ecspresso.StatusOption{
-			Events: ptr(10),
+			Events: 10,
 		},
 		fn: func(t *testing.T, _ any) {
 			if v := os.Getenv("ECSPRESSO_TEST"); v != "ok" {
@@ -62,7 +62,7 @@ var cliTests = []struct {
 			AssumeRoleARN:  "",
 		},
 		subOption: &ecspresso.StatusOption{
-			Events: ptr(100),
+			Events: 100,
 		},
 	},
 	{
@@ -85,21 +85,21 @@ var cliTests = []struct {
 		args: []string{"status"},
 		sub:  "status",
 		subOption: &ecspresso.StatusOption{
-			Events: ptr(10),
+			Events: 10,
 		},
 	},
 	{
 		args: []string{"status", "--events=100"},
 		sub:  "status",
 		subOption: &ecspresso.StatusOption{
-			Events: ptr(100),
+			Events: 100,
 		},
 	},
 	{
 		args: []string{"status", "--events", "20"},
 		sub:  "status",
 		subOption: &ecspresso.StatusOption{
-			Events: ptr(20),
+			Events: 20,
 		},
 	},
 	{

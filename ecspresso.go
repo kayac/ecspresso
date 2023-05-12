@@ -37,10 +37,6 @@ var Version string
 var delayForServiceChanged = 3 * time.Second
 var spcIndent = "  "
 
-func ptr[T any](v T) *T {
-	return &v
-}
-
 type TaskDefinition = types.TaskDefinition
 
 type TaskDefinitionInput = ecs.RegisterTaskDefinitionInput
