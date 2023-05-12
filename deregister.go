@@ -3,6 +3,7 @@ package ecspresso
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -10,13 +11,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
 type DeregisterOption struct {
-	DryRun   *bool  `help:"dry run" default:"false"`
-	Keeps    *int   `help:"number of task definitions to keep except in-use" default:"0"`
-	Revision *int64 `help:"task definition revision to deregister" default:"0"`
-	Force    *bool  `help:"force deregister without confirmation" default:"false"`
+	DryRun   *bool   `help:"dry run" default:"false"`
+	Keeps    *int    `help:"number of task definitions to keep except in-use" default:"0"`
+	Revision *string `help:"revision number or 'latest'" default:""`
+	Force    *bool   `help:"force deregister without confirmation" default:"false"`
 }
 
 func (opt DeregisterOption) DryRunString() string {
@@ -36,7 +38,7 @@ func (d *App) Deregister(ctx context.Context, opt DeregisterOption) error {
 		return err
 	}
 
-	if aws.ToInt64(opt.Revision) > 0 {
+	if aws.ToString(opt.Revision) != "" {
 		return d.deregiserRevision(ctx, opt, inUse)
 	} else if aws.ToInt(opt.Keeps) > 0 {
 		return d.deregisterKeeps(ctx, opt, inUse)
@@ -49,7 +51,26 @@ func (d *App) deregiserRevision(ctx context.Context, opt DeregisterOption, inUse
 	if err != nil {
 		return err
 	}
-	name := fmt.Sprintf("%s:%d", aws.ToString(td.Family), aws.ToInt64(opt.Revision))
+	var rv int32
+	switch aws.ToString(opt.Revision) {
+	case "latest":
+		res, err := d.ecs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
+			TaskDefinition: td.Family,
+			Include:        []types.TaskDefinitionField{types.TaskDefinitionFieldTags},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to describe task definition %s: %w", *td.Family, err)
+		}
+		rv = res.TaskDefinition.Revision
+	default:
+		if v, err := strconv.ParseInt(aws.ToString(opt.Revision), 10, 64); err != nil {
+			return fmt.Errorf("invalid revision number: %w", err)
+		} else {
+			rv = int32(v)
+		}
+	}
+
+	name := fmt.Sprintf("%s:%d", aws.ToString(td.Family), rv)
 
 	if s := inUse[name]; s != "" {
 		return fmt.Errorf("%s is in use by %s", name, s)
