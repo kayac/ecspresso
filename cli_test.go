@@ -374,9 +374,10 @@ var cliTests = []struct {
 		sub:  "deregister",
 		subOption: &ecspresso.DeregisterOption{
 			DryRun:   ptr(false),
-			Revision: ptr(int64(0)),
+			Revision: ptr(""),
 			Keeps:    ptr(0),
 			Force:    ptr(false),
+			Delete:   ptr(false),
 		},
 	},
 	{
@@ -385,9 +386,34 @@ var cliTests = []struct {
 		sub: "deregister",
 		subOption: &ecspresso.DeregisterOption{
 			DryRun:   ptr(true),
-			Revision: ptr(int64(123)),
+			Revision: ptr("123"),
 			Keeps:    ptr(23),
 			Force:    ptr(true),
+			Delete:   ptr(false),
+		},
+	},
+	{
+		args: []string{"deregister",
+			"--dry-run", "--revision", "latest", "--keeps", "23", "--force"},
+		sub: "deregister",
+		subOption: &ecspresso.DeregisterOption{
+			DryRun:   ptr(true),
+			Revision: ptr("latest"),
+			Keeps:    ptr(23),
+			Force:    ptr(true),
+			Delete:   ptr(false),
+		},
+	},
+	{
+		args: []string{"deregister",
+			"--dry-run", "--revision", "latest", "--keeps", "23", "--force", "--delete"},
+		sub: "deregister",
+		subOption: &ecspresso.DeregisterOption{
+			DryRun:   ptr(true),
+			Revision: ptr("latest"),
+			Keeps:    ptr(23),
+			Force:    ptr(true),
+			Delete:   ptr(true),
 		},
 	},
 	{
