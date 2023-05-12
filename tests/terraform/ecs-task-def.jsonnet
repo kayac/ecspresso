@@ -8,7 +8,7 @@
         logDriver: 'awslogs',
         options: {
           'awslogs-create-group': 'true',
-          'awslogs-group': '{{tfstate `aws_cloudwatch_log_group.main.name`}}',
+          'awslogs-group': '{{ tfstate `aws_cloudwatch_log_group.main.name` }}',
           'awslogs-region': '{{ must_env `AWS_REGION` }}',
           'awslogs-stream-prefix': 'nginx',
         },
@@ -36,7 +36,7 @@
         logDriver: 'awslogs',
         options: {
           'awslogs-create-group': 'true',
-          'awslogs-group': '{{tfstate `aws_cloudwatch_log_group.main.name`}}',
+          'awslogs-group': '{{ tfstate `aws_cloudwatch_log_group.main.name` }}',
           'awslogs-region': '{{ must_env `AWS_REGION` }}',
           'awslogs-stream-prefix': 'bash',
         },
@@ -45,15 +45,15 @@
       secrets: [
         {
           name: 'FOO',
-          valueFrom: '{{tfstate `aws_ssm_parameter.foo.name`}}'
+          valueFrom: '{{ tfstate `aws_ssm_parameter.foo.name` }}'
         },
         {
           name: 'BAR',
-          valueFrom: '{{tfstate `aws_secretsmanager_secret.bar.arn`}}'
+          valueFrom: '{{ tfstate `aws_secretsmanager_secret.bar.arn` }}'
         },
         {
           name: 'JSON_KEY',
-          valueFrom: '{{tfstate `aws_secretsmanager_secret.json.arn`}}:key::'
+          valueFrom: '{{ tfstate `aws_secretsmanager_secret.json.arn` }}:key::'
         },
       ],
     },
@@ -62,7 +62,7 @@
   ephemeralStorage: {
     sizeInGiB: 30,
   },
-  executionRoleArn: '{{tfstate `aws_iam_role.ecs-task.arn`}}',
+  executionRoleArn: '{{tfstate `aws_iam_role.ecs-task-execution.arn`}}',
   family: 'ecspresso',
   memory: '512',
   networkMode: 'awsvpc',
