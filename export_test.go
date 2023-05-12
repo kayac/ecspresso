@@ -25,6 +25,8 @@ var (
 	Map2str                   = map2str
 )
 
+type ModifyAutoScalingParams = modifyAutoScalingParams
+
 func (d *App) SetLogger(logger *log.Logger) {
 	d.logger = logger
 }

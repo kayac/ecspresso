@@ -165,6 +165,24 @@ var cliTests = []struct {
 		},
 	},
 	{
+		args: []string{"deploy", "--suspend-auto-scaling", "--auto-scaling-min=3", "--auto-scaling-max=10"},
+		sub:  "deploy",
+		subOption: &ecspresso.DeployOption{
+			SuspendAutoScaling:   ptr(true),
+			AutoScalingMin:       ptr(int32(3)),
+			AutoScalingMax:       ptr(int32(10)),
+			ResumeAutoScaling:    nil,
+			DryRun:               ptr(false),
+			DesiredCount:         ptr(int32(-1)),
+			SkipTaskDefinition:   ptr(false),
+			ForceNewDeployment:   ptr(false),
+			NoWait:               ptr(false),
+			RollbackEvents:       ptr(""),
+			UpdateService:        ptr(true),
+			LatestTaskDefinition: ptr(false),
+		},
+	},
+	{
 		args: []string{"scale", "--tasks=5"},
 		sub:  "scale",
 		subOption: &ecspresso.ScaleOption{
@@ -235,6 +253,36 @@ var cliTests = []struct {
 				UpdateService:        ptr(false),
 				LatestTaskDefinition: ptr(false),
 				ResumeAutoScaling:    ptr(true),
+			}); diff != "" {
+				t.Errorf("unexpected DeployOption (-want +got):\n%s", diff)
+			}
+		},
+	},
+	{
+		args: []string{"scale", "--resume-auto-scaling", "--auto-scaling-min=3", "--auto-scaling-max=10"},
+		sub:  "scale",
+		subOption: &ecspresso.ScaleOption{
+			DryRun:            ptr(false),
+			DesiredCount:      ptr(int32(-1)),
+			NoWait:            ptr(false),
+			ResumeAutoScaling: ptr(true),
+			AutoScalingMin:    ptr(int32(3)),
+			AutoScalingMax:    ptr(int32(10)),
+		},
+		fn: func(t *testing.T, o any) {
+			do := o.(*ecspresso.ScaleOption).DeployOption()
+			if diff := cmp.Diff(do, ecspresso.DeployOption{
+				DryRun:               ptr(false),
+				DesiredCount:         ptr(int32(-1)),
+				SkipTaskDefinition:   ptr(true),
+				ForceNewDeployment:   ptr(false),
+				NoWait:               ptr(false),
+				RollbackEvents:       ptr(""),
+				UpdateService:        ptr(false),
+				LatestTaskDefinition: ptr(false),
+				ResumeAutoScaling:    ptr(true),
+				AutoScalingMin:       ptr(int32(3)),
+				AutoScalingMax:       ptr(int32(10)),
 			}); diff != "" {
 				t.Errorf("unexpected DeployOption (-want +got):\n%s", diff)
 			}

@@ -315,7 +315,7 @@ appspec:
 To change a desired count of the service, specify `scale --tasks`.
 
 ```console
-$ ecspresso scale --config ecspresso.yml --tasks 10
+$ ecspresso scale --tasks 10
 ```
 
 `scale` command is equivalent to `deploy --skip-task-definition --no-update-service`.
@@ -385,12 +385,18 @@ This description allows execution if the version is greater than or equal to 2.0
 
 This feature is implemented by [go-version](github.com/hashicorp/go-version).
 
-### Suspend and Resume application auto scaling.
+### Manage Application Auto Scaling
+
+If you're using Application Auto Scaling for your ECS service, adjusting the minimum and maximum auto-scaling settings with the `ecspresso scale` command is a breeze. Simply specify either `scale --auto-scaling-min` or `scale --auto-scaling-max` to modify the settings.
+
+```console
+$ ecspresso scale --tasks 5 --autos-caling-min 5 --autos-caling-max 20
+```
 
 `ecspresso deploy` and `scale` can suspend and resume application auto scaling.
 
-- `--suspend-auto-scaling` sets suspended state true.
-- `--resume-auto-scaling` sets suspended state false.
+- `--suspend-auto-scaling` sets suspended state to true.
+- `--resume-auto-scaling` sets suspended state to false.
 
 When you want to change the suspended state simply, try `ecspresso scale --suspend-auto-scaling` or `ecspresso scale --resume-auto-scaling`. That operation will change suspended state only.
 

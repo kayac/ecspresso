@@ -32,6 +32,8 @@ type DeployOption struct {
 	NoWait               *bool   `help:"exit ecspresso immediately after just deployed without waiting for service stable" default:"false"`
 	SuspendAutoScaling   *bool   `help:"suspend application auto-scaling attached with the ECS service"`
 	ResumeAutoScaling    *bool   `help:"resume application auto-scaling attached with the ECS service"`
+	AutoScalingMin       *int32  `help:"set minimum capacity of application auto-scaling attached with the ECS service"`
+	AutoScalingMax       *int32  `help:"set maximum capacity of application auto-scaling attached with the ECS service"`
 	RollbackEvents       *string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
 	UpdateService        *bool   `help:"update service attributes by service definition" default:"true" negatable:""`
 	LatestTaskDefinition *bool   `help:"deploy with the latest task definition without registering a new task definition" default:"false"`
@@ -42,6 +44,20 @@ func (opt DeployOption) DryRunString() string {
 		return dryRunStr
 	}
 	return ""
+}
+
+func (opt DeployOption) ModifyAutoScalingParams() *modifyAutoScalingParams {
+	p := &modifyAutoScalingParams{
+		Suspend:     nil,
+		MinCapacity: opt.AutoScalingMin,
+		MaxCapacity: opt.AutoScalingMax,
+	}
+	if opt.SuspendAutoScaling != nil && *opt.SuspendAutoScaling {
+		p.Suspend = aws.Bool(true)
+	} else if opt.ResumeAutoScaling != nil && *opt.ResumeAutoScaling {
+		p.Suspend = aws.Bool(false)
+	}
+	return p
 }
 
 func calcDesiredCount(sv *Service, opt DeployOption) *int32 {
@@ -142,22 +158,14 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		d.Log("desired count: unchanged")
 	}
 
+	// manage auto scaling
+	if err := d.modifyAutoScaling(ctx, opt); err != nil {
+		return err
+	}
+
 	if *opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
-	}
-
-	// manage auto scaling only when set option --suspend-auto-scaling or --resume-auto-scaling explicitly
-	if opt.SuspendAutoScaling != nil && *opt.SuspendAutoScaling {
-		d.Log("suspending auto scaling")
-		if err := d.suspendAutoScaling(ctx, true); err != nil {
-			return err
-		}
-	} else if opt.ResumeAutoScaling != nil && *opt.ResumeAutoScaling {
-		d.Log("resuming auto scaling")
-		if err := d.suspendAutoScaling(ctx, false); err != nil {
-			return err
-		}
 	}
 
 	if err := doDeploy(ctx, tdArn, count, sv, opt); err != nil {

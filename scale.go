@@ -6,6 +6,8 @@ type ScaleOption struct {
 	NoWait             *bool  `help:"exit ecspresso immediately after just deployed without waiting for service stable" default:"false"`
 	SuspendAutoScaling *bool  `help:"suspend application auto-scaling attached with the ECS service"`
 	ResumeAutoScaling  *bool  `help:"resume application auto-scaling attached with the ECS service"`
+	AutoScalingMin     *int32 `help:"set minimum capacity of application auto-scaling attached with the ECS service"`
+	AutoScalingMax     *int32 `help:"set maximum capacity of application auto-scaling attached with the ECS service"`
 }
 
 func (o *ScaleOption) DeployOption() DeployOption {
@@ -20,5 +22,7 @@ func (o *ScaleOption) DeployOption() DeployOption {
 		LatestTaskDefinition: ptr(false),
 		SuspendAutoScaling:   o.SuspendAutoScaling,
 		ResumeAutoScaling:    o.ResumeAutoScaling,
+		AutoScalingMin:       o.AutoScalingMin,
+		AutoScalingMax:       o.AutoScalingMax,
 	}
 }
