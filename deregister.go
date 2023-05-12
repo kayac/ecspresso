@@ -178,7 +178,7 @@ func (d *App) deregisterKeeps(ctx context.Context, opt DeregisterOption, inUse m
 	d.Log("%d task definitions were deregistered", deregistered)
 	if aws.ToBool(opt.Delete) {
 		for _, names := range lo.Chunk(deregs, 10) { // 10 is max batch size
-			d.Log("Deleting task definitions %v", names)
+			d.Log("Deleting task definitions %s", strings.Join(names, ","))
 			if _, err := d.ecs.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
 				TaskDefinitions: names,
 			}); err != nil {
