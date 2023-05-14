@@ -31,16 +31,20 @@ runs:
         else
           DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/ecspresso_${VERSION:1}_linux_amd64.tar.gz
         fi
+        mkdir -p ${RUNNER_TOOL_CACHE}/ecspresso
         cd /tmp
         curl -sfLO ${DOWNLOAD_URL}
         if [[ "${DOWNLOAD_URL}" =~ \.tar\.gz$ ]]; then
           FILENAME=$(basename $DOWNLOAD_URL .tar.gz)
           tar xzvf ${FILENAME}.tar.gz
-          sudo install ecspresso /usr/local/bin/ecspresso
+          sudo install ecspresso ${RUNNER_TOOL_CACHE}/ecspresso/ecspresso
         elif [[ "${DOWNLOAD_URL}" =~ \.zip$ ]]; then
           FILENAME=$(basename $DOWNLOAD_URL .zip)
           unzip ${FILENAME}.zip
-          sudo install ${FILENAME} /usr/local/bin/ecspresso
+          sudo install ${FILENAME} ${RUNNER_TOOL_CACHE}/ecspresso/ecspresso
         fi
-        echo -n "installed "
+
+        echo "Adding ${RUNNER_TOOL_CACHE}/ecspresso to path..."
+        echo "${RUNNER_TOOL_CACHE}/ecspresso" >> $GITHUB_PATH
+        type ecspresso
         ecspresso version
