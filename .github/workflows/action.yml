@@ -53,6 +53,6 @@ jobs:
           ecspresso version 2>&1 | fgrep v2.
       - uses: kayac/ecspresso@v2-action-testing
         with:
-          version: 2.1.0
+          version: v2.1.0
       - run: |
           ecspresso version 2>&1 | fgrep v2.1.0
