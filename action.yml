@@ -42,3 +42,5 @@ runs:
           unzip ${FILENAME}.zip
           sudo install ${FILENAME} /usr/local/bin/ecspresso
         fi
+        echo -n "installed "
+        ecspresso version
