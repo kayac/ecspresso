@@ -8,18 +8,49 @@ on:
 
 jobs:
   install:
-    strategy:
-      matrix:
-        action_version: ['v0', 'v1', 'v2', 'v2-action-testing']
-        install_version: ['latest', 'v1.7.15', 'v2.1.0']
-
     name: test action
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - uses: "kayac/ecspresso@{{ matrix.action_version }}"
+      - uses: kayac/ecspresso@v2-action-testing
         with:
-          version: "{{ matrix.install_version }}"
+          version: latest
       - run: |
-          ecspresso version
+          ecspresso version 2>&1 | fgrep v2.
+
+      - uses: kayac/ecspresso@v2-action-testing
+        with:
+          version: 2.1.0
+      - run: |
+          ecspresso version 2>&1 | fgrep v2.1.0
+
+      - uses: kayac/ecspresso@v0
+        with:
+          version: v1.5.0
+      - run: |
+          ecspresso version 2>&1 | fgrep v1.5.0
+      - uses: kayac/ecspresso@v1
+        with:
+          version: v1.6.0
+      - run: |
+          ecspresso version 2>&1 | fgrep v1.6.0
+      - uses: kayac/ecspresso@v1
+        with:
+          version: latest
+      - run: |
+          ecspresso version 2>&1 | fgrep v1.7.
+      - uses: kayac/ecspresso@v2
+        with:
+          version: latest
+      - run: |
+          ecspresso version 2>&1 | fgrep v2.
+      - uses: kayac/ecspresso@v2
+        with:
+          version: v1.7.14
+      - run: |
+          ecspresso version 2>&1 | fgrep v1.7.14
+      - uses: kayac/ecspresso@v2
+        with:
+          version-file: tests/.ecspresso-version
+      - run: |
+          ecspresso version 2>&1 | fgrep v2.0.0
