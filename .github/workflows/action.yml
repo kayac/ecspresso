@@ -12,18 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: kayac/ecspresso@v2-action-testing
-        with:
-          version: latest
-      - run: |
-          ecspresso version 2>&1 | fgrep v2.
-
-      - uses: kayac/ecspresso@v2-action-testing
-        with:
-          version: 2.1.0
-      - run: |
-          ecspresso version 2>&1 | fgrep v2.1.0
-
       - uses: kayac/ecspresso@v0
         with:
           version: v1.5.0
@@ -54,3 +42,17 @@ jobs:
           version-file: tests/.ecspresso-version
       - run: |
           ecspresso version 2>&1 | fgrep v2.0.0
+
+      - run: |
+          rm -f /usr/local/bin/ecspresso
+
+      - uses: kayac/ecspresso@v2-action-testing
+        with:
+          version: latest
+      - run: |
+          ecspresso version 2>&1 | fgrep v2.
+      - uses: kayac/ecspresso@v2-action-testing
+        with:
+          version: 2.1.0
+      - run: |
+          ecspresso version 2>&1 | fgrep v2.1.0
