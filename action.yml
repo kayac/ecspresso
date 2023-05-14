@@ -46,5 +46,4 @@ runs:
 
         echo "Adding ${RUNNER_TOOL_CACHE}/ecspresso to path..."
         echo "${RUNNER_TOOL_CACHE}/ecspresso" >> $GITHUB_PATH
-        type ecspresso
-        ecspresso version
+        "${RUNNER_TOOL_CACHE}/ecspresso" --version
