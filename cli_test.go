@@ -207,6 +207,30 @@ var cliTests = []struct {
 		},
 	},
 	{
+		args: []string{"scale", "--no-wait"},
+		sub:  "scale",
+		subOption: &ecspresso.ScaleOption{
+			DryRun:       false,
+			DesiredCount: ptr(int32(-1)),
+			Wait:         false,
+		},
+		fn: func(t *testing.T, o any) {
+			do := o.(*ecspresso.ScaleOption).DeployOption()
+			if diff := cmp.Diff(do, ecspresso.DeployOption{
+				DryRun:               false,
+				DesiredCount:         ptr(int32(-1)),
+				SkipTaskDefinition:   true,
+				ForceNewDeployment:   false,
+				Wait:                 false,
+				RollbackEvents:       "",
+				UpdateService:        false,
+				LatestTaskDefinition: false,
+			}); diff != "" {
+				t.Errorf("unexpected DeployOption (-want +got):\n%s", diff)
+			}
+		},
+	},
+	{
 		args: []string{"scale", "--suspend-auto-scaling"},
 		sub:  "scale",
 		subOption: &ecspresso.ScaleOption{

@@ -3,7 +3,7 @@ package ecspresso
 type ScaleOption struct {
 	DryRun             bool   `help:"dry run" default:"false"`
 	DesiredCount       *int32 `name:"tasks" help:"desired count of tasks" default:"-1"`
-	Wait               bool   `help:"wait for service stable" default:"true"`
+	Wait               bool   `help:"wait for service stable" default:"true" negatable:""`
 	SuspendAutoScaling *bool  `help:"suspend application auto-scaling attached with the ECS service"`
 	ResumeAutoScaling  *bool  `help:"resume application auto-scaling attached with the ECS service"`
 	AutoScalingMin     *int32 `help:"set minimum capacity of application auto-scaling attached with the ECS service"`
