@@ -311,6 +311,28 @@ var cliTests = []struct {
 		},
 	},
 	{
+		args: []string{"refresh", "--no-wait"},
+		sub:  "refresh",
+		subOption: &ecspresso.RefreshOption{
+			DryRun: false,
+			Wait:   false,
+		},
+		fn: func(t *testing.T, o any) {
+			do := o.(*ecspresso.RefreshOption).DeployOption()
+			if diff := cmp.Diff(do, ecspresso.DeployOption{
+				DryRun:               false,
+				SkipTaskDefinition:   true,
+				ForceNewDeployment:   true,
+				Wait:                 false,
+				RollbackEvents:       "",
+				UpdateService:        false,
+				LatestTaskDefinition: false,
+			}); diff != "" {
+				t.Errorf("unexpected DeployOption (-want +got):\n%s", diff)
+			}
+		},
+	},
+	{
 		args: []string{"rollback"},
 		sub:  "rollback",
 		subOption: &ecspresso.RollbackOption{
