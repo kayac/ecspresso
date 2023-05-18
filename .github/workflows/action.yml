@@ -42,8 +42,17 @@ jobs:
           version-file: tests/.ecspresso-version
       - run: |
           ecspresso version 2>&1 | fgrep v2.0.0
+
+      - run: |
+          rm -f /usr/local/bin/ecspresso
+
       - uses: kayac/ecspresso@v2-action-testing
         with:
           version: latest
       - run: |
           ecspresso version 2>&1 | fgrep v2.
+      - uses: kayac/ecspresso@v2-action-testing
+        with:
+          version: v2.0.4
+      - run: |
+          ecspresso version 2>&1 | fgrep v2.0.4

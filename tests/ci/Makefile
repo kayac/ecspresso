@@ -2,6 +2,7 @@
 
 export CLUSTER := ecspresso-test
 export SERVICE := nginx-$(CIRCLE_BRANCH)
+export NOW := $(shell date +%Y%m%d%H%M%S)
 ECSPRESSO := ecspresso --envfile envfile
 
 help:

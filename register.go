@@ -6,12 +6,12 @@ import (
 )
 
 type RegisterOption struct {
-	DryRun *bool `help:"dry run" default:"false"`
-	Output *bool `help:"output the registered task definition as JSON" default:"false"`
+	DryRun bool `help:"dry run" default:"false"`
+	Output bool `help:"output the registered task definition as JSON" default:"false"`
 }
 
 func (opt RegisterOption) DryRunString() string {
-	if *opt.DryRun {
+	if opt.DryRun {
 		return dryRunStr
 	}
 	return ""
@@ -26,7 +26,7 @@ func (d *App) Register(ctx context.Context, opt RegisterOption) error {
 	if err != nil {
 		return err
 	}
-	if *opt.DryRun {
+	if opt.DryRun {
 		d.Log("task definition:")
 		if err := d.OutputJSONForAPI(os.Stdout, td); err != nil {
 			return err
@@ -40,7 +40,7 @@ func (d *App) Register(ctx context.Context, opt RegisterOption) error {
 		return err
 	}
 
-	if *opt.Output {
+	if opt.Output {
 		return d.OutputJSONForAPI(os.Stdout, newTd)
 	}
 	return nil

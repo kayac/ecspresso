@@ -52,7 +52,7 @@ func newVerifier(execCfg, appCfg aws.Config, opt *VerifyOption) *verifier {
 }
 
 func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
-	if !aws.ToBool(v.opt.GetSecrets) {
+	if !v.opt.GetSecrets {
 		return ErrSkipVerify(fmt.Sprintf("get a secret value for %s", from))
 	}
 
@@ -158,16 +158,16 @@ func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionR
 
 // VerifyOption represents options for Verify()
 type VerifyOption struct {
-	GetSecrets *bool `help:"get secrets from ParameterStore or SecretsManager" default:"true" negatable:""`
-	PutLogs    *bool `help:"put logs to CloudWatchLogs" default:"true" negatable:""`
-	Cache      *bool `help:"use cache" default:"true" negatable:""`
+	GetSecrets bool `help:"get secrets from ParameterStore or SecretsManager" default:"true" negatable:""`
+	PutLogs    bool `help:"put logs to CloudWatchLogs" default:"true" negatable:""`
+	Cache      bool `help:"use cache" default:"true" negatable:""`
 }
 
 type verifyResourceFunc func(context.Context) error
 
 // Verify verifies service / task definitions related resources are valid.
 func (d *App) Verify(ctx context.Context, opt VerifyOption) error {
-	initVerifyState(aws.ToBool(opt.Cache))
+	initVerifyState(opt.Cache)
 
 	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 	if err != nil {
@@ -552,7 +552,7 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 		return errors.New("awslogs-region is required")
 	}
 
-	if !aws.ToBool(d.verifier.opt.PutLogs) {
+	if !d.verifier.opt.PutLogs {
 		return ErrSkipVerify(fmt.Sprintf("putting logs to %s", group))
 	}
 

@@ -8,24 +8,24 @@ import (
 )
 
 var (
-	SortTaskDefinitionForDiff    = sortTaskDefinitionForDiff
-	SortServiceDefinitionForDiff = sortServiceDefinitionForDiff
-	EqualString                  = equalString
-	ToNumberCPU                  = toNumberCPU
-	ToNumberMemory               = toNumberMemory
-	CalcDesiredCount             = calcDesiredCount
-	ParseTags                    = parseTags
-	ExtractRoleName              = extractRoleName
-	IsLongArnFormat              = isLongArnFormat
-	ECRImageURLRegex             = ecrImageURLRegex
-	NewLogger                    = newLogger
-	NewLogFilter                 = newLogFilter
-	NewConfigLoader              = newConfigLoader
-	ArnToName                    = arnToName
-	InitVerifyState              = initVerifyState
-	VerifyResource               = verifyResource
-	Map2str                      = map2str
+	SortTaskDefinitionForDiff = sortTaskDefinitionForDiff
+	ToNumberCPU               = toNumberCPU
+	ToNumberMemory            = toNumberMemory
+	CalcDesiredCount          = calcDesiredCount
+	ParseTags                 = parseTags
+	ExtractRoleName           = extractRoleName
+	IsLongArnFormat           = isLongArnFormat
+	ECRImageURLRegex          = ecrImageURLRegex
+	NewLogger                 = newLogger
+	NewLogFilter              = newLogFilter
+	NewConfigLoader           = newConfigLoader
+	ArnToName                 = arnToName
+	InitVerifyState           = initVerifyState
+	VerifyResource            = verifyResource
+	Map2str                   = map2str
 )
+
+type ModifyAutoScalingParams = modifyAutoScalingParams
 
 func (d *App) SetLogger(logger *log.Logger) {
 	d.logger = logger

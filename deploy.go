@@ -25,23 +25,39 @@ const (
 )
 
 type DeployOption struct {
-	DryRun               *bool   `help:"dry run" default:"false"`
-	DesiredCount         *int32  `name:"tasks" help:"desired count of tasks" default:"-1"`
-	SkipTaskDefinition   *bool   `help:"skip register a new task definition" default:"false"`
-	ForceNewDeployment   *bool   `help:"force a new deployment of the service" default:"false"`
-	NoWait               *bool   `help:"exit ecspresso immediately after just deployed without waiting for service stable" default:"false"`
-	SuspendAutoScaling   *bool   `help:"suspend application auto-scaling attached with the ECS service"`
-	ResumeAutoScaling    *bool   `help:"resume application auto-scaling attached with the ECS service"`
-	RollbackEvents       *string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
-	UpdateService        *bool   `help:"update service attributes by service definition" default:"true" negatable:""`
-	LatestTaskDefinition *bool   `help:"deploy with the latest task definition without registering a new task definition" default:"false"`
+	DryRun               bool   `help:"dry run" default:"false"`
+	DesiredCount         *int32 `name:"tasks" help:"desired count of tasks" default:"-1"`
+	SkipTaskDefinition   bool   `help:"skip register a new task definition" default:"false"`
+	ForceNewDeployment   bool   `help:"force a new deployment of the service" default:"false"`
+	Wait                 bool   `help:"wait for service stable" default:"true" negatable:""`
+	SuspendAutoScaling   *bool  `help:"suspend application auto-scaling attached with the ECS service"`
+	ResumeAutoScaling    *bool  `help:"resume application auto-scaling attached with the ECS service"`
+	AutoScalingMin       *int32 `help:"set minimum capacity of application auto-scaling attached with the ECS service"`
+	AutoScalingMax       *int32 `help:"set maximum capacity of application auto-scaling attached with the ECS service"`
+	RollbackEvents       string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
+	UpdateService        bool   `help:"update service attributes by service definition" default:"true" negatable:""`
+	LatestTaskDefinition bool   `help:"deploy with the latest task definition without registering a new task definition" default:"false"`
 }
 
 func (opt DeployOption) DryRunString() string {
-	if *opt.DryRun {
+	if opt.DryRun {
 		return dryRunStr
 	}
 	return ""
+}
+
+func (opt DeployOption) ModifyAutoScalingParams() *modifyAutoScalingParams {
+	p := &modifyAutoScalingParams{
+		Suspend:     nil,
+		MinCapacity: opt.AutoScalingMin,
+		MaxCapacity: opt.AutoScalingMax,
+	}
+	if opt.SuspendAutoScaling != nil && *opt.SuspendAutoScaling {
+		p.Suspend = aws.Bool(true)
+	} else if opt.ResumeAutoScaling != nil && *opt.ResumeAutoScaling {
+		p.Suspend = aws.Bool(false)
+	}
+	return p
 }
 
 func calcDesiredCount(sv *Service, opt DeployOption) *int32 {
@@ -84,21 +100,21 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 	}
 
 	var tdArn string
-	if *opt.LatestTaskDefinition {
+	if opt.LatestTaskDefinition {
 		family := strings.Split(arnToName(*sv.TaskDefinition), ":")[0]
 		var err error
 		tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
 		if err != nil {
 			return err
 		}
-	} else if *opt.SkipTaskDefinition {
+	} else if opt.SkipTaskDefinition {
 		tdArn = *sv.TaskDefinition
 	} else {
 		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
 		if err != nil {
 			return err
 		}
-		if *opt.DryRun {
+		if opt.DryRun {
 			d.Log("[INFO] task definition:")
 			d.OutputJSONForAPI(os.Stderr, td)
 		} else {
@@ -111,11 +127,12 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 	}
 
 	var count *int32
-	if d.config.ServiceDefinitionPath != "" && aws.ToBool(opt.UpdateService) {
+	if d.config.ServiceDefinitionPath != "" && opt.UpdateService {
 		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 		if err != nil {
 			return err
 		}
+		addedTags, updatedTags, deletedTags := CompareTags(sv.Tags, newSv.Tags)
 		ds, err := diffServices(newSv, sv, "", d.config.ServiceDefinitionPath, true)
 		if err != nil {
 			return fmt.Errorf("failed to diff of service definitions: %w", err)
@@ -128,6 +145,9 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		} else {
 			d.Log("service attributes will not change")
 		}
+		if err := d.UpdateServiceTags(ctx, sv, addedTags, updatedTags, deletedTags, opt); err != nil {
+			return err
+		}
 		count = calcDesiredCount(newSv, opt)
 	} else {
 		count = calcDesiredCount(sv, opt)
@@ -138,29 +158,21 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		d.Log("desired count: unchanged")
 	}
 
-	if *opt.DryRun {
-		d.Log("DRY RUN OK")
-		return nil
+	// manage auto scaling
+	if err := d.modifyAutoScaling(ctx, opt); err != nil {
+		return err
 	}
 
-	// manage auto scaling only when set option --suspend-auto-scaling or --resume-auto-scaling explicitly
-	if opt.SuspendAutoScaling != nil && *opt.SuspendAutoScaling {
-		d.Log("suspending auto scaling")
-		if err := d.suspendAutoScaling(ctx, true); err != nil {
-			return err
-		}
-	} else if opt.ResumeAutoScaling != nil && *opt.ResumeAutoScaling {
-		d.Log("resuming auto scaling")
-		if err := d.suspendAutoScaling(ctx, false); err != nil {
-			return err
-		}
+	if opt.DryRun {
+		d.Log("DRY RUN OK")
+		return nil
 	}
 
 	if err := doDeploy(ctx, tdArn, count, sv, opt); err != nil {
 		return err
 	}
 
-	if *opt.NoWait {
+	if !opt.Wait {
 		d.Log("Service is deployed.")
 		return nil
 	}
@@ -184,10 +196,10 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 		Cluster:            aws.String(d.Cluster),
 		TaskDefinition:     aws.String(taskDefinitionArn),
 		DesiredCount:       count,
-		ForceNewDeployment: *opt.ForceNewDeployment,
+		ForceNewDeployment: opt.ForceNewDeployment,
 	}
 	msg := "Updating service tasks"
-	if *opt.ForceNewDeployment {
+	if opt.ForceNewDeployment {
 		msg = msg + " with force new deployment"
 	}
 	msg = msg + "..."
@@ -239,20 +251,22 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, taskDefi
 		in.CapacityProviderStrategy = nil
 	} else {
 		d.Log("[INFO] deployment by ECS rolling update")
-		in.ForceNewDeployment = aws.ToBool(opt.ForceNewDeployment)
+		in.ForceNewDeployment = opt.ForceNewDeployment
 		in.TaskDefinition = aws.String(taskDefinitionArn)
 	}
 	in.Service = aws.String(d.Service)
 	in.Cluster = aws.String(d.Cluster)
 
-	if *opt.DryRun {
+	if opt.DryRun {
 		d.Log("[INFO] update service input: %s", MustMarshalJSONStringForAPI(in))
 		return nil
 	}
 	d.Log("Updating service attributes...")
 
-	if _, err := d.ecs.UpdateService(ctx, in); err != nil {
+	if out, err := d.ecs.UpdateService(ctx, in); err != nil {
 		return fmt.Errorf("failed to update service attributes: %w", err)
+	} else {
+		sv.ServiceArn = out.Service.ServiceArn
 	}
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	return nil
@@ -273,7 +287,7 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 	if err != nil {
 		return fmt.Errorf("failed to update service: %w", err)
 	}
-	if aws.ToBool(opt.SkipTaskDefinition) && !aws.ToBool(opt.UpdateService) && !aws.ToBool(opt.ForceNewDeployment) {
+	if opt.SkipTaskDefinition && !opt.UpdateService && !opt.ForceNewDeployment {
 		// no need to create new deployment.
 		return nil
 	}
@@ -389,7 +403,7 @@ func (d *App) findCodeDeployDeploymentGroups(ctx context.Context, appName string
 	return groups, nil
 }
 
-func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionArn string, rollbackEvents *string) error {
+func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionArn string, rollbackEvents string) error {
 	spec, err := appspec.NewWithService(&sv.Service, taskDefinitionArn)
 	if err != nil {
 		return fmt.Errorf("failed to create appspec: %w", err)
@@ -415,9 +429,9 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 			},
 		},
 	}
-	if ev := aws.ToString(rollbackEvents); ev != "" {
+	if rollbackEvents != "" {
 		var events []cdTypes.AutoRollbackEvent
-		for _, ev := range strings.Split(ev, ",") {
+		for _, ev := range strings.Split(rollbackEvents, ",") {
 			switch ev {
 			case "DEPLOYMENT_FAILURE":
 				events = append(events, cdTypes.AutoRollbackEventDeploymentFailure)
@@ -477,4 +491,48 @@ func (d *App) DeployFunc(sv *Service) (deployFunc, error) {
 		}
 	}
 	return defaultFunc, nil
+}
+
+func (d *App) UpdateServiceTags(ctx context.Context, sv *Service, added, updated, deleted []types.Tag, opt DeployOption) error {
+	if len(added) == 0 && len(updated) == 0 && len(deleted) == 0 {
+		d.Log("[DEBUG] no service tags to update")
+		return nil
+	}
+	var tags []types.Tag
+	tags = append(tags, added...)
+	tags = append(tags, updated...)
+	var untagKeys []string
+	for _, t := range deleted {
+		untagKeys = append(untagKeys, *t.Key)
+	}
+
+	if len(tags) > 0 {
+		for _, t := range tags {
+			d.Log("[INFO] updating service tags: %s=%s", aws.ToString(t.Key), aws.ToString(t.Value))
+		}
+	}
+	if len(untagKeys) > 0 {
+		d.Log("[INFO] deleting service tags: %v", untagKeys)
+	}
+	if opt.DryRun {
+		return nil
+	}
+
+	if len(tags) > 0 {
+		if _, err := d.ecs.TagResource(ctx, &ecs.TagResourceInput{
+			ResourceArn: sv.ServiceArn,
+			Tags:        tags,
+		}); err != nil {
+			return fmt.Errorf("failed to tag service: %w", err)
+		}
+	}
+	if len(untagKeys) > 0 {
+		if _, err := d.ecs.UntagResource(ctx, &ecs.UntagResourceInput{
+			ResourceArn: sv.ServiceArn,
+			TagKeys:     untagKeys,
+		}); err != nil {
+			return fmt.Errorf("failed to untag service: %w", err)
+		}
+	}
+	return nil
 }
