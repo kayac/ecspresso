@@ -4,19 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/fujiwara/ecsta"
 )
 
 type ExecOption struct {
-	ID        *string `help:"task ID" default:""`
-	Command   *string `help:"command to execute" default:"sh"`
-	Container *string `help:"container name" default:""`
+	ID        string `help:"task ID" default:""`
+	Command   string `help:"command to execute" default:"sh"`
+	Container string `help:"container name" default:""`
 
-	PortForward *bool   `help:"enable port forward" default:"false"`
-	LocalPort   *int    `help:"local port number" default:"0"`
-	Port        *int    `help:"remote port number (required for --port-forward)" default:"0"`
-	Host        *string `help:"remote host (required for --port-forward)" default:""`
+	PortForward bool   `help:"enable port forward" default:"false"`
+	LocalPort   int    `help:"local port number" default:"0"`
+	Port        int    `help:"remote port number (required for --port-forward)" default:"0"`
+	Host        string `help:"remote host (required for --port-forward)" default:""`
 }
 
 func (d *App) NewEcsta(ctx context.Context) (*ecsta.Ecsta, error) {
@@ -47,21 +46,21 @@ func (d *App) Exec(ctx context.Context, opt ExecOption) error {
 		service = &d.config.Service
 	}
 
-	if aws.ToBool(opt.PortForward) {
+	if opt.PortForward {
 		return ecstaApp.RunPortforward(ctx, &ecsta.PortforwardOption{
-			ID:         aws.ToString(opt.ID),
-			Container:  aws.ToString(opt.Container),
-			LocalPort:  aws.ToInt(opt.LocalPort),
-			RemotePort: aws.ToInt(opt.Port),
-			RemoteHost: aws.ToString(opt.Host),
+			ID:         opt.ID,
+			Container:  opt.Container,
+			LocalPort:  opt.LocalPort,
+			RemotePort: opt.Port,
+			RemoteHost: opt.Host,
 			Family:     &family,
 			Service:    service,
 		})
 	} else {
 		return ecstaApp.RunExec(ctx, &ecsta.ExecOption{
-			ID:        aws.ToString(opt.ID),
-			Command:   aws.ToString(opt.Command),
-			Container: aws.ToString(opt.Container),
+			ID:        opt.ID,
+			Command:   opt.Command,
+			Container: opt.Container,
 			Family:    &family,
 			Service:   service,
 		})

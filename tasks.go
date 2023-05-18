@@ -11,16 +11,16 @@ import (
 )
 
 type TasksOption struct {
-	ID     *string `help:"task ID" default:""`
-	Output *string `help:"output format" enum:"table,json,tsv" default:"table"`
-	Find   *bool   `help:"find a task from tasks list and dump it as JSON" default:"false"`
-	Stop   *bool   `help:"stop the task" default:"false"`
-	Force  *bool   `help:"stop the task without confirmation" default:"false"`
-	Trace  *bool   `help:"trace the task" default:"false"`
+	ID     string `help:"task ID" default:""`
+	Output string `help:"output format" enum:"table,json,tsv" default:"table"`
+	Find   bool   `help:"find a task from tasks list and dump it as JSON" default:"false"`
+	Stop   bool   `help:"stop the task" default:"false"`
+	Force  bool   `help:"stop the task without confirmation" default:"false"`
+	Trace  bool   `help:"trace the task" default:"false"`
 }
 
 func (o TasksOption) taskID() string {
-	return aws.ToString(o.ID)
+	return o.ID
 }
 
 func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
@@ -31,7 +31,7 @@ func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
 	if err != nil {
 		return err
 	}
-	ecstaApp.Config.Set("output", aws.ToString(opt.Output))
+	ecstaApp.Config.Set("output", opt.Output)
 
 	family, err := d.taskDefinitionFamily(ctx)
 	if err != nil {
@@ -42,20 +42,20 @@ func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
 		service = &d.config.Service
 	}
 
-	if aws.ToBool(opt.Find) {
+	if opt.Find {
 		return ecstaApp.RunDescribe(ctx, &ecsta.DescribeOption{
 			ID:      opt.taskID(),
 			Family:  &family,
 			Service: service,
 		})
-	} else if aws.ToBool(opt.Stop) {
+	} else if opt.Stop {
 		return ecstaApp.RunStop(ctx, &ecsta.StopOption{
 			ID:      opt.taskID(),
-			Force:   aws.ToBool(opt.Force),
+			Force:   opt.Force,
 			Family:  &family,
 			Service: service,
 		})
-	} else if aws.ToBool(opt.Trace) {
+	} else if opt.Trace {
 		return ecstaApp.RunTrace(ctx, &ecsta.TraceOption{
 			ID:       opt.taskID(),
 			Duration: time.Minute,

@@ -13,27 +13,27 @@ import (
 )
 
 type RunOption struct {
-	DryRun               *bool   `help:"dry run" default:"false"`
-	TaskDefinition       *string `name:"task-def" help:"task definition file for run task" default:""`
-	NoWait               *bool   `help:"don't wait for task to complete" default:"false"`
-	TaskOverrideStr      *string `name:"overrides" help:"task override JSON string" default:""`
-	TaskOverrideFile     *string `name:"overrides-file" help:"task override JSON file path" default:""`
-	SkipTaskDefinition   *bool   `help:"skip register a new task definition" default:"false"`
-	Count                *int32  `help:"number of tasks to run (max 10)" default:"1"`
-	WatchContainer       *string `help:"container name for watching exit code" default:""`
-	LatestTaskDefinition *bool   `help:"use the latest task definition without registering a new task definition" default:"false"`
-	PropagateTags        *string `help:"propagate the tags for the task (SERVICE or TASK_DEFINITION)" default:""`
-	Tags                 *string `help:"tags for the task: format is KeyFoo=ValueFoo,KeyBar=ValueBar" default:""`
-	WaitUntil            *string `help:"wait until invoked tasks status reached to (running or stopped)" default:"stopped" enum:"running,stopped"`
-	Revision             *int64  `help:"revision of the task definition to run when --skip-task-definition" default:"0"`
+	DryRun               bool   `help:"dry run" default:"false"`
+	TaskDefinition       string `name:"task-def" help:"task definition file for run task" default:""`
+	Wait                 bool   `help:"wait for task to complete" default:"true" negatable:""`
+	TaskOverrideStr      string `name:"overrides" help:"task override JSON string" default:""`
+	TaskOverrideFile     string `name:"overrides-file" help:"task override JSON file path" default:""`
+	SkipTaskDefinition   bool   `help:"skip register a new task definition" default:"false"`
+	Count                int32  `help:"number of tasks to run (max 10)" default:"1"`
+	WatchContainer       string `help:"container name for watching exit code" default:""`
+	LatestTaskDefinition bool   `help:"use the latest task definition without registering a new task definition" default:"false"`
+	PropagateTags        string `help:"propagate the tags for the task (SERVICE or TASK_DEFINITION)" default:""`
+	Tags                 string `help:"tags for the task: format is KeyFoo=ValueFoo,KeyBar=ValueBar" default:""`
+	WaitUntil            string `help:"wait until invoked tasks status reached to (running or stopped)" default:"stopped" enum:"running,stopped"`
+	Revision             *int64 `help:"revision of the task definition to run when --skip-task-definition" default:"0"`
 }
 
 func (opt RunOption) waitUntilRunning() bool {
-	return aws.ToString(opt.WaitUntil) == "running"
+	return opt.WaitUntil == "running"
 }
 
 func (opt RunOption) DryRunString() string {
-	if *opt.DryRun {
+	if opt.DryRun {
 		return ""
 	}
 	return ""
@@ -45,11 +45,11 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 
 	d.Log("Running task %s", opt.DryRunString())
 	ov := types.TaskOverride{}
-	if ovStr := aws.ToString(opt.TaskOverrideStr); ovStr != "" {
-		if err := json.Unmarshal([]byte(ovStr), &ov); err != nil {
+	if opt.TaskOverrideStr != "" {
+		if err := json.Unmarshal([]byte(opt.TaskOverrideStr), &ov); err != nil {
 			return fmt.Errorf("invalid overrides: %w", err)
 		}
-	} else if ovFile := aws.ToString(opt.TaskOverrideFile); ovFile != "" {
+	} else if ovFile := opt.TaskOverrideFile; ovFile != "" {
 		src, err := d.readDefinitionFile(ovFile)
 		if err != nil {
 			return fmt.Errorf("failed to read overrides-file %s: %w", ovFile, err)
@@ -66,7 +66,7 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 		return err
 	}
 	d.Log("Task definition ARN: %s", tdArn)
-	if *opt.DryRun {
+	if opt.DryRun {
 		d.Log("DRY RUN OK")
 		return nil
 	}
@@ -74,14 +74,14 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 	if err != nil {
 		return err
 	}
-	watchContainer := containerOf(td, opt.WatchContainer)
+	watchContainer := containerOf(td, &opt.WatchContainer)
 	d.Log("Watch container: %s", *watchContainer.Name)
 
 	task, err := d.RunTask(ctx, tdArn, &ov, &opt)
 	if err != nil {
 		return err
 	}
-	if *opt.NoWait {
+	if !opt.Wait {
 		d.Log("Run task invoked")
 		return nil
 	}
@@ -104,7 +104,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 		return nil, err
 	}
 
-	tags, err := parseTags(*opt.Tags)
+	tags, err := parseTags(opt.Tags)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run task. invalid tags: %w", err)
 	}
@@ -115,7 +115,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 		NetworkConfiguration:     sv.NetworkConfiguration,
 		LaunchType:               sv.LaunchType,
 		Overrides:                ov,
-		Count:                    opt.Count,
+		Count:                    &opt.Count,
 		CapacityProviderStrategy: sv.CapacityProviderStrategy,
 		PlacementConstraints:     sv.PlacementConstraints,
 		PlacementStrategy:        sv.PlacementStrategy,
@@ -125,7 +125,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 		EnableExecuteCommand:     sv.EnableExecuteCommand,
 	}
 
-	switch aws.ToString(opt.PropagateTags) {
+	switch opt.PropagateTags {
 	case "SERVICE":
 		out, err := d.ecs.ListTagsForResource(ctx, &ecs.ListTagsForResourceInput{
 			ResourceArn: sv.ServiceArn,
@@ -223,7 +223,7 @@ func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool)
 func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (string, error) {
 	switch {
 	case *opt.Revision > 0:
-		if aws.ToBool(opt.LatestTaskDefinition) {
+		if opt.LatestTaskDefinition {
 			err := ErrConflictOptions("revision and latest-task-definition are exclusive")
 			// TODO: v2.1 raise error
 			d.Log("[WARNING] %s", err)
@@ -233,7 +233,7 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 			return "", err
 		}
 		return fmt.Sprintf("%s:%d", family, *opt.Revision), nil
-	case *opt.LatestTaskDefinition:
+	case opt.LatestTaskDefinition:
 		family, _, err := d.resolveTaskdefinition(ctx)
 		if err != nil {
 			return "", err
@@ -244,7 +244,7 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 			return "", err
 		}
 		return latestTdArn, nil
-	case *opt.SkipTaskDefinition:
+	case opt.SkipTaskDefinition:
 		family, rev, err := d.resolveTaskdefinition(ctx)
 		if err != nil {
 			return "", err
@@ -259,7 +259,7 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 		}
 		return latestTdArn, nil
 	default:
-		tdPath := aws.ToString(opt.TaskDefinition)
+		tdPath := opt.TaskDefinition
 		if tdPath == "" {
 			tdPath = d.config.TaskDefinitionPath
 		}
@@ -267,7 +267,7 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 		if err != nil {
 			return "", err
 		}
-		if *opt.DryRun {
+		if opt.DryRun {
 			return fmt.Sprintf("family %s will be registered", *in.Family), nil
 		}
 		newTd, err := d.RegisterTaskDefinition(ctx, in)

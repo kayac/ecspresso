@@ -19,7 +19,7 @@ import (
 )
 
 type DiffOption struct {
-	Unified *bool `help:"unified diff format" default:"true" negatable:""`
+	Unified bool `help:"unified diff format" default:"true" negatable:""`
 }
 
 func (d *App) Diff(ctx context.Context, opt DiffOption) error {
@@ -38,7 +38,7 @@ func (d *App) Diff(ctx context.Context, opt DiffOption) error {
 			return fmt.Errorf("failed to describe service: %w", err)
 		}
 
-		if ds, err := diffServices(newSv, remoteSv, *remoteSv.ServiceArn, d.config.ServiceDefinitionPath, *opt.Unified); err != nil {
+		if ds, err := diffServices(newSv, remoteSv, *remoteSv.ServiceArn, d.config.ServiceDefinitionPath, opt.Unified); err != nil {
 			return err
 		} else if ds != "" {
 			fmt.Print(coloredDiff(ds))
@@ -63,7 +63,7 @@ func (d *App) Diff(ctx context.Context, opt DiffOption) error {
 		return err
 	}
 
-	if ds, err := diffTaskDefs(newTd, remoteTd, taskDefArn, d.config.TaskDefinitionPath, *opt.Unified); err != nil {
+	if ds, err := diffTaskDefs(newTd, remoteTd, taskDefArn, d.config.TaskDefinitionPath, opt.Unified); err != nil {
 		return err
 	} else if ds != "" {
 		fmt.Print(coloredDiff(ds))

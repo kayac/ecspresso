@@ -14,14 +14,14 @@ import (
 )
 
 type RollbackOption struct {
-	DryRun                   *bool   `help:"dry run" default:"false"`
-	DeregisterTaskDefinition *bool   `help:"deregister the rolled-back task definition. not works with --no-wait" default:"true" negatable:""`
-	NoWait                   *bool   `help:"don't wait for the service stable" default:"false"`
-	RollbackEvents           *string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
+	DryRun                   bool   `help:"dry run" default:"false"`
+	DeregisterTaskDefinition bool   `help:"deregister the rolled-back task definition. not works with --no-wait" default:"true" negatable:""`
+	Wait                     bool   `help:"wait for the service stable" default:"true" negatable:""`
+	RollbackEvents           string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
 }
 
 func (opt RollbackOption) DryRunString() string {
-	if *opt.DryRun {
+	if opt.DryRun {
 		return dryRunStr
 	}
 	return ""
@@ -31,7 +31,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
-	if aws.ToBool(opt.DeregisterTaskDefinition) && aws.ToBool(opt.NoWait) {
+	if opt.DeregisterTaskDefinition && !opt.Wait {
 		return fmt.Errorf("--deregister-task-definition not works with --no-wait together. Please use --no-deregister-task-definition with --no-wait")
 	}
 
@@ -48,8 +48,8 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	}
 
 	d.Log("Rolling back to %s", arnToName(targetArn))
-	if *opt.DryRun {
-		if *opt.DeregisterTaskDefinition {
+	if opt.DryRun {
+		if opt.DeregisterTaskDefinition {
 			d.Log("%s will be deregistered", arnToName(currentArn))
 		} else {
 			d.Log("%s will not be deregistered", arnToName(currentArn))
@@ -72,7 +72,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 		return err
 	}
 
-	if *opt.NoWait {
+	if !opt.Wait {
 		d.Log("Service is rolled back.")
 		return nil
 	}
@@ -84,7 +84,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 
 	d.Log("Service is stable now. Completed!")
 
-	if *opt.DeregisterTaskDefinition {
+	if opt.DeregisterTaskDefinition {
 		d.Log("Deregistering the rolled-back task definition %s", arnToName(currentArn))
 		_, err := d.ecs.DeregisterTaskDefinition(
 			ctx,
@@ -108,8 +108,8 @@ func (d *App) RollbackServiceTasks(ctx context.Context, sv *Service, tdArn strin
 		nil,
 		sv,
 		DeployOption{
-			ForceNewDeployment: aws.Bool(false),
-			UpdateService:      aws.Bool(false),
+			ForceNewDeployment: false,
+			UpdateService:      false,
 		},
 	)
 }
@@ -140,7 +140,7 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 		return fmt.Errorf("failed to get deployment: %w", err)
 	}
 
-	if *opt.DryRun {
+	if opt.DryRun {
 		d.Log("deployment id: %s", dpID)
 		d.Log("DRY RUN OK")
 		return nil

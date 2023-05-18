@@ -68,7 +68,7 @@ func (d *App) modifyAutoScaling(ctx context.Context, opt DeployOption) error {
 		return nil
 	}
 
-	if *opt.DryRun {
+	if opt.DryRun {
 		return nil
 	}
 	for _, target := range out.ScalableTargets {

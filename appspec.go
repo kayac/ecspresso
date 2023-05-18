@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/kayac/ecspresso/v2/appspec"
 )
 
 type AppSpecOption struct {
-	TaskDefinition *string `help:"use task definition arn in AppSpec (latest, current or Arn)" default:"latest"`
-	UpdateService  *bool   `help:"update service definition with task definition arn" default:"true" negatable:""`
+	TaskDefinition string `help:"use task definition arn in AppSpec (latest, current or Arn)" default:"latest"`
+	UpdateService  bool   `help:"update service definition with task definition arn" default:"true" negatable:""`
 }
 
 func (d *App) AppSpec(ctx context.Context, opt AppSpecOption) error {
@@ -23,7 +22,7 @@ func (d *App) AppSpec(ctx context.Context, opt AppSpecOption) error {
 	if err != nil {
 		return err
 	}
-	switch *opt.TaskDefinition {
+	switch opt.TaskDefinition {
 	case "current":
 		taskDefinitionArn = *sv.TaskDefinition
 	case "latest":
@@ -33,12 +32,11 @@ func (d *App) AppSpec(ctx context.Context, opt AppSpecOption) error {
 			return err
 		}
 	default:
-		taskDefinitionArn = *opt.TaskDefinition
-		if !strings.HasPrefix(taskDefinitionArn, "arn:aws:ecs:") {
+		if !strings.HasPrefix(opt.TaskDefinition, "arn:aws:ecs:") {
 			return fmt.Errorf("--task-definition requires current, latest or a valid task definition arn")
 		}
 	}
-	if aws.ToBool(opt.UpdateService) {
+	if opt.UpdateService {
 		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 		if err != nil {
 			return err
