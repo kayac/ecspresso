@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/kong v0.7.0
 	github.com/aws/aws-sdk-go-v2 v1.18.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.15
-	github.com/aws/aws-sdk-go-v2/credentials v1.13.15
+	github.com/aws/aws-sdk-go-v2/credentials v1.13.24
 	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.15.17
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.19
 	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.14.17
@@ -19,7 +19,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.16.0
 	github.com/aws/aws-sdk-go-v2/service/servicediscovery v1.18.2
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.28.0
-	github.com/aws/aws-sdk-go-v2/service/sts v1.18.5
+	github.com/aws/aws-sdk-go-v2/service/sts v1.19.0
 	github.com/aws/smithy-go v1.13.5
 	github.com/fatih/color v1.13.0
 	github.com/fujiwara/cfn-lookup v1.0.0
@@ -64,7 +64,7 @@ require (
 	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/Songmu/flextime v0.1.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.8 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.23 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.3 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.11.33 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.33 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.27 // indirect
@@ -73,11 +73,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.22.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.1.18 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.23 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.27 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.13.17 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sns v1.18.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.12.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.12.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.10 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/fujiwara/tracer v1.0.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
