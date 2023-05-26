@@ -155,11 +155,14 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 		if f.Arn != nil {
 			d.Log("Task ARN: %s", *f.Arn)
 		}
-		return nil, fmt.Errorf("failed to run task: %s %s", *f.Reason, *f.Detail)
+		return nil, fmt.Errorf("failed to run task: %s %s", aws.ToString(f.Reason), aws.ToString(f.Detail))
 	}
 
+	if len(out.Tasks) == 0 {
+		return nil, fmt.Errorf("failed to run task: no tasks run")
+	}
 	task := out.Tasks[0]
-	d.Log("Task ARN: %s", *task.TaskArn)
+	d.Log("Task ARN: %s", aws.ToString(task.TaskArn))
 	return &task, nil
 }
 
