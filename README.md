@@ -390,7 +390,7 @@ This feature is implemented by [go-version](github.com/hashicorp/go-version).
 If you're using Application Auto Scaling for your ECS service, adjusting the minimum and maximum auto-scaling settings with the `ecspresso scale` command is a breeze. Simply specify either `scale --auto-scaling-min` or `scale --auto-scaling-max` to modify the settings.
 
 ```console
-$ ecspresso scale --tasks 5 --autos-caling-min 5 --autos-caling-max 20
+$ ecspresso scale --tasks 5 --auto-scaling-min 5 --auto-scaling-max 20
 ```
 
 `ecspresso deploy` and `scale` can suspend and resume application auto scaling.
