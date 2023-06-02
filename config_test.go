@@ -2,7 +2,6 @@ package ecspresso_test
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -61,8 +60,8 @@ func TestLoadConfigWithPluginMultiple(t *testing.T) {
 }
 
 func TestLoadConfigWithPluginDuplicate(t *testing.T) {
-	os.Setenv("TAG", "testing")
-	os.Setenv("JSON", `{"foo":"bar"}`)
+	t.Setenv("TAG", "testing")
+	t.Setenv("JSON", `{"foo":"bar"}`)
 	ctx := context.Background()
 	loader := ecspresso.NewConfigLoader(nil, nil)
 	_, err := loader.Load(ctx, "tests/config_duplicate_plugins.yaml", "")
@@ -86,9 +85,9 @@ func TestLoadConfigWithPlugin(t *testing.T) {
 }
 
 func testLoadConfigWithPlugin(t *testing.T, path string) {
-	os.Setenv("TAG", "testing")
-	os.Setenv("JSON", `{"foo":"bar"}`)
-	os.Setenv("AWS_REGION", "ap-northeast-1")
+	t.Setenv("TAG", "testing")
+	t.Setenv("JSON", `{"foo":"bar"}`)
+	t.Setenv("AWS_REGION", "ap-northeast-1")
 	ctx := context.Background()
 	app, err := ecspresso.New(ctx, &ecspresso.Option{ConfigFilePath: path})
 	if err != nil {
@@ -262,9 +261,7 @@ func TestConfigWithInvalidRequiredVersion(t *testing.T) {
 }
 
 func TestLoadConfigWithoutTimeout(t *testing.T) {
-	region := os.Getenv("AWS_REGION")
-	os.Setenv("AWS_REGION", "ap-northeast-2")
-	defer func() { os.Setenv("AWS_REGION", region) }()
+	t.Setenv("AWS_REGION", "ap-northeast-2")
 
 	ctx := context.Background()
 	loader := ecspresso.NewConfigLoader(nil, nil)
@@ -313,9 +310,8 @@ var FilterCommandTests = []struct {
 
 func TestFilterCommandDeprecated(t *testing.T) {
 	ctx := context.Background()
-	defer os.Setenv("ECSPRESSO_FILTER_COMMAND", "")
 	for _, ts := range FilterCommandTests {
-		os.Setenv("ECSPRESSO_FILTER_COMMAND", ts.Env)
+		t.Setenv("ECSPRESSO_FILTER_COMMAND", ts.Env)
 		app, err := ecspresso.New(ctx, &ecspresso.Option{
 			ConfigFilePath: "tests/filter_command.yml",
 		})
