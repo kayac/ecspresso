@@ -5,3 +5,8 @@ updates:
     schedule:
       interval: monthly
     target-branch: v2
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    target-branch: v2
