@@ -39,15 +39,19 @@ type verifier struct {
 	isAssumed      bool
 }
 
-func newVerifier(execCfg, appCfg aws.Config, opt *VerifyOption) *verifier {
+func (v *verifier) IsAssumed() bool {
+	return v.isAssumed
+}
+
+func newVerifier(execCfg, appCfg *aws.Config, opt *VerifyOption) *verifier {
 	return &verifier{
-		cwl:            cloudwatchlogs.NewFromConfig(execCfg),
-		ssm:            ssm.NewFromConfig(execCfg),
-		secretsmanager: secretsmanager.NewFromConfig(execCfg),
-		ecr:            ecr.NewFromConfig(execCfg),
-		s3:             s3.NewFromConfig(appCfg),
+		cwl:            cloudwatchlogs.NewFromConfig(*execCfg),
+		ssm:            ssm.NewFromConfig(*execCfg),
+		secretsmanager: secretsmanager.NewFromConfig(*execCfg),
+		ecr:            ecr.NewFromConfig(*execCfg),
+		s3:             s3.NewFromConfig(*appCfg),
 		opt:            opt,
-		isAssumed:      &execCfg != &appCfg,
+		isAssumed:      execCfg != appCfg,
 	}
 }
 
@@ -135,7 +139,7 @@ func (v *verifier) existsEnvironmentFile(ctx context.Context, envFile types.Envi
 
 func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionRole *string, opt *VerifyOption) (*verifier, error) {
 	if executionRole == nil {
-		return newVerifier(cfg, cfg, opt), nil
+		return newVerifier(&cfg, &cfg, opt), nil
 	}
 	svc := sts.NewFromConfig(d.config.awsv2Config)
 	out, err := svc.AssumeRole(ctx, &sts.AssumeRoleInput{
@@ -144,7 +148,7 @@ func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionR
 	})
 	if err != nil {
 		d.Log("[INFO] failed to assume role to taskExecutionRole. Continue to verify with current session. %s", err.Error())
-		return newVerifier(cfg, cfg, opt), nil
+		return newVerifier(&cfg, &cfg, opt), nil
 	}
 	ec := aws.Config{}
 	ec.Region = d.config.Region
@@ -153,7 +157,7 @@ func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionR
 		aws.ToString(out.Credentials.SecretAccessKey),
 		aws.ToString(out.Credentials.SessionToken),
 	)
-	return newVerifier(ec, cfg, opt), nil
+	return newVerifier(&ec, &cfg, opt), nil
 }
 
 // VerifyOption represents options for Verify()
