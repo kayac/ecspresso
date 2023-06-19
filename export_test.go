@@ -19,6 +19,7 @@ var (
 	NewLogger                 = newLogger
 	NewLogFilter              = newLogFilter
 	NewConfigLoader           = newConfigLoader
+	NewVerifier               = newVerifier
 	ArnToName                 = arnToName
 	InitVerifyState           = initVerifyState
 	VerifyResource            = verifyResource

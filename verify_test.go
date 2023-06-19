@@ -6,6 +6,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/fatih/color"
 	"github.com/kayac/ecspresso/v2"
@@ -243,6 +244,27 @@ func TestVerifySkipResource(t *testing.T) {
 					t.Error("unexpected output [SKIP] for skip resource")
 				}
 			}
+		}
+	}
+}
+
+func TestVerifierIsAssumed(t *testing.T) {
+	cfg1 := aws.Config{}
+	cfg2 := aws.Config{}
+	var testCases = []struct {
+		exec      *aws.Config
+		app       *aws.Config
+		isAssumed bool
+	}{
+		{&cfg1, &cfg2, true},
+		{&cfg1, &cfg1, false},
+		{&cfg2, &cfg2, false},
+		{&cfg2, &cfg1, true},
+	}
+	for i, c := range testCases {
+		v := ecspresso.NewVerifier(c.exec, c.app, &ecspresso.VerifyOption{})
+		if v.IsAssumed() != c.isAssumed {
+			t.Errorf("unexpected IsAssumed %d expected:%v got:%v", i, c.isAssumed, v.IsAssumed())
 		}
 	}
 }

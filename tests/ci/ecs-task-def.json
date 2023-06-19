@@ -8,6 +8,7 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
+          "awslogs-create-group": "true",
           "awslogs-group": "ecspresso-test",
           "awslogs-region": "ap-northeast-1",
           "awslogs-stream-prefix": "nginx"

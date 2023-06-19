@@ -39,15 +39,19 @@ type verifier struct {
 	isAssumed      bool
 }
 
-func newVerifier(execCfg, appCfg aws.Config, opt *VerifyOption) *verifier {
+func (v *verifier) IsAssumed() bool {
+	return v.isAssumed
+}
+
+func newVerifier(execCfg, appCfg *aws.Config, opt *VerifyOption) *verifier {
 	return &verifier{
-		cwl:            cloudwatchlogs.NewFromConfig(execCfg),
-		ssm:            ssm.NewFromConfig(execCfg),
-		secretsmanager: secretsmanager.NewFromConfig(execCfg),
-		ecr:            ecr.NewFromConfig(execCfg),
-		s3:             s3.NewFromConfig(appCfg),
+		cwl:            cloudwatchlogs.NewFromConfig(*execCfg),
+		ssm:            ssm.NewFromConfig(*execCfg),
+		secretsmanager: secretsmanager.NewFromConfig(*execCfg),
+		ecr:            ecr.NewFromConfig(*execCfg),
+		s3:             s3.NewFromConfig(*appCfg),
 		opt:            opt,
-		isAssumed:      &execCfg != &appCfg,
+		isAssumed:      execCfg != appCfg,
 	}
 }
 
@@ -135,7 +139,8 @@ func (v *verifier) existsEnvironmentFile(ctx context.Context, envFile types.Envi
 
 func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionRole *string, opt *VerifyOption) (*verifier, error) {
 	if executionRole == nil {
-		return newVerifier(cfg, cfg, opt), nil
+		d.Log("[INFO] executionRoleArn is not set. Continue to verify with current session.")
+		return newVerifier(&cfg, &cfg, opt), nil
 	}
 	svc := sts.NewFromConfig(d.config.awsv2Config)
 	out, err := svc.AssumeRole(ctx, &sts.AssumeRoleInput{
@@ -144,8 +149,9 @@ func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionR
 	})
 	if err != nil {
 		d.Log("[INFO] failed to assume role to taskExecutionRole. Continue to verify with current session. %s", err.Error())
-		return newVerifier(cfg, cfg, opt), nil
+		return newVerifier(&cfg, &cfg, opt), nil
 	}
+	d.Log("[INFO] success to assume role: %s", aws.ToString(executionRole))
 	ec := aws.Config{}
 	ec.Region = d.config.Region
 	ec.Credentials = credentials.NewStaticCredentialsProvider(
@@ -153,7 +159,7 @@ func (d *App) newAssumedVerifier(ctx context.Context, cfg aws.Config, executionR
 		aws.ToString(out.Credentials.SecretAccessKey),
 		aws.ToString(out.Credentials.SessionToken),
 	)
-	return newVerifier(ec, cfg, opt), nil
+	return newVerifier(&ec, &cfg, opt), nil
 }
 
 // VerifyOption represents options for Verify()
@@ -564,8 +570,10 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 			if errors.As(err, &ex) {
 				// ignore error if log group already exists
 				d.Log("[DEBUG] log group %s already exists, ignored", group)
-			} else {
+			} else if d.verifier.IsAssumed() {
 				return fmt.Errorf("failed to create log group %s: %w", group, err)
+			} else {
+				d.Log("[WARNING] failed to create log group %s: %s", group, err)
 			}
 		} else {
 			d.Log("[INFO] created log group %s", group)
