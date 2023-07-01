@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/Songmu/prompter v0.5.1
-	github.com/alecthomas/kong v0.7.0
+	github.com/alecthomas/kong v0.8.0
 	github.com/aws/aws-sdk-go-v2 v1.18.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.15
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.24
