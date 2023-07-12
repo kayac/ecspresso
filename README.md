@@ -697,6 +697,18 @@ ecs-service-def.json
 {{ tfstatef `aws_subnet.ecs['%s'].id` (must_env `SERVICE`) }}
 ```
 
+#### Supported tfstate URL format
+
+- Local file `file://path/to/terraform.tfstate`
+- HTTP/HTTPS `https://example.com/terraform.tfstate`
+- Amazon S3 `s3://{bucket}/{key}`
+- Terraform Cloud `remote://api.terraform.io/{organization}/{workspaces}`
+  - `TFE_TOKEN` environment variable is required.
+- Google Cloud Storage `gs://{bucket}/{key}`
+- Azure Blog Storage `azurerm://{resource_group_name}/{storage_account_name}/{container_name}/{blob_name}`
+
+This plugin uses [tfstate-lookup](https://github.com/fujiwara/tfstate-lookup) to load tfstate.
+
 #### Multiple tfstate support
 
 `func_prefix` adds a prefix to template function names for each plugin configuration.
