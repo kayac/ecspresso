@@ -30,8 +30,7 @@ func (d *App) NewEcsta(ctx context.Context) (*ecsta.Ecsta, error) {
 }
 
 func (d *App) Exec(ctx context.Context, opt ExecOption) error {
-	ctx, cancel := d.Start(ctx)
-	defer cancel()
+	// Do not call d.Start() because timeout disabled for exec.
 
 	ecstaApp, err := d.NewEcsta(ctx)
 	if err != nil {
