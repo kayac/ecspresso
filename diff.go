@@ -87,7 +87,7 @@ func diffServices(local, remote *Service, remoteArn string, localPath string, un
 	}
 	if local.DesiredCount == nil {
 		// ignore DesiredCount when it in local is not defined.
-		remote.DesiredCount = nil
+		remoteSvForDiff.UpdateServiceInput.DesiredCount = nil
 	}
 	remoteSvBytes, err := MarshalJSONForAPI(remoteSvForDiff)
 	if err != nil {
