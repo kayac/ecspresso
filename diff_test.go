@@ -212,3 +212,46 @@ func TestServiceDefinitionDiffer(t *testing.T) {
 		t.Error("failed to SortTaskDefinitionForDiff", diff)
 	}
 }
+
+var testServiceDefinitionNoDesiredCount = &ecspresso.Service{
+	Service: types.Service{
+		LaunchType: types.LaunchTypeFargate,
+	},
+	DesiredCount: nil,
+}
+
+var testServiceDefinitionHasDesiredCount = &ecspresso.Service{
+	Service: types.Service{
+		LaunchType: types.LaunchTypeFargate,
+	},
+	DesiredCount: ptr(int32(2)),
+}
+
+func TestDiffServices(t *testing.T) {
+	t.Run("when local.DesiredCount is nil, ignore diff of DesiredCount", func (t *testing.T) {
+		diff, err := ecspresso.DiffServices(
+			testServiceDefinitionNoDesiredCount,
+			testServiceDefinitionHasDesiredCount,
+			"arn", "file", true,
+		)
+		if err != nil {
+			t.Error(err)
+		}
+		if diff != "" {
+			t.Errorf("unexpected diff: %s", diff)
+		}
+	})
+	t.Run("when local.DesiredCount is not nil, detect diff of DesiredCount.", func(t *testing.T) {
+		diff, err := ecspresso.DiffServices(
+			testServiceDefinitionHasDesiredCount,
+			testServiceDefinitionNoDesiredCount,
+			"arn", "file", true,
+		)
+		if err != nil {
+			t.Error(err)
+		}
+		if diff == "" {
+			t.Errorf("unexpected diff: %s", diff)
+		}
+	})
+}

@@ -24,6 +24,7 @@ var (
 	InitVerifyState           = initVerifyState
 	VerifyResource            = verifyResource
 	Map2str                   = map2str
+	DiffServices              = diffServices
 )
 
 type ModifyAutoScalingParams = modifyAutoScalingParams
