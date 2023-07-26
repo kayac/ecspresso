@@ -640,6 +640,21 @@ var cliTests = []struct {
 		},
 	},
 	{
+		args: []string{"init", "--task-definition=app:123", "--config", "myconfig.yml"},
+		sub:  "init",
+		subOption: &ecspresso.InitOption{
+			Region:                os.Getenv("AWS_REGION"),
+			Cluster:               "default",
+			ConfigFilePath:        "myconfig.yml",
+			Service:               "",
+			TaskDefinition:        "app:123",
+			TaskDefinitionPath:    "ecs-task-def.json",
+			ServiceDefinitionPath: "ecs-service-def.json",
+			ForceOverwrite:        false,
+			Jsonnet:               false,
+		},
+	},
+	{
 		args: []string{"diff"},
 		sub:  "diff",
 		subOption: &ecspresso.DiffOption{
