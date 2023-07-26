@@ -163,7 +163,8 @@ func (d *App) initServiceDefinition(ctx context.Context, opt InitOption) (*Servi
 	}
 	tdArn := *sv.TaskDefinition
 	treatmentServiceDefinition(sv)
-	if b, err := MarshalJSONForAPI(sv); err != nil {
+	// remove unnecessary fields
+	if b, err := MarshalJSONForAPI(sv, "del(.runningCount, .pendingCount)"); err != nil {
 		return nil, "", fmt.Errorf("unable to marshal service definition to JSON: %w", err)
 	} else {
 		if opt.Jsonnet {
