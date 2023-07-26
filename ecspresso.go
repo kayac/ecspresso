@@ -462,7 +462,7 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 		src = c.TaskDefinition
 	}
 	var td TaskDefinitionInput
-	if err := d.UnmarshalJSONForStruct(src, &td, path); err != nil {
+	if err := UnmarshalJSONForStruct(src, &td, path); err != nil {
 		return nil, fmt.Errorf("failed to load task definition %s: %w", path, err)
 	}
 	if len(td.Tags) == 0 {
