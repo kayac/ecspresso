@@ -52,14 +52,8 @@ var (
 
 func (d *App) Init(ctx context.Context, opt InitOption) error {
 	conf := d.config
-	var tdOnly bool
-	if opt.Service != "" {
-		tdOnly = false
-	} else if opt.TaskDefinition != "" {
-		tdOnly = true
-	} else {
-		return fmt.Errorf("--service or --task-definition is required")
-	}
+	// when --task-definition is not empty, --service is empty because these flags are exclusive.
+	tdOnly := opt.TaskDefinition != ""
 
 	d.LogJSON(opt)
 	if opt.Jsonnet {
