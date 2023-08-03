@@ -277,7 +277,7 @@ It escapes values as JSON strings. Use it when you want to escape values that ne
 
 ### Plugin provided template functions
 
-ecspresso also adds some template functions by plugins. See [Plugin](#plugin) section.
+ecspresso also adds some template functions by plugins. See [Plugins](#plugins) section.
 
 ## Example of deployment
 
