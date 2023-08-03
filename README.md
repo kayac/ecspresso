@@ -202,6 +202,25 @@ And then, you already can deploy the service by ecspresso!
 $ ecspresso deploy --config ecspresso.yml
 ```
 
+### Next step
+
+ecspresso can read service and task definition files as a template. A typical use case is to replace the image's tag in the task definition file.
+
+Modify ecs-task-def.json as below.
+
+```diff
+-  "image": "nginx:latest",
++  "image": "nginx:{{ must_env `IMAGE_TAG` }}",
+```
+
+And then, deploy the service with environment variable `IMAGE_TAG`.
+
+```console
+$ IMAGE_TAG=stable ecspresso deploy --config ecspresso.yml
+```
+
+See also [Configuration file](#configuration-file) and [Template syntax](#template-syntax) section.
+
 ## Configuration file
 
 A configuration file of ecspresso (YAML or JSON, or Jsonnet format).
@@ -225,6 +244,40 @@ timeout: 5m # default 10m
 - Wait for the service to be stable.
 
 Configuration files and task/service definition files are read by [go-config](https://github.com/kayac/go-config). go-config has template functions `env`, `must_env` and `json_escape`.
+
+## Template syntax
+
+ecspresso uses the [text/template standard package in Go](https://pkg.go.dev/text/template) to render template files, and parses as YAML/JSON/Jsonnet. By default, ecspresso provides the following as template functions.
+
+### `env`
+
+```
+"{{ env `NAME` `default value` }}"
+```
+
+If the environment variable `NAME` is set, it will replace with its value. If it's not set, it will replace with "default value".
+
+### `must_env`
+
+```
+"{{ must_env `NAME` }}"
+```
+
+It replaces with the value of the environment variable `NAME`. If the variable isn't set at the time of execution, ecspresso will panic and stop forcefully.
+
+By defining values that can cause issues when running without meaningful values with must_env, you can prevent unintended deployments.
+
+### `json_escape`
+
+```
+"{{ must_env `JSON_VALUE` | json_escape }}"
+```
+
+It escapes values as JSON strings. Use it when you want to escape values that need to be embedded as strings and require escaping, like quotes.
+
+### Plugin provided template functions
+
+ecspresso also adds some template functions by plugins. See [Plugins](#plugins) section.
 
 ## Example of deployment
 
