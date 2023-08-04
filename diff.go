@@ -277,7 +277,7 @@ func sortTaskDefinitionForDiff(td *TaskDefinitionInput) {
 	})
 	// containerDefinitions are sorted by name
 	sort.SliceStable(td.ContainerDefinitions, func(i, j int) bool {
-		return aws.ToString(td.ContainerDefinitions[i].Name) > aws.ToString(td.ContainerDefinitions[j].Name)
+		return aws.ToString(td.ContainerDefinitions[i].Name) < aws.ToString(td.ContainerDefinitions[j].Name)
 	})
 
 	if td.Cpu != nil {

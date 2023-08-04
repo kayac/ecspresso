@@ -24,6 +24,7 @@ type InitOption struct {
 	TaskDefinition        string `help:"ECS task definition name:revision" required:"" xor:"FROM"`
 	TaskDefinitionPath    string `help:"path to output task definition file" default:"ecs-task-def.json"`
 	ServiceDefinitionPath string `help:"path to output service definition file" default:"ecs-service-def.json"`
+	Sort                  bool   `help:"sort elements in task definition" default:"false" negatable:""`
 	ConfigFilePath        string
 	ForceOverwrite        bool `help:"overwrite existing files" default:"false"`
 	Jsonnet               bool `help:"output files as jsonnet format" default:"false"`
@@ -187,6 +188,9 @@ func (d *App) initTaskDefinition(ctx context.Context, opt InitOption, tdArn stri
 	td, err := d.DescribeTaskDefinition(ctx, tdArn)
 	if err != nil {
 		return nil, err
+	}
+	if opt.Sort {
+		sortTaskDefinitionForDiff(td)
 	}
 	if b, err := MarshalJSONForAPI(td); err != nil {
 		return nil, fmt.Errorf("unable to marshal task definition to JSON: %w", err)
