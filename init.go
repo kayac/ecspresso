@@ -190,7 +190,7 @@ func (d *App) initTaskDefinition(ctx context.Context, opt InitOption, tdArn stri
 		return nil, err
 	}
 	if opt.Sort {
-		sortTaskDefinitionForDiff(td)
+		sortTaskDefinition(td)
 	}
 	if b, err := MarshalJSONForAPI(td); err != nil {
 		return nil, fmt.Errorf("unable to marshal task definition to JSON: %w", err)

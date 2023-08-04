@@ -110,8 +110,8 @@ func diffServices(local, remote *Service, remoteArn string, localPath string, un
 }
 
 func diffTaskDefs(local, remote *TaskDefinitionInput, remoteArn string, localPath string, unified bool) (string, error) {
-	sortTaskDefinitionForDiff(local)
-	sortTaskDefinitionForDiff(remote)
+	sortTaskDefinition(local)
+	sortTaskDefinition(remote)
 
 	newTdBytes, err := MarshalJSONForAPI(local)
 	if err != nil {
@@ -235,7 +235,7 @@ func ServiceDefinitionForDiff(sv *Service) *ServiceForDiff {
 	}
 }
 
-func sortTaskDefinitionForDiff(td *TaskDefinitionInput) {
+func sortTaskDefinition(td *TaskDefinitionInput) {
 	for i, cd := range td.ContainerDefinitions {
 		sort.SliceStable(cd.Environment, func(i, j int) bool {
 			return aws.ToString(cd.Environment[i].Name) < aws.ToString(cd.Environment[j].Name)
