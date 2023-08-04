@@ -137,8 +137,8 @@ var testTaskDefinition2 = &ecspresso.TaskDefinitionInput{
 }
 
 func TestTaskDefinitionDiffer(t *testing.T) {
-	ecspresso.SortTaskDefinitionForDiff(testTaskDefinition1)
-	ecspresso.SortTaskDefinitionForDiff(testTaskDefinition2)
+	ecspresso.SortTaskDefinition(testTaskDefinition1)
+	ecspresso.SortTaskDefinition(testTaskDefinition2)
 	td1, _ := ecspresso.MarshalJSONForAPI(testTaskDefinition1)
 	td2, _ := ecspresso.MarshalJSONForAPI(testTaskDefinition2)
 	if diff := cmp.Diff(td1, td2); diff != "" {
@@ -228,7 +228,7 @@ var testServiceDefinitionHasDesiredCount = &ecspresso.Service{
 }
 
 func TestDiffServices(t *testing.T) {
-	t.Run("when local.DesiredCount is nil, ignore diff of DesiredCount", func (t *testing.T) {
+	t.Run("when local.DesiredCount is nil, ignore diff of DesiredCount", func(t *testing.T) {
 		diff, err := ecspresso.DiffServices(
 			testServiceDefinitionNoDesiredCount,
 			testServiceDefinitionHasDesiredCount,
