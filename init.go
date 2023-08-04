@@ -71,7 +71,7 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 	if err := conf.Restrict(ctx); err != nil {
 		return err
 	}
-	conf.Timeout = nil // timeout is omitted by init command. timout should be set by user.
+	conf.Timeout = nil // timeout is omitted by init command. timeout should be set by user.
 
 	var err error
 	var sv *Service
