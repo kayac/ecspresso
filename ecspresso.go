@@ -173,12 +173,14 @@ func (d *App) Start(ctx context.Context) (context.Context, context.CancelFunc) {
 }
 
 type Option struct {
-	InitOption     *InitOption
-	ConfigFilePath string
-	Debug          bool
-	ExtStr         map[string]string
-	ExtCode        map[string]string
-	AssumeRoleARN  string
+	Envfile        []string          `help:"environment files"`
+	Debug          bool              `help:"enable debug log"`
+	ExtStr         map[string]string `help:"external string values for Jsonnet"`
+	ExtCode        map[string]string `help:"external code values for Jsonnet"`
+	ConfigFilePath string            `help:"config file" name:"config" default:"ecspresso.yml"`
+	AssumeRoleARN  string            `help:"the ARN of the role to assume" default:""`
+
+	InitOption *InitOption
 }
 
 func (opt *Option) resolveConfigFilePath() (path string) {

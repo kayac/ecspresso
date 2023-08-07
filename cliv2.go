@@ -24,18 +24,10 @@ func ParseCLIv2(args []string) (string, *CLIOptions, func(), error) {
 	}
 	sub := strings.Fields(c.Command())[0]
 
-	for _, envFile := range opts.Envfile {
+	for _, envFile := range opts.Option.Envfile {
 		if err := ExportEnvFile(envFile); err != nil {
 			return sub, &opts, nil, fmt.Errorf("failed to load envfile: %w", err)
 		}
-	}
-
-	opts.Option = &Option{
-		ConfigFilePath: opts.Config,
-		Debug:          opts.Debug,
-		ExtStr:         opts.ExtStr,
-		ExtCode:        opts.ExtCode,
-		AssumeRoleARN:  opts.AssumeRoleARN,
 	}
 	if opts.Option.ExtStr == nil {
 		opts.Option.ExtStr = map[string]string{}
@@ -45,7 +37,7 @@ func ParseCLIv2(args []string) (string, *CLIOptions, func(), error) {
 	}
 	switch sub {
 	case "init":
-		opts.Init.ConfigFilePath = opts.Config
+		opts.Init.ConfigFilePath = opts.ConfigFilePath
 		opts.Option.InitOption = opts.Init
 	}
 	return sub, &opts, func() { c.PrintUsage(true) }, nil

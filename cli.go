@@ -7,14 +7,7 @@ import (
 )
 
 type CLIOptions struct {
-	Envfile       []string          `help:"environment files"`
-	Debug         bool              `help:"enable debug log"`
-	ExtStr        map[string]string `help:"external string values for Jsonnet"`
-	ExtCode       map[string]string `help:"external code values for Jsonnet"`
-	Config        string            `help:"config file" default:"ecspresso.yml"`
-	AssumeRoleARN string            `help:"the ARN of the role to assume" default:""`
-
-	Option *Option
+	Option
 
 	Appspec    *AppSpecOption    `cmd:"" help:"output AppSpec YAML for CodeDeploy to STDOUT"`
 	Delete     *DeleteOption     `cmd:"" help:"delete service"`
@@ -87,7 +80,7 @@ func dispatchCLI(ctx context.Context, sub string, usage func(), opts *CLIOptions
 		return nil
 	}
 
-	app, err := New(ctx, opts.Option)
+	app, err := New(ctx, &opts.Option)
 	if err != nil {
 		return err
 	}
