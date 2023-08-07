@@ -65,6 +65,11 @@ type Config struct {
 	awsv2Config        aws.Config
 }
 
+type ConfigOverrides struct {
+	Region  string        `help:"AWS region" env:"AWS_REGION"`
+	Timeout time.Duration `help:"Timeout duration" default:"10m" env:"ECSPRESSO_TIMEOUT"` // default must be same as DefaultTimeout
+}
+
 type ConfigCodeDeploy struct {
 	ApplicationName     string `yaml:"application_name,omitempty" json:"application_name,omitempty"`
 	DeploymentGroupName string `yaml:"deployment_group_name,omitempty" json:"deployment_group_name,omitempty"`
@@ -200,6 +205,14 @@ func (c *Config) ValidateVersion(version string) error {
 	}
 
 	return nil
+}
+
+func (c *Config) Override(ov *ConfigOverrides) {
+	if ov == nil {
+		return // nothing to do
+	}
+	c.Timeout = &Duration{Duration: ov.Timeout}
+	c.Region = ov.Region
 }
 
 // NewDefaultConfig creates a default configuration.

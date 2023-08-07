@@ -18,7 +18,6 @@ import (
 var CreateFileMode = os.FileMode(0644)
 
 type InitOption struct {
-	Region                string `help:"AWS region" env:"AWS_REGION" default:""`
 	Cluster               string `help:"ECS cluster name" default:"default"`
 	Service               string `help:"ECS service name" required:"" xor:"FROM"`
 	TaskDefinition        string `help:"ECS task definition name:revision" required:"" xor:"FROM"`
@@ -30,10 +29,9 @@ type InitOption struct {
 	Jsonnet               bool `help:"output files as jsonnet format" default:"false"`
 }
 
-func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
+func (opt *InitOption) NewConfig(ctx context.Context, ov *ConfigOverrides) (*Config, error) {
 	conf := NewDefaultConfig()
 	conf.path = opt.ConfigFilePath
-	conf.Region = opt.Region
 	conf.Cluster = opt.Cluster
 	conf.Service = opt.Service
 	conf.TaskDefinitionPath = opt.TaskDefinitionPath
@@ -41,6 +39,7 @@ func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
 	if err := conf.Restrict(ctx); err != nil {
 		return nil, err
 	}
+	conf.Override(ov)
 	return conf, nil
 }
 

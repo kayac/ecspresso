@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/kayac/ecspresso/v2"
@@ -29,6 +30,10 @@ var cliTests = []struct {
 		},
 		sub: "status",
 		option: &ecspresso.Option{
+			ConfigOverrides: &ecspresso.ConfigOverrides{
+				Region:  os.Getenv("AWS_REGION"),
+				Timeout: ecspresso.DefaultTimeout,
+			},
 			ConfigFilePath: "config.yml",
 			Debug:          true,
 			Envfile:        []string{"tests/envfile"},
@@ -55,6 +60,10 @@ var cliTests = []struct {
 		},
 		sub: "status",
 		option: &ecspresso.Option{
+			ConfigOverrides: &ecspresso.ConfigOverrides{
+				Region:  os.Getenv("AWS_REGION"),
+				Timeout: ecspresso.DefaultTimeout,
+			},
 			ConfigFilePath: "config.yml",
 			Debug:          true,
 			ExtStr:         map[string]string{},
@@ -104,8 +113,17 @@ var cliTests = []struct {
 		},
 	},
 	{
-		args: []string{"deploy"},
+		args: []string{"deploy", "--timeout=5m", "--region=us-east-1"},
 		sub:  "deploy",
+		option: &ecspresso.Option{
+			ConfigOverrides: &ecspresso.ConfigOverrides{
+				Region:  "us-east-1",
+				Timeout: time.Minute * 5,
+			},
+			ExtStr:         map[string]string{},
+			ExtCode:        map[string]string{},
+			ConfigFilePath: "ecspresso.yml",
+		},
 		subOption: &ecspresso.DeployOption{
 			DryRun:               false,
 			DesiredCount:         ptr(int32(-1)),
@@ -581,7 +599,6 @@ var cliTests = []struct {
 		args: []string{"init", "--service", "myservice", "--config", "myconfig.yml"},
 		sub:  "init",
 		subOption: &ecspresso.InitOption{
-			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "default",
 			ConfigFilePath:        "myconfig.yml",
 			Service:               "myservice",
@@ -595,8 +612,11 @@ var cliTests = []struct {
 		args: []string{"init", "--service", "myservice", "--config", "myconfig.yml"},
 		sub:  "init",
 		option: &ecspresso.Option{
+			ConfigOverrides: &ecspresso.ConfigOverrides{
+				Region:  os.Getenv("AWS_REGION"),
+				Timeout: ecspresso.DefaultTimeout,
+			},
 			InitOption: &ecspresso.InitOption{
-				Region:                os.Getenv("AWS_REGION"),
 				Cluster:               "default",
 				ConfigFilePath:        "myconfig.yml",
 				Service:               "myservice",
@@ -611,7 +631,6 @@ var cliTests = []struct {
 			ExtCode:        map[string]string{},
 		},
 		subOption: &ecspresso.InitOption{
-			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "default",
 			ConfigFilePath:        "myconfig.yml",
 			Service:               "myservice",
@@ -630,7 +649,6 @@ var cliTests = []struct {
 		},
 		sub: "init",
 		subOption: &ecspresso.InitOption{
-			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "mycluster",
 			ConfigFilePath:        "myconfig.jsonnet",
 			Service:               "myservice",
@@ -644,7 +662,6 @@ var cliTests = []struct {
 		args: []string{"init", "--task-definition=app:123", "--config", "myconfig.yml"},
 		sub:  "init",
 		subOption: &ecspresso.InitOption{
-			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "default",
 			ConfigFilePath:        "myconfig.yml",
 			Service:               "",

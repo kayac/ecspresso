@@ -13,7 +13,9 @@ func ParseCLIv2(args []string) (string, *CLIOptions, func(), error) {
 		args = []string{"--help"}
 	}
 
-	var opts CLIOptions
+	opts := CLIOptions{}
+	opts.ConfigOverrides = &ConfigOverrides{}
+
 	parser, err := kong.New(&opts, kong.Vars{"version": Version})
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to new kong: %w", err)

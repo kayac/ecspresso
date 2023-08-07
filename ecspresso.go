@@ -118,7 +118,7 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 		err  error
 	)
 	if opt.InitOption != nil {
-		conf, err = opt.InitOption.NewConfig(ctx)
+		conf, err = opt.InitOption.NewConfig(ctx, opt.ConfigOverrides)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize config: %w", err)
 		}
@@ -127,6 +127,7 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
 		}
+		conf.Override(opt.ConfigOverrides)
 	}
 	conf.AssumeRole(opt.AssumeRoleARN)
 
@@ -180,7 +181,8 @@ type Option struct {
 	ConfigFilePath string            `help:"config file" name:"config" default:"ecspresso.yml"`
 	AssumeRoleARN  string            `help:"the ARN of the role to assume" default:""`
 
-	InitOption *InitOption
+	*ConfigOverrides
+	InitOption *InitOption `hidden:""`
 }
 
 func (opt *Option) resolveConfigFilePath() (path string) {
