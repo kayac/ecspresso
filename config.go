@@ -23,6 +23,10 @@ const (
 	DefaultTimeout     = 10 * time.Minute
 )
 
+var (
+	DefaultRegion = os.Getenv("AWS_REGION")
+)
+
 var awsv2ConfigLoadOptionsFunc []func(*awsConfig.LoadOptions) error
 
 type configLoader struct {
@@ -142,7 +146,7 @@ func (c *Config) Restrict(ctx context.Context) error {
 		c.Timeout = &Duration{Duration: DefaultTimeout}
 	}
 	if c.Region == "" {
-		c.Region = os.Getenv("AWS_REGION")
+		c.Region = DefaultRegion
 	}
 	var err error
 	var optsFunc []func(*awsConfig.LoadOptions) error
@@ -218,7 +222,7 @@ func (c *Config) Override(ov *ConfigOverrides) {
 // NewDefaultConfig creates a default configuration.
 func NewDefaultConfig() *Config {
 	return &Config{
-		Region:  os.Getenv("AWS_REGION"),
+		Region:  DefaultRegion,
 		Timeout: &Duration{DefaultTimeout},
 	}
 }
