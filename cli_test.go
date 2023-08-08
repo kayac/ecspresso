@@ -30,17 +30,14 @@ var cliTests = []struct {
 		},
 		sub: "status",
 		option: &ecspresso.Option{
-			ConfigOverrides: &ecspresso.ConfigOverrides{
-				Region:  os.Getenv("AWS_REGION"),
-				Timeout: ecspresso.DefaultTimeout,
-			},
-			ConfigFilePath: "config.yml",
-			Debug:          true,
-			Envfile:        []string{"tests/envfile"},
-			ExtStr:         map[string]string{"s1": "v1", "s2": "v2"},
-			ExtCode:        map[string]string{"c1": "123", "c2": "1+2"},
-			InitOption:     nil,
-			AssumeRoleARN:  "arn:aws:iam::123456789012:role/exampleRole",
+			ConfigOverrides: &ecspresso.ConfigOverrides{},
+			ConfigFilePath:  "config.yml",
+			Debug:           true,
+			Envfile:         []string{"tests/envfile"},
+			ExtStr:          map[string]string{"s1": "v1", "s2": "v2"},
+			ExtCode:         map[string]string{"c1": "123", "c2": "1+2"},
+			InitOption:      nil,
+			AssumeRoleARN:   "arn:aws:iam::123456789012:role/exampleRole",
 		},
 		subOption: &ecspresso.StatusOption{
 			Events: 10,
@@ -60,16 +57,13 @@ var cliTests = []struct {
 		},
 		sub: "status",
 		option: &ecspresso.Option{
-			ConfigOverrides: &ecspresso.ConfigOverrides{
-				Region:  os.Getenv("AWS_REGION"),
-				Timeout: ecspresso.DefaultTimeout,
-			},
-			ConfigFilePath: "config.yml",
-			Debug:          true,
-			ExtStr:         map[string]string{},
-			ExtCode:        map[string]string{},
-			InitOption:     nil,
-			AssumeRoleARN:  "",
+			ConfigOverrides: &ecspresso.ConfigOverrides{},
+			ConfigFilePath:  "config.yml",
+			Debug:           true,
+			ExtStr:          map[string]string{},
+			ExtCode:         map[string]string{},
+			InitOption:      nil,
+			AssumeRoleARN:   "",
 		},
 		subOption: &ecspresso.StatusOption{
 			Events: 100,
@@ -117,8 +111,8 @@ var cliTests = []struct {
 		sub:  "deploy",
 		option: &ecspresso.Option{
 			ConfigOverrides: &ecspresso.ConfigOverrides{
-				Region:  "us-east-1",
-				Timeout: time.Minute * 5,
+				Region:  ptr("us-east-1"),
+				Timeout: ptr(time.Minute * 5),
 			},
 			ExtStr:         map[string]string{},
 			ExtCode:        map[string]string{},
@@ -612,10 +606,7 @@ var cliTests = []struct {
 		args: []string{"init", "--service", "myservice", "--config", "myconfig.yml"},
 		sub:  "init",
 		option: &ecspresso.Option{
-			ConfigOverrides: &ecspresso.ConfigOverrides{
-				Region:  os.Getenv("AWS_REGION"),
-				Timeout: ecspresso.DefaultTimeout,
-			},
+			ConfigOverrides: &ecspresso.ConfigOverrides{},
 			InitOption: &ecspresso.InitOption{
 				Cluster:               "default",
 				ConfigFilePath:        "myconfig.yml",

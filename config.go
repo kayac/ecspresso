@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	DefaultRegion = os.Getenv("AWS_REGION")
+	DefaultRegion = func() string { return os.Getenv("AWS_REGION") }
 )
 
 var awsv2ConfigLoadOptionsFunc []func(*awsConfig.LoadOptions) error
@@ -70,8 +70,8 @@ type Config struct {
 }
 
 type ConfigOverrides struct {
-	Region  string        `help:"AWS region" env:"AWS_REGION"`
-	Timeout time.Duration `help:"Timeout duration" default:"10m" env:"ECSPRESSO_TIMEOUT"` // default must be same as DefaultTimeout
+	Region  *string        `help:"AWS region" env:"AWS_REGION"`
+	Timeout *time.Duration `help:"Timeout duration" env:"ECSPRESSO_TIMEOUT"`
 }
 
 type ConfigCodeDeploy struct {
@@ -146,7 +146,7 @@ func (c *Config) Restrict(ctx context.Context) error {
 		c.Timeout = &Duration{Duration: DefaultTimeout}
 	}
 	if c.Region == "" {
-		c.Region = DefaultRegion
+		c.Region = DefaultRegion()
 	}
 	var err error
 	var optsFunc []func(*awsConfig.LoadOptions) error
@@ -215,14 +215,18 @@ func (c *Config) Override(ov *ConfigOverrides) {
 	if ov == nil {
 		return // nothing to do
 	}
-	c.Timeout = &Duration{Duration: ov.Timeout}
-	c.Region = ov.Region
+	if ov.Timeout != nil {
+		c.Timeout = &Duration{Duration: *ov.Timeout}
+	}
+	if ov.Region != nil {
+		c.Region = *ov.Region
+	}
 }
 
 // NewDefaultConfig creates a default configuration.
 func NewDefaultConfig() *Config {
 	return &Config{
-		Region:  DefaultRegion,
+		Region:  DefaultRegion(),
 		Timeout: &Duration{DefaultTimeout},
 	}
 }
