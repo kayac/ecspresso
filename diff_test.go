@@ -26,7 +26,7 @@ func TestToNumberCPU(t *testing.T) {
 	for _, s := range testSuiteToNumberCPU {
 		cpu := ecspresso.ToNumberCPU(s[0])
 		if aws.ToString(cpu) != s[1] {
-			t.Errorf("unexpected vcpu convertion %s => %s expected %s", s[0], *cpu, s[1])
+			t.Errorf("unexpected vcpu conversion %s => %s expected %s", s[0], *cpu, s[1])
 		}
 	}
 }
@@ -35,7 +35,7 @@ func TestToNumberMemory(t *testing.T) {
 	for _, s := range testSuiteToNumberMemory {
 		cpu := ecspresso.ToNumberMemory(s[0])
 		if aws.ToString(cpu) != s[1] {
-			t.Errorf("unexpected memory convertion %s => %s expected %s", s[0], *cpu, s[1])
+			t.Errorf("unexpected memory conversion %s => %s expected %s", s[0], *cpu, s[1])
 		}
 	}
 }
