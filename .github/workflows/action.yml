@@ -11,7 +11,7 @@ jobs:
     name: test action
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: kayac/ecspresso@v0
         with:
           version: v1.5.0
