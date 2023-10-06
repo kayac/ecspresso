@@ -375,7 +375,7 @@ $ ecspresso scale --tasks 10
 
 ## Example of deploy
 
-escpresso can deploy a service by `service_definition` JSON file and `task_definition`.
+ecspresso can deploy a service by `service_definition` JSON file and `task_definition`.
 
 ```console
 $ ecspresso deploy --config ecspresso.yml
