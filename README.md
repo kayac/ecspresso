@@ -30,6 +30,14 @@ $ asdf install ecspresso 2.0.0
 $ asdf global ecspresso 2.0.0
 ```
 
+### aqua (macOS and Linux)
+
+[aqua](https://aquaproj.github.io/) is a CLI Version Manager.
+
+```console
+$ aqua g -i kayac/ecspresso
+```
+
 ### Binary packages
 
 [Releases](https://github.com/kayac/ecspresso/releases)
