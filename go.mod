@@ -41,7 +41,7 @@ require (
 	github.com/samber/lo v1.36.0
 	github.com/schollz/progressbar/v3 v3.13.1
 	github.com/shogo82148/go-retry v1.1.1
-	golang.org/x/sys v0.11.0
+	golang.org/x/sys v0.13.0
 )
 
 require (
@@ -107,12 +107,12 @@ require (
 	github.com/tkuchiki/go-timezone v0.2.2 // indirect
 	github.com/tkuchiki/parsetime v0.3.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
-	golang.org/x/net v0.14.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1 // indirect
-	golang.org/x/term v0.11.0 // indirect
-	golang.org/x/text v0.12.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.96.0 // indirect
