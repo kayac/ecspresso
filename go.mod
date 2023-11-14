@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.22.2
 	github.com/aws/aws-sdk-go-v2/config v1.18.15
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.24
-	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.15.17
+	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.24.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.19
 	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.14.17
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.18.11
