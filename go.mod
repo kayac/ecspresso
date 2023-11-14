@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.15.17
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.19
 	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.14.17
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.18.11
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.22.1
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.33.0
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.19.11
 	github.com/aws/aws-sdk-go-v2/service/iam v1.18.18
