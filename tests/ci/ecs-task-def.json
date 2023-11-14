@@ -63,6 +63,10 @@
         {
           "name": "JSON_FOO",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:{{must_env `AWS_ACCOUNT_ID`}}:secret:ecspresso-test/json-soBS7X:foo::"
+        },
+        {
+          "name": "JSON_VIA_SSM",
+          "valueFrom": "{{ secretsmanager_arn `ecspresso-test/json` }}"
         }
       ],
       "command": [

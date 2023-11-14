@@ -4,3 +4,5 @@ service: "{{ must_env `SERVICE` }}"
 service_definition: ecs-service-def.json
 task_definition: ecs-task-def.json
 timeout: 10m0s
+plugins:
+  - name: secretsmanager
