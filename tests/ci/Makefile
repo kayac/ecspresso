@@ -3,6 +3,7 @@
 export CLUSTER := ecspresso-test
 export SERVICE := nginx-$(CIRCLE_BRANCH)
 export NOW := $(shell date +%Y%m%d%H%M%S)
+export CLIENT_TOKEN := $(shell uuidgen)
 ECSPRESSO := ecspresso --envfile envfile
 
 help:
@@ -53,7 +54,7 @@ run-task:
 		--dry-run
 	$(ECSPRESSO) --envfile envfile.override run \
 		--overrides '{"containerOverrides":[{"name":"nginx", "command":["nginx", "-V"]}]}' \
-		--debug
+		--debug --client-token $(CLIENT_TOKEN)
 	OPTION=-v $(ECSPRESSO) --envfile envfile.override run \
 		--overrides-file=overrides.json \
 		--dry-run

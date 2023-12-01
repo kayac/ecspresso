@@ -13,19 +13,20 @@ import (
 )
 
 type RunOption struct {
-	DryRun               bool   `help:"dry run" default:"false"`
-	TaskDefinition       string `name:"task-def" help:"task definition file for run task" default:""`
-	Wait                 bool   `help:"wait for task to complete" default:"true" negatable:""`
-	TaskOverrideStr      string `name:"overrides" help:"task override JSON string" default:""`
-	TaskOverrideFile     string `name:"overrides-file" help:"task override JSON file path" default:""`
-	SkipTaskDefinition   bool   `help:"skip register a new task definition" default:"false"`
-	Count                int32  `help:"number of tasks to run (max 10)" default:"1"`
-	WatchContainer       string `help:"container name for watching exit code" default:""`
-	LatestTaskDefinition bool   `help:"use the latest task definition without registering a new task definition" default:"false"`
-	PropagateTags        string `help:"propagate the tags for the task (SERVICE or TASK_DEFINITION)" default:""`
-	Tags                 string `help:"tags for the task: format is KeyFoo=ValueFoo,KeyBar=ValueBar" default:""`
-	WaitUntil            string `help:"wait until invoked tasks status reached to (running or stopped)" default:"stopped" enum:"running,stopped"`
-	Revision             *int64 `help:"revision of the task definition to run when --skip-task-definition" default:"0"`
+	DryRun               bool    `help:"dry run" default:"false"`
+	TaskDefinition       string  `name:"task-def" help:"task definition file for run task" default:""`
+	Wait                 bool    `help:"wait for task to complete" default:"true" negatable:""`
+	TaskOverrideStr      string  `name:"overrides" help:"task override JSON string" default:""`
+	TaskOverrideFile     string  `name:"overrides-file" help:"task override JSON file path" default:""`
+	SkipTaskDefinition   bool    `help:"skip register a new task definition" default:"false"`
+	Count                int32   `help:"number of tasks to run (max 10)" default:"1"`
+	WatchContainer       string  `help:"container name for watching exit code" default:""`
+	LatestTaskDefinition bool    `help:"use the latest task definition without registering a new task definition" default:"false"`
+	PropagateTags        string  `help:"propagate the tags for the task (SERVICE or TASK_DEFINITION)" default:""`
+	Tags                 string  `help:"tags for the task: format is KeyFoo=ValueFoo,KeyBar=ValueBar" default:""`
+	WaitUntil            string  `help:"wait until invoked tasks status reached to (running or stopped)" default:"stopped" enum:"running,stopped"`
+	Revision             *int64  `help:"revision of the task definition to run when --skip-task-definition" default:"0"`
+	ClientToken          *string `help:"unique token that identifies a request, useful for idempotency"`
 }
 
 func (opt RunOption) waitUntilRunning() bool {
@@ -123,6 +124,7 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 		Tags:                     tags,
 		EnableECSManagedTags:     sv.EnableECSManagedTags,
 		EnableExecuteCommand:     sv.EnableExecuteCommand,
+		ClientToken:              opt.ClientToken,
 	}
 
 	switch opt.PropagateTags {
