@@ -128,6 +128,7 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
 		}
 	}
+	conf.OverrideByOption(opt)
 	conf.AssumeRole(opt.AssumeRoleARN)
 
 	logger := newLogger()
@@ -153,6 +154,7 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 		logger: logger,
 	}
 	d.Log("[DEBUG] config file path: %s", opt.ConfigFilePath)
+	d.Log("[DEBUG] timeout: %s", d.config.Timeout)
 	return d, nil
 }
 
@@ -173,12 +175,15 @@ func (d *App) Start(ctx context.Context) (context.Context, context.CancelFunc) {
 }
 
 type Option struct {
-	InitOption     *InitOption
-	ConfigFilePath string
-	Debug          bool
-	ExtStr         map[string]string
-	ExtCode        map[string]string
-	AssumeRoleARN  string
+	InitOption *InitOption
+
+	Envfile        []string          `help:"environment files" env:"ECSPRESSO_ENVFILE"`
+	Debug          bool              `help:"enable debug log" env:"ECSPRESSO_DEBUG"`
+	ExtStr         map[string]string `help:"external string values for Jsonnet" env:"ECSPRESSO_EXT_STR"`
+	ExtCode        map[string]string `help:"external code values for Jsonnet" env:"ECSPRESSO_EXT_CODE"`
+	ConfigFilePath string            `name:"config" help:"config file" default:"ecspresso.yml" env:"ECSPRESSO_CONFIG"`
+	AssumeRoleARN  string            `help:"the ARN of the role to assume" default:"" env:"ECSPRESSO_ASSUME_ROLE_ARN"`
+	Timeout        *time.Duration    `help:"timeout. Override in a configuration file." env:"ECSPRESSO_TIMEOUT"`
 }
 
 func (opt *Option) resolveConfigFilePath() (path string) {

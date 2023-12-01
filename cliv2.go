@@ -30,13 +30,6 @@ func ParseCLIv2(args []string) (string, *CLIOptions, func(), error) {
 		}
 	}
 
-	opts.Option = &Option{
-		ConfigFilePath: opts.Config,
-		Debug:          opts.Debug,
-		ExtStr:         opts.ExtStr,
-		ExtCode:        opts.ExtCode,
-		AssumeRoleARN:  opts.AssumeRoleARN,
-	}
 	if opts.Option.ExtStr == nil {
 		opts.Option.ExtStr = map[string]string{}
 	}
@@ -45,7 +38,7 @@ func ParseCLIv2(args []string) (string, *CLIOptions, func(), error) {
 	}
 	switch sub {
 	case "init":
-		opts.Init.ConfigFilePath = opts.Config
+		opts.Init.ConfigFilePath = opts.ConfigFilePath
 		opts.Option.InitOption = opts.Init
 	}
 	return sub, &opts, func() { c.PrintUsage(true) }, nil

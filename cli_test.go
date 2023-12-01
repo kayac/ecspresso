@@ -31,6 +31,7 @@ var cliTests = []struct {
 		option: &ecspresso.Option{
 			ConfigFilePath: "config.yml",
 			Debug:          true,
+			Envfile:        []string{"tests/envfile"},
 			ExtStr:         map[string]string{"s1": "v1", "s2": "v2"},
 			ExtCode:        map[string]string{"c1": "123", "c2": "1+2"},
 			InitOption:     nil,
@@ -797,7 +798,7 @@ func TestParseCLIv2(t *testing.T) {
 				t.Errorf("unexpected subcommand: expected %s, got %s", tt.sub, sub)
 			}
 			if tt.option != nil {
-				if diff := cmp.Diff(tt.option, opt.Option); diff != "" {
+				if diff := cmp.Diff(*tt.option, opt.Option); diff != "" {
 					t.Errorf("unexpected option: diff %s", diff)
 				}
 			}
