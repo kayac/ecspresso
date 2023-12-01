@@ -25,6 +25,7 @@ var (
 	VerifyResource     = verifyResource
 	Map2str            = map2str
 	DiffServices       = diffServices
+	DiffTaskDefs       = diffTaskDefs
 )
 
 type ModifyAutoScalingParams = modifyAutoScalingParams
