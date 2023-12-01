@@ -311,9 +311,9 @@ var FilterCommandTests = []struct {
 func TestFilterCommandDeprecated(t *testing.T) {
 	ctx := context.Background()
 	for _, ts := range FilterCommandTests {
-		t.Setenv("ECSPRESSO_FILTER_COMMAND", ts.Env)
 		app, err := ecspresso.New(ctx, &ecspresso.Option{
 			ConfigFilePath: "tests/filter_command.yml",
+			FilterCommand:  ts.Env,
 		})
 		if err != nil {
 			t.Error(err)

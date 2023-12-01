@@ -116,6 +116,9 @@ func (c *Config) OverrideByOption(opt *Option) {
 	if opt.Timeout != nil {
 		c.Timeout = &Duration{*opt.Timeout}
 	}
+	if opt.FilterCommand != "" {
+		c.FilterCommand = opt.FilterCommand
+	}
 }
 
 // Restrict restricts a configuration.
@@ -164,9 +167,8 @@ func (c *Config) Restrict(ctx context.Context) error {
 	if err := c.setupPlugins(ctx); err != nil {
 		return fmt.Errorf("failed to setup plugins: %w", err)
 	}
-
 	if c.FilterCommand != "" {
-		Log("[WARNING] filter_command is deprecated. Use %s environment variable instead.", FilterCommandEnv)
+		Log("[WARNING] filter_command is deprecated. Use environment variable or CLI flag instead.")
 	}
 	return nil
 }

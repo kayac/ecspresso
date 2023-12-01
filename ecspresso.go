@@ -31,7 +31,6 @@ import (
 const DefaultDesiredCount = -1
 const DefaultConfigFilePath = "ecspresso.yml"
 const dryRunStr = "DRY RUN"
-const FilterCommandEnv = "ECSPRESSO_FILTER_COMMAND"
 
 var Version string
 var delayForServiceChanged = 3 * time.Second
@@ -184,6 +183,7 @@ type Option struct {
 	ConfigFilePath string            `name:"config" help:"config file" default:"ecspresso.yml" env:"ECSPRESSO_CONFIG"`
 	AssumeRoleARN  string            `help:"the ARN of the role to assume" default:"" env:"ECSPRESSO_ASSUME_ROLE_ARN"`
 	Timeout        *time.Duration    `help:"timeout. Override in a configuration file." env:"ECSPRESSO_TIMEOUT"`
+	FilterCommand  string            `help:"filter command" env:"ECSPRESSO_FILTER_COMMAND"`
 }
 
 func (opt *Option) resolveConfigFilePath() (path string) {
@@ -538,8 +538,5 @@ func (d *App) GetLogInfo(task *types.Task, c *types.ContainerDefinition) (string
 }
 
 func (d *App) FilterCommand() string {
-	if fc := os.Getenv(FilterCommandEnv); fc != "" {
-		return fc
-	}
 	return d.config.FilterCommand
 }
