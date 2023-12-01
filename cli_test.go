@@ -430,6 +430,7 @@ var cliTests = []struct {
 			Tags:                 "",
 			WaitUntil:            "stopped",
 			Revision:             ptr(int64(0)),
+			ClientToken:          nil,
 		},
 	},
 	{
@@ -449,6 +450,7 @@ var cliTests = []struct {
 			Tags:                 "",
 			WaitUntil:            "stopped",
 			Revision:             ptr(int64(0)),
+			ClientToken:          nil,
 		},
 	},
 	{
@@ -458,6 +460,7 @@ var cliTests = []struct {
 			"--overrides-file", "overrides.json",
 			"--latest-task-definition", "--tags", "KeyFoo=ValueFoo,KeyBar=ValueBar",
 			"--wait-until", "running", "--revision", "1",
+			"--client-token", "3abb3a41-c4dc-4c16-a3be-aaab729008a0",
 		},
 		sub: "run",
 		subOption: &ecspresso.RunOption{
@@ -474,6 +477,7 @@ var cliTests = []struct {
 			Tags:                 "KeyFoo=ValueFoo,KeyBar=ValueBar",
 			WaitUntil:            "running",
 			Revision:             ptr(int64(1)),
+			ClientToken:          ptr("3abb3a41-c4dc-4c16-a3be-aaab729008a0"),
 		},
 	},
 	{
