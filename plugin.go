@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/fujiwara/cfn-lookup/cfn"
 	"github.com/fujiwara/tfstate-lookup/tfstate"
 
@@ -28,6 +29,8 @@ func (p ConfigPlugin) Setup(ctx context.Context, c *Config) error {
 		return setupPluginCFn(ctx, p, c)
 	case "ssm":
 		return setupPluginSSM(ctx, p, c)
+	case "secretsmanager":
+		return setupPluginSecretsManager(ctx, p, c)
 	default:
 		return fmt.Errorf("plugin %s is not available", p.Name)
 	}
@@ -87,6 +90,21 @@ func setupPluginSSM(ctx context.Context, p ConfigPlugin, c *Config) error {
 	funcs, err := ssm.FuncMap(ctx, c.awsv2Config)
 	if err != nil {
 		return err
+	}
+	return p.AppendFuncMap(c, funcs)
+}
+
+func setupPluginSecretsManager(ctx context.Context, p ConfigPlugin, c *Config) error {
+	funcs := make(template.FuncMap)
+	smsvc := secretsmanager.NewFromConfig(c.awsv2Config)
+	funcs[p.FuncPrefix+"secretsmanager_arn"] = func(id string) (string, error) {
+		res, err := smsvc.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
+			SecretId: &id,
+		})
+		if err != nil {
+			return "", err
+		}
+		return *res.ARN, nil
 	}
 	return p.AppendFuncMap(c, funcs)
 }
