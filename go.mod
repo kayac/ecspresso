@@ -21,7 +21,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.28.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.19.0
 	github.com/aws/smithy-go v1.16.0
-	github.com/fatih/color v1.13.0
+	github.com/fatih/color v1.16.0
 	github.com/fujiwara/cfn-lookup v1.0.0
 	github.com/fujiwara/ecsta v0.3.3
 	github.com/fujiwara/logutils v1.1.2
@@ -35,13 +35,13 @@ require (
 	github.com/itchyny/gojq v0.12.11
 	github.com/kayac/go-config v0.6.0
 	github.com/kylelemons/godebug v1.1.0
-	github.com/mattn/go-isatty v0.0.17
+	github.com/mattn/go-isatty v0.0.20
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/image-spec v1.0.2
 	github.com/samber/lo v1.36.0
 	github.com/schollz/progressbar/v3 v3.13.1
 	github.com/shogo82148/go-retry v1.1.1
-	golang.org/x/sys v0.13.0
+	golang.org/x/sys v0.14.0
 )
 
 require (
