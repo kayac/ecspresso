@@ -27,6 +27,9 @@ func MustMarshalJSONStringForAPI(v interface{}) string {
 }
 
 func MarshalJSONForAPI(v interface{}, queries ...string) ([]byte, error) {
+	if v == nil {
+		return nil, nil
+	}
 	b, err := json.Marshal(v)
 	if err != nil {
 		return nil, err

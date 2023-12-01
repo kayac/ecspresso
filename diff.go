@@ -3,6 +3,7 @@ package ecspresso
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -26,7 +27,7 @@ func (d *App) Diff(ctx context.Context, opt DiffOption) error {
 	ctx, cancel := d.Start(ctx)
 	defer cancel()
 
-	var taskDefArn string
+	var remoteTaskDefArn string
 	// diff for services only when service defined
 	if d.config.Service != "" {
 		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
@@ -35,15 +36,20 @@ func (d *App) Diff(ctx context.Context, opt DiffOption) error {
 		}
 		remoteSv, err := d.DescribeService(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to describe service: %w", err)
+			if errors.As(err, &errNotFound) {
+				d.Log("[INFO] service not found, will create a new service")
+			} else {
+				return fmt.Errorf("failed to describe service: %w", err)
+			}
 		}
-
-		if ds, err := diffServices(newSv, remoteSv, *remoteSv.ServiceArn, d.config.ServiceDefinitionPath, opt.Unified); err != nil {
+		if ds, err := diffServices(newSv, remoteSv, d.config.ServiceDefinitionPath, opt.Unified); err != nil {
 			return err
 		} else if ds != "" {
 			fmt.Print(coloredDiff(ds))
 		}
-		taskDefArn = *remoteSv.TaskDefinition
+		if remoteSv != nil {
+			remoteTaskDefArn = *remoteSv.TaskDefinition
+		}
 	}
 
 	// task definition
@@ -51,19 +57,26 @@ func (d *App) Diff(ctx context.Context, opt DiffOption) error {
 	if err != nil {
 		return err
 	}
-	if taskDefArn == "" {
+	if remoteTaskDefArn == "" {
 		arn, err := d.findLatestTaskDefinitionArn(ctx, *newTd.Family)
+		if err != nil {
+			if errors.As(err, &errNotFound) {
+				d.Log("[INFO] task definition not found, will register a new task definition")
+			} else {
+				return err
+			}
+		}
+		remoteTaskDefArn = arn
+	}
+	var remoteTd *ecs.RegisterTaskDefinitionInput
+	if remoteTaskDefArn != "" {
+		remoteTd, err = d.DescribeTaskDefinition(ctx, remoteTaskDefArn)
 		if err != nil {
 			return err
 		}
-		taskDefArn = arn
-	}
-	remoteTd, err := d.DescribeTaskDefinition(ctx, taskDefArn)
-	if err != nil {
-		return err
 	}
 
-	if ds, err := diffTaskDefs(newTd, remoteTd, taskDefArn, d.config.TaskDefinitionPath, opt.Unified); err != nil {
+	if ds, err := diffTaskDefs(newTd, remoteTd, d.config.TaskDefinitionPath, remoteTaskDefArn, opt.Unified); err != nil {
 		return err
 	} else if ds != "" {
 		fmt.Print(coloredDiff(ds))
@@ -77,7 +90,12 @@ type ServiceForDiff struct {
 	Tags []types.Tag
 }
 
-func diffServices(local, remote *Service, remoteArn string, localPath string, unified bool) (string, error) {
+func diffServices(local, remote *Service, localPath string, unified bool) (string, error) {
+	var remoteArn string
+	if remote != nil {
+		remoteArn = aws.ToString(remote.ServiceArn)
+	}
+
 	localSvForDiff := ServiceDefinitionForDiff(local)
 	remoteSvForDiff := ServiceDefinitionForDiff(remote)
 
@@ -85,7 +103,7 @@ func diffServices(local, remote *Service, remoteArn string, localPath string, un
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal new service definition: %w", err)
 	}
-	if local.DesiredCount == nil {
+	if local.DesiredCount == nil && remoteSvForDiff != nil {
 		// ignore DesiredCount when it in local is not defined.
 		remoteSvForDiff.UpdateServiceInput.DesiredCount = nil
 	}
@@ -109,7 +127,7 @@ func diffServices(local, remote *Service, remoteArn string, localPath string, un
 	return fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds), nil
 }
 
-func diffTaskDefs(local, remote *TaskDefinitionInput, remoteArn string, localPath string, unified bool) (string, error) {
+func diffTaskDefs(local, remote *TaskDefinitionInput, localPath, remoteArn string, unified bool) (string, error) {
 	sortTaskDefinition(local)
 	sortTaskDefinition(remote)
 
@@ -180,6 +198,9 @@ func jsonStr(v interface{}) string {
 }
 
 func ServiceDefinitionForDiff(sv *Service) *ServiceForDiff {
+	if sv == nil {
+		return nil
+	}
 	sort.SliceStable(sv.PlacementConstraints, func(i, j int) bool {
 		return jsonStr(sv.PlacementConstraints[i]) < jsonStr(sv.PlacementConstraints[j])
 	})
@@ -236,6 +257,9 @@ func ServiceDefinitionForDiff(sv *Service) *ServiceForDiff {
 }
 
 func sortTaskDefinition(td *TaskDefinitionInput) {
+	if td == nil {
+		return
+	}
 	for i, cd := range td.ContainerDefinitions {
 		sort.SliceStable(cd.Environment, func(i, j int) bool {
 			return aws.ToString(cd.Environment[i].Name) < aws.ToString(cd.Environment[j].Name)

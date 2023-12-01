@@ -232,7 +232,7 @@ func TestDiffServices(t *testing.T) {
 		diff, err := ecspresso.DiffServices(
 			testServiceDefinitionNoDesiredCount,
 			testServiceDefinitionHasDesiredCount,
-			"arn", "file", true,
+			"file", true,
 		)
 		if err != nil {
 			t.Error(err)
@@ -245,7 +245,51 @@ func TestDiffServices(t *testing.T) {
 		diff, err := ecspresso.DiffServices(
 			testServiceDefinitionHasDesiredCount,
 			testServiceDefinitionNoDesiredCount,
-			"arn", "file", true,
+			"file", true,
+		)
+		if err != nil {
+			t.Error(err)
+		}
+		if diff == "" {
+			t.Errorf("unexpected diff: %s", diff)
+		}
+	})
+
+	t.Run("remote service is nil", func(t *testing.T) {
+		diff, err := ecspresso.DiffServices(
+			testServiceDefinitionNoDesiredCount,
+			nil,
+			"file", true,
+		)
+		if err != nil {
+			t.Error(err)
+		}
+		if diff == "" {
+			t.Errorf("unexpected diff: %s", diff)
+		}
+	})
+}
+
+func TestDiffTaskDefs(t *testing.T) {
+	t.Run("diff task defs same actually", func(t *testing.T) {
+		diff, err := ecspresso.DiffTaskDefs(
+			testTaskDefinition1,
+			testTaskDefinition2,
+			"file", "remote", true,
+		)
+		if err != nil {
+			t.Error(err)
+		}
+		if diff != "" {
+			t.Errorf("unexpected diff: %s", diff)
+		}
+	})
+
+	t.Run("diff task defs remote nil", func(t *testing.T) {
+		diff, err := ecspresso.DiffTaskDefs(
+			testTaskDefinition1,
+			nil,
+			"file", "", true,
 		)
 		if err != nil {
 			t.Error(err)

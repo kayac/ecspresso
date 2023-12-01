@@ -133,7 +133,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 			return err
 		}
 		addedTags, updatedTags, deletedTags := CompareTags(sv.Tags, newSv.Tags)
-		ds, err := diffServices(newSv, sv, "", d.config.ServiceDefinitionPath, true)
+		ds, err := diffServices(newSv, sv, d.config.ServiceDefinitionPath, true)
 		if err != nil {
 			return fmt.Errorf("failed to diff of service definitions: %w", err)
 		}
