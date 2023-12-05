@@ -1,6 +1,7 @@
 package ecspresso_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -267,6 +268,15 @@ func TestDiffServices(t *testing.T) {
 		if diff == "" {
 			t.Errorf("unexpected diff: %s", diff)
 		}
+		minusDiffs := 0
+		for _, line := range strings.Split(diff, "\n") {
+			if strings.HasPrefix(line, "-") {
+				minusDiffs++
+			}
+		}
+		if minusDiffs != 1 {  // The first line is "---"
+			t.Errorf("unexpected diff. has many minus diffs: %s", diff)
+		}
 	})
 }
 
@@ -296,6 +306,15 @@ func TestDiffTaskDefs(t *testing.T) {
 		}
 		if diff == "" {
 			t.Errorf("unexpected diff: %s", diff)
+		}
+		minusDiffs := 0
+		for _, line := range strings.Split(diff, "\n") {
+			if strings.HasPrefix(line, "-") {
+				minusDiffs++
+			}
+		}
+		if minusDiffs != 1 { // The first line is "---"
+			t.Errorf("unexpected diff. has many minus diffs: %s", diff)
 		}
 	})
 }

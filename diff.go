@@ -1,6 +1,7 @@
 package ecspresso
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -30,6 +31,7 @@ func (d *App) Diff(ctx context.Context, opt DiffOption) error {
 	var remoteTaskDefArn string
 	// diff for services only when service defined
 	if d.config.Service != "" {
+		d.Log("[DEGUG] diff service compare with %s", d.config.Service)
 		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 		if err != nil {
 			return fmt.Errorf("failed to load service definition: %w", err)
@@ -70,6 +72,7 @@ func (d *App) Diff(ctx context.Context, opt DiffOption) error {
 	}
 	var remoteTd *ecs.RegisterTaskDefinitionInput
 	if remoteTaskDefArn != "" {
+		d.Log("[DEGUG] diff task definition compare with %s", remoteTaskDefArn)
 		remoteTd, err = d.DescribeTaskDefinition(ctx, remoteTaskDefArn)
 		if err != nil {
 			return err
@@ -112,8 +115,8 @@ func diffServices(local, remote *Service, localPath string, unified bool) (strin
 		return "", fmt.Errorf("failed to marshal remote service definition: %w", err)
 	}
 
-	remoteSv := string(remoteSvBytes)
-	newSv := string(newSvBytes)
+	remoteSv := toDiffString(remoteSvBytes)
+	newSv := toDiffString(newSvBytes)
 
 	if unified {
 		edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteSv, newSv)
@@ -141,8 +144,8 @@ func diffTaskDefs(local, remote *TaskDefinitionInput, localPath, remoteArn strin
 		return "", fmt.Errorf("failed to marshal remote task definition: %w", err)
 	}
 
-	remoteTd := string(remoteTdBytes)
-	newTd := string(newTdBytes)
+	remoteTd := toDiffString(remoteTdBytes)
+	newTd := toDiffString(newTdBytes)
 
 	if unified {
 		edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteTd, newTd)
@@ -340,4 +343,11 @@ func toNumberMemory(memory string) *string {
 		}
 	}
 	return &memory
+}
+
+func toDiffString(b []byte) string {
+	if bytes.Equal(b, []byte("null")) || bytes.Equal(b, []byte("null\n")) {
+		return ""
+	}
+	return string(b)
 }
