@@ -12,7 +12,7 @@ import (
 func (d *App) OutputJSONForAPI(w io.Writer, v interface{}) error {
 	b, err := MarshalJSONForAPI(v)
 	if err != nil {
-		fmt.Errorf("failed to marshal json: %w", err)
+		return fmt.Errorf("failed to marshal json: %w", err)
 	}
 	_, err = w.Write(b)
 	return err
