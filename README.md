@@ -116,16 +116,15 @@ GitHub Action `kayac/ecspresso@v2` supports `version-file: path/to/file` install
 Usage: ecspresso <command>
 
 Flags:
-  -h, --help                       Show context-sensitive help.
-      --init-option=INIT-OPTION
-      --envfile=ENVFILE,...        environment files ($ECSPRESSO_ENVFILE)
-      --debug                      enable debug log ($ECSPRESSO_DEBUG)
-      --ext-str=KEY=VALUE;...      external string values for Jsonnet ($ECSPRESSO_EXT_STR)
-      --ext-code=KEY=VALUE;...     external code values for Jsonnet ($ECSPRESSO_EXT_CODE)
-      --config="ecspresso.yml"     config file ($ECSPRESSO_CONFIG)
-      --assume-role-arn=""         the ARN of the role to assume ($ECSPRESSO_ASSUME_ROLE_ARN)
-      --timeout=TIMEOUT            timeout. Override in a configuration file ($ECSPRESSO_TIMEOUT).
-      --filter-command=STRING      filter command ($ECSPRESSO_FILTER_COMMAND)
+  -h, --help                      Show context-sensitive help.
+      --envfile=ENVFILE,...       environment files ($ECSPRESSO_ENVFILE)
+      --debug                     enable debug log ($ECSPRESSO_DEBUG)
+      --ext-str=KEY=VALUE;...     external string values for Jsonnet ($ECSPRESSO_EXT_STR)
+      --ext-code=KEY=VALUE;...    external code values for Jsonnet ($ECSPRESSO_EXT_CODE)
+      --config="ecspresso.yml"    config file ($ECSPRESSO_CONFIG)
+      --assume-role-arn=""        the ARN of the role to assume ($ECSPRESSO_ASSUME_ROLE_ARN)
+      --timeout=TIMEOUT           timeout. Override in a configuration file ($ECSPRESSO_TIMEOUT).
+      --filter-command=STRING     filter command ($ECSPRESSO_FILTER_COMMAND)
 
 Commands:
   appspec
