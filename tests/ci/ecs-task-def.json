@@ -2,7 +2,16 @@
   "containerDefinitions": [
     {
       "cpu": 0,
-      "environment": [],
+      "environment": [
+        {
+          "name": "FOO",
+          "value": "{{ ssm `/ecspresso-test/foo` }}"
+        },
+        {
+          "name": "BAZ_ARN",
+          "value": "{{ secretsmanager_arn `ecspresso-test/baz` }}"
+        }
+      ],
       "essential": true,
       "image": "nginx:{{ env `NGINX_VERSION` `latest` }}",
       "logConfiguration": {
