@@ -888,15 +888,15 @@ The template function `secretsmanager_arn` resolves secretsmanager secret ARN by
 ```
 
 will be rendered into this.
+
 ```json
   "secrets": [
     {
       "name": "FOO",
-      "valueFrom": ""
+      "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:foo-06XQOH"
     }
   ]
 ```
-
 
 ## LICENCE
 

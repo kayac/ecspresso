@@ -6,6 +6,10 @@
         {
           "name": "FOO",
           "value": "{{ ssm `/ecspresso-test/foo` }}"
+        },
+        {
+          "name": "BAZ_ARN",
+          "value": "{{ secretsmanager_arn `ecspresso-test/baz` }}"
         }
       ],
       "essential": true,
