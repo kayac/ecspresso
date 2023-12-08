@@ -23,7 +23,7 @@ require (
 	github.com/aws/smithy-go v1.19.0
 	github.com/fatih/color v1.13.0
 	github.com/fujiwara/cfn-lookup v1.0.0
-	github.com/fujiwara/ecsta v0.3.3
+	github.com/fujiwara/ecsta v0.4.1
 	github.com/fujiwara/logutils v1.1.2
 	github.com/fujiwara/tfstate-lookup v1.1.4
 	github.com/goccy/go-yaml v1.9.5
@@ -79,8 +79,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sns v1.26.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.18.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.4 // indirect
+	github.com/creack/pty v1.1.20 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/fujiwara/tracer v1.0.0 // indirect
+	github.com/fujiwara/tracer v1.0.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.0.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
