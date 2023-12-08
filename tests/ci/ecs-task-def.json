@@ -2,7 +2,12 @@
   "containerDefinitions": [
     {
       "cpu": 0,
-      "environment": [],
+      "environment": [
+        {
+          "name": "FOO",
+          "value": "{{ ssm `/ecspresso-test/foo` }}"
+        }
+      ],
       "essential": true,
       "image": "nginx:{{ env `NGINX_VERSION` `latest` }}",
       "logConfiguration": {

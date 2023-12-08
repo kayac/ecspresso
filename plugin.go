@@ -12,12 +12,10 @@ import (
 	"github.com/fujiwara/tfstate-lookup/tfstate"
 	"github.com/kayac/ecspresso/v2/secretsmanager"
 	"github.com/kayac/ecspresso/v2/ssm"
+	"github.com/samber/lo"
 )
 
-var defaultPlugins = []ConfigPlugin{
-	{Name: "ssm"},
-	{Name: "secretsmanager"},
-}
+var defaultPluginNames = []string{"ssm", "secretsmanager"}
 
 type ConfigPlugin struct {
 	Name       string                 `yaml:"name" json:"name"`
@@ -46,6 +44,10 @@ func (p ConfigPlugin) AppendFuncMap(c *Config, funcMap template.FuncMap) error {
 		name := p.FuncPrefix + funcName
 		for _, appendedFuncs := range c.templateFuncs {
 			if _, exists := appendedFuncs[name]; exists {
+				if lo.Contains(defaultPluginNames, p.Name) {
+					Log("[DEBUG] template function %s already exists by default plugins. skip", name)
+					continue
+				}
 				return fmt.Errorf("template function %s already exists. set func_prefix to %s plugin", name, p.Name)
 			}
 		}

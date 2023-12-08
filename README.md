@@ -844,14 +844,9 @@ ecs-service-def.json
 }
 ```
 
-### ssm
+### Lookups ssm parameter store
 
-The ssm plugin introduces a template function, `ssm` to read parameters from AWS Systems Manager(SSM) Parameter Store.
-
-```yaml
-plugins:
-  - name: ssm
-```
+The template function `ssm` reads parameters from AWS Systems Manager(SSM) Parameter Store.
 
 Suppose ssm parameter store has the following parameters:
 
@@ -878,6 +873,30 @@ will be rendered into this.
   "securestring": "ImSecureStriing"
 }
 ```
+
+### Resolve secretsmanager secret ARN
+
+The template function `secretsmanager_arn` resolves secretsmanager secret ARN by secret name.
+
+```json
+  "secrets": [
+    {
+      "name": "FOO",
+      "valueFrom": "{{ secretsmanager_arn `foo` }}"
+    }
+  ]
+```
+
+will be rendered into this.
+```json
+  "secrets": [
+    {
+      "name": "FOO",
+      "valueFrom": ""
+    }
+  ]
+```
+
 
 ## LICENCE
 
