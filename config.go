@@ -184,7 +184,9 @@ func (c *Config) AssumeRole(assumeRoleARN string) {
 }
 
 func (c *Config) setupPlugins(ctx context.Context) error {
-	for _, p := range c.Plugins {
+	plugins := defaultPlugins
+	plugins = append(plugins, c.Plugins...)
+	for _, p := range plugins {
 		if err := p.Setup(ctx, c); err != nil {
 			return err
 		}
