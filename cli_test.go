@@ -34,7 +34,6 @@ var cliTests = []struct {
 			Envfile:        []string{"tests/envfile"},
 			ExtStr:         map[string]string{"s1": "v1", "s2": "v2"},
 			ExtCode:        map[string]string{"c1": "123", "c2": "1+2"},
-			InitOption:     nil,
 			AssumeRoleARN:  "arn:aws:iam::123456789012:role/exampleRole",
 		},
 		subOption: &ecspresso.StatusOption{
@@ -59,7 +58,6 @@ var cliTests = []struct {
 			Debug:          true,
 			ExtStr:         map[string]string{},
 			ExtCode:        map[string]string{},
-			InitOption:     nil,
 			AssumeRoleARN:  "",
 		},
 		subOption: &ecspresso.StatusOption{
@@ -587,7 +585,6 @@ var cliTests = []struct {
 		subOption: &ecspresso.InitOption{
 			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "default",
-			ConfigFilePath:        "myconfig.yml",
 			Service:               "myservice",
 			TaskDefinitionPath:    "ecs-task-def.json",
 			ServiceDefinitionPath: "ecs-service-def.json",
@@ -599,16 +596,6 @@ var cliTests = []struct {
 		args: []string{"init", "--service", "myservice", "--config", "myconfig.yml"},
 		sub:  "init",
 		option: &ecspresso.Option{
-			InitOption: &ecspresso.InitOption{
-				Region:                os.Getenv("AWS_REGION"),
-				Cluster:               "default",
-				ConfigFilePath:        "myconfig.yml",
-				Service:               "myservice",
-				TaskDefinitionPath:    "ecs-task-def.json",
-				ServiceDefinitionPath: "ecs-service-def.json",
-				ForceOverwrite:        false,
-				Jsonnet:               false,
-			},
 			ConfigFilePath: "myconfig.yml",
 			Debug:          false,
 			ExtStr:         map[string]string{},
@@ -617,7 +604,6 @@ var cliTests = []struct {
 		subOption: &ecspresso.InitOption{
 			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "default",
-			ConfigFilePath:        "myconfig.yml",
 			Service:               "myservice",
 			TaskDefinitionPath:    "ecs-task-def.json",
 			ServiceDefinitionPath: "ecs-service-def.json",
@@ -636,7 +622,6 @@ var cliTests = []struct {
 		subOption: &ecspresso.InitOption{
 			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "mycluster",
-			ConfigFilePath:        "myconfig.jsonnet",
 			Service:               "myservice",
 			TaskDefinitionPath:    "taskdef.jsonnet",
 			ServiceDefinitionPath: "servicedef.jsonnet",
@@ -650,7 +635,6 @@ var cliTests = []struct {
 		subOption: &ecspresso.InitOption{
 			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "default",
-			ConfigFilePath:        "myconfig.yml",
 			Service:               "",
 			TaskDefinition:        "app:123",
 			TaskDefinitionPath:    "ecs-task-def.json",

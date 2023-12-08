@@ -109,15 +109,14 @@ type App struct {
 	logger *log.Logger
 }
 
-func New(ctx context.Context, opt *Option) (*App, error) {
+func New(ctx context.Context, opt *Option, initOpt ...*InitOption) (*App, error) {
 	opt.resolveConfigFilePath()
 	loader := newConfigLoader(opt.ExtStr, opt.ExtCode)
-	var (
-		conf *Config
-		err  error
-	)
-	if opt.InitOption != nil {
-		conf, err = opt.InitOption.NewConfig(ctx)
+
+	var conf *Config
+	var err error
+	if len(initOpt) > 0 && initOpt[0] != nil {
+		conf, err = initOpt[0].NewConfig(ctx, opt.ConfigFilePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize config: %w", err)
 		}
@@ -174,8 +173,6 @@ func (d *App) Start(ctx context.Context) (context.Context, context.CancelFunc) {
 }
 
 type Option struct {
-	InitOption *InitOption
-
 	Envfile        []string          `help:"environment files" env:"ECSPRESSO_ENVFILE"`
 	Debug          bool              `help:"enable debug log" env:"ECSPRESSO_DEBUG"`
 	ExtStr         map[string]string `help:"external string values for Jsonnet" env:"ECSPRESSO_EXT_STR"`
@@ -190,9 +187,6 @@ func (opt *Option) resolveConfigFilePath() (path string) {
 	path = DefaultConfigFilePath
 	defer func() {
 		opt.ConfigFilePath = path
-		if opt.InitOption != nil {
-			opt.InitOption.ConfigFilePath = path
-		}
 	}()
 	if opt.ConfigFilePath != "" && opt.ConfigFilePath != DefaultConfigFilePath {
 		path = opt.ConfigFilePath

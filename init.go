@@ -25,14 +25,13 @@ type InitOption struct {
 	TaskDefinitionPath    string `help:"path to output task definition file" default:"ecs-task-def.json"`
 	ServiceDefinitionPath string `help:"path to output service definition file" default:"ecs-service-def.json"`
 	Sort                  bool   `help:"sort elements in task definition" default:"false" negatable:""`
-	ConfigFilePath        string
-	ForceOverwrite        bool `help:"overwrite existing files" default:"false"`
-	Jsonnet               bool `help:"output files as jsonnet format" default:"false"`
+	ForceOverwrite        bool   `help:"overwrite existing files" default:"false"`
+	Jsonnet               bool   `help:"output files as jsonnet format" default:"false"`
 }
 
-func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
+func (opt *InitOption) NewConfig(ctx context.Context, configFilePath string) (*Config, error) {
 	conf := NewDefaultConfig()
-	conf.path = opt.ConfigFilePath
+	conf.path = configFilePath
 	conf.Region = opt.Region
 	conf.Cluster = opt.Cluster
 	conf.Service = opt.Service
@@ -51,7 +50,7 @@ var (
 	yamlExt    = ".yaml"
 )
 
-func (d *App) Init(ctx context.Context, opt InitOption) error {
+func (d *App) Init(ctx context.Context, opt InitOption, configFilePath string) error {
 	conf := d.config
 	// when --task-definition is not empty, --service is empty because these flags are exclusive.
 	tdOnly := opt.TaskDefinition != ""
@@ -64,8 +63,8 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 		if ext := filepath.Ext(conf.TaskDefinitionPath); ext == jsonExt {
 			conf.TaskDefinitionPath = strings.TrimSuffix(conf.TaskDefinitionPath, ext) + jsonnetExt
 		}
-		if ext := filepath.Ext(opt.ConfigFilePath); ext == ymlExt || ext == yamlExt {
-			opt.ConfigFilePath = strings.TrimSuffix(opt.ConfigFilePath, ext) + jsonnetExt
+		if ext := filepath.Ext(configFilePath); ext == ymlExt || ext == yamlExt {
+			configFilePath = strings.TrimSuffix(configFilePath, ext) + jsonnetExt
 		}
 	}
 	if err := conf.Restrict(ctx); err != nil {
@@ -86,13 +85,13 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 	if err != nil {
 		return err
 	}
-	if err := d.initConfigurationFile(ctx, opt, sv, td); err != nil {
+	if err := d.initConfigurationFile(ctx, configFilePath, opt, sv, td); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *App) initConfigurationFile(ctx context.Context, opt InitOption, sv *Service, td *TaskDefinitionInput) error {
+func (d *App) initConfigurationFile(ctx context.Context, configFilePath string, opt InitOption, sv *Service, td *TaskDefinitionInput) error {
 	conf := d.config
 	if sv == nil {
 		// tdOnly
@@ -118,7 +117,7 @@ func (d *App) initConfigurationFile(ctx context.Context, opt InitOption, sv *Ser
 			if err != nil {
 				return fmt.Errorf("unable to marshal config to JSON: %w", err)
 			}
-			out, err := formatter.Format(opt.ConfigFilePath, string(b), formatter.DefaultOptions())
+			out, err := formatter.Format(configFilePath, string(b), formatter.DefaultOptions())
 			if err != nil {
 				return fmt.Errorf("unable to format config as Jsonnet: %w", err)
 			}
@@ -129,8 +128,8 @@ func (d *App) initConfigurationFile(ctx context.Context, opt InitOption, sv *Ser
 				return fmt.Errorf("unable to marshal config to YAML: %w", err)
 			}
 		}
-		d.Log("save config to %s", opt.ConfigFilePath)
-		if err := d.saveFile(opt.ConfigFilePath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
+		// d.Log("save config to %s", opt.ConfigFilePath)
+		if err := d.saveFile(configFilePath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
 			return err
 		}
 	}

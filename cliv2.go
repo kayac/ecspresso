@@ -36,10 +36,5 @@ func ParseCLIv2(args []string) (string, *CLIOptions, func(), error) {
 	if opts.Option.ExtCode == nil {
 		opts.Option.ExtCode = map[string]string{}
 	}
-	switch sub {
-	case "init":
-		opts.Init.ConfigFilePath = opts.ConfigFilePath
-		opts.Option.InitOption = opts.Init
-	}
 	return sub, &opts, func() { c.PrintUsage(true) }, nil
 }

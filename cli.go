@@ -79,8 +79,10 @@ func dispatchCLI(ctx context.Context, sub string, usage func(), opts *CLIOptions
 		fmt.Println("ecspresso", Version)
 		return nil
 	}
-
-	app, err := New(ctx, &opts.Option)
+	if sub != "init" {
+		opts.Init = nil
+	}
+	app, err := New(ctx, &opts.Option, opts.Init)
 	if err != nil {
 		return err
 	}
@@ -111,7 +113,7 @@ func dispatchCLI(ctx context.Context, sub string, usage func(), opts *CLIOptions
 	case "revisions":
 		return app.Revesions(ctx, *opts.Revisions)
 	case "init":
-		return app.Init(ctx, *opts.Init)
+		return app.Init(ctx, *opts.Init, opts.ConfigFilePath)
 	case "diff":
 		return app.Diff(ctx, *opts.Diff)
 	case "appspec":
