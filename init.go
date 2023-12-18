@@ -68,15 +68,12 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 			conf.path = strings.TrimSuffix(conf.path, ext) + jsonnetExt
 		}
 	}
-	if err := conf.Restrict(ctx); err != nil {
-		return err
-	}
-	var err error
 	var sv *Service
 	var tdArn string
 	if tdOnly {
 		tdArn = opt.TaskDefinition
 	} else {
+		var err error
 		sv, tdArn, err = d.initServiceDefinition(ctx, opt)
 		if err != nil {
 			return err
