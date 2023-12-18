@@ -30,16 +30,11 @@ func ParseCLIv2(args []string) (string, *CLIOptions, func(), error) {
 		}
 	}
 
-	if opts.Option.ExtStr == nil {
-		opts.Option.ExtStr = map[string]string{}
+	if opts.ExtStr == nil {
+		opts.ExtStr = map[string]string{}
 	}
-	if opts.Option.ExtCode == nil {
-		opts.Option.ExtCode = map[string]string{}
-	}
-	switch sub {
-	case "init":
-		opts.Init.ConfigFilePath = opts.ConfigFilePath
-		opts.Option.InitOption = opts.Init
+	if opts.ExtCode == nil {
+		opts.ExtCode = map[string]string{}
 	}
 	return sub, &opts, func() { c.PrintUsage(true) }, nil
 }

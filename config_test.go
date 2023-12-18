@@ -13,7 +13,7 @@ import (
 
 func TestLoadServiceDefinition(t *testing.T) {
 	ctx := context.Background()
-	app, err := ecspresso.New(ctx, &ecspresso.Option{ConfigFilePath: "tests/test.yaml"})
+	app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{ConfigFilePath: "tests/test.yaml"})
 	if err != nil {
 		t.Error(err)
 	}
@@ -89,7 +89,7 @@ func testLoadConfigWithPlugin(t *testing.T, path string) {
 	t.Setenv("JSON", `{"foo":"bar"}`)
 	t.Setenv("AWS_REGION", "ap-northeast-1")
 	ctx := context.Background()
-	app, err := ecspresso.New(ctx, &ecspresso.Option{ConfigFilePath: path})
+	app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{ConfigFilePath: path})
 	if err != nil {
 		t.Error(err)
 	}
@@ -311,7 +311,7 @@ var FilterCommandTests = []struct {
 func TestFilterCommandDeprecated(t *testing.T) {
 	ctx := context.Background()
 	for _, ts := range FilterCommandTests {
-		app, err := ecspresso.New(ctx, &ecspresso.Option{
+		app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{
 			ConfigFilePath: "tests/filter_command.yml",
 			FilterCommand:  ts.Env,
 		})

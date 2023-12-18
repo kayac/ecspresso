@@ -109,33 +109,64 @@ type App struct {
 	logger *log.Logger
 }
 
-func New(ctx context.Context, opt *Option) (*App, error) {
+type appOptions struct {
+	config *Config
+	loader *configLoader
+	logger *log.Logger
+}
+
+type AppOption func(*appOptions)
+
+func WithConfig(c *Config) AppOption {
+	return func(o *appOptions) {
+		o.config = c
+	}
+}
+
+func WithConfigLoader(extstr, extcode map[string]string) AppOption {
+	return func(o *appOptions) {
+		o.loader = newConfigLoader(extstr, extcode)
+	}
+}
+
+func WithLogger(l *log.Logger) AppOption {
+	return func(o *appOptions) {
+		o.logger = l
+	}
+}
+
+func New(ctx context.Context, opt *CLIOptions, newAppOptions ...AppOption) (*App, error) {
 	opt.resolveConfigFilePath()
-	loader := newConfigLoader(opt.ExtStr, opt.ExtCode)
-	var (
-		conf *Config
-		err  error
-	)
-	if opt.InitOption != nil {
-		conf, err = opt.InitOption.NewConfig(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to initialize config: %w", err)
-		}
+
+	appOpts := appOptions{
+		loader: newConfigLoader(opt.ExtStr, opt.ExtCode),
+		logger: newLogger(),
+	}
+	for _, fn := range newAppOptions {
+		fn(&appOpts)
+	}
+
+	// set log level
+	if opt.Debug {
+		appOpts.logger.SetOutput(newLogFilter(os.Stderr, "DEBUG"))
 	} else {
-		conf, err = loader.Load(ctx, opt.ConfigFilePath, Version)
-		if err != nil {
+		appOpts.logger.SetOutput(newLogFilter(os.Stderr, "INFO"))
+	}
+	Log("[INFO] ecspresso version: %s", Version)
+
+	// load config file
+	if appOpts.config == nil {
+		if config, err := appOpts.loader.Load(ctx, opt.ConfigFilePath, Version); err != nil {
 			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
+		} else {
+			appOpts.config = config
 		}
 	}
-	conf.OverrideByOption(opt)
+	conf := appOpts.config
+	conf.OverrideByCLIOptions(opt)
 	conf.AssumeRole(opt.AssumeRoleARN)
 
-	logger := newLogger()
-	if opt.Debug {
-		logger.SetOutput(newLogFilter(os.Stderr, "DEBUG"))
-	} else {
-		logger.SetOutput(newLogFilter(os.Stderr, "INFO"))
-	}
+	// new app
 	d := &App{
 		Service: conf.Service,
 		Cluster: conf.Cluster,
@@ -147,11 +178,11 @@ func New(ctx context.Context, opt *Option) (*App, error) {
 		iam:         iam.NewFromConfig(conf.awsv2Config),
 		elbv2:       elasticloadbalancingv2.NewFromConfig(conf.awsv2Config),
 		sd:          servicediscovery.NewFromConfig(conf.awsv2Config),
-
-		config: conf,
-		loader: loader,
-		logger: logger,
+		loader:      appOpts.loader,
+		config:      appOpts.config,
+		logger:      appOpts.logger,
 	}
+
 	d.Log("[DEBUG] config file path: %s", opt.ConfigFilePath)
 	d.Log("[DEBUG] timeout: %s", d.config.Timeout)
 	return d, nil
@@ -171,40 +202,6 @@ func (d *App) Start(ctx context.Context) (context.Context, context.CancelFunc) {
 	} else {
 		return ctx, func() {}
 	}
-}
-
-type Option struct {
-	InitOption *InitOption
-
-	Envfile        []string          `help:"environment files" env:"ECSPRESSO_ENVFILE"`
-	Debug          bool              `help:"enable debug log" env:"ECSPRESSO_DEBUG"`
-	ExtStr         map[string]string `help:"external string values for Jsonnet" env:"ECSPRESSO_EXT_STR"`
-	ExtCode        map[string]string `help:"external code values for Jsonnet" env:"ECSPRESSO_EXT_CODE"`
-	ConfigFilePath string            `name:"config" help:"config file" default:"ecspresso.yml" env:"ECSPRESSO_CONFIG"`
-	AssumeRoleARN  string            `help:"the ARN of the role to assume" default:"" env:"ECSPRESSO_ASSUME_ROLE_ARN"`
-	Timeout        *time.Duration    `help:"timeout. Override in a configuration file." env:"ECSPRESSO_TIMEOUT"`
-	FilterCommand  string            `help:"filter command" env:"ECSPRESSO_FILTER_COMMAND"`
-}
-
-func (opt *Option) resolveConfigFilePath() (path string) {
-	path = DefaultConfigFilePath
-	defer func() {
-		opt.ConfigFilePath = path
-		if opt.InitOption != nil {
-			opt.InitOption.ConfigFilePath = path
-		}
-	}()
-	if opt.ConfigFilePath != "" && opt.ConfigFilePath != DefaultConfigFilePath {
-		path = opt.ConfigFilePath
-		return
-	}
-	for _, ext := range []string{ymlExt, yamlExt, jsonExt, jsonnetExt} {
-		if _, err := os.Stat("ecspresso" + ext); err == nil {
-			path = "ecspresso" + ext
-			return
-		}
-	}
-	return
 }
 
 func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {

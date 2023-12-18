@@ -112,7 +112,7 @@ func (l *configLoader) Load(ctx context.Context, path string, version string) (*
 	return conf, nil
 }
 
-func (c *Config) OverrideByOption(opt *Option) {
+func (c *Config) OverrideByCLIOptions(opt *CLIOptions) {
 	if opt.Timeout != nil {
 		c.Timeout = &Duration{*opt.Timeout}
 	}

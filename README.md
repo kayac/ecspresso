@@ -26,8 +26,8 @@ $ asdf plugin add ecspresso
 # or
 $ asdf plugin add ecspresso https://github.com/kayac/asdf-ecspresso.git
 
-$ asdf install ecspresso 2.0.0
-$ asdf global ecspresso 2.0.0
+$ asdf install ecspresso 2.3.0
+$ asdf global ecspresso 2.3.0
 ```
 
 ### aqua (macOS and Linux)
@@ -49,13 +49,13 @@ https://circleci.com/orbs/registry/orb/fujiwara/ecspresso
 ```yaml
 version: 2.1
 orbs:
-  ecspresso: fujiwara/ecspresso@2.0.3
+  ecspresso: fujiwara/ecspresso@2.3.0
 jobs:
   install:
     steps:
       - checkout
       - ecspresso/install:
-          version: v2.0.0 # or latest
+          version: v2.3.0 # or latest
           # version-file: .ecspresso-version
       - run:
           command: |
@@ -86,7 +86,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: kayac/ecspresso@v2
         with:
-          version: v2.0.0 # or latest
+          version: v2.3.0 # or latest
           # version-file: .ecspresso-version
       - run: |
           ecspresso deploy --config ecspresso.yml
@@ -108,7 +108,7 @@ Pass the parameter "latest" to use the latest version of ecspresso.
 
 `version: latest` is not recommended because it may cause unexpected behavior when the new version of ecspresso is released.
 
-GitHub Action `kayac/ecspresso@v2` supports `version-file: path/to/file` installs ecspresso that version written in the file. This version number does not have `v` prefix, For example `2.0.0`.
+GitHub Action `kayac/ecspresso@v2` supports `version-file: path/to/file` installs ecspresso that version written in the file. This version number does not have `v` prefix, For example `2.3.0`.
 
 ## Usage
 
@@ -117,13 +117,14 @@ Usage: ecspresso <command>
 
 Flags:
   -h, --help                      Show context-sensitive help.
-      --envfile=ENVFILE,...       environment files
-      --debug                     enable debug log
-      --ext-str=KEY=VALUE;...     external string values for Jsonnet
-      --ext-code=KEY=VALUE;...    external code values for Jsonnet
-      --config="ecspresso.yml"    config file
-      --assume-role-arn=""        the ARN of the role to assume
-      --option=OPTION
+      --envfile=ENVFILE,...       environment files ($ECSPRESSO_ENVFILE)
+      --debug                     enable debug log ($ECSPRESSO_DEBUG)
+      --ext-str=KEY=VALUE;...     external string values for Jsonnet ($ECSPRESSO_EXT_STR)
+      --ext-code=KEY=VALUE;...    external code values for Jsonnet ($ECSPRESSO_EXT_CODE)
+      --config="ecspresso.yml"    config file ($ECSPRESSO_CONFIG)
+      --assume-role-arn=""        the ARN of the role to assume ($ECSPRESSO_ASSUME_ROLE_ARN)
+      --timeout=TIMEOUT           timeout. Override in a configuration file ($ECSPRESSO_TIMEOUT).
+      --filter-command=STRING     filter command ($ECSPRESSO_FILTER_COMMAND)
 
 Commands:
   appspec

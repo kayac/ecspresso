@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Songmu/prompter"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/goccy/go-yaml"
@@ -25,14 +26,13 @@ type InitOption struct {
 	TaskDefinitionPath    string `help:"path to output task definition file" default:"ecs-task-def.json"`
 	ServiceDefinitionPath string `help:"path to output service definition file" default:"ecs-service-def.json"`
 	Sort                  bool   `help:"sort elements in task definition" default:"false" negatable:""`
-	ConfigFilePath        string
-	ForceOverwrite        bool `help:"overwrite existing files" default:"false"`
-	Jsonnet               bool `help:"output files as jsonnet format" default:"false"`
+	ForceOverwrite        bool   `help:"overwrite existing files" default:"false"`
+	Jsonnet               bool   `help:"output files as jsonnet format" default:"false"`
 }
 
-func (opt *InitOption) NewConfig(ctx context.Context) (*Config, error) {
+func (opt *InitOption) NewConfig(ctx context.Context, configFilePath string) (*Config, error) {
 	conf := NewDefaultConfig()
-	conf.path = opt.ConfigFilePath
+	conf.path = configFilePath
 	conf.Region = opt.Region
 	conf.Cluster = opt.Cluster
 	conf.Service = opt.Service
@@ -64,19 +64,16 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 		if ext := filepath.Ext(conf.TaskDefinitionPath); ext == jsonExt {
 			conf.TaskDefinitionPath = strings.TrimSuffix(conf.TaskDefinitionPath, ext) + jsonnetExt
 		}
-		if ext := filepath.Ext(opt.ConfigFilePath); ext == ymlExt || ext == yamlExt {
-			opt.ConfigFilePath = strings.TrimSuffix(opt.ConfigFilePath, ext) + jsonnetExt
+		if ext := filepath.Ext(conf.path); ext == ymlExt || ext == yamlExt {
+			conf.path = strings.TrimSuffix(conf.path, ext) + jsonnetExt
 		}
 	}
-	if err := conf.Restrict(ctx); err != nil {
-		return err
-	}
-	var err error
 	var sv *Service
 	var tdArn string
 	if tdOnly {
 		tdArn = opt.TaskDefinition
 	} else {
+		var err error
 		sv, tdArn, err = d.initServiceDefinition(ctx, opt)
 		if err != nil {
 			return err
@@ -86,13 +83,13 @@ func (d *App) Init(ctx context.Context, opt InitOption) error {
 	if err != nil {
 		return err
 	}
-	if err := d.initConfigurationFile(ctx, opt, sv, td); err != nil {
+	if err := d.initConfigurationFile(ctx, conf.path, opt, sv, td); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *App) initConfigurationFile(ctx context.Context, opt InitOption, sv *Service, td *TaskDefinitionInput) error {
+func (d *App) initConfigurationFile(ctx context.Context, configFilePath string, opt InitOption, sv *Service, td *TaskDefinitionInput) error {
 	conf := d.config
 	if sv == nil {
 		// tdOnly
@@ -118,7 +115,7 @@ func (d *App) initConfigurationFile(ctx context.Context, opt InitOption, sv *Ser
 			if err != nil {
 				return fmt.Errorf("unable to marshal config to JSON: %w", err)
 			}
-			out, err := formatter.Format(opt.ConfigFilePath, string(b), formatter.DefaultOptions())
+			out, err := formatter.Format(configFilePath, string(b), formatter.DefaultOptions())
 			if err != nil {
 				return fmt.Errorf("unable to format config as Jsonnet: %w", err)
 			}
@@ -129,8 +126,8 @@ func (d *App) initConfigurationFile(ctx context.Context, opt InitOption, sv *Ser
 				return fmt.Errorf("unable to marshal config to YAML: %w", err)
 			}
 		}
-		d.Log("save config to %s", opt.ConfigFilePath)
-		if err := d.saveFile(opt.ConfigFilePath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
+		d.Log("save the config to %s", configFilePath)
+		if err := d.saveFile(configFilePath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
 			return err
 		}
 	}
@@ -151,8 +148,8 @@ func (d *App) initServiceDefinition(ctx context.Context, opt InitOption) (*Servi
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to describe service: %w", err)
 	}
-
-	if long, _ := isLongArnFormat(*sv.ServiceArn); long {
+	svArn := aws.ToString(sv.ServiceArn)
+	if long, _ := isLongArnFormat(svArn); long {
 		// Long arn format must be used for tagging operations
 		lt, err := d.ecs.ListTagsForResource(ctx, &ecs.ListTagsForResourceInput{
 			ResourceArn: sv.ServiceArn,
@@ -175,7 +172,7 @@ func (d *App) initServiceDefinition(ctx context.Context, opt InitOption) (*Servi
 			}
 			b = []byte(out)
 		}
-		d.Log("save service definition to %s", conf.ServiceDefinitionPath)
+		d.Log("save the service definition %s to %s", svArn, conf.ServiceDefinitionPath)
 		if err := d.saveFile(conf.ServiceDefinitionPath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
 			return nil, "", err
 		}
@@ -202,7 +199,7 @@ func (d *App) initTaskDefinition(ctx context.Context, opt InitOption, tdArn stri
 			}
 			b = []byte(out)
 		}
-		d.Log("save task definition to %s", conf.TaskDefinitionPath)
+		d.Log("save the task definition %s to %s", tdArn, conf.TaskDefinitionPath)
 		if err := d.saveFile(conf.TaskDefinitionPath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
 			return nil, err
 		}

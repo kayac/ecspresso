@@ -99,7 +99,7 @@ func TestTaskDefinitionArnForRun(t *testing.T) {
 	})
 	defer ecspresso.ResetAWSV2ConfigLoadOptionsFunc()
 	for config, suites := range testTaskDefinitionArnForRunSuite {
-		app, err := ecspresso.New(ctx, &ecspresso.Option{ConfigFilePath: config})
+		app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{ConfigFilePath: config})
 		if err != nil {
 			t.Error(err)
 			continue

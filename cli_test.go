@@ -12,7 +12,7 @@ import (
 var cliTests = []struct {
 	args      []string
 	sub       string
-	option    *ecspresso.Option
+	option    *ecspresso.CLIOptions
 	subOption any
 	fn        func(*testing.T, any)
 }{
@@ -28,13 +28,12 @@ var cliTests = []struct {
 			"--assume-role-arn", "arn:aws:iam::123456789012:role/exampleRole",
 		},
 		sub: "status",
-		option: &ecspresso.Option{
+		option: &ecspresso.CLIOptions{
 			ConfigFilePath: "config.yml",
 			Debug:          true,
 			Envfile:        []string{"tests/envfile"},
 			ExtStr:         map[string]string{"s1": "v1", "s2": "v2"},
 			ExtCode:        map[string]string{"c1": "123", "c2": "1+2"},
-			InitOption:     nil,
 			AssumeRoleARN:  "arn:aws:iam::123456789012:role/exampleRole",
 		},
 		subOption: &ecspresso.StatusOption{
@@ -54,12 +53,11 @@ var cliTests = []struct {
 			"--events=100",
 		},
 		sub: "status",
-		option: &ecspresso.Option{
+		option: &ecspresso.CLIOptions{
 			ConfigFilePath: "config.yml",
 			Debug:          true,
 			ExtStr:         map[string]string{},
 			ExtCode:        map[string]string{},
-			InitOption:     nil,
 			AssumeRoleARN:  "",
 		},
 		subOption: &ecspresso.StatusOption{
@@ -587,7 +585,6 @@ var cliTests = []struct {
 		subOption: &ecspresso.InitOption{
 			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "default",
-			ConfigFilePath:        "myconfig.yml",
 			Service:               "myservice",
 			TaskDefinitionPath:    "ecs-task-def.json",
 			ServiceDefinitionPath: "ecs-service-def.json",
@@ -598,17 +595,7 @@ var cliTests = []struct {
 	{
 		args: []string{"init", "--service", "myservice", "--config", "myconfig.yml"},
 		sub:  "init",
-		option: &ecspresso.Option{
-			InitOption: &ecspresso.InitOption{
-				Region:                os.Getenv("AWS_REGION"),
-				Cluster:               "default",
-				ConfigFilePath:        "myconfig.yml",
-				Service:               "myservice",
-				TaskDefinitionPath:    "ecs-task-def.json",
-				ServiceDefinitionPath: "ecs-service-def.json",
-				ForceOverwrite:        false,
-				Jsonnet:               false,
-			},
+		option: &ecspresso.CLIOptions{
 			ConfigFilePath: "myconfig.yml",
 			Debug:          false,
 			ExtStr:         map[string]string{},
@@ -617,7 +604,6 @@ var cliTests = []struct {
 		subOption: &ecspresso.InitOption{
 			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "default",
-			ConfigFilePath:        "myconfig.yml",
 			Service:               "myservice",
 			TaskDefinitionPath:    "ecs-task-def.json",
 			ServiceDefinitionPath: "ecs-service-def.json",
@@ -636,7 +622,6 @@ var cliTests = []struct {
 		subOption: &ecspresso.InitOption{
 			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "mycluster",
-			ConfigFilePath:        "myconfig.jsonnet",
 			Service:               "myservice",
 			TaskDefinitionPath:    "taskdef.jsonnet",
 			ServiceDefinitionPath: "servicedef.jsonnet",
@@ -650,7 +635,6 @@ var cliTests = []struct {
 		subOption: &ecspresso.InitOption{
 			Region:                os.Getenv("AWS_REGION"),
 			Cluster:               "default",
-			ConfigFilePath:        "myconfig.yml",
 			Service:               "",
 			TaskDefinition:        "app:123",
 			TaskDefinitionPath:    "ecs-task-def.json",
@@ -798,7 +782,7 @@ func TestParseCLIv2(t *testing.T) {
 				t.Errorf("unexpected subcommand: expected %s, got %s", tt.sub, sub)
 			}
 			if tt.option != nil {
-				if diff := cmp.Diff(*tt.option, opt.Option); diff != "" {
+				if diff := cmp.Diff(tt.option, CLIOptionsGlobalOnly(opt)); diff != "" {
 					t.Errorf("unexpected option: diff %s", diff)
 				}
 			}
@@ -811,5 +795,18 @@ func TestParseCLIv2(t *testing.T) {
 				tt.fn(t, opt.ForSubCommand(sub))
 			}
 		})
+	}
+}
+
+func CLIOptionsGlobalOnly(opts *ecspresso.CLIOptions) *ecspresso.CLIOptions {
+	return &ecspresso.CLIOptions{
+		ConfigFilePath: opts.ConfigFilePath,
+		Debug:          opts.Debug,
+		ExtStr:         opts.ExtStr,
+		ExtCode:        opts.ExtCode,
+		Envfile:        opts.Envfile,
+		AssumeRoleARN:  opts.AssumeRoleARN,
+		Timeout:        opts.Timeout,
+		FilterCommand:  opts.FilterCommand,
 	}
 }
