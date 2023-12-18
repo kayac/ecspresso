@@ -49,7 +49,7 @@ https://circleci.com/orbs/registry/orb/fujiwara/ecspresso
 ```yaml
 version: 2.1
 orbs:
-  ecspresso: fujiwara/ecspresso@2.3.0
+  ecspresso: fujiwara/ecspresso@2.0.3
 jobs:
   install:
     steps:
