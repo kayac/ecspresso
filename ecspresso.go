@@ -145,6 +145,16 @@ func New(ctx context.Context, opt *CLIOptions, newAppOptions ...AppOption) (*App
 	for _, fn := range newAppOptions {
 		fn(&appOpts)
 	}
+
+	// set log level
+	if opt.Debug {
+		appOpts.logger.SetOutput(newLogFilter(os.Stderr, "DEBUG"))
+	} else {
+		appOpts.logger.SetOutput(newLogFilter(os.Stderr, "INFO"))
+	}
+	Log("[INFO] ecspresso version: %s", Version)
+
+	// load config file
 	if appOpts.config == nil {
 		if config, err := appOpts.loader.Load(ctx, opt.ConfigFilePath, Version); err != nil {
 			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
@@ -153,16 +163,10 @@ func New(ctx context.Context, opt *CLIOptions, newAppOptions ...AppOption) (*App
 		}
 	}
 	conf := appOpts.config
-
 	conf.OverrideByCLIOptions(opt)
 	conf.AssumeRole(opt.AssumeRoleARN)
 
-	logger := newLogger()
-	if opt.Debug {
-		logger.SetOutput(newLogFilter(os.Stderr, "DEBUG"))
-	} else {
-		logger.SetOutput(newLogFilter(os.Stderr, "INFO"))
-	}
+	// new app
 	d := &App{
 		Service: conf.Service,
 		Cluster: conf.Cluster,
