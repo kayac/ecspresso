@@ -20,7 +20,7 @@ func TestLoadTaskDefinition(t *testing.T) {
 		"tests/td-plain-in-tags.json",
 		"tests/td.jsonnet",
 	} {
-		app, err := ecspresso.New(ctx, &ecspresso.Option{
+		app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{
 			ConfigFilePath: "tests/td-config.yml",
 			ExtStr:         map[string]string{"WorkerID": "3"},
 			ExtCode:        map[string]string{"EphemeralStorage": "24 + 1"}, // == 25
@@ -48,7 +48,7 @@ func TestLoadTaskDefinition(t *testing.T) {
 func TestLoadTaskDefinitionTags(t *testing.T) {
 	ctx := context.Background()
 	for _, path := range []string{"tests/td.json", "tests/td-plain.json", "tests/td.jsonnet"} {
-		app, err := ecspresso.New(ctx, &ecspresso.Option{
+		app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{
 			ConfigFilePath: "tests/td-config.yml",
 			ExtStr:         map[string]string{"WorkerID": "3"},
 			ExtCode:        map[string]string{"EphemeralStorage": "24 + 1"}, // == 25
@@ -66,7 +66,7 @@ func TestLoadTaskDefinitionTags(t *testing.T) {
 	}
 
 	for _, path := range []string{"tests/td-in-tags.json", "tests/td-plain-in-tags.json"} {
-		app, err := ecspresso.New(ctx, &ecspresso.Option{ConfigFilePath: "tests/td-config.yml"})
+		app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{ConfigFilePath: "tests/td-config.yml"})
 		if err != nil {
 			t.Error(err)
 		}

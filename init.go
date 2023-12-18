@@ -51,7 +51,7 @@ var (
 	yamlExt    = ".yaml"
 )
 
-func (d *App) Init(ctx context.Context, opt InitOption, configFilePath string) error {
+func (d *App) Init(ctx context.Context, opt InitOption) error {
 	conf := d.config
 	// when --task-definition is not empty, --service is empty because these flags are exclusive.
 	tdOnly := opt.TaskDefinition != ""
@@ -64,8 +64,8 @@ func (d *App) Init(ctx context.Context, opt InitOption, configFilePath string) e
 		if ext := filepath.Ext(conf.TaskDefinitionPath); ext == jsonExt {
 			conf.TaskDefinitionPath = strings.TrimSuffix(conf.TaskDefinitionPath, ext) + jsonnetExt
 		}
-		if ext := filepath.Ext(configFilePath); ext == ymlExt || ext == yamlExt {
-			configFilePath = strings.TrimSuffix(configFilePath, ext) + jsonnetExt
+		if ext := filepath.Ext(conf.path); ext == ymlExt || ext == yamlExt {
+			conf.path = strings.TrimSuffix(conf.path, ext) + jsonnetExt
 		}
 	}
 	if err := conf.Restrict(ctx); err != nil {
@@ -86,7 +86,7 @@ func (d *App) Init(ctx context.Context, opt InitOption, configFilePath string) e
 	if err != nil {
 		return err
 	}
-	if err := d.initConfigurationFile(ctx, configFilePath, opt, sv, td); err != nil {
+	if err := d.initConfigurationFile(ctx, conf.path, opt, sv, td); err != nil {
 		return err
 	}
 	return nil

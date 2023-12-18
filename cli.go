@@ -4,10 +4,18 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 )
 
 type CLIOptions struct {
-	Option
+	Envfile        []string          `help:"environment files" env:"ECSPRESSO_ENVFILE"`
+	Debug          bool              `help:"enable debug log" env:"ECSPRESSO_DEBUG"`
+	ExtStr         map[string]string `help:"external string values for Jsonnet" env:"ECSPRESSO_EXT_STR"`
+	ExtCode        map[string]string `help:"external code values for Jsonnet" env:"ECSPRESSO_EXT_CODE"`
+	ConfigFilePath string            `name:"config" help:"config file" default:"ecspresso.yml" env:"ECSPRESSO_CONFIG"`
+	AssumeRoleARN  string            `help:"the ARN of the role to assume" default:"" env:"ECSPRESSO_ASSUME_ROLE_ARN"`
+	Timeout        *time.Duration    `help:"timeout. Override in a configuration file." env:"ECSPRESSO_TIMEOUT"`
+	FilterCommand  string            `help:"filter command" env:"ECSPRESSO_FILTER_COMMAND"`
 
 	Appspec    *AppSpecOption    `cmd:"" help:"output AppSpec YAML for CodeDeploy to STDOUT"`
 	Delete     *DeleteOption     `cmd:"" help:"delete service"`
@@ -28,6 +36,24 @@ type CLIOptions struct {
 	Verify     *VerifyOption     `cmd:"" help:"verify resources in configurations"`
 	Wait       *WaitOption       `cmd:"" help:"wait until service stable"`
 	Version    struct{}          `cmd:"" help:"show version"`
+}
+
+func (opt *CLIOptions) resolveConfigFilePath() (path string) {
+	path = DefaultConfigFilePath
+	defer func() {
+		opt.ConfigFilePath = path
+	}()
+	if opt.ConfigFilePath != "" && opt.ConfigFilePath != DefaultConfigFilePath {
+		path = opt.ConfigFilePath
+		return
+	}
+	for _, ext := range []string{ymlExt, yamlExt, jsonExt, jsonnetExt} {
+		if _, err := os.Stat("ecspresso" + ext); err == nil {
+			path = "ecspresso" + ext
+			return
+		}
+	}
+	return
 }
 
 func (opts *CLIOptions) ForSubCommand(sub string) interface{} {
@@ -79,10 +105,15 @@ func dispatchCLI(ctx context.Context, sub string, usage func(), opts *CLIOptions
 		fmt.Println("ecspresso", Version)
 		return nil
 	}
-	if sub != "init" {
-		opts.Init = nil
+	var appOpts []AppOption
+	if sub == "init" {
+		config, err := opts.Init.NewConfig(ctx, opts.ConfigFilePath)
+		if err != nil {
+			return err
+		}
+		appOpts = append(appOpts, WithConfig(config))
 	}
-	app, err := New(ctx, &opts.Option, opts.Init)
+	app, err := New(ctx, opts, appOpts...)
 	if err != nil {
 		return err
 	}
@@ -113,7 +144,7 @@ func dispatchCLI(ctx context.Context, sub string, usage func(), opts *CLIOptions
 	case "revisions":
 		return app.Revesions(ctx, *opts.Revisions)
 	case "init":
-		return app.Init(ctx, *opts.Init, opts.ConfigFilePath)
+		return app.Init(ctx, *opts.Init)
 	case "diff":
 		return app.Diff(ctx, *opts.Diff)
 	case "appspec":
