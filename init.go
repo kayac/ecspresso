@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Songmu/prompter"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/goccy/go-yaml"
@@ -128,7 +129,7 @@ func (d *App) initConfigurationFile(ctx context.Context, configFilePath string, 
 				return fmt.Errorf("unable to marshal config to YAML: %w", err)
 			}
 		}
-		// d.Log("save config to %s", opt.ConfigFilePath)
+		d.Log("save the config to %s", configFilePath)
 		if err := d.saveFile(configFilePath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
 			return err
 		}
@@ -150,8 +151,8 @@ func (d *App) initServiceDefinition(ctx context.Context, opt InitOption) (*Servi
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to describe service: %w", err)
 	}
-
-	if long, _ := isLongArnFormat(*sv.ServiceArn); long {
+	svArn := aws.ToString(sv.ServiceArn)
+	if long, _ := isLongArnFormat(svArn); long {
 		// Long arn format must be used for tagging operations
 		lt, err := d.ecs.ListTagsForResource(ctx, &ecs.ListTagsForResourceInput{
 			ResourceArn: sv.ServiceArn,
@@ -174,7 +175,7 @@ func (d *App) initServiceDefinition(ctx context.Context, opt InitOption) (*Servi
 			}
 			b = []byte(out)
 		}
-		d.Log("save service definition to %s", conf.ServiceDefinitionPath)
+		d.Log("save the service definition %s to %s", svArn, conf.ServiceDefinitionPath)
 		if err := d.saveFile(conf.ServiceDefinitionPath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
 			return nil, "", err
 		}
@@ -201,7 +202,7 @@ func (d *App) initTaskDefinition(ctx context.Context, opt InitOption, tdArn stri
 			}
 			b = []byte(out)
 		}
-		d.Log("save task definition to %s", conf.TaskDefinitionPath)
+		d.Log("save the task definition %s to %s", tdArn, conf.TaskDefinitionPath)
 		if err := d.saveFile(conf.TaskDefinitionPath, b, CreateFileMode, opt.ForceOverwrite); err != nil {
 			return nil, err
 		}
