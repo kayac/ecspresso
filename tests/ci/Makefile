@@ -1,14 +1,15 @@
 .PHONY: test deploy rollback refresh deploy-no-update-service scale down delete help run-task status
 
 export CLUSTER := ecspresso-test
-export SERVICE := nginx-$(CIRCLE_BRANCH)
+export SERVICE := nginx
+# export TFSTATE_BUCKET := ecspresso-test
 export NOW := $(shell date +%Y%m%d%H%M%S)
 export CLIENT_TOKEN := $(shell uuidgen)
 ECSPRESSO := ecspresso --envfile envfile
 
 help:
 
-test: verify deploy tasks diff revisions run-task deploy rollback refresh deploy-no-update-service scale down up delete
+test: diff verify deploy tasks diff revisions run-task deploy rollback refresh deploy-no-update-service scale down up delete
 
 status:
 	$(ECSPRESSO) status --events 10 --debug
@@ -89,3 +90,8 @@ revisions:
 	$(ECSPRESSO) revisions
 	$(ECSPRESSO) revisions --revision=current
 	$(ECSPRESSO) revisions --revision=latest
+
+render:
+	$(ECSPRESSO) render config
+	$(ECSPRESSO) render servicedef
+	$(ECSPRESSO) render taskdef
