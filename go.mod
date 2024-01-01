@@ -19,7 +19,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.25.4
 	github.com/aws/aws-sdk-go-v2/service/servicediscovery v1.27.4
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.44.4
-	github.com/aws/aws-sdk-go-v2/service/sts v1.26.4
+	github.com/aws/aws-sdk-go-v2/service/sts v1.26.6
 	github.com/aws/smithy-go v1.19.0
 	github.com/fatih/color v1.16.0
 	github.com/fujiwara/cfn-lookup v1.0.0
