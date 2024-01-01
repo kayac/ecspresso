@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/kong v0.8.1
 	github.com/aws/aws-sdk-go-v2 v1.24.0
 	github.com/aws/aws-sdk-go-v2/config v1.26.0
-	github.com/aws/aws-sdk-go-v2/credentials v1.16.11
+	github.com/aws/aws-sdk-go-v2/credentials v1.16.13
 	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.25.4
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.29.4
 	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.22.0
@@ -19,7 +19,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.25.4
 	github.com/aws/aws-sdk-go-v2/service/servicediscovery v1.27.4
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.44.4
-	github.com/aws/aws-sdk-go-v2/service/sts v1.26.4
+	github.com/aws/aws-sdk-go-v2/service/sts v1.26.6
 	github.com/aws/smithy-go v1.19.0
 	github.com/fatih/color v1.16.0
 	github.com/fujiwara/cfn-lookup v1.0.0
@@ -78,8 +78,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.16.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sns v1.26.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.18.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.18.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.5 // indirect
 	github.com/creack/pty v1.1.20 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/fujiwara/tracer v1.0.2 // indirect
