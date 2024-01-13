@@ -573,6 +573,61 @@ You can define `serviceConnectConfiguration` in service definition files and `po
 
 For more details, see also [Service Connect parameters](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html#service-connect-parameters)
 
+### EBS Volume support
+
+ecspresso supports managing [Amazon EBS Volumes](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/ebs-volumes.html).
+
+To use EBS volumes, define `volumeConfigurations` in service definitions, and `mountPoints` and `volumes` attributes in task definition files.
+
+```json
+// ecs-service-def.json
+  "volumeConfigurations": [
+    {
+      "managedEBSVolume": {
+        "filesystemType": "ext4",
+        "roleArn": "arn:aws:iam::123456789012:role/ecsInfrastructureRole",
+        "sizeInGiB": 10,
+        "tagSpecifications": [
+          {
+            "propagateTags": "SERVICE",
+            "resourceType": "volume"
+          }
+        ],
+        "volumeType": "gp3"
+      },
+      "name": "ebs"
+    }
+  ]
+```
+
+```json
+// ecs-task-def.json
+// containerDefinitions[].mountPoints
+      "mountPoints": [
+        {
+          "containerPath": "/mnt/ebs",
+          "sourceVolume": "ebs"
+        }
+      ]
+// volumes
+  "volumes": [
+    {
+      "name": "ebs",
+      "configuredAtLaunch": true
+    }
+  ]
+```
+
+`ecspresso run` command supports EBS volumes too.
+
+The EBS volumes attached to the standalone tasks will be deleted when the task is stopped by default. But you can keep the volumes by `--no-ebs-delete-on-termination` option.
+
+```console
+$ ecspresso run --no-ebs-delete-on-termination
+```
+
+The EBS volumes attached to the tasks run by ECS services will always be deleted when the task is stopped. This behavior is by the ECS specification, so ecspresso can't change it.
+
 ### How to check diff and verify service/task definitions before deploy.
 
 ecspresso supports `diff` and `verify` subcommands.
