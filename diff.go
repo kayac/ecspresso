@@ -31,7 +31,7 @@ func (d *App) Diff(ctx context.Context, opt DiffOption) error {
 	var remoteTaskDefArn string
 	// diff for services only when service defined
 	if d.config.Service != "" {
-		d.Log("[DEGUG] diff service compare with %s", d.config.Service)
+		d.Log("[DEBUG] diff service compare with %s", d.config.Service)
 		newSv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 		if err != nil {
 			return fmt.Errorf("failed to load service definition: %w", err)
@@ -72,7 +72,7 @@ func (d *App) Diff(ctx context.Context, opt DiffOption) error {
 	}
 	var remoteTd *ecs.RegisterTaskDefinitionInput
 	if remoteTaskDefArn != "" {
-		d.Log("[DEGUG] diff task definition compare with %s", remoteTaskDefArn)
+		d.Log("[DEBUG] diff task definition compare with %s", remoteTaskDefArn)
 		remoteTd, err = d.DescribeTaskDefinition(ctx, remoteTaskDefArn)
 		if err != nil {
 			return err
