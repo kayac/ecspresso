@@ -73,6 +73,10 @@
           {
             "propagateTags": "SERVICE",
             "resourceType": "volume"
+          },
+          {
+            "propagateTags": "TASK_DEFINITION",
+            "resourceType": "volume"
           }
         ],
         "volumeType": "gp3"
