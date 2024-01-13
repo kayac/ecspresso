@@ -14,7 +14,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.24.4
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.37.0
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.26.4
-	github.com/aws/aws-sdk-go-v2/service/iam v1.28.4
+	github.com/aws/aws-sdk-go-v2/service/iam v1.28.7
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.47.4
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.25.4
 	github.com/aws/aws-sdk-go-v2/service/servicediscovery v1.27.4

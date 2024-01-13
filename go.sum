@@ -93,8 +93,8 @@ github.com/aws/aws-sdk-go-v2/service/ecs v1.37.0 h1:7jZWcv19M7jGHmrQqEFbCqNRXa6L
 github.com/aws/aws-sdk-go-v2/service/ecs v1.37.0/go.mod h1:kt+L4lMA2nvv9evq9S6TOH1up95/2RsQG4GXfxoPRfM=
 github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.26.4 h1:bSjDWRQTcUorD6q0oTUmzrXOmWkTveezefwpP9wArxA=
 github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.26.4/go.mod h1:Tpt4kC8x1HfYuh2rG/6yXZrxjABETERrUl9IdA/IS98=
-github.com/aws/aws-sdk-go-v2/service/iam v1.28.4 h1:EyQh7g++21hhuILNnA+SaCd0632VRnbrFYpA6zGQmFA=
-github.com/aws/aws-sdk-go-v2/service/iam v1.28.4/go.mod h1:kKI0gdVsf+Ev9knh/3lBJbchtX5LLNH25lAzx3KDj3Q=
+github.com/aws/aws-sdk-go-v2/service/iam v1.28.7 h1:FKPRDYZOO0Eur19vWUL1B40Op0j89KQj3kARjrszMK8=
+github.com/aws/aws-sdk-go-v2/service/iam v1.28.7/go.mod h1:YzMYyQ7S4twfYzLjwP24G1RAxypozVZeNaG1r2jxRms=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4 h1:/b31bi3YVNlkzkBrm9LfpaKoaYZUxIAj4sHfOTmLfqw=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4/go.mod h1:2aGXHFmbInwgP9ZfpmdIfOELL79zhdNYNmReK8qDfdQ=
 github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.2.9 h1:/90OR2XbSYfXucBMJ4U14wrjlfleq/0SB6dZDPncgmo=
