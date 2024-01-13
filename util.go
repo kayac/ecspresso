@@ -111,23 +111,27 @@ func CompareTags(oldTags, newTags []types.Tag) (added, updated, deleted []types.
 func serviceVolumeConfigurationsToTask(vcs []types.ServiceVolumeConfiguration, deleteOnTermination *bool) []types.TaskVolumeConfiguration {
 	var tvc []types.TaskVolumeConfiguration
 	for _, vc := range vcs {
-		tagSpecs := lo.Filter(vc.ManagedEBSVolume.TagSpecifications, func(t types.EBSTagSpecification, _ int) bool {
+		v := vc.ManagedEBSVolume
+		if v == nil {
+			continue
+		}
+		tagSpecs := lo.Filter(v.TagSpecifications, func(t types.EBSTagSpecification, _ int) bool {
 			// PropagateTagsService is not supported in RunTask
 			return t.PropagateTags != types.PropagateTagsService
 		})
 		tvc = append(tvc, types.TaskVolumeConfiguration{
 			Name: vc.Name,
 			ManagedEBSVolume: &types.TaskManagedEBSVolumeConfiguration{
-				RoleArn:           vc.ManagedEBSVolume.RoleArn,
-				Encrypted:         vc.ManagedEBSVolume.Encrypted,
-				FilesystemType:    vc.ManagedEBSVolume.FilesystemType,
-				Iops:              vc.ManagedEBSVolume.Iops,
-				KmsKeyId:          vc.ManagedEBSVolume.KmsKeyId,
-				SizeInGiB:         vc.ManagedEBSVolume.SizeInGiB,
-				SnapshotId:        vc.ManagedEBSVolume.SnapshotId,
+				RoleArn:           v.RoleArn,
+				Encrypted:         v.Encrypted,
+				FilesystemType:    v.FilesystemType,
+				Iops:              v.Iops,
+				KmsKeyId:          v.KmsKeyId,
+				SizeInGiB:         v.SizeInGiB,
+				SnapshotId:        v.SnapshotId,
 				TagSpecifications: tagSpecs,
-				Throughput:        vc.ManagedEBSVolume.Throughput,
-				VolumeType:        vc.ManagedEBSVolume.VolumeType,
+				Throughput:        v.Throughput,
+				VolumeType:        v.VolumeType,
 				TerminationPolicy: &types.TaskManagedEBSVolumeTerminationPolicy{
 					DeleteOnTermination: deleteOnTermination,
 				},
