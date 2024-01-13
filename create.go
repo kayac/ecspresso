@@ -75,6 +75,7 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 		ServiceRegistries:             svd.ServiceRegistries,
 		Tags:                          svd.Tags,
 		TaskDefinition:                aws.String(tdArn),
+		VolumeConfigurations:          svd.VolumeConfigurations,
 	}
 	if _, err := d.ecs.CreateService(ctx, createServiceInput); err != nil {
 		return fmt.Errorf("failed to create service: %w", err)

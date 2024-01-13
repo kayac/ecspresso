@@ -78,6 +78,12 @@
           "valueFrom": "{{ secretsmanager_arn `ecspresso-test/json` }}"
         }
       ],
+      "mountPoints": [
+        {
+          "containerPath": "/mnt/ebs",
+          "sourceVolume": "ebs"
+        }
+      ],
       "command": [
         "tail",
         "-f",
@@ -104,5 +110,10 @@
     }
   ],
   "taskRoleArn": "arn:aws:iam::{{must_env `AWS_ACCOUNT_ID`}}:role/ecsTaskRole",
-  "volumes": []
+  "volumes": [
+    {
+      "name": "ebs",
+      "configuredAtLaunch": true
+    }
+  ]
 }
