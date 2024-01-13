@@ -33,10 +33,11 @@ type verifier struct {
 	cwl            *cloudwatchlogs.Client
 	ssm            *ssm.Client
 	secretsmanager *secretsmanager.Client
-	ecr            *ecr.Client
+	ecr            map[string]*ecr.Client
 	s3             *s3.Client
 	opt            *VerifyOption
 	isAssumed      bool
+	execCfg        *aws.Config
 }
 
 func (v *verifier) IsAssumed() bool {
@@ -48,11 +49,25 @@ func newVerifier(execCfg, appCfg *aws.Config, opt *VerifyOption) *verifier {
 		cwl:            cloudwatchlogs.NewFromConfig(*execCfg),
 		ssm:            ssm.NewFromConfig(*execCfg),
 		secretsmanager: secretsmanager.NewFromConfig(*execCfg),
-		ecr:            ecr.NewFromConfig(*execCfg),
-		s3:             s3.NewFromConfig(*appCfg),
-		opt:            opt,
-		isAssumed:      execCfg != appCfg,
+		ecr: map[string]*ecr.Client{
+			execCfg.Region: ecr.NewFromConfig(*execCfg),
+		},
+		s3:        s3.NewFromConfig(*appCfg),
+		opt:       opt,
+		isAssumed: execCfg != appCfg,
+		execCfg:   execCfg,
 	}
+}
+
+func (v *verifier) ecrClient(region string) *ecr.Client {
+	if c, ok := v.ecr[region]; ok {
+		return c
+	}
+	cfg := v.execCfg.Copy()
+	cfg.Region = region
+	client := ecr.NewFromConfig(cfg)
+	v.ecr[region] = client
+	return client
 }
 
 func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
@@ -378,12 +393,12 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 }
 
 var (
-	ecrImageURLRegex = regexp.MustCompile(`dkr\.ecr\..+.amazonaws\.com/.*`)
+	// e.g. {aws_account_id}.dkr.ecr.{region}.amazonaws.com/amazonlinux:latest
+	ecrImageURLRegex = regexp.MustCompile(`^([0-9]+)\.dkr\.ecr\.([0-9a-zA-Z-]+)\.amazonaws\.com/.*`)
 )
 
-func (d *App) verifyECRImage(ctx context.Context, image string) error {
-	d.Log("[DEBUG] VERIFY ECR Image")
-	out, err := d.verifier.ecr.GetAuthorizationToken(
+func (d *App) verifyECRImage(ctx context.Context, image, region string) error {
+	out, err := d.verifier.ecrClient(region).GetAuthorizationToken(
 		ctx,
 		&ecr.GetAuthorizationTokenInput{},
 	)
@@ -494,9 +509,11 @@ func (d *App) verifyImage(ctx context.Context, image string) error {
 	if image == "" {
 		return errors.New("image is not defined")
 	}
-	if ecrImageURLRegex.MatchString(image) {
-		return d.verifyECRImage(ctx, image)
+	if m := ecrImageURLRegex.FindStringSubmatch(image); len(m) == 3 {
+		d.Log("[DEBUG] VERIFY ECR Image %s in region %s", image, m[2])
+		return d.verifyECRImage(ctx, image, m[2]) // m[1] is aws account id, m[2] is region
 	}
+	d.Log("[DEBUG] VERIFY Registry Image %s", image)
 	return d.verifyRegistryImage(ctx, image, "", "")
 }
 

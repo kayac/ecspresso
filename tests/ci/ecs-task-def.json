@@ -50,7 +50,7 @@
     },
     {
       "essential": true,
-      "image": "debian:buster-slim",
+      "image": "{{ must_env `AWS_ACCOUNT_ID` }}.dkr.ecr.us-east-1.amazonaws.com/bash:latest",
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
