@@ -47,6 +47,7 @@ func taskDefinitionName(t *TaskDefinition) string {
 type Service struct {
 	types.Service
 	ServiceConnectConfiguration *types.ServiceConnectConfiguration
+	VolumeConfigurations        []types.ServiceVolumeConfiguration
 	DesiredCount                *int32
 }
 
@@ -55,16 +56,20 @@ func (d *App) newServiceFromTypes(ctx context.Context, in types.Service) (*Servi
 		Service:      in,
 		DesiredCount: aws.Int32(in.DesiredCount),
 	}
-	for _, dp := range in.Deployments {
-		d.Log("[DEBUG] deployment: %s %s", *dp.Id, *dp.Status)
-		if aws.ToString(dp.Status) != "PRIMARY" {
-			continue
-		}
-		scc := dp.ServiceConnectConfiguration
-		sv.ServiceConnectConfiguration = scc
-		if scc == nil {
-			break
-		}
+	dps := lo.Filter(in.Deployments, func(dp types.Deployment, i int) bool {
+		return aws.ToString(dp.Status) == "PRIMARY"
+	})
+	if len(dps) == 0 {
+		d.Log("[WARNING] no primary deployment")
+		return &sv, nil
+	}
+	dp := dps[0]
+	d.Log("[DEBUG] deployment: %s %s", *dp.Id, *dp.Status)
+
+	// ServiceConnect
+	scc := dp.ServiceConnectConfiguration
+	sv.ServiceConnectConfiguration = scc
+	if scc != nil {
 		// resolve sd namespace arn to name
 		id := arnToName(aws.ToString(scc.Namespace))
 		res, err := d.sd.GetNamespace(ctx, &servicediscovery.GetNamespaceInput{
@@ -74,7 +79,6 @@ func (d *App) newServiceFromTypes(ctx context.Context, in types.Service) (*Servi
 			var oe *smithy.OperationError
 			if errors.As(err, &oe) {
 				d.Log("[WARNING] failed to get namespace: %s", oe)
-				break
 			} else {
 				return nil, fmt.Errorf("failed to get namespace: %w", err)
 			}
@@ -82,8 +86,14 @@ func (d *App) newServiceFromTypes(ctx context.Context, in types.Service) (*Servi
 		if res.Namespace != nil {
 			scc.Namespace = res.Namespace.Name
 		}
-		break
 	}
+
+	// VolumeConfigurations
+	if dp.VolumeConfigurations != nil {
+		d.Log("[DEBUG] VolumeConfigurations: %#v", dp.VolumeConfigurations)
+		sv.VolumeConfigurations = dp.VolumeConfigurations
+	}
+
 	return &sv, nil
 }
 

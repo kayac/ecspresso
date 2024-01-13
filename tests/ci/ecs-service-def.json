@@ -62,5 +62,26 @@
       "key": "cluster",
       "value": "ecspresso-test"
     }
+  ],
+  "volumeConfigurations": [
+    {
+      "managedEBSVolume": {
+        "filesystemType": "ext4",
+        "roleArn": "arn:aws:iam::{{ must_env `AWS_ACCOUNT_ID` }}:role/ecsInfrastructureRole",
+        "sizeInGiB": 10,
+        "tagSpecifications": [
+          {
+            "propagateTags": "SERVICE",
+            "resourceType": "volume"
+          },
+          {
+            "propagateTags": "TASK_DEFINITION",
+            "resourceType": "volume"
+          }
+        ],
+        "volumeType": "gp3"
+      },
+      "name": "ebs"
+    }
   ]
 }
