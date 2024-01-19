@@ -277,6 +277,10 @@ func (d *App) taskDefinitionArnForRun(ctx context.Context, opt RunOption) (strin
 		if err != nil {
 			return "", err
 		}
+		{
+			b, _ := MarshalJSONForAPI(in)
+			d.Log("[DEBUG] task definition: %s", string(b))
+		}
 		if opt.DryRun {
 			return fmt.Sprintf("family %s will be registered", *in.Family), nil
 		}

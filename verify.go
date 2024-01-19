@@ -349,7 +349,22 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 		}
 	}
 	if len(sv.LoadBalancers) == 0 && sv.HealthCheckGracePeriodSeconds != nil {
-		return fmt.Errorf("service has no load balancers, but healthCheckGracePeriodSeconds is defined.")
+		return errors.New("service has no load balancers, but healthCheckGracePeriodSeconds is defined")
+	}
+
+	for i, vc := range sv.VolumeConfigurations {
+		name := fmt.Sprintf("VolumeConfigurations[%d]", i)
+		err := verifyResource(ctx, name, func(context.Context) error {
+			if ebs := vc.ManagedEBSVolume; ebs != nil {
+				if len(ebs.TagSpecifications) > 1 {
+					d.Log("[WARNING] %s has more than one tag specifications. Only the first tag specification is used.", name)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
