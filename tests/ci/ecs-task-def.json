@@ -70,6 +70,10 @@
           "valueFrom": "arn:aws:ssm:ap-northeast-1:{{must_env `AWS_ACCOUNT_ID`}}:parameter/ecspresso-test/bar"
         },
         {
+          "name": "BAZ_ARN",
+          "valueFrom": "{{ secretsmanager_arn `ecspresso-test/baz` }}"
+        },
+        {
           "name": "JSON_FOO",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:{{must_env `AWS_ACCOUNT_ID`}}:secret:ecspresso-test/json-soBS7X:foo::"
         },
