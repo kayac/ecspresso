@@ -111,6 +111,7 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 				cdTypes.DeploymentStatusQueued,
 				cdTypes.DeploymentStatusInProgress,
 				cdTypes.DeploymentStatusReady,
+				cdTypes.DeploymentStatusSucceeded,
 			},
 		},
 	)
