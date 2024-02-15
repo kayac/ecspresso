@@ -49,7 +49,7 @@ https://circleci.com/orbs/registry/orb/fujiwara/ecspresso
 ```yaml
 version: 2.1
 orbs:
-  ecspresso: fujiwara/ecspresso@2.0.3
+  ecspresso: fujiwara/ecspresso@2.0.4
 jobs:
   install:
     steps:
@@ -57,6 +57,8 @@ jobs:
       - ecspresso/install:
           version: v2.3.0 # or latest
           # version-file: .ecspresso-version
+          os: linux # or windows or darwin
+          arch: amd64 # or arm64
       - run:
           command: |
             ecspresso version
@@ -647,7 +649,7 @@ $ ecspresso diff
 -  "platformVersion": "1.3.0"
 +  "platformVersion": "LATEST"
  }
- 
+
 --- arn:aws:ecs:ap-northeast-1:123456789012:task-definition/ecspresso-test:202
 +++ ecs-task-def.json
 @@ -1,6 +1,10 @@
