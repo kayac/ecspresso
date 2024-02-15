@@ -14,6 +14,14 @@ commands:
         description: "File containing the ecspresso version. Example: .ecspresso-version"
         type: string
         default: ""
+      os:
+        description: "OS of the binary. Example: linux, darwin, windows"
+        type: string
+        default: "linux"
+      arch:
+        description: "Architecture of the binary. Example: amd64, arm64"
+        type: string
+        default: "amd64"
     steps:
       - run:
           name: "Install ecspresso"
@@ -23,10 +31,12 @@ commands:
             if [ -n "<< parameters.version-file >>" ]; then
               VERSION="v$(cat << parameters.version-file >>)"
             fi
+            DOWNLOAD_OS="<< parameters.os >>"
+            DOWNLOAD_ARCH="<< parameters.arch >>"
             if [ "${VERSION}" = "latest" ]; then
-              DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases | jq -r '[.[]|select(.tag_name > "v2.0")|select(.prerelease==false)][0].assets[].browser_download_url|select(match("linux.amd64."))')
+              DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases | jq --arg arch ${DOWNLOAD_OS}.${DOWNLOAD_ARCH}. -r '[.[]|select(.tag_name > "v2.0")|select(.prerelease==false)][0].assets[].browser_download_url|select(match($arch))')
             else
-              DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/ecspresso_${VERSION:1}_linux_amd64.tar.gz
+              DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/ecspresso_${VERSION:1}_${DOWNLOAD_OS}_${DOWNLOAD_ARCH}.tar.gz
             fi
             cd /tmp
             curl -sfLO ${DOWNLOAD_URL}
