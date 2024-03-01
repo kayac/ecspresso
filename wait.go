@@ -17,7 +17,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-type waitFunc func(ctx context.Context, sv *Service) error
+type waitFunc func(ctx context.Context, sv *Service, id ...string) error
 
 func (d *App) WaitFunc(sv *Service) (waitFunc, error) {
 	defaultFunc := d.WaitServiceStable
@@ -67,7 +67,7 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 	return nil
 }
 
-func (d *App) WaitServiceStable(ctx context.Context, sv *Service) error {
+func (d *App) WaitServiceStable(ctx context.Context, sv *Service, _ ...string) error {
 	d.Log("Waiting for service stable...(it will take a few minutes)")
 	waitCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -95,33 +95,37 @@ func (d *App) WaitServiceStable(ctx context.Context, sv *Service) error {
 	return nil
 }
 
-func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
+func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service, waitID ...string) error {
 	d.Log("[DEBUG] wait for CodeDeploy")
 	dp, err := d.findDeploymentInfo(ctx)
 	if err != nil {
 		return err
 	}
-	out, err := d.codedeploy.ListDeployments(
-		ctx,
-		&codedeploy.ListDeploymentsInput{
-			ApplicationName:     dp.ApplicationName,
-			DeploymentGroupName: dp.DeploymentGroupName,
-			IncludeOnlyStatuses: []cdTypes.DeploymentStatus{
-				cdTypes.DeploymentStatusCreated,
-				cdTypes.DeploymentStatusQueued,
-				cdTypes.DeploymentStatusInProgress,
-				cdTypes.DeploymentStatusReady,
+	var dpID string
+	if len(waitID) == 0 {
+		out, err := d.codedeploy.ListDeployments(
+			ctx,
+			&codedeploy.ListDeploymentsInput{
+				ApplicationName:     dp.ApplicationName,
+				DeploymentGroupName: dp.DeploymentGroupName,
+				IncludeOnlyStatuses: []cdTypes.DeploymentStatus{
+					cdTypes.DeploymentStatusCreated,
+					cdTypes.DeploymentStatusQueued,
+					cdTypes.DeploymentStatusInProgress,
+					cdTypes.DeploymentStatusReady,
+				},
 			},
-		},
-	)
-	if err != nil {
-		return err
+		)
+		if err != nil {
+			return err
+		}
+		if len(out.Deployments) == 0 {
+			return ErrNotFound("No deployments found in progress on CodeDeploy")
+		}
+		dpID = out.Deployments[0]
+	} else {
+		dpID = waitID[0]
 	}
-	if len(out.Deployments) == 0 {
-		return ErrNotFound("No deployments found in progress on CodeDeploy")
-	}
-
-	dpID := out.Deployments[0]
 	d.Log("Waiting for a deployment successful ID: " + dpID)
 	go d.codeDeployProgressBar(ctx, dpID)
 

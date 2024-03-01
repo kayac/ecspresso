@@ -168,7 +168,8 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return nil
 	}
 
-	if err := doDeploy(ctx, tdArn, count, sv, opt); err != nil {
+	dpid, err := doDeploy(ctx, tdArn, count, sv, opt)
+	if err != nil {
 		return err
 	}
 
@@ -177,7 +178,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return nil
 	}
 
-	if err := doWait(ctx, sv); err != nil {
+	if err := doWait(ctx, sv, dpid); err != nil {
 		if errors.As(err, &errNotFound) {
 			d.Log("[INFO] %s", err)
 			// no need to wait
@@ -190,7 +191,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 	return nil
 }
 
-func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) error {
+func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) (string, error) {
 	in := &ecs.UpdateServiceInput{
 		Service:            sv.ServiceName,
 		Cluster:            aws.String(d.Cluster),
@@ -206,12 +207,12 @@ func (d *App) UpdateServiceTasks(ctx context.Context, taskDefinitionArn string, 
 	d.Log(msg)
 	d.LogJSON(in)
 
-	_, err := d.ecs.UpdateService(ctx, in)
+	res, err := d.ecs.UpdateService(ctx, in)
 	if err != nil {
-		return fmt.Errorf("failed to update service tasks: %w", err)
+		return "", fmt.Errorf("failed to update service tasks: %w", err)
 	}
 	time.Sleep(delayForServiceChanged) // wait for service updated
-	return nil
+	return aws.ToString(res.Service.Deployments[0].Id), nil
 }
 
 func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
@@ -273,7 +274,7 @@ func (d *App) UpdateServiceAttributes(ctx context.Context, sv *Service, taskDefi
 	return nil
 }
 
-func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) error {
+func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) (string, error) {
 	if count != nil {
 		d.Log("updating desired count to %d", *count)
 	}
@@ -286,11 +287,11 @@ func (d *App) DeployByCodeDeploy(ctx context.Context, taskDefinitionArn string, 
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("failed to update service: %w", err)
+		return "", fmt.Errorf("failed to update service: %w", err)
 	}
 	if opt.SkipTaskDefinition && !opt.UpdateService && !opt.ForceNewDeployment {
 		// no need to create new deployment.
-		return nil
+		return "", nil
 	}
 
 	return d.createDeployment(ctx, sv, taskDefinitionArn, opt.RollbackEvents)
@@ -404,10 +405,10 @@ func (d *App) findCodeDeployDeploymentGroups(ctx context.Context, appName string
 	return groups, nil
 }
 
-func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionArn string, rollbackEvents string) error {
+func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionArn string, rollbackEvents string) (string, error) {
 	spec, err := appspec.NewWithService(&sv.Service, taskDefinitionArn)
 	if err != nil {
-		return fmt.Errorf("failed to create appspec: %w", err)
+		return "", fmt.Errorf("failed to create appspec: %w", err)
 	}
 	if d.config.AppSpec != nil {
 		spec.Hooks = d.config.AppSpec.Hooks
@@ -417,7 +418,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 	// deployment
 	dp, err := d.findDeploymentInfo(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 	dd := &codedeploy.CreateDeploymentInput{
 		ApplicationName:      dp.ApplicationName,
@@ -441,7 +442,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 			case "DEPLOYMENT_STOP_ON_REQUEST":
 				events = append(events, cdTypes.AutoRollbackEventDeploymentStopOnRequest)
 			default:
-				return fmt.Errorf("invalid rollback event: %s", ev)
+				return "", fmt.Errorf("invalid rollback event: %s", ev)
 			}
 		}
 		dd.AutoRollbackConfiguration = &cdTypes.AutoRollbackConfiguration{
@@ -454,7 +455,7 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 
 	res, err := d.codedeploy.CreateDeployment(ctx, dd)
 	if err != nil {
-		return fmt.Errorf("failed to create deployment: %w", err)
+		return "", fmt.Errorf("failed to create deployment: %w", err)
 	}
 	id := *res.DeploymentId
 	u := fmt.Sprintf(
@@ -471,10 +472,10 @@ func (d *App) createDeployment(ctx context.Context, sv *Service, taskDefinitionA
 			d.Log("Couldn't open URL %s", u)
 		}
 	}
-	return nil
+	return id, nil
 }
 
-type deployFunc func(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) error
+type deployFunc func(ctx context.Context, taskDefinitionArn string, count *int32, sv *Service, opt DeployOption) (string, error)
 
 func (d *App) DeployFunc(sv *Service) (deployFunc, error) {
 	defaultFunc := d.UpdateServiceTasks

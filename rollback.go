@@ -68,7 +68,8 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 		return err
 	}
 
-	if err := doRollback(ctx, sv, targetArn, opt); err != nil {
+	dpid, err := doRollback(ctx, sv, targetArn, opt)
+	if err != nil {
 		return err
 	}
 
@@ -78,7 +79,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	}
 
 	time.Sleep(delayForServiceChanged) // wait for service updated
-	if err := doWait(ctx, sv); err != nil {
+	if err := doWait(ctx, sv, dpid); err != nil {
 		return err
 	}
 
@@ -101,7 +102,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	return nil
 }
 
-func (d *App) RollbackServiceTasks(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) error {
+func (d *App) RollbackServiceTasks(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) (string, error) {
 	return d.UpdateServiceTasks(
 		ctx,
 		tdArn,
@@ -114,10 +115,10 @@ func (d *App) RollbackServiceTasks(ctx context.Context, sv *Service, tdArn strin
 	)
 }
 
-func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) error {
+func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) (string, error) {
 	dp, err := d.findDeploymentInfo(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	ld, err := d.codedeploy.ListDeployments(ctx, &codedeploy.ListDeploymentsInput{
@@ -125,10 +126,10 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 		DeploymentGroupName: dp.DeploymentGroupName,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to list deployments: %w", err)
+		return "", fmt.Errorf("failed to list deployments: %w", err)
 	}
 	if len(ld.Deployments) == 0 {
-		return ErrNotFound("no deployments are found")
+		return "", ErrNotFound("no deployments are found")
 	}
 
 	dpID := ld.Deployments[0] // latest deployment id
@@ -137,13 +138,13 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 		DeploymentId: &dpID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to get deployment: %w", err)
+		return "", fmt.Errorf("failed to get deployment: %w", err)
 	}
 
 	if opt.DryRun {
 		d.Log("deployment id: %s", dpID)
 		d.Log("DRY RUN OK")
-		return nil
+		return dpID, nil
 	}
 
 	switch dep.DeploymentInfo.Status {
@@ -155,11 +156,11 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 			AutoRollbackEnabled: aws.Bool(true),
 		})
 		if err != nil {
-			return fmt.Errorf("failed to roll back the deployment: %w", err)
+			return "", fmt.Errorf("failed to roll back the deployment: %w", err)
 		}
 
 		d.Log("Deployment %s is rolled back on CodeDeploy:", dpID)
-		return nil
+		return dpID, nil
 	}
 }
 
@@ -198,7 +199,7 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 	return "", ErrNotFound("rollback target is not found")
 }
 
-type rollbackFunc func(ctx context.Context, sv *Service, taskDefinitionArn string, opt RollbackOption) error
+type rollbackFunc func(ctx context.Context, sv *Service, taskDefinitionArn string, opt RollbackOption) (string, error)
 
 func (d *App) RollbackFunc(sv *Service) (rollbackFunc, error) {
 	defaultFunc := d.RollbackServiceTasks
