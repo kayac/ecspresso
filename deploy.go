@@ -28,6 +28,7 @@ type DeployOption struct {
 	DryRun               bool   `help:"dry run" default:"false"`
 	DesiredCount         *int32 `name:"tasks" help:"desired count of tasks" default:"-1"`
 	SkipTaskDefinition   bool   `help:"skip register a new task definition" default:"false"`
+	Revision             int64  `help:"revision of the task definition to run when --skip-task-definition" default:"0"`
 	ForceNewDeployment   bool   `help:"force a new deployment of the service" default:"false"`
 	Wait                 bool   `help:"wait for service stable" default:"true" negatable:""`
 	SuspendAutoScaling   *bool  `help:"suspend application auto-scaling attached with the ECS service"`
@@ -99,31 +100,9 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return err
 	}
 
-	var tdArn string
-	if opt.LatestTaskDefinition {
-		family := strings.Split(arnToName(*sv.TaskDefinition), ":")[0]
-		var err error
-		tdArn, err = d.findLatestTaskDefinitionArn(ctx, family)
-		if err != nil {
-			return err
-		}
-	} else if opt.SkipTaskDefinition {
-		tdArn = *sv.TaskDefinition
-	} else {
-		td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
-		if err != nil {
-			return err
-		}
-		if opt.DryRun {
-			d.Log("[INFO] task definition:")
-			d.OutputJSONForAPI(os.Stderr, td)
-		} else {
-			newTd, err := d.RegisterTaskDefinition(ctx, td)
-			if err != nil {
-				return err
-			}
-			tdArn = *newTd.TaskDefinitionArn
-		}
+	tdArn, err := d.taskDefinitionArnForDeploy(ctx, sv, opt)
+	if err != nil {
+		return err
 	}
 
 	var count *int32
@@ -536,4 +515,48 @@ func (d *App) UpdateServiceTags(ctx context.Context, sv *Service, added, updated
 		}
 	}
 	return nil
+}
+
+func (d *App) taskDefinitionArnForDeploy(ctx context.Context, sv *Service, opt DeployOption) (string, error) {
+	if opt.Revision > 0 {
+		if opt.LatestTaskDefinition {
+			return "", ErrConflictOptions("revision and latest-task-definition are exclusive")
+		}
+		if !opt.SkipTaskDefinition {
+			return "", fmt.Errorf("revision requires skip-task-definition")
+		}
+		family := strings.Split(arnToName(*sv.TaskDefinition), ":")[0]
+		return fmt.Sprintf("%s:%d", family, opt.Revision), nil
+	}
+
+	if opt.LatestTaskDefinition {
+		family := strings.Split(arnToName(*sv.TaskDefinition), ":")[0]
+		var err error
+		tdArn, err := d.findLatestTaskDefinitionArn(ctx, family)
+		if err != nil {
+			return "", err
+		}
+		return tdArn, nil
+	}
+
+	if opt.SkipTaskDefinition {
+		return *sv.TaskDefinition, nil
+	}
+
+	td, err := d.LoadTaskDefinition(d.config.TaskDefinitionPath)
+	if err != nil {
+		return "", err
+	}
+
+	if opt.DryRun {
+		d.Log("[INFO] task definition:")
+		d.OutputJSONForAPI(os.Stderr, td)
+		return "", nil
+	}
+
+	newTd, err := d.RegisterTaskDefinition(ctx, td)
+	if err != nil {
+		return "", err
+	}
+	return *newTd.TaskDefinitionArn, nil
 }
