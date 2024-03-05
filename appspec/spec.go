@@ -30,6 +30,14 @@ func (a *AppSpec) String() string {
 	return string(b)
 }
 
+func Unmarsal(data []byte) (*AppSpec, error) {
+	var spec AppSpec
+	if err := yaml.Unmarshal(data, &spec); err != nil {
+		return nil, err
+	}
+	return &spec, nil
+}
+
 func NewWithService(sv *types.Service, tdArn string) (*AppSpec, error) {
 	if len(sv.LoadBalancers) == 0 {
 		return nil, errors.New("require LoadBalancers")

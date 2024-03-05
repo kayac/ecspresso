@@ -70,4 +70,13 @@ func TestAppSpec(t *testing.T) {
 	if diff := cmp.Diff(&s, expected); diff != "" {
 		t.Error(diff)
 	}
+
+	// round trip
+	r, err := appspec.Unmarsal([]byte(s.String()))
+	if err != nil {
+		t.Error(err)
+	}
+	if diff := cmp.Diff(r, expected); diff != "" {
+		t.Error("failed to Unmarsal", diff)
+	}
 }
