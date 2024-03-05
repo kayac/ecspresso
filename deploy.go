@@ -531,7 +531,6 @@ func (d *App) taskDefinitionArnForDeploy(ctx context.Context, sv *Service, opt D
 
 	if opt.LatestTaskDefinition {
 		family := strings.Split(arnToName(*sv.TaskDefinition), ":")[0]
-		var err error
 		tdArn, err := d.findLatestTaskDefinitionArn(ctx, family)
 		if err != nil {
 			return "", err
