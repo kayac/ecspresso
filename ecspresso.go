@@ -59,6 +59,11 @@ func (d *App) newServiceFromTypes(ctx context.Context, in types.Service) (*Servi
 	dps := lo.Filter(in.Deployments, func(dp types.Deployment, i int) bool {
 		return aws.ToString(dp.Status) == "PRIMARY"
 	})
+	if sv.isCodeDeploy() {
+		// CodeDeploy does not support ServiceConnect and VolumeConfiguratons.
+		// So we can break here.
+		return &sv, nil
+	}
 	if len(dps) == 0 {
 		d.Log("[WARNING] no primary deployment")
 		return &sv, nil
