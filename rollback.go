@@ -11,6 +11,7 @@ import (
 	cdTypes "github.com/aws/aws-sdk-go-v2/service/codedeploy/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/kayac/ecspresso/v2/appspec"
 )
 
 type RollbackOption struct {
@@ -41,34 +42,20 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 		return err
 	}
 
-	currentArn := *sv.TaskDefinition
-	targetArn, err := d.FindRollbackTarget(ctx, currentArn)
-	if err != nil {
-		return err
-	}
-
-	d.Log("Rolling back to %s", arnToName(targetArn))
-	if opt.DryRun {
-		if opt.DeregisterTaskDefinition {
-			d.Log("%s will be deregistered", arnToName(currentArn))
-		} else {
-			d.Log("%s will not be deregistered", arnToName(currentArn))
-		}
-		d.Log("DRY RUN OK")
-		return nil
-	}
-
 	d.Log("deployment controller: %s", sv.DeploymentController.Type)
 	doRollback, err := d.RollbackFunc(sv)
 	if err != nil {
 		return err
 	}
+
 	doWait, err := d.WaitFunc(sv)
 	if err != nil {
 		return err
 	}
 
-	if err := doRollback(ctx, sv, targetArn, opt); err != nil {
+	// doRollback returns the task definition arn to be rolled back
+	rollbackedTdArn, err := doRollback(ctx, sv, opt)
+	if err != nil {
 		return err
 	}
 
@@ -85,39 +72,59 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	d.Log("Service is stable now. Completed!")
 
 	if opt.DeregisterTaskDefinition {
-		d.Log("Deregistering the rolled-back task definition %s", arnToName(currentArn))
+		d.Log("Deregistering the rolled-back task definition %s", arnToName(rollbackedTdArn))
 		_, err := d.ecs.DeregisterTaskDefinition(
 			ctx,
 			&ecs.DeregisterTaskDefinitionInput{
-				TaskDefinition: &currentArn,
+				TaskDefinition: &rollbackedTdArn,
 			},
 		)
 		if err != nil {
 			return fmt.Errorf("failed to deregister task definition: %w", err)
 		}
-		d.Log("%s was deregistered successfully", arnToName(currentArn))
+		d.Log("%s was deregistered successfully", arnToName(rollbackedTdArn))
 	}
 
 	return nil
 }
 
-func (d *App) RollbackServiceTasks(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) error {
-	return d.UpdateServiceTasks(
+func (d *App) RollbackServiceTasks(ctx context.Context, sv *Service, opt RollbackOption) (string, error) {
+	currentArn := *sv.TaskDefinition
+	targetArn, err := d.FindRollbackTarget(ctx, currentArn)
+	if err != nil {
+		return "", err
+	}
+
+	d.Log("Rolling back to %s", arnToName(targetArn))
+	if opt.DryRun {
+		if opt.DeregisterTaskDefinition {
+			d.Log("%s will be deregistered", arnToName(currentArn))
+		} else {
+			d.Log("%s will not be deregistered", arnToName(currentArn))
+		}
+		d.Log("DRY RUN OK")
+		return "", nil
+	}
+
+	if err := d.UpdateServiceTasks(
 		ctx,
-		tdArn,
+		targetArn,
 		nil,
 		sv,
 		DeployOption{
 			ForceNewDeployment: false,
 			UpdateService:      false,
 		},
-	)
+	); err != nil {
+		return "", err
+	}
+	return targetArn, nil
 }
 
-func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn string, opt RollbackOption) error {
+func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, opt RollbackOption) (string, error) {
 	dp, err := d.findDeploymentInfo(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	ld, err := d.codedeploy.ListDeployments(ctx, &codedeploy.ListDeploymentsInput{
@@ -125,10 +132,10 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 		DeploymentGroupName: dp.DeploymentGroupName,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to list deployments: %w", err)
+		return "", fmt.Errorf("failed to list deployments: %w", err)
 	}
 	if len(ld.Deployments) == 0 {
-		return ErrNotFound("no deployments are found")
+		return "", ErrNotFound("no deployments are found")
 	}
 
 	dpID := ld.Deployments[0] // latest deployment id
@@ -137,29 +144,42 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, tdArn strin
 		DeploymentId: &dpID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to get deployment: %w", err)
+		return "", fmt.Errorf("failed to get deployment: %w", err)
 	}
 
 	if opt.DryRun {
 		d.Log("deployment id: %s", dpID)
 		d.Log("DRY RUN OK")
-		return nil
+		return "", nil
 	}
 
 	switch dep.DeploymentInfo.Status {
 	case cdTypes.DeploymentStatusSucceeded, cdTypes.DeploymentStatusFailed, cdTypes.DeploymentStatusStopped:
-		return d.createDeployment(ctx, sv, tdArn, opt.RollbackEvents)
+		currentTdArn := *sv.TaskDefinition
+		targetArn, err := d.FindRollbackTarget(ctx, currentTdArn)
+		if err != nil {
+			return "", err
+		}
+		d.Log("the deployment in progress is not found, creating a new deployment with %s", targetArn)
+		if err := d.createDeployment(ctx, sv, targetArn, opt.RollbackEvents); err != nil {
+			return "", err
+		}
+		return currentTdArn, nil
 	default: // If the deployment is not yet complete
+		d.Log("stopping the deployment %s", dpID)
 		_, err = d.codedeploy.StopDeployment(ctx, &codedeploy.StopDeploymentInput{
 			DeploymentId:        &dpID,
 			AutoRollbackEnabled: aws.Bool(true),
 		})
 		if err != nil {
-			return fmt.Errorf("failed to roll back the deployment: %w", err)
+			return "", fmt.Errorf("failed to roll back the deployment: %w", err)
 		}
-
-		d.Log("Deployment %s is rolled back on CodeDeploy:", dpID)
-		return nil
+		tdArn, err := d.findTaskDefinitionOfDeployment(ctx, dp)
+		if err != nil {
+			return "", err
+		}
+		d.Log("Deployment %s is rolled back on CodeDeploy", dpID)
+		return tdArn, nil
 	}
 }
 
@@ -198,7 +218,7 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 	return "", ErrNotFound("rollback target is not found")
 }
 
-type rollbackFunc func(ctx context.Context, sv *Service, taskDefinitionArn string, opt RollbackOption) error
+type rollbackFunc func(ctx context.Context, sv *Service, opt RollbackOption) (string, error)
 
 func (d *App) RollbackFunc(sv *Service) (rollbackFunc, error) {
 	defaultFunc := d.RollbackServiceTasks
@@ -216,4 +236,19 @@ func (d *App) RollbackFunc(sv *Service) (rollbackFunc, error) {
 		}
 	}
 	return defaultFunc, nil
+}
+
+func (d *App) findTaskDefinitionOfDeployment(ctx context.Context, dp *cdTypes.DeploymentInfo) (string, error) {
+	resRev, err := d.codedeploy.GetApplicationRevision(ctx, &codedeploy.GetApplicationRevisionInput{
+		ApplicationName: dp.ApplicationName,
+		Revision:        dp.Revision,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get application revision: %w", err)
+	}
+	spec, err := appspec.Unmarsal([]byte(*resRev.Revision.AppSpecContent.Content))
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal appspec: %w", err)
+	}
+	return *spec.Resources[0].TargetService.Properties.TaskDefinition, nil
 }
