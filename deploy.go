@@ -522,9 +522,6 @@ func (d *App) taskDefinitionArnForDeploy(ctx context.Context, sv *Service, opt D
 		if opt.LatestTaskDefinition {
 			return "", ErrConflictOptions("revision and latest-task-definition are exclusive")
 		}
-		if !opt.SkipTaskDefinition {
-			return "", fmt.Errorf("revision requires skip-task-definition")
-		}
 		family := strings.Split(arnToName(*sv.TaskDefinition), ":")[0]
 		return fmt.Sprintf("%s:%d", family, opt.Revision), nil
 	}
