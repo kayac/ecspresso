@@ -76,14 +76,11 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 
 	time.Sleep(delayForServiceChanged) // wait for service updated
 	if err := doWait(ctx, sv); err != nil {
-		if errors.As(err, &errNotFound) && sv.isCodeDeploy() {
+		if errors.As(err, &errNotFound) {
 			d.Log("[INFO] %s", err)
-			if err := d.WaitTaskSetStable(ctx, sv); err != nil {
-				return err
-			}
-		} else {
-			return err
+			return nil
 		}
+		return err
 	}
 
 	d.Log("Service is stable now. Completed!")
