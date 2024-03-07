@@ -135,7 +135,7 @@ func (d *App) RollbackServiceTasks(ctx context.Context, sv *Service, opt Rollbac
 	); err != nil {
 		return "", err
 	}
-	return targetArn, nil
+	return currentArn, nil
 }
 
 func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, opt RollbackOption) (string, error) {
