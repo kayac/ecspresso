@@ -1,9 +1,9 @@
 region: ap-northeast-1
 cluster: ecspresso-test
 service: "{{ must_env `SERVICE` }}"
-service_definition: ecs-service-def.json
-task_definition: ecs-task-def.json
-timeout: 10m0s
+service_definition: ecs-service-def.jsonnet
+task_definition: ecs-task-def.jsonnet
+timeout: 20m0s
 plugins:
 {{ if (env `TFSTATE_BUCKET` ``) }}
   - name: tfstate
