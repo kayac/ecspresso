@@ -73,8 +73,8 @@ func (d *App) WaitServiceStable(ctx context.Context, sv *Service) error {
 	defer cancel()
 
 	tick := time.NewTicker(10 * time.Second)
+	st := &showState{lastEventAt: time.Now()}
 	go func() {
-		st := &showState{lastEventAt: time.Now()}
 		for {
 			select {
 			case <-waitCtx.Done():
@@ -93,6 +93,13 @@ func (d *App) WaitServiceStable(ctx context.Context, sv *Service) error {
 	})
 	if err := waiter.Wait(ctx, d.DescribeServicesInput(), d.Timeout()); err != nil {
 		return fmt.Errorf("failed to wait for service stable: %w", err)
+	}
+	cancel() // stop the showServiceStatus
+
+	<-time.After(delayForServiceChanged)
+	// show the service status once more (correct all logs)
+	if err := d.showServiceStatus(ctx, st); err != nil {
+		d.Log("[WARNING] %s", err.Error())
 	}
 	return nil
 }
