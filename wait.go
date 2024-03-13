@@ -88,7 +88,9 @@ func (d *App) WaitServiceStable(ctx context.Context, sv *Service) error {
 		}
 	}()
 
-	waiter := ecs.NewServicesStableWaiter(d.ecs)
+	waiter := ecs.NewServicesStableWaiter(d.ecs, func(o *ecs.ServicesStableWaiterOptions) {
+		o.MaxDelay = waiterMaxDelay
+	})
 	if err := waiter.Wait(ctx, d.DescribeServicesInput(), d.Timeout()); err != nil {
 		return fmt.Errorf("failed to wait for service stable: %w", err)
 	}
@@ -125,7 +127,9 @@ func (d *App) WaitForCodeDeploy(ctx context.Context, sv *Service) error {
 	d.Log("Waiting for a deployment successful ID: " + dpID)
 	go d.codeDeployProgressBar(ctx, dpID)
 
-	waiter := codedeploy.NewDeploymentSuccessfulWaiter(d.codedeploy)
+	waiter := codedeploy.NewDeploymentSuccessfulWaiter(d.codedeploy, func(o *codedeploy.DeploymentSuccessfulWaiterOptions) {
+		o.MaxDelay = waiterMaxDelay
+	})
 	return waiter.Wait(
 		ctx,
 		&codedeploy.GetDeploymentInput{DeploymentId: &dpID},
