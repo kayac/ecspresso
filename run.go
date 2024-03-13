@@ -214,7 +214,9 @@ func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool)
 	id := arnToName(*task.TaskArn)
 	if untilRunning {
 		d.Log("Waiting for task ID %s until running", id)
-		waiter := ecs.NewTasksRunningWaiter(d.ecs)
+		waiter := ecs.NewTasksRunningWaiter(d.ecs, func(o *ecs.TasksRunningWaiterOptions) {
+			o.MaxDelay = waiterMaxDelay
+		})
 		if err := waiter.Wait(ctx, d.DescribeTasksInput(task), d.Timeout()); err != nil {
 			return err
 		}
@@ -223,7 +225,9 @@ func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool)
 	}
 
 	d.Log("Waiting for task ID %s until stopped", id)
-	waiter := ecs.NewTasksStoppedWaiter(d.ecs)
+	waiter := ecs.NewTasksStoppedWaiter(d.ecs, func(o *ecs.TasksStoppedWaiterOptions) {
+		o.MaxDelay = waiterMaxDelay
+	})
 	if err := waiter.Wait(ctx, d.DescribeTasksInput(task), d.Timeout()); err != nil {
 		return fmt.Errorf("failed to wait task: %w", err)
 	}
