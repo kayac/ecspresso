@@ -18,7 +18,7 @@
 				"logs:GetLogEvents",
 				"secretsmanager:GetSecretValue",
 				"servicediscovery:GetNamespace",
-				"ssm:GetParameter",
+				"ssm:GetParameters",
 				"sts:AssumeRole"
 			],
 			"Resource": "*"

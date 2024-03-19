@@ -116,8 +116,8 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 	} else {
 		name = from
 	}
-	_, err := v.ssm.GetParameter(ctx, &ssm.GetParameterInput{
-		Name:           &name,
+	_, err := v.ssm.GetParameters(ctx, &ssm.GetParametersInput{
+		Names:          []string{name},
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
