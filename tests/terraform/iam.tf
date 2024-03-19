@@ -73,7 +73,6 @@ resource "aws_iam_policy" "ecs-task-execution" {
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents",
-          "ssm:GetParameter",
           "ssm:GetParameters",
           "secretsmanager:GetSecretValue",
         ]
