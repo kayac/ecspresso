@@ -78,7 +78,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	if err := doWait(ctx, sv); err != nil {
 		if errors.As(err, &errNotFound) {
 			d.Log("[INFO] %s", err)
-			return nil
+			return d.rollbackTaskDefinition(ctx, rollbackedTdArn, opt)
 		}
 		return err
 	}
