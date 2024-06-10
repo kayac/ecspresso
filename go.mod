@@ -5,22 +5,22 @@ go 1.18
 require (
 	github.com/Songmu/prompter v0.5.1
 	github.com/alecthomas/kong v0.8.1
-	github.com/aws/aws-sdk-go-v2 v1.24.1
-	github.com/aws/aws-sdk-go-v2/config v1.26.3
-	github.com/aws/aws-sdk-go-v2/credentials v1.16.14
-	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.25.4
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.31.0
-	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.22.0
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.24.4
-	github.com/aws/aws-sdk-go-v2/service/ecs v1.37.0
-	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.26.4
-	github.com/aws/aws-sdk-go-v2/service/iam v1.28.4
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.47.4
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.25.4
-	github.com/aws/aws-sdk-go-v2/service/servicediscovery v1.27.4
-	github.com/aws/aws-sdk-go-v2/service/ssm v1.44.7
-	github.com/aws/aws-sdk-go-v2/service/sts v1.26.7
-	github.com/aws/smithy-go v1.19.0
+	github.com/aws/aws-sdk-go-v2 v1.27.2
+	github.com/aws/aws-sdk-go-v2/config v1.27.18
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.18
+	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.27.10
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.35.7
+	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.25.10
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.28.5
+	github.com/aws/aws-sdk-go-v2/service/ecs v1.41.13
+	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.31.3
+	github.com/aws/aws-sdk-go-v2/service/iam v1.32.6
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.55.1
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.29.3
+	github.com/aws/aws-sdk-go-v2/service/servicediscovery v1.29.12
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.50.6
+	github.com/aws/aws-sdk-go-v2/service/sts v1.28.12
+	github.com/aws/smithy-go v1.20.2
 	github.com/fatih/color v1.16.0
 	github.com/fujiwara/cfn-lookup v1.0.0
 	github.com/fujiwara/ecsta v0.4.5
@@ -65,21 +65,21 @@ require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.1.1 // indirect
 	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/Songmu/flextime v0.1.0 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.5.4 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.11 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.2 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.5 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.15.6 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.10 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.10 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.7.2 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.2.9 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.9 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.9 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.42.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.2.9 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.10 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.16.9 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.3.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.17.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sns v1.26.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.18.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.6 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.20.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.24.5 // indirect
 	github.com/creack/pty v1.1.20 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/fujiwara/tracer v1.0.2 // indirect
