@@ -237,8 +237,8 @@ github.com/hashicorp/go-slug v0.15.0/go.mod h1:THWVTAXwJEinbsp4/bBRcmbaO5EYNLTqx
 github.com/hashicorp/go-tfe v1.56.0 h1:AjBTo7TmWoz42l4KhH65Q3NvjRD5yD3XZrG1tzFySeI=
 github.com/hashicorp/go-tfe v1.56.0/go.mod h1:XnTtBj3tVQ4uFkcFsv8Grn+O1CVcIcceL1uc2AgUcaU=
 github.com/hashicorp/go-uuid v1.0.3 h1:2gKiV6YVmrJ1i2CKKa9obLvRieoRGviZFL26PcT/Co8=
-github.com/hashicorp/go-version v1.6.0 h1:feTTfFNnjP967rlCxM/I9g701jU+RN74YKx2mOkIeek=
-github.com/hashicorp/go-version v1.6.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
+github.com/hashicorp/go-version v1.7.0 h1:5tqGy27NaOTB8yJKUZELlFAS/LTKJkrmONwQKeRZfjY=
+github.com/hashicorp/go-version v1.7.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
 github.com/hashicorp/jsonapi v1.3.1 h1:GtPvnmcWgYwCuDGvYT5VZBHcUyFdq9lSyCzDjn1DdPo=
 github.com/hashicorp/jsonapi v1.3.1/go.mod h1:kWfdn49yCjQvbpnvY1dxxAuAFzISwrrMDQOcu6NsFoM=
 github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
