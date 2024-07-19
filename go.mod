@@ -39,7 +39,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/image-spec v1.0.2
-	github.com/samber/lo v1.36.0
+	github.com/samber/lo v1.46.0
 	github.com/schollz/progressbar/v3 v3.13.1
 	github.com/shogo82148/go-retry v1.1.1
 	golang.org/x/sys v0.21.0
@@ -120,7 +120,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.21.0 // indirect
 	go.opentelemetry.io/otel/trace v1.21.0 // indirect
 	golang.org/x/crypto v0.24.0 // indirect
-	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/oauth2 v0.16.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
