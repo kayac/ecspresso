@@ -40,7 +40,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/samber/lo v1.46.0
-	github.com/schollz/progressbar/v3 v3.13.1
+	github.com/schollz/progressbar/v3 v3.14.4
 	github.com/shogo82148/go-retry v1.1.1
 	golang.org/x/sys v0.21.0
 )
