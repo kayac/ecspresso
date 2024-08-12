@@ -21,7 +21,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.52.3
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.3
 	github.com/aws/smithy-go v1.20.3
-	github.com/fatih/color v1.16.0
+	github.com/fatih/color v1.17.0
 	github.com/fujiwara/cfn-lookup v1.1.0
 	github.com/fujiwara/ecsta v0.4.5
 	github.com/fujiwara/logutils v1.1.2
