@@ -46,10 +46,10 @@ github.com/Songmu/flextime v0.1.0 h1:sss5IALl84LbvU/cS5D1cKNd5ffT94N2BZwC+esgAJI
 github.com/Songmu/flextime v0.1.0/go.mod h1:ofUSZ/qj7f1BfQQ6rEH4ovewJ0SZmLOjBF1xa8iE87Q=
 github.com/Songmu/prompter v0.5.1 h1:IAsttKsOZWSDw7bV1mtGn9TAmLFAjXbp9I/eYmUUogo=
 github.com/Songmu/prompter v0.5.1/go.mod h1:CS3jEPD6h9IaLaG6afrl1orTgII9+uDWuw95dr6xHSw=
-github.com/alecthomas/assert/v2 v2.1.0 h1:tbredtNcQnoSd3QBhQWI7QZ3XHOVkw1Moklp2ojoH/0=
-github.com/alecthomas/kong v0.8.1 h1:acZdn3m4lLRobeh3Zi2S2EpnXTd1mOL6U7xVml+vfkY=
-github.com/alecthomas/kong v0.8.1/go.mod h1:n1iCIO2xS46oE8ZfYCNDqdR0b0wZNrXAIAqro/2132U=
-github.com/alecthomas/repr v0.1.0 h1:ENn2e1+J3k09gyj2shc0dHr/yjaWSHRlrJ4DPMevDqE=
+github.com/alecthomas/assert/v2 v2.6.0 h1:o3WJwILtexrEUk3cUVal3oiQY2tfgr/FHWiz/v2n4FU=
+github.com/alecthomas/kong v0.9.0 h1:G5diXxc85KvoV2f0ZRVuMsi45IrBgx9zDNGNj165aPA=
+github.com/alecthomas/kong v0.9.0/go.mod h1:Y47y5gKfHp1hDc7CH7OeXgLIpp+Q2m1Ni0L5s3bI8Os=
+github.com/alecthomas/repr v0.4.0 h1:GhI2A8MACjfegCPVq9f1FLvIBS+DrQ2KQBFZP1iFzXc=
 github.com/aws/aws-sdk-go-v2 v1.16.15/go.mod h1:SwiyXi/1zTUZ6KIAmLK5V5ll8SiURNUYOqTerZPaF9k=
 github.com/aws/aws-sdk-go-v2 v1.30.3 h1:jUeBtG0Ih+ZIFH0F4UkmL9w3cSpaMv9tYYDbzILP8dY=
 github.com/aws/aws-sdk-go-v2 v1.30.3/go.mod h1:nIQjQVp5sfpQcTc9mPSr1B0PaWK5ByX9MOoDadSN4lc=
