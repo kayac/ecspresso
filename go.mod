@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/Songmu/prompter v0.5.1
-	github.com/alecthomas/kong v0.8.1
+	github.com/alecthomas/kong v1.4.0
 	github.com/aws/aws-sdk-go-v2 v1.32.5
 	github.com/aws/aws-sdk-go-v2/config v1.27.27
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.27
@@ -20,6 +20,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/servicediscovery v1.31.3
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.52.3
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.3
+	github.com/aws/aws-sdk-go-v2/service/vpclattice v1.12.7
 	github.com/aws/smithy-go v1.22.1
 	github.com/fatih/color v1.16.0
 	github.com/fujiwara/cfn-lookup v1.1.0
@@ -82,7 +83,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sns v1.26.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.22.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.26.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/vpclattice v1.12.7 // indirect
 	github.com/creack/pty v1.1.20 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
