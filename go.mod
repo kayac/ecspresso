@@ -22,7 +22,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.3
 	github.com/aws/aws-sdk-go-v2/service/vpclattice v1.12.7
 	github.com/aws/smithy-go v1.22.1
-	github.com/fatih/color v1.16.0
+	github.com/fatih/color v1.18.0
 	github.com/fujiwara/cfn-lookup v1.1.0
 	github.com/fujiwara/ecsta v0.4.5
 	github.com/fujiwara/logutils v1.1.2
@@ -44,7 +44,7 @@ require (
 	github.com/samber/lo v1.46.0
 	github.com/schollz/progressbar/v3 v3.14.6
 	github.com/shogo82148/go-retry v1.1.1
-	golang.org/x/sys v0.22.0
+	golang.org/x/sys v0.25.0
 )
 
 require (
