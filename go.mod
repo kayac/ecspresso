@@ -44,7 +44,7 @@ require (
 	github.com/samber/lo v1.46.0
 	github.com/schollz/progressbar/v3 v3.14.6
 	github.com/shogo82148/go-retry v1.1.1
-	golang.org/x/sys v0.22.0
+	golang.org/x/sys v0.28.0
 )
 
 require (
