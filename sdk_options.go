@@ -15,5 +15,3 @@ func (s SDKOptions) ConfigOptions() []awsConfig.LoadOptionsFunc {
 
 	return res
 }
-
-// TODO: Unmarshal JSON
