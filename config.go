@@ -61,6 +61,7 @@ type Config struct {
 	AppSpec               *appspec.AppSpec  `yaml:"appspec,omitempty" json:"appspec,omitempty"`
 	FilterCommand         string            `yaml:"filter_command,omitempty" json:"filter_command,omitempty"`
 	Timeout               *Duration         `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	SDK                   *SDKOptions       `yaml:"sdk,omitempty" json:"sdk,omitempty"`
 	CodeDeploy            *ConfigCodeDeploy `yaml:"codedeploy,omitempty" json:"codedeploy,omitempty"`
 	Ignore                *ConfigIgnore     `yaml:"ignore,omitempty" json:"ignore,omitempty"`
 
