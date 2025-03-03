@@ -1,27 +1,28 @@
 module github.com/kayac/ecspresso/v2
 
 go 1.21
+toolchain go1.22.5
 
 require (
 	github.com/Songmu/prompter v0.5.1
 	github.com/alecthomas/kong v0.8.1
-	github.com/aws/aws-sdk-go-v2 v1.32.8
-	github.com/aws/aws-sdk-go-v2/config v1.28.10
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.51
-	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.34.5
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.45.3
-	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.29.10
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.38.3
-	github.com/aws/aws-sdk-go-v2/service/ecs v1.53.4
-	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.43.4
-	github.com/aws/aws-sdk-go-v2/service/iam v1.38.4
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.72.2
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.34.10
-	github.com/aws/aws-sdk-go-v2/service/servicediscovery v1.34.3
-	github.com/aws/aws-sdk-go-v2/service/ssm v1.56.4
-	github.com/aws/aws-sdk-go-v2/service/sts v1.33.6
-	github.com/aws/aws-sdk-go-v2/service/vpclattice v1.13.4
-	github.com/aws/smithy-go v1.22.1
+	github.com/aws/aws-sdk-go-v2 v1.36.3
+	github.com/aws/aws-sdk-go-v2/config v1.29.8
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.61
+	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.35.0
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.46.0
+	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.30.0
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.42.0
+	github.com/aws/aws-sdk-go-v2/service/ecs v1.54.0
+	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.44.0
+	github.com/aws/aws-sdk-go-v2/service/iam v1.40.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.78.0
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.35.0
+	github.com/aws/aws-sdk-go-v2/service/servicediscovery v1.35.0
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.57.1
+	github.com/aws/aws-sdk-go-v2/service/sts v1.33.16
+	github.com/aws/aws-sdk-go-v2/service/vpclattice v1.14.0
+	github.com/aws/smithy-go v1.22.2
 	github.com/fatih/color v1.16.0
 	github.com/fujiwara/cfn-lookup v1.1.0
 	github.com/fujiwara/ecsta v0.4.5
@@ -68,21 +69,21 @@ require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2 // indirect
 	github.com/BurntSushi/toml v1.3.0 // indirect
 	github.com/Songmu/flextime v0.1.0 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.7 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.23 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.16.24 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.27 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.27 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.27 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.34 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.34 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.34 // indirect
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.42.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.8 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.8 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.6.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.15 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sns v1.26.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.24.9 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.25.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.29.0 // indirect
 	github.com/creack/pty v1.1.20 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
