@@ -33,7 +33,7 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' }} # skip on workflow_dispatch
       # after tagpr adds a release tag, or workflow_dispatch, release it
       - name: Set up Go
-        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
         with:
           go-version: "1.23"
         if: ${{ steps.tagpr.outputs.tag != '' || github.event_name == 'workflow_dispatch' }}
