@@ -1,6 +1,6 @@
 module github.com/kayac/ecspresso/v2
 
-go 1.23.0
+go 1.23.7
 
 toolchain go1.24.2
 
@@ -32,7 +32,7 @@ require (
 	github.com/fujiwara/tfstate-lookup v1.4.3
 	github.com/goccy/go-yaml v1.12.0
 	github.com/google/go-cmp v0.6.0
-	github.com/google/go-jsonnet v0.20.0
+	github.com/google/go-jsonnet v0.21.0
 	github.com/hashicorp/go-envparse v0.1.0
 	github.com/hashicorp/go-version v1.7.0
 	github.com/hexops/gotextdiff v1.0.3
@@ -138,5 +138,5 @@ require (
 	google.golang.org/grpc v1.62.1 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
 )
