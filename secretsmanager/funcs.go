@@ -58,6 +58,10 @@ func (a *App) FuncMap(ctx context.Context) template.FuncMap {
 		"secretsmanager_arn": func(id string) (string, error) {
 			return a.ResolveArn(ctx, id)
 		},
+		"secretsmanager_arnf": func(format string, args ...interface{}) (string, error) {
+			id := fmt.Sprintf(format, args...)
+			return a.ResolveArn(ctx, id)
+		},
 	}
 	return funcs
 }
@@ -72,6 +76,25 @@ func (a *App) JsonnetNativeFuncs(ctx context.Context) []*jsonnet.NativeFunction 
 				if !ok {
 					return nil, fmt.Errorf("secretsmanager_arn: id must be string")
 				}
+				return a.ResolveArn(ctx, id)
+			},
+		},
+		{
+			Name:   "secretsmanager_arnf",
+			Params: []ast.Identifier{"format", "args"},
+			Func: func(args []any) (any, error) {
+				if len(args) < 1 {
+					return nil, fmt.Errorf("secretsmanager_arnf: format argument is required")
+				}
+				format, ok := args[0].(string)
+				if !ok {
+					return nil, fmt.Errorf("secretsmanager_arnf: format must be string")
+				}
+				var formatArgs []interface{}
+				if len(args) > 1 {
+					formatArgs = args[1:]
+				}
+				id := fmt.Sprintf(format, formatArgs...)
 				return a.ResolveArn(ctx, id)
 			},
 		},
