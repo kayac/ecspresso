@@ -9,7 +9,7 @@ import (
 	"github.com/itchyny/gojq"
 )
 
-func OutputJSONForAPI(w io.Writer, v interface{}) (int, error) {
+func OutputJSONForAPI(w io.Writer, v any) (int, error) {
 	b, err := MarshalJSONForAPI(v)
 	if err != nil {
 		return 0, fmt.Errorf("failed to marshal json: %w", err)
@@ -17,7 +17,7 @@ func OutputJSONForAPI(w io.Writer, v interface{}) (int, error) {
 	return w.Write(b)
 }
 
-func MustMarshalJSONStringForAPI(v interface{}) string {
+func MustMarshalJSONStringForAPI(v any) string {
 	b, err := MarshalJSONForAPI(v)
 	if err != nil {
 		panic(err)
@@ -25,7 +25,7 @@ func MustMarshalJSONStringForAPI(v interface{}) string {
 	return string(b)
 }
 
-func MarshalJSONForAPI(v interface{}, queries ...string) ([]byte, error) {
+func MarshalJSONForAPI(v any, queries ...string) ([]byte, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -33,7 +33,7 @@ func MarshalJSONForAPI(v interface{}, queries ...string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	m := map[string]interface{}{}
+	m := map[string]any{}
 	if err := json.Unmarshal(b, &m); err != nil {
 		return nil, err
 	}
@@ -53,8 +53,8 @@ func MarshalJSONForAPI(v interface{}, queries ...string) ([]byte, error) {
 	return bs, nil
 }
 
-func UnmarshalJSONForStruct(src []byte, v interface{}, path string) error {
-	m := map[string]interface{}{}
+func UnmarshalJSONForStruct(src []byte, v any, path string) error {
+	m := map[string]any{}
 	if err := json.Unmarshal(src, &m); err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func jsonKeyForStruct(s string) string {
 	return strings.ToUpper(s[:1]) + s[1:]
 }
 
-func walkMap(m map[string]interface{}, fn func(string) string) {
+func walkMap(m map[string]any, fn func(string) string) {
 	for key, value := range m {
 		delete(m, key)
 		newKey := key
@@ -91,14 +91,14 @@ func walkMap(m map[string]interface{}, fn func(string) string) {
 			m[newKey] = value
 		}
 		switch value := value.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			switch strings.ToLower(key) {
 			case "dockerlabels", "options":
 				walkMap(value, nil) // do not rewrite keys for map[string]string
 			default:
 				walkMap(value, fn)
 			}
-		case []interface{}:
+		case []any:
 			if len(value) > 0 {
 				walkArray(value, fn)
 			} else {
@@ -109,19 +109,19 @@ func walkMap(m map[string]interface{}, fn func(string) string) {
 	}
 }
 
-func walkArray(a []interface{}, fn func(string) string) {
+func walkArray(a []any, fn func(string) string) {
 	for _, value := range a {
 		switch value := value.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			walkMap(value, fn)
-		case []interface{}:
+		case []any:
 			walkArray(value, fn)
 		default:
 		}
 	}
 }
 
-func jqFilter(m map[string]interface{}, q string) (map[string]interface{}, error) {
+func jqFilter(m map[string]any, q string) (map[string]any, error) {
 	query, err := gojq.Parse(q)
 	if err != nil {
 		return nil, err
@@ -135,8 +135,8 @@ func jqFilter(m map[string]interface{}, q string) (map[string]interface{}, error
 		if err, ok := v.(error); ok {
 			return nil, err
 		}
-		if m, ok = v.(map[string]interface{}); !ok {
-			return nil, fmt.Errorf("query result is not map[string]interface{}: %v", v)
+		if m, ok = v.(map[string]any); !ok {
+			return nil, fmt.Errorf("query result is not map[string]any: %v", v)
 		}
 	}
 	return m, nil

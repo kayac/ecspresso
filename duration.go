@@ -28,8 +28,8 @@ func (d *Duration) MarshalYAML() ([]byte, error) {
 	return d.marshal()
 }
 
-func (d *Duration) unmarshal(b []byte, unmarshaler func([]byte, interface{}) error) error {
-	var unmarshalled interface{}
+func (d *Duration) unmarshal(b []byte, unmarshaler func([]byte, any) error) error {
+	var unmarshalled any
 
 	err := unmarshaler(b, &unmarshalled)
 	if err != nil {

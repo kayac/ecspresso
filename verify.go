@@ -99,7 +99,7 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 		if key == "" {
 			return nil
 		}
-		var m map[string]interface{}
+		var m map[string]any
 		if err := json.Unmarshal([]byte(*res.SecretString), &m); err != nil {
 			return fmt.Errorf("failed to parse secret string from %s secret id %s: %w", from, secretArn, err)
 		}

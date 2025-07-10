@@ -555,7 +555,7 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 	return &td, nil
 }
 
-func unmarshalYAML(src []byte, v interface{}, path string) error {
+func unmarshalYAML(src []byte, v any, path string) error {
 	b, err := yaml.YAMLToJSON(src)
 	if err != nil {
 		return fmt.Errorf("failed to parse %s: %w", path, err)
@@ -563,7 +563,7 @@ func unmarshalYAML(src []byte, v interface{}, path string) error {
 	return unmarshalJSON(b, v, path)
 }
 
-func unmarshalJSON(src []byte, v interface{}, path string) error {
+func unmarshalJSON(src []byte, v any, path string) error {
 	strict := json.NewDecoder(bytes.NewReader(src))
 	strict.DisallowUnknownFields()
 	if err := strict.Decode(&v); err != nil {

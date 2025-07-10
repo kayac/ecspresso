@@ -264,7 +264,7 @@ func tdToTaskDefinitionInput(td *TaskDefinition, tdTags []types.Tag) *TaskDefini
 	return tdi
 }
 
-func jsonStr(v interface{}) string {
+func jsonStr(v any) string {
 	s, _ := json.Marshal(v)
 	return string(s)
 }

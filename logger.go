@@ -46,47 +46,47 @@ func newLogger(w io.Writer) *slog.Logger {
 	}
 }
 
-func LogDebug(f string, v ...interface{}) {
+func LogDebug(f string, v ...any) {
 	msg := fmt.Sprintf(f, v...)
 	commonLogger.Debug(msg)
 }
 
-func LogInfo(f string, v ...interface{}) {
+func LogInfo(f string, v ...any) {
 	msg := fmt.Sprintf(f, v...)
 	commonLogger.Info(msg)
 }
 
-func LogWarn(f string, v ...interface{}) {
+func LogWarn(f string, v ...any) {
 	msg := fmt.Sprintf(f, v...)
 	commonLogger.Warn(msg)
 }
 
-func LogError(f string, v ...interface{}) {
+func LogError(f string, v ...any) {
 	msg := fmt.Sprintf(f, v...)
 	commonLogger.Error(msg)
 }
 
-func (d *App) LogDebug(f string, v ...interface{}) {
+func (d *App) LogDebug(f string, v ...any) {
 	msg := fmt.Sprintf(f, v...)
 	d.logger.Debug(msg)
 }
 
-func (d *App) LogInfo(f string, v ...interface{}) {
+func (d *App) LogInfo(f string, v ...any) {
 	msg := fmt.Sprintf(f, v...)
 	d.logger.Info(msg)
 }
 
-func (d *App) LogWarn(f string, v ...interface{}) {
+func (d *App) LogWarn(f string, v ...any) {
 	msg := fmt.Sprintf(f, v...)
 	d.logger.Warn(msg)
 }
 
-func (d *App) LogError(f string, v ...interface{}) {
+func (d *App) LogError(f string, v ...any) {
 	msg := fmt.Sprintf(f, v...)
 	d.logger.Error(msg)
 }
 
-func (d *App) LogJSON(v interface{}) {
+func (d *App) LogJSON(v any) {
 	b, err := json.Marshal(v)
 	if err != nil {
 		d.logger.Warn("failed to marshal json", "error", err.Error())

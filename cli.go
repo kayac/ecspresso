@@ -59,7 +59,7 @@ func (opt *CLIOptions) resolveConfigFilePath() (path string) {
 	return
 }
 
-func (opts *CLIOptions) ForSubCommand(sub string) interface{} {
+func (opts *CLIOptions) ForSubCommand(sub string) any {
 	switch sub {
 	case "appspec":
 		return opts.Appspec
