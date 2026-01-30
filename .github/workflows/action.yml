@@ -15,7 +15,7 @@ jobs:
     name: test action
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - uses: kayac/ecspresso@v0
         with:
           version: v1.5.0
@@ -70,7 +70,7 @@ jobs:
     name: test action
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - uses: kayac/ecspresso@v2-action-testing
         with:
           version: latest
