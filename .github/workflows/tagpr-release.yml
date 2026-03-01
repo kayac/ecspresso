@@ -27,7 +27,7 @@ jobs:
         run: |
           git checkout v2
           git symbolic-ref --short HEAD
-      - uses: Songmu/tagpr@39bf0bcd1f7ba113b93eb491864ab8df471ad1d6 # v1
+      - uses: Songmu/tagpr@b3fb89424646b06c8aa460f50307c60b6a541425 # v1
         id: tagpr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
