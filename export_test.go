@@ -67,6 +67,10 @@ func (d *App) ResolveTaskDefinitionForRun(ctx context.Context, opt RunOption) (*
 	return d.resolveTaskDefinitionForRun(ctx, opt)
 }
 
+func (d *App) ResolveEcstaFilters(ctx context.Context) (*string, *string, error) {
+	return d.resolveEcstaFilters(ctx)
+}
+
 func (opt *DiffOption) SetWriter(w io.Writer) {
 	opt.w = w
 }

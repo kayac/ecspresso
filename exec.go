@@ -53,6 +53,20 @@ func (d *App) NewEcsta(ctx context.Context) (*ecsta.Ecsta, error) {
 	return app, nil
 }
 
+// resolveEcstaFilters returns Family/Service filters for ecsta. When service is set,
+// Family is left nil; passing both makes ecsta union ListTasks(Family) with
+// ListTasks(ServiceName), so the result includes tasks that do not belong to the service.
+func (d *App) resolveEcstaFilters(ctx context.Context) (*string, *string, error) {
+	if d.config.Service != "" {
+		return nil, &d.config.Service, nil
+	}
+	f, err := d.taskDefinitionFamily(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &f, nil, nil
+}
+
 func (d *App) Exec(ctx context.Context, opt ExecOption) error {
 	// Do not call d.Start() because timeout disabled for exec.
 
@@ -60,13 +74,9 @@ func (d *App) Exec(ctx context.Context, opt ExecOption) error {
 	if err != nil {
 		return err
 	}
-	family, err := d.taskDefinitionFamily(ctx)
+	family, service, err := d.resolveEcstaFilters(ctx)
 	if err != nil {
 		return err
-	}
-	var service *string
-	if d.config.Service != "" {
-		service = &d.config.Service
 	}
 
 	switch {
@@ -78,7 +88,7 @@ func (d *App) Exec(ctx context.Context, opt ExecOption) error {
 			Progress:  opt.Cp.Progress,
 			ID:        opt.ID,
 			Container: opt.Container,
-			Family:    &family,
+			Family:    family,
 			Service:   service,
 		})
 	case opt.Portforward != nil:
@@ -89,7 +99,7 @@ func (d *App) Exec(ctx context.Context, opt ExecOption) error {
 			RemotePort: opt.Portforward.Port,
 			RemoteHost: opt.Portforward.Host,
 			L:          opt.Portforward.L,
-			Family:     &family,
+			Family:     family,
 			Service:    service,
 		})
 	case opt.Run != nil:
@@ -104,7 +114,7 @@ func (d *App) Exec(ctx context.Context, opt ExecOption) error {
 				RemotePort: run.Port,
 				RemoteHost: run.Host,
 				L:          run.L,
-				Family:     &family,
+				Family:     family,
 				Service:    service,
 			})
 		default:
@@ -112,7 +122,7 @@ func (d *App) Exec(ctx context.Context, opt ExecOption) error {
 				ID:        opt.ID,
 				Command:   run.Command,
 				Container: opt.Container,
-				Family:    &family,
+				Family:    family,
 				Service:   service,
 			})
 		}

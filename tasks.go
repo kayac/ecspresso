@@ -59,34 +59,30 @@ func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
 	}
 	ecstaApp.Config.Set("output", opt.Output)
 
-	family, err := d.taskDefinitionFamily(ctx)
+	family, service, err := d.resolveEcstaFilters(ctx)
 	if err != nil {
 		return err
-	}
-	var service *string
-	if d.config.Service != "" {
-		service = &d.config.Service
 	}
 
 	switch {
 	case opt.Find != nil:
 		return ecstaApp.RunDescribe(ctx, &ecsta.DescribeOption{
 			ID:      opt.taskID(),
-			Family:  &family,
+			Family:  family,
 			Service: service,
 		})
 	case opt.Stop != nil:
 		return ecstaApp.RunStop(ctx, &ecsta.StopOption{
 			ID:      opt.taskID(),
 			Force:   opt.Stop.Force,
-			Family:  &family,
+			Family:  family,
 			Service: service,
 		})
 	case opt.Trace != nil:
 		return ecstaApp.RunTrace(ctx, &ecsta.TraceOption{
 			ID:       opt.taskID(),
 			Duration: time.Minute,
-			Family:   &family,
+			Family:   family,
 			Service:  service,
 		})
 	case opt.Logs != nil:
@@ -96,7 +92,7 @@ func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
 			Duration:  opt.Logs.Duration,
 			StartTime: opt.Logs.StartTime,
 			Container: opt.Logs.Container,
-			Family:    &family,
+			Family:    family,
 			Service:   service,
 			JSON:      logFormat == logFormatJSON,
 		})
@@ -107,7 +103,7 @@ func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
 			LogWarn("--find flag is deprecated, use 'tasks find' subcommand instead")
 			return ecstaApp.RunDescribe(ctx, &ecsta.DescribeOption{
 				ID:      opt.taskID(),
-				Family:  &family,
+				Family:  family,
 				Service: service,
 			})
 		case list.DeprecatedStop:
@@ -115,7 +111,7 @@ func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
 			return ecstaApp.RunStop(ctx, &ecsta.StopOption{
 				ID:      opt.taskID(),
 				Force:   list.DeprecatedForce,
-				Family:  &family,
+				Family:  family,
 				Service: service,
 			})
 		case list.DeprecatedTrace:
@@ -123,12 +119,12 @@ func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
 			return ecstaApp.RunTrace(ctx, &ecsta.TraceOption{
 				ID:       opt.taskID(),
 				Duration: time.Minute,
-				Family:   &family,
+				Family:   family,
 				Service:  service,
 			})
 		default:
 			return ecstaApp.RunList(ctx, &ecsta.ListOption{
-				Family:  &family,
+				Family:  family,
 				Service: service,
 			})
 		}
