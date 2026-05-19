@@ -27,6 +27,61 @@ type ConfigPlugin struct {
 	FuncPrefix string         `yaml:"func_prefix,omitempty" json:"func_prefix,omitempty"`
 }
 
+// Render returns a copy of p with each string value in Name,
+// FuncPrefix, and Config rendered through renderString. This lets the
+// config loader expand `{{ env / must_env }}` and similar template
+// literals inside plugin definitions before plugin Setup runs. Walks
+// nested maps and slices in Config so values at any depth are covered.
+func (p ConfigPlugin) Render(renderString func(string) (string, error)) (ConfigPlugin, error) {
+	name, err := renderString(p.Name)
+	if err != nil {
+		return p, fmt.Errorf("name: %w", err)
+	}
+	prefix, err := renderString(p.FuncPrefix)
+	if err != nil {
+		return p, fmt.Errorf("func_prefix: %w", err)
+	}
+	cfg, err := renderConfigStrings(p.Config, renderString)
+	if err != nil {
+		return p, fmt.Errorf("config: %w", err)
+	}
+	out := ConfigPlugin{Name: name, FuncPrefix: prefix}
+	if cfg != nil {
+		out.Config, _ = cfg.(map[string]any)
+	}
+	return out, nil
+}
+
+// renderConfigStrings walks a plugin Config (which arrives as
+// map[string]any after JSON / YAML decode) and template-renders every
+// string leaf via renderString.
+func renderConfigStrings(v any, renderString func(string) (string, error)) (any, error) {
+	switch x := v.(type) {
+	case string:
+		return renderString(x)
+	case map[string]any:
+		for k, sub := range x {
+			r, err := renderConfigStrings(sub, renderString)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", k, err)
+			}
+			x[k] = r
+		}
+		return x, nil
+	case []any:
+		for i, sub := range x {
+			r, err := renderConfigStrings(sub, renderString)
+			if err != nil {
+				return nil, fmt.Errorf("[%d]: %w", i, err)
+			}
+			x[i] = r
+		}
+		return x, nil
+	default:
+		return v, nil
+	}
+}
+
 func (p ConfigPlugin) Setup(ctx context.Context, c *Config) error {
 	switch strings.ToLower(p.Name) {
 	case "tfstate":

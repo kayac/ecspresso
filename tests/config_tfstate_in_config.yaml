@@ -1,0 +1,14 @@
+# Demonstrates resolving config-level fields from the tfstate plugin.
+# The loader extracts `plugins:` first (without template-rendering the
+# rest of the file), runs plugin setup, then re-reads the whole file
+# with `tfstate` registered as a template function.
+region: ap-northeast-1
+cluster: "{{ tfstate `aws_ecs_cluster.main.name` }}"
+service: test
+service_definition: ecs-service-def.jsonnet
+task_definition: ecs-task-def.jsonnet
+timeout: 10m0s
+plugins:
+  - name: tfstate
+    config:
+      path: terraform.tfstate

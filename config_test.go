@@ -424,6 +424,37 @@ func TestLoadConfigWithTFStatePluginOptional(t *testing.T) {
 	}
 }
 
+// Verifies that the tfstate plugin can be used in top-level config
+// fields (cluster / service / region / etc.), not only in task and
+// service definition templates. ecspresso evaluates the file in two
+// passes: pass 1 extracts only `plugins`, pass 2 re-reads the whole
+// file with the tfstate function registered. Same fixture content
+// across jsonnet / yaml / json to confirm the unified extraction
+// works for every supported format.
+func TestLoadConfigWithTFStateInConfig(t *testing.T) {
+	for _, ext := range []string{".jsonnet", ".yaml", ".json"} {
+		t.Run(ext, func(t *testing.T) {
+			t.Setenv("AWS_REGION", "ap-northeast-1")
+			ctx := t.Context()
+			app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{
+				ConfigFilePath: "tests/config_tfstate_in_config" + ext,
+			})
+			if err != nil {
+				t.Fatalf("New failed: %s", err)
+			}
+			// tests/terraform.tfstate has an aws_ecs_cluster.main
+			// resource whose name is "test-cluster"; every fixture
+			// sets cluster: tfstate("aws_ecs_cluster.main.name").
+			if got, want := app.Config().Cluster, "test-cluster"; got != want {
+				t.Errorf("cluster = %q, want %q (tfstate-resolved value)", got, want)
+			}
+			if got, want := app.Name(), "test/test-cluster"; got != want {
+				t.Errorf("app.Name() = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
 // optional must be a bool. Other types (e.g. the string "true") are
 // rejected so users do not silently get the empty-state fallback by typo.
 func TestLoadConfigWithTFStatePluginOptionalInvalidType(t *testing.T) {
