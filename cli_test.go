@@ -910,23 +910,6 @@ var cliTests = []struct {
 			List:   &ecspresso.TasksListOption{},
 		},
 	},
-	// tasks: deprecated flags (backward compat)
-	{
-		args: []string{"tasks", "--id", "abcdefff", "--output", "json",
-			"--find", "--stop", "--force", "--trace",
-		},
-		sub: "tasks",
-		subOption: &ecspresso.TasksOption{
-			ID:     "abcdefff",
-			Output: "json",
-			List: &ecspresso.TasksListOption{
-				DeprecatedFind:  true,
-				DeprecatedStop:  true,
-				DeprecatedForce: true,
-				DeprecatedTrace: true,
-			},
-		},
-	},
 	// tasks: find subcommand
 	{
 		args: []string{"tasks", "find"},
