@@ -64,7 +64,6 @@ type Config struct {
 	ExpressDefinitionPath string            `yaml:"express_definition,omitempty" json:"express_definition,omitempty"`
 	Plugins               []ConfigPlugin    `yaml:"plugins,omitempty" json:"plugins,omitempty"`
 	AppSpec               *appspec.AppSpec  `yaml:"appspec,omitempty" json:"appspec,omitempty"`
-	FilterCommand         string            `yaml:"filter_command,omitempty" json:"filter_command,omitempty"`
 	Timeout               *Duration         `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 	CodeDeploy            *ConfigCodeDeploy `yaml:"codedeploy,omitempty" json:"codedeploy,omitempty"`
 	Ignore                *ConfigIgnore     `yaml:"ignore,omitempty" json:"ignore,omitempty"`
@@ -331,9 +330,6 @@ func (c *Config) OverrideByCLIOptions(opt *CLIOptions) {
 	if opt.Timeout != nil {
 		c.Timeout = &Duration{*opt.Timeout}
 	}
-	if opt.FilterCommand != "" {
-		c.FilterCommand = opt.FilterCommand
-	}
 }
 
 // Restrict restricts a configuration.
@@ -371,9 +367,6 @@ func (c *Config) Restrict(ctx context.Context) error {
 			return fmt.Errorf("failed to setup plugins: %w", err)
 		}
 		c.pluginsConfigured = true
-	}
-	if c.FilterCommand != "" {
-		LogWarn("filter_command is deprecated, use environment variable or CLI flag instead")
 	}
 	return nil
 }
