@@ -52,7 +52,7 @@ Replaced by the `exec portforward` subcommand. The legacy flags have been hidden
 
 ### Remove deprecated `tasks` flags
 
-Replaced by the `tasks find`, `tasks stop`, and `tasks trace` subcommands. The legacy flags have been hidden since v2.
+Replaced by the `tasks find`, `tasks stop`, and `tasks trace` subcommands. The legacy flags have been hidden since v2. PR: https://github.com/kayac/ecspresso/pull/1025
 
 - Items to delete:
   - `tasks.go`: `TasksListOption.{DeprecatedFind,DeprecatedStop,DeprecatedForce,DeprecatedTrace}` fields and the three `LogWarn` branches in `App.Tasks`.
