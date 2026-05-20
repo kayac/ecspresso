@@ -17,15 +17,8 @@ type ExecOption struct {
 }
 
 // ExecRunOption is the default subcommand for exec.
-// Deprecated flags are kept as hidden for backward compatibility.
 type ExecRunOption struct {
 	Command string `help:"command to execute" default:"sh"`
-
-	PortForward bool   `name:"port-forward" hidden:"" default:"false"`
-	LocalPort   int    `name:"local-port" hidden:"" default:"0"`
-	Port        int    `name:"port" hidden:"" default:"0"`
-	Host        string `name:"host" hidden:"" default:""`
-	L           string `name:"L" short:"L" hidden:"" default:""`
 }
 
 type ExecPortforwardOption struct {
@@ -93,29 +86,13 @@ func (d *App) Exec(ctx context.Context, opt ExecOption) error {
 			Service:    service,
 		})
 	case opt.Run != nil:
-		run := opt.Run
-		switch {
-		case run.PortForward:
-			LogWarn("--port-forward flag is deprecated, use 'exec portforward' subcommand instead")
-			return ecstaApp.RunPortforward(ctx, &ecsta.PortforwardOption{
-				ID:         opt.ID,
-				Container:  opt.Container,
-				LocalPort:  run.LocalPort,
-				RemotePort: run.Port,
-				RemoteHost: run.Host,
-				L:          run.L,
-				Family:     &family,
-				Service:    service,
-			})
-		default:
-			return ecstaApp.RunExec(ctx, &ecsta.ExecOption{
-				ID:        opt.ID,
-				Command:   run.Command,
-				Container: opt.Container,
-				Family:    &family,
-				Service:   service,
-			})
-		}
+		return ecstaApp.RunExec(ctx, &ecsta.ExecOption{
+			ID:        opt.ID,
+			Command:   opt.Run.Command,
+			Container: opt.Container,
+			Family:    &family,
+			Service:   service,
+		})
 	}
 	return nil
 }

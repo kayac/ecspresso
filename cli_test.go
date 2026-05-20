@@ -910,23 +910,6 @@ var cliTests = []struct {
 			List:   &ecspresso.TasksListOption{},
 		},
 	},
-	// tasks: deprecated flags (backward compat)
-	{
-		args: []string{"tasks", "--id", "abcdefff", "--output", "json",
-			"--find", "--stop", "--force", "--trace",
-		},
-		sub: "tasks",
-		subOption: &ecspresso.TasksOption{
-			ID:     "abcdefff",
-			Output: "json",
-			List: &ecspresso.TasksListOption{
-				DeprecatedFind:  true,
-				DeprecatedStop:  true,
-				DeprecatedForce: true,
-				DeprecatedTrace: true,
-			},
-		},
-	},
 	// tasks: find subcommand
 	{
 		args: []string{"tasks", "find"},
@@ -974,30 +957,6 @@ var cliTests = []struct {
 		subOption: &ecspresso.ExecOption{
 			Run: &ecspresso.ExecRunOption{
 				Command: "sh",
-			},
-		},
-	},
-	// exec: deprecated --port-forward (backward compat)
-	{
-		args: []string{"exec",
-			"--id", "abcdefff",
-			"--command", "ls -la",
-			"--container", "mycontainer",
-			"--local-port", "8080",
-			"--port", "80",
-			"--host", "example.com",
-			"--port-forward",
-		},
-		sub: "exec",
-		subOption: &ecspresso.ExecOption{
-			ID:        "abcdefff",
-			Container: "mycontainer",
-			Run: &ecspresso.ExecRunOption{
-				Command:     "ls -la",
-				PortForward: true,
-				LocalPort:   8080,
-				Port:        80,
-				Host:        "example.com",
 			},
 		},
 	},

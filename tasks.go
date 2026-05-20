@@ -22,13 +22,7 @@ type TasksOption struct {
 }
 
 // TasksListOption is the default subcommand for tasks.
-// Deprecated flags are kept as hidden for backward compatibility.
-type TasksListOption struct {
-	DeprecatedFind  bool `name:"find" hidden:"" default:"false"`
-	DeprecatedStop  bool `name:"stop" hidden:"" default:"false"`
-	DeprecatedForce bool `name:"force" hidden:"" default:"false"`
-	DeprecatedTrace bool `name:"trace" hidden:"" default:"false"`
-}
+type TasksListOption struct{}
 
 type TasksFindOption struct{}
 
@@ -101,37 +95,10 @@ func (d *App) Tasks(ctx context.Context, opt TasksOption) error {
 			JSON:      logFormat == logFormatJSON,
 		})
 	case opt.List != nil:
-		list := opt.List
-		switch {
-		case list.DeprecatedFind:
-			LogWarn("--find flag is deprecated, use 'tasks find' subcommand instead")
-			return ecstaApp.RunDescribe(ctx, &ecsta.DescribeOption{
-				ID:      opt.taskID(),
-				Family:  &family,
-				Service: service,
-			})
-		case list.DeprecatedStop:
-			LogWarn("--stop flag is deprecated, use 'tasks stop' subcommand instead")
-			return ecstaApp.RunStop(ctx, &ecsta.StopOption{
-				ID:      opt.taskID(),
-				Force:   list.DeprecatedForce,
-				Family:  &family,
-				Service: service,
-			})
-		case list.DeprecatedTrace:
-			LogWarn("--trace flag is deprecated, use 'tasks trace' subcommand instead")
-			return ecstaApp.RunTrace(ctx, &ecsta.TraceOption{
-				ID:       opt.taskID(),
-				Duration: time.Minute,
-				Family:   &family,
-				Service:  service,
-			})
-		default:
-			return ecstaApp.RunList(ctx, &ecsta.ListOption{
-				Family:  &family,
-				Service: service,
-			})
-		}
+		return ecstaApp.RunList(ctx, &ecsta.ListOption{
+			Family:  &family,
+			Service: service,
+		})
 	}
 	return nil
 }
