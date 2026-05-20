@@ -60,7 +60,7 @@ Replaced by the `tasks find`, `tasks stop`, and `tasks trace` subcommands. The l
 
 ### Remove dead `create` dispatch case
 
-The `create` subcommand was removed from `CLIOptions` back in v2, so the Kong parser rejects it before dispatch. The `case "create":` branch in `dispatchApp` (`cli.go:161-162`) is unreachable dead code and can go.
+The `create` subcommand was removed from `CLIOptions` back in v2, so the Kong parser rejects it before dispatch. The `case "create":` branch in `dispatchApp` (`cli.go:161-162`) is unreachable dead code and can go. PR: https://github.com/kayac/ecspresso/pull/1026
 
 ### Drop the `--no-unified` diff path and the `kylelemons/godebug` dependency
 
