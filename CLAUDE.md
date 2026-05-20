@@ -40,7 +40,7 @@ make packages
 
 - **App** (`ecspresso.go`): Main application struct that holds AWS clients (ECS, CodeDeploy, CloudWatch Logs, IAM, etc.) and orchestrates operations
 - **Config** (`config.go`): Configuration loading and validation. Supports YAML, JSON, and Jsonnet formats with template functions
-- **CLI** (`cli.go`, `cliv2.go`): Command-line interface using Kong. Each subcommand (deploy, run, diff, etc.) has its own option struct and handler
+- **CLI** (`cli.go`, `cli_parse.go`): Command-line interface using Kong. Each subcommand (deploy, run, diff, etc.) has its own option struct and handler
 
 ### Command Structure
 

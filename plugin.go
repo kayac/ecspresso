@@ -27,12 +27,12 @@ type ConfigPlugin struct {
 	FuncPrefix string         `yaml:"func_prefix,omitempty" json:"func_prefix,omitempty"`
 }
 
-// Render returns a copy of p with each string value in Name,
+// render returns a copy of p with each string value in Name,
 // FuncPrefix, and Config rendered through renderString. This lets the
 // config loader expand `{{ env / must_env }}` and similar template
 // literals inside plugin definitions before plugin Setup runs. Walks
 // nested maps and slices in Config so values at any depth are covered.
-func (p ConfigPlugin) Render(renderString func(string) (string, error)) (ConfigPlugin, error) {
+func (p ConfigPlugin) render(renderString func(string) (string, error)) (ConfigPlugin, error) {
 	name, err := renderString(p.Name)
 	if err != nil {
 		return p, fmt.Errorf("name: %w", err)

@@ -133,7 +133,7 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 		return err
 	}
 	if err := doWait(ctx, sv); err != nil {
-		if errors.As(err, &errNotFound) && sv.isCodeDeploy() {
+		if errors.Is(err, ErrNotFound) && sv.isCodeDeploy() {
 			d.LogInfo(err.Error())
 			return d.WaitTaskSetStable(ctx, sv)
 		}
@@ -225,7 +225,7 @@ func (d *App) WaitServiceDeployCompleted(ctx context.Context, sv *Service) error
 	d.LogInfo("Waiting for service deployed...(it will take a few minutes)")
 	deploymentArn, err := d.findActiveECSDeploymentArn(ctx, time.Second*10)
 	if err != nil {
-		if errors.As(err, &errNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			d.LogInfo("No active deployment found")
 			return nil // no active deployment, nothing to wait for
 		}
@@ -256,7 +256,7 @@ func (d *App) WaitServiceDeployCompleted(ctx context.Context, sv *Service) error
 			return fmt.Errorf("failed to describe service deployments: %w", err)
 		}
 		if len(resp.ServiceDeployments) == 0 {
-			return ErrNotFound("service deployment not found: " + deploymentArn)
+			return fmt.Errorf("service deployment not found: %s: %w", deploymentArn, ErrNotFound)
 		}
 		dp := resp.ServiceDeployments[0]
 
@@ -310,7 +310,7 @@ func (d *App) getCodeDeployDeploymentID(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if len(out.Deployments) == 0 {
-		return "", ErrNotFound("No deployments found in progress on CodeDeploy")
+		return "", fmt.Errorf("No deployments found in progress on CodeDeploy: %w", ErrNotFound)
 	}
 
 	return out.Deployments[0], nil
@@ -419,7 +419,7 @@ func (d *App) showServiceStatus(ctx context.Context, st *showState) error {
 		return fmt.Errorf("failed to describe services: %w", err)
 	}
 	if len(out.Services) == 0 {
-		return ErrNotFound(fmt.Sprintf("service %s is not found", d.Service))
+		return fmt.Errorf("service %s is not found: %w", d.Service, ErrNotFound)
 	}
 	sv := out.Services[0]
 

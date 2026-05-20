@@ -297,7 +297,7 @@ func (l *configLoader) extractPlugins(path, ext string) ([]ConfigPlugin, string,
 		return nil, "", nil
 	}
 	for i := range po.Plugins {
-		rendered, err := po.Plugins[i].Render(l.renderString)
+		rendered, err := po.Plugins[i].render(l.renderString)
 		if err != nil {
 			return nil, "", fmt.Errorf("plugins[%d]: %w", i, err)
 		}

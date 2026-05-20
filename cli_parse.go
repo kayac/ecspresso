@@ -8,7 +8,7 @@ import (
 	"github.com/fatih/color"
 )
 
-func ParseCLIv2(args []string) (string, *CLIOptions, func(), error) {
+func ParseCLI(args []string) (string, *CLIOptions, func(), error) {
 	// compatible with v1
 	if len(args) == 0 || len(args) > 0 && args[0] == "help" {
 		args = []string{"--help"}
@@ -30,7 +30,7 @@ func ParseCLIv2(args []string) (string, *CLIOptions, func(), error) {
 	clearInactiveSubcommands(&opts, c.Command())
 
 	for _, envFile := range opts.Envfile {
-		if err := ExportEnvFile(envFile); err != nil {
+		if err := exportEnvFile(envFile); err != nil {
 			return sub, &opts, nil, fmt.Errorf("failed to load envfile: %w", err)
 		}
 	}

@@ -3,6 +3,7 @@ package ecspresso_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -281,7 +282,7 @@ func TestVerifySkipResource(t *testing.T) {
 		vs := ecspresso.NewVerifyState(cache)
 		for i := range 3 {
 			r, err := vs.VerifyResource(context.TODO(), "skip resource", func(_ context.Context) error {
-				return ecspresso.ErrSkipVerify("hello")
+				return fmt.Errorf("hello: %w", ecspresso.ErrSkipVerify)
 			})
 			if err != nil {
 				t.Error("unexpected error for skip resource", err)
@@ -484,8 +485,7 @@ func TestWrapPermissionError(t *testing.T) {
 					t.Errorf("expected nil, got %v", result)
 				}
 			case "ErrPermissionDenied":
-				var permErr ecspresso.ErrPermissionDenied
-				if !errors.As(result, &permErr) {
+				if !errors.Is(result, ecspresso.ErrPermissionDenied) {
 					t.Errorf("expected ErrPermissionDenied, got %T", result)
 				}
 			case "mockAPIError":

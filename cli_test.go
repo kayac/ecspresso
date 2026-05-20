@@ -991,10 +991,10 @@ var cliTests = []struct {
 	},
 }
 
-func TestParseCLIv2(t *testing.T) {
+func TestParseCLI(t *testing.T) {
 	for _, tt := range cliTests {
 		t.Run(strings.Join(tt.args, "_"), func(t *testing.T) {
-			sub, opt, _, err := ecspresso.ParseCLIv2(tt.args)
+			sub, opt, _, err := ecspresso.ParseCLI(tt.args)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
@@ -1019,12 +1019,12 @@ func TestParseCLIv2(t *testing.T) {
 	}
 }
 
-func TestParseCLIv2WithInvalidWaitUntilOption(t *testing.T) {
-	_, _, _, err := ecspresso.ParseCLIv2([]string{"deploy", "--wait-until=UNSUPPORTED"})
+func TestParseCLIWithInvalidWaitUntilOption(t *testing.T) {
+	_, _, _, err := ecspresso.ParseCLI([]string{"deploy", "--wait-until=UNSUPPORTED"})
 	if err == nil {
 		t.Errorf("invalid wait-until should return error")
 	}
-	_, _, _, err = ecspresso.ParseCLIv2([]string{"deploy", "--wait-until=codedeploy:"}) // lifecycle event name is empty (i.e., prefix only)
+	_, _, _, err = ecspresso.ParseCLI([]string{"deploy", "--wait-until=codedeploy:"}) // lifecycle event name is empty (i.e., prefix only)
 	if err == nil {
 		t.Errorf("invalid wait-until should return error")
 	}

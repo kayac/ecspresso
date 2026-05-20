@@ -111,7 +111,7 @@ func TestTaskDefinitionArnForRun(t *testing.T) {
 		for _, s := range suites {
 			args := []string{"run", "--dry-run"}
 			args = append(args, s.opts...)
-			_, cliopts, _, err := ecspresso.ParseCLIv2(args)
+			_, cliopts, _, err := ecspresso.ParseCLI(args)
 			if err != nil {
 				t.Error(err)
 			}

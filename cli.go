@@ -62,7 +62,7 @@ func (opt *CLIOptions) resolveConfigFilePath() (path string) {
 	return
 }
 
-func (opts *CLIOptions) ForSubCommand(sub string) any {
+func (opts *CLIOptions) forSubCommand(sub string) any {
 	switch sub {
 	case "appspec":
 		return opts.Appspec
@@ -189,9 +189,7 @@ func dispatchApp(ctx context.Context, sub string, usage func(), opts *CLIOptions
 	}
 }
 
-type CLIParseFunc func([]string) (string, *CLIOptions, func(), error)
-
-func CLI(ctx context.Context, parse CLIParseFunc) (int, error) {
+func CLI(ctx context.Context, parse func([]string) (string, *CLIOptions, func(), error)) (int, error) {
 	sub, opts, usage, err := parse(os.Args[1:])
 	if err != nil {
 		return 1, err

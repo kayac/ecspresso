@@ -13,7 +13,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), trapSignals...)
 	defer stop()
 
-	exitCode, err := ecspresso.CLI(ctx, ecspresso.ParseCLIv2)
+	exitCode, err := ecspresso.CLI(ctx, ecspresso.ParseCLI)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			ecspresso.LogWarn("Interrupted")

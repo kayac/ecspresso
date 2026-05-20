@@ -82,7 +82,7 @@ func (d *App) diff(ctx context.Context, opt DiffOption) (bool, error) {
 		}
 		remoteSv, err := d.DescribeService(ctx)
 		if err != nil {
-			if errors.As(err, &errNotFound) {
+			if errors.Is(err, ErrNotFound) {
 				d.LogInfo("service not found, will create a new service")
 			} else {
 				return false, fmt.Errorf("failed to describe service: %w", err)
@@ -108,7 +108,7 @@ func (d *App) diff(ctx context.Context, opt DiffOption) (bool, error) {
 	if remoteTaskDefArn == "" {
 		arn, err := d.findLatestTaskDefinitionArn(ctx, *newTd.Family)
 		if err != nil {
-			if errors.As(err, &errNotFound) {
+			if errors.Is(err, ErrNotFound) {
 				d.LogInfo("task definition not found, will register a new task definition")
 			} else {
 				return false, err
@@ -151,7 +151,7 @@ func (d *App) diffExpress(ctx context.Context, opt DiffOption) (bool, error) {
 	}
 	remoteEx, err := d.DescribeExpressGatewayService(ctx, sv)
 	if err != nil {
-		if errors.As(err, &errNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			d.LogInfo("express gateway service not found, will create a new express gateway service")
 		} else {
 			return false, fmt.Errorf("failed to describe express gateway service: %w", err)
