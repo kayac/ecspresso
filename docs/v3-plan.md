@@ -32,7 +32,7 @@ JSON and Jsonnet configs are unaffected.
 
 ### Remove deprecated `filter_command` config field
 
-Originally deprecated in v2 (#469, see [docs/v1-v2.md](v1-v2.md)). Removal in v3.
+Originally deprecated in v2 (#469, see [docs/v1-v2.md](v1-v2.md)). Removal in v3. PR: https://github.com/kayac/ecspresso/pull/1024
 
 - Replacement: `ECSPRESSO_FILTER_COMMAND` environment variable, or the `--filter-command` CLI flag.
 - Items to delete:
