@@ -17,6 +17,7 @@ ecspresso also supports ECS Express mode for simplified deployments and provides
 - [Usage](#usage)
 - [Quick Start](#quick-start)
 - [Configuration file](#configuration-file)
+  - [Plugin functions in top-level fields](#plugin-functions-in-top-level-fields)
 - [Template syntax](#template-syntax)
 - [Deployment](#example-of-deployment)
   - [Rolling deployment](#rolling-deployment)
@@ -354,6 +355,61 @@ ignore:
 - Wait for the service to be stable.
 
 Configuration files and task/service definition files are read by [go-config](https://github.com/kayac/go-config) which provides template functions `env`, `must_env` and `json_escape`.
+
+### Plugin functions in top-level fields
+
+Plugin-provided functions (`tfstate`, `cfn` / `cloudformation`, `ssm`, `secretsmanager`) can be used in top-level configuration fields such as `cluster`, `service`, and `region`, not only inside task / service definitions. This is typically useful when ECS clusters are managed by Terraform:
+
+```yaml
+region: ap-northeast-1
+cluster: "{{ tfstate `aws_ecs_cluster.main.name` }}"
+service: myservice
+service_definition: ecs-service-def.json
+task_definition: ecs-task-def.json
+plugins:
+  - name: tfstate
+    config:
+      path: terraform.tfstate
+```
+
+```jsonnet
+local tfstate = std.native('tfstate');
+{
+  region: 'ap-northeast-1',
+  cluster: tfstate('aws_ecs_cluster.main.name'),
+  service: 'myservice',
+  service_definition: 'ecs-service-def.jsonnet',
+  task_definition: 'ecs-task-def.jsonnet',
+  plugins: [
+    { name: 'tfstate', config: { path: 'terraform.tfstate' } },
+  ],
+}
+```
+
+To make this work, ecspresso loads the configuration file in two passes:
+
+1. Extract only the `plugins` (and `region`) section, then run plugin setup.
+2. Re-read the whole file with plugin-provided template / Jsonnet functions registered.
+
+Notes and limitations:
+
+- The `plugins` block itself cannot reference plugin functions — that would be a chicken-and-egg loop. Use `env` / `must_env` there instead.
+- If `region` itself is resolved from a plugin function that needs AWS access (e.g. `ssm`, `cfn`), the AWS client for plugin setup falls back to the `AWS_REGION` environment variable.
+
+> [!IMPORTANT]
+> **Breaking change in v3 (not compatible with v2)**: the YAML configuration file must be valid YAML on its own — i.e. before template rendering. In particular, template literals that begin a scalar must be quoted, because YAML parses an unquoted leading `{` as a flow-mapping opener.
+>
+> v2 template-rendered the whole file first and parsed YAML afterwards, which silently tolerated unquoted `{{ ... }}` at the start of a scalar. v3 reads the raw file with a YAML parser in pass 1 to extract `plugins`, so this no longer works.
+>
+> ```yaml
+> # NG in v3 (worked in v2): YAML treats leading `{` as a flow-mapping opener
+> region: {{ must_env `AWS_REGION` }}
+>
+> # OK: quote the scalar
+> region: "{{ must_env `AWS_REGION` }}"
+> ```
+>
+> JSON and Jsonnet configurations are unaffected. Existing v2 YAML configs that already quote their template literals (the common case) continue to work without changes.
 
 ## Template syntax
 

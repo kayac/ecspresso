@@ -80,9 +80,35 @@ func TestLoadConfigWithPluginDuplicate(t *testing.T) {
 }
 
 func TestLoadConfigWithPlugin(t *testing.T) {
-	for _, ext := range []string{".yml", ".yaml", ".json", ".jsonnet"} {
+	// .yml / .yaml are excluded: the two-pass loader runs yaml.YAMLToJSON
+	// on the raw file to extract `plugins`, so unquoted `{{ ... }}` in
+	// YAML scalars is no longer accepted. See
+	// TestLoadConfigYAMLUnquotedTemplateIsIncompatible for the regression.
+	for _, ext := range []string{".json", ".jsonnet"} {
 		t.Run("tests/ecspresso"+ext, func(t *testing.T) {
 			testLoadConfigWithPlugin(t, "tests/ecspresso"+ext)
+		})
+	}
+}
+
+// Unquoted `{{ ... }}` at the start of a YAML scalar is parsed by YAML
+// as a flow-mapping opener, so the two-pass config loader can no longer
+// read these files. This is a documented incompatibility from the
+// switch to two-pass plugin loading. The test pins the behaviour to a
+// graceful error (not a panic).
+func TestLoadConfigYAMLUnquotedTemplateIsIncompatible(t *testing.T) {
+	t.Setenv("AWS_REGION", "ap-northeast-1")
+	for _, ext := range []string{".yml", ".yaml"} {
+		t.Run("tests/ecspresso"+ext, func(t *testing.T) {
+			app, err := ecspresso.New(t.Context(), &ecspresso.CLIOptions{
+				ConfigFilePath: "tests/ecspresso" + ext,
+			})
+			if err == nil {
+				t.Fatalf("expected error for unquoted YAML template, got app=%v", app)
+			}
+			if app != nil {
+				t.Errorf("expected nil app on error, got %v", app)
+			}
 		})
 	}
 }
@@ -94,7 +120,7 @@ func testLoadConfigWithPlugin(t *testing.T, path string) {
 	ctx := t.Context()
 	app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{ConfigFilePath: path})
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if app.Name() != "test/default" {
 		t.Errorf("unexpected name got %s", app.Name())
@@ -421,6 +447,37 @@ func TestLoadConfigWithTFStatePluginOptional(t *testing.T) {
 	}
 	if app == nil {
 		t.Fatal("app is nil")
+	}
+}
+
+// Verifies that the tfstate plugin can be used in top-level config
+// fields (cluster / service / region / etc.), not only in task and
+// service definition templates. ecspresso evaluates the file in two
+// passes: pass 1 extracts only `plugins`, pass 2 re-reads the whole
+// file with the tfstate function registered. Same fixture content
+// across jsonnet / yaml / json to confirm the unified extraction
+// works for every supported format.
+func TestLoadConfigWithTFStateInConfig(t *testing.T) {
+	for _, ext := range []string{".jsonnet", ".yaml", ".json"} {
+		t.Run(ext, func(t *testing.T) {
+			t.Setenv("AWS_REGION", "ap-northeast-1")
+			ctx := t.Context()
+			app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{
+				ConfigFilePath: "tests/config_tfstate_in_config" + ext,
+			})
+			if err != nil {
+				t.Fatalf("New failed: %s", err)
+			}
+			// tests/terraform.tfstate has an aws_ecs_cluster.main
+			// resource whose name is "test-cluster"; every fixture
+			// sets cluster: tfstate("aws_ecs_cluster.main.name").
+			if got, want := app.Config().Cluster, "test-cluster"; got != want {
+				t.Errorf("cluster = %q, want %q (tfstate-resolved value)", got, want)
+			}
+			if got, want := app.Name(), "test/test-cluster"; got != want {
+				t.Errorf("app.Name() = %q, want %q", got, want)
+			}
+		})
 	}
 }
 
