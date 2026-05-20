@@ -2,7 +2,6 @@ package ecspresso
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -158,8 +157,6 @@ func dispatchApp(ctx context.Context, sub string, usage func(), opts *CLIOptions
 		return app.Status(ctx, *opts.Status)
 	case "rollback":
 		return app.Rollback(ctx, *opts.Rollback)
-	case "create":
-		return fmt.Errorf("create command is deprecated. use deploy command instead")
 	case "delete":
 		return app.Delete(ctx, *opts.Delete)
 	case "run":
