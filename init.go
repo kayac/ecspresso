@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/goccy/go-yaml"
+	"github.com/kayac/ecspresso/v2/duration"
 )
 
 var CreateFileMode = os.FileMode(0644)
@@ -147,7 +148,7 @@ func (d *App) initConfigurationFile(ctx context.Context, configFilePath string, 
 
 	// Express Mode uses CANARY deployment, so requires increasing timeout
 	if sv != nil && sv.isExpressMode() {
-		conf.Timeout = &Duration{Duration: DefaultTimeout * 2}
+		conf.Timeout = &duration.Duration{Duration: DefaultTimeout * 2}
 	}
 
 	{

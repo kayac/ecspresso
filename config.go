@@ -20,6 +20,7 @@ import (
 	"github.com/google/go-jsonnet"
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/kayac/ecspresso/v2/appspec"
+	"github.com/kayac/ecspresso/v2/duration"
 	goConfig "github.com/kayac/go-config"
 	"github.com/samber/lo"
 )
@@ -55,18 +56,18 @@ func newConfigLoader(extStr, extCode map[string]string) *configLoader {
 
 // Config represents a configuration.
 type Config struct {
-	RequiredVersion       string            `yaml:"required_version,omitempty" json:"required_version,omitempty"`
-	Region                string            `yaml:"region" json:"region"`
-	Cluster               string            `yaml:"cluster" json:"cluster"`
-	Service               string            `yaml:"service" json:"service"`
-	ServiceDefinitionPath string            `yaml:"service_definition,omitempty" json:"service_definition,omitempty"`
-	TaskDefinitionPath    string            `yaml:"task_definition,omitempty" json:"task_definition,omitempty"`
-	ExpressDefinitionPath string            `yaml:"express_definition,omitempty" json:"express_definition,omitempty"`
-	Plugins               []ConfigPlugin    `yaml:"plugins,omitempty" json:"plugins,omitempty"`
-	AppSpec               *appspec.AppSpec  `yaml:"appspec,omitempty" json:"appspec,omitempty"`
-	Timeout               *Duration         `yaml:"timeout,omitempty" json:"timeout,omitempty"`
-	CodeDeploy            *ConfigCodeDeploy `yaml:"codedeploy,omitempty" json:"codedeploy,omitempty"`
-	Ignore                *ConfigIgnore     `yaml:"ignore,omitempty" json:"ignore,omitempty"`
+	RequiredVersion       string             `yaml:"required_version,omitempty" json:"required_version,omitempty"`
+	Region                string             `yaml:"region" json:"region"`
+	Cluster               string             `yaml:"cluster" json:"cluster"`
+	Service               string             `yaml:"service" json:"service"`
+	ServiceDefinitionPath string             `yaml:"service_definition,omitempty" json:"service_definition,omitempty"`
+	TaskDefinitionPath    string             `yaml:"task_definition,omitempty" json:"task_definition,omitempty"`
+	ExpressDefinitionPath string             `yaml:"express_definition,omitempty" json:"express_definition,omitempty"`
+	Plugins               []ConfigPlugin     `yaml:"plugins,omitempty" json:"plugins,omitempty"`
+	AppSpec               *appspec.AppSpec   `yaml:"appspec,omitempty" json:"appspec,omitempty"`
+	Timeout               *duration.Duration `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	CodeDeploy            *ConfigCodeDeploy  `yaml:"codedeploy,omitempty" json:"codedeploy,omitempty"`
+	Ignore                *ConfigIgnore      `yaml:"ignore,omitempty" json:"ignore,omitempty"`
 
 	path               string
 	templateFuncs      []template.FuncMap
@@ -328,7 +329,7 @@ func (l *configLoader) renderString(s string) (string, error) {
 
 func (c *Config) OverrideByCLIOptions(opt *CLIOptions) {
 	if opt.Timeout != nil {
-		c.Timeout = &Duration{*opt.Timeout}
+		c.Timeout = &duration.Duration{Duration: *opt.Timeout}
 	}
 }
 
@@ -357,7 +358,7 @@ func (c *Config) Restrict(ctx context.Context) error {
 		c.versionConstraints = constraints
 	}
 	if c.Timeout == nil {
-		c.Timeout = &Duration{Duration: DefaultTimeout}
+		c.Timeout = &duration.Duration{Duration: DefaultTimeout}
 	}
 	if err := c.loadAWSConfig(ctx); err != nil {
 		return err
@@ -461,7 +462,7 @@ func (c *Config) isExpressMode() bool {
 func NewDefaultConfig() *Config {
 	return &Config{
 		Region:  os.Getenv("AWS_REGION"),
-		Timeout: &Duration{DefaultTimeout},
+		Timeout: &duration.Duration{Duration: DefaultTimeout},
 	}
 }
 
