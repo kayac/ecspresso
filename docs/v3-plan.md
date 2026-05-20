@@ -138,7 +138,7 @@ The new repo is the source of truth — keep the forwarder's `inputs` in sync wi
 
 ### Unify Duration handling and reinterpret plain numbers as seconds
 
-`Duration` (`duration.go`) is currently defined inside the `ecspresso` package, so subpackages (notably `external/`) cannot import it. As a result `external.Config.Timeout` is a bare `int64` (seconds), which is inconsistent with the main `Config.Timeout` (a `*Duration` that accepts `"10m0s"` etc.).
+`Duration` (`duration.go`) is currently defined inside the `ecspresso` package, so subpackages (notably `external/`) cannot import it. As a result `external.Config.Timeout` is a bare `int64` (seconds), which is inconsistent with the main `Config.Timeout` (a `*Duration` that accepts `"10m0s"` etc.). PR: https://github.com/kayac/ecspresso/pull/1028
 
 #### Plan
 
