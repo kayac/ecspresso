@@ -176,6 +176,8 @@ duration value is unusually large for a timeout; interpreted as seconds (v2 inte
 
 ## Cleanups
 
+All cleanup items below ship together in PR: https://github.com/kayac/ecspresso/pull/1029
+
 ### Consolidate sentinel errors into the idiomatic pattern
 
 `errors.go` currently exposes four string-typed error *types* — `ErrSkipVerify`, `ErrNotFound`, `ErrConflictOptions`, `ErrPermissionDenied` — where the type carries the message and callers construct per-call values like `ErrNotFound(fmt.Sprintf("service %s is not found", name))`. Detection is `errors.As(err, &errNotFound)` (pattern-matching the type, not the value). The mix of exported types, package-level unexported values (`errNotFound`, `errSkipVerify`, `errPermissionDenied`), and locally re-declared `var errNotFound ErrNotFound` inside functions (`rollback.go:149,164`) is hard to follow.
