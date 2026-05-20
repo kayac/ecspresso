@@ -1,5 +1,5 @@
 region: "{{ must_env `AWS_REGION` }}"
-cluster: default
+cluster: "{{ tfstate `aws_ecs_cluster.main.arn` }}"
 service: test
 service_definition: ecs-service-def.json
 task_definition: ecs-task-def.json

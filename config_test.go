@@ -80,9 +80,35 @@ func TestLoadConfigWithPluginDuplicate(t *testing.T) {
 }
 
 func TestLoadConfigWithPlugin(t *testing.T) {
-	for _, ext := range []string{".yml", ".yaml", ".json", ".jsonnet"} {
+	// .yml / .yaml are excluded: the two-pass loader runs yaml.YAMLToJSON
+	// on the raw file to extract `plugins`, so unquoted `{{ ... }}` in
+	// YAML scalars is no longer accepted. See
+	// TestLoadConfigYAMLUnquotedTemplateIsIncompatible for the regression.
+	for _, ext := range []string{".json", ".jsonnet"} {
 		t.Run("tests/ecspresso"+ext, func(t *testing.T) {
 			testLoadConfigWithPlugin(t, "tests/ecspresso"+ext)
+		})
+	}
+}
+
+// Unquoted `{{ ... }}` at the start of a YAML scalar is parsed by YAML
+// as a flow-mapping opener, so the two-pass config loader can no longer
+// read these files. This is a documented incompatibility from the
+// switch to two-pass plugin loading. The test pins the behaviour to a
+// graceful error (not a panic).
+func TestLoadConfigYAMLUnquotedTemplateIsIncompatible(t *testing.T) {
+	t.Setenv("AWS_REGION", "ap-northeast-1")
+	for _, ext := range []string{".yml", ".yaml"} {
+		t.Run("tests/ecspresso"+ext, func(t *testing.T) {
+			app, err := ecspresso.New(t.Context(), &ecspresso.CLIOptions{
+				ConfigFilePath: "tests/ecspresso" + ext,
+			})
+			if err == nil {
+				t.Fatalf("expected error for unquoted YAML template, got app=%v", app)
+			}
+			if app != nil {
+				t.Errorf("expected nil app on error, got %v", app)
+			}
 		})
 	}
 }
@@ -94,7 +120,7 @@ func testLoadConfigWithPlugin(t *testing.T, path string) {
 	ctx := t.Context()
 	app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{ConfigFilePath: path})
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if app.Name() != "test/default" {
 		t.Errorf("unexpected name got %s", app.Name())
