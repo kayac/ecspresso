@@ -344,6 +344,22 @@ func TestLoadConfigForCodeDeploy(t *testing.T) {
 	}
 }
 
+func TestFilterCommandFromCLIOption(t *testing.T) {
+	ctx := t.Context()
+	for _, want := range []string{"", "peco", "fzf"} {
+		app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{
+			ConfigFilePath: "tests/test.yaml",
+			FilterCommand:  want,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := app.FilterCommand(); got != want {
+			t.Errorf("FilterCommand: want %q, got %q", want, got)
+		}
+	}
+}
+
 var ConfigIgnoreTests = []struct {
 	name         string
 	ignore       *ecspresso.ConfigIgnore
