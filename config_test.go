@@ -344,26 +344,18 @@ func TestLoadConfigForCodeDeploy(t *testing.T) {
 	}
 }
 
-var FilterCommandTests = []struct {
-	Env      string
-	Expected string
-}{
-	{"", "fzf"},
-	{"peco", "peco"},
-}
-
-func TestFilterCommandDeprecated(t *testing.T) {
+func TestFilterCommandFromCLIOption(t *testing.T) {
 	ctx := t.Context()
-	for _, ts := range FilterCommandTests {
+	for _, want := range []string{"", "peco", "fzf"} {
 		app, err := ecspresso.New(ctx, &ecspresso.CLIOptions{
-			ConfigFilePath: "tests/filter_command.yml",
-			FilterCommand:  ts.Env,
+			ConfigFilePath: "tests/test.yaml",
+			FilterCommand:  want,
 		})
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
-		if app.FilterCommand() != ts.Expected {
-			t.Errorf("expected %s, but got %s", ts.Expected, app.FilterCommand())
+		if got := app.FilterCommand(); got != want {
+			t.Errorf("FilterCommand: want %q, got %q", want, got)
 		}
 	}
 }

@@ -168,6 +168,8 @@ type App struct {
 	loader *configLoader
 	logger *slog.Logger
 
+	filterCommand string
+
 	startedAt time.Time
 }
 
@@ -227,18 +229,19 @@ func New(ctx context.Context, opt *CLIOptions, newAppOptions ...AppOption) (*App
 		Service: conf.Service,
 		Cluster: conf.Cluster,
 
-		ecs:         ecs.NewFromConfig(conf.awsv2Config),
-		autoScaling: applicationautoscaling.NewFromConfig(conf.awsv2Config),
-		codedeploy:  codedeploy.NewFromConfig(conf.awsv2Config),
-		cwl:         cloudwatchlogs.NewFromConfig(conf.awsv2Config),
-		iam:         iam.NewFromConfig(conf.awsv2Config),
-		elbv2:       elasticloadbalancingv2.NewFromConfig(conf.awsv2Config),
-		sd:          servicediscovery.NewFromConfig(conf.awsv2Config),
-		lattice:     vpclattice.NewFromConfig(conf.awsv2Config),
-		lambda:      lambda.NewFromConfig(conf.awsv2Config),
-		loader:      appOpts.loader,
-		config:      appOpts.config,
-		startedAt:   time.Now(),
+		ecs:           ecs.NewFromConfig(conf.awsv2Config),
+		autoScaling:   applicationautoscaling.NewFromConfig(conf.awsv2Config),
+		codedeploy:    codedeploy.NewFromConfig(conf.awsv2Config),
+		cwl:           cloudwatchlogs.NewFromConfig(conf.awsv2Config),
+		iam:           iam.NewFromConfig(conf.awsv2Config),
+		elbv2:         elasticloadbalancingv2.NewFromConfig(conf.awsv2Config),
+		sd:            servicediscovery.NewFromConfig(conf.awsv2Config),
+		lattice:       vpclattice.NewFromConfig(conf.awsv2Config),
+		lambda:        lambda.NewFromConfig(conf.awsv2Config),
+		loader:        appOpts.loader,
+		config:        appOpts.config,
+		filterCommand: opt.FilterCommand,
+		startedAt:     time.Now(),
 	}
 	if logFormat == logFormatJSON {
 		d.logger = appOpts.logger.With("cluster", d.Cluster, "service", d.Service)
@@ -693,5 +696,5 @@ func (d *App) GetLogInfo(task *types.Task, c *types.ContainerDefinition) (string
 }
 
 func (d *App) FilterCommand() string {
-	return d.config.FilterCommand
+	return d.filterCommand
 }
