@@ -9,16 +9,21 @@
 //     under the standard time.Duration cast.
 //   - Any other string ("30s", "5m", "1h30m") is delegated to
 //     time.ParseDuration.
-//   - If the resulting Duration exceeds 30 days, a slog.Warn is emitted
-//     so accidental nanosecond-shaped inputs (e.g. 30000000000 meant as
-//     "30 seconds" under v2 semantics) surface at config-load time
-//     instead of silently producing absurd timeouts.
+//   - For bare-number inputs, if the seconds-interpreted result exceeds
+//     30 days a slog.Warn is emitted so accidental nanosecond-shaped
+//     inputs (e.g. 30000000000 meant as "30 seconds" under v2
+//     semantics) surface at config-load time instead of silently
+//     producing absurd timeouts. Values that would overflow
+//     time.Duration (int64 ns) when multiplied by time.Second are
+//     clamped to math.MaxInt64 rather than wrapping to garbage.
+//     Explicit duration strings ("1000h" etc.) are trusted as-is.
 package duration
 
 import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"strconv"
 	"time"
 
@@ -26,14 +31,14 @@ import (
 )
 
 // warnThreshold is the upper bound for a "normal" ecspresso-ish
-// timeout. Anything larger is almost certainly a v2 nanosecond value
-// being reinterpreted as seconds, so we warn but still honour it.
+// timeout. A bare-number input larger than this is almost certainly a
+// v2 nanosecond value being reinterpreted as seconds.
 const warnThreshold = 30 * 24 * time.Hour
 
-// warnSeconds is warnThreshold expressed in seconds. Used to flag
-// suspect raw-number inputs before the multiplication that could
-// otherwise overflow time.Duration (int64 ns) past int64 max.
-const warnSeconds = int64(warnThreshold / time.Second)
+// maxSafeSeconds is the largest integer seconds value that fits in a
+// time.Duration (int64 ns) without overflowing when multiplied by
+// time.Second. Roughly 9_223_372_036 seconds (~292 years).
+const maxSafeSeconds = int64(math.MaxInt64 / int64(time.Second))
 
 // Duration wraps time.Duration with JSON / YAML marshalling that
 // treats bare numbers as seconds. See the package comment.
@@ -62,12 +67,16 @@ func (d *Duration) unmarshal(b []byte, unmarshaler func([]byte, any) error) erro
 	if err := unmarshaler(b, &v); err != nil {
 		return err
 	}
-	suspectLarge := false
+	// numericInput is true for the seconds-reinterpretation paths
+	// (JSON / YAML number, or pure-digit string). Used to scope the
+	// warn message to those inputs only — explicit duration strings
+	// like "1000h" are trusted and not warned about.
+	var numericInput bool
 	switch value := v.(type) {
 	case string:
 		if n, err := strconv.ParseInt(value, 10, 64); err == nil {
-			suspectLarge = n > warnSeconds
-			d.Duration = time.Duration(n) * time.Second
+			numericInput = true
+			d.Duration = secondsToDuration(n)
 		} else {
 			parsed, err := time.ParseDuration(value)
 			if err != nil {
@@ -76,16 +85,25 @@ func (d *Duration) unmarshal(b []byte, unmarshaler func([]byte, any) error) erro
 			d.Duration = parsed
 		}
 	case float64:
-		suspectLarge = value > float64(warnSeconds)
-		d.Duration = time.Duration(value * float64(time.Second))
+		numericInput = true
+		d.Duration = floatSecondsToDuration(value)
+	case int:
+		numericInput = true
+		d.Duration = secondsToDuration(int64(value))
+	case int64:
+		numericInput = true
+		d.Duration = secondsToDuration(value)
+	case uint64:
+		numericInput = true
+		if value > math.MaxInt64 {
+			d.Duration = math.MaxInt64
+		} else {
+			d.Duration = secondsToDuration(int64(value))
+		}
 	default:
 		return fmt.Errorf("invalid duration format: %v", value)
 	}
-	// suspectLarge catches the raw-number paths whose multiplication
-	// can overflow time.Duration; the bottom check catches the
-	// time.ParseDuration path (which can't overflow but can still
-	// produce an unusually long Duration).
-	if suspectLarge || d.Duration > warnThreshold {
+	if numericInput && d.Duration > warnThreshold {
 		slog.Warn(
 			"duration value is unusually large for a timeout; interpreted as seconds (v2 interpreted plain numbers as nanoseconds)",
 			"input", string(b),
@@ -94,6 +112,32 @@ func (d *Duration) unmarshal(b []byte, unmarshaler func([]byte, any) error) erro
 		)
 	}
 	return nil
+}
+
+// secondsToDuration converts an integer seconds value to time.Duration,
+// clamping to math.MaxInt64 when the multiplication by time.Second
+// would overflow int64.
+func secondsToDuration(n int64) time.Duration {
+	if n > maxSafeSeconds {
+		return math.MaxInt64
+	}
+	if n < -maxSafeSeconds {
+		return math.MinInt64
+	}
+	return time.Duration(n) * time.Second
+}
+
+// floatSecondsToDuration is the float64 equivalent of
+// secondsToDuration: any positive value above maxSafeSeconds clamps to
+// math.MaxInt64.
+func floatSecondsToDuration(v float64) time.Duration {
+	if v >= float64(maxSafeSeconds) {
+		return math.MaxInt64
+	}
+	if v <= -float64(maxSafeSeconds) {
+		return math.MinInt64
+	}
+	return time.Duration(v * float64(time.Second))
 }
 
 func (d *Duration) marshal() []byte {
