@@ -176,6 +176,46 @@ duration value is unusually large for a timeout; interpreted as seconds (v2 inte
 
 ## Cleanups
 
+### Consolidate sentinel errors into the idiomatic pattern
+
+`errors.go` currently exposes four string-typed error *types* — `ErrSkipVerify`, `ErrNotFound`, `ErrConflictOptions`, `ErrPermissionDenied` — where the type carries the message and callers construct per-call values like `ErrNotFound(fmt.Sprintf("service %s is not found", name))`. Detection is `errors.As(err, &errNotFound)` (pattern-matching the type, not the value). The mix of exported types, package-level unexported values (`errNotFound`, `errSkipVerify`, `errPermissionDenied`), and locally re-declared `var errNotFound ErrNotFound` inside functions (`rollback.go:149,164`) is hard to follow.
+
+#### Plan
+
+Replace with the standard `errors.New` sentinel pattern:
+
+```go
+var (
+    ErrSkipVerify       = errors.New("skip verify")
+    ErrNotFound         = errors.New("not found")
+    ErrConflictOptions  = errors.New("conflicting options")
+    ErrPermissionDenied = errors.New("permission denied")
+)
+```
+
+- Construction wraps the sentinel: `fmt.Errorf("service %s is not found: %w", name, ErrNotFound)`.
+- Detection becomes `errors.Is(err, ErrNotFound)` everywhere (drop the local `var errNotFound ErrNotFound` declarations).
+- `wrapPermissionError` returns a wrapped sentinel instead of constructing a typed value.
+- Audit each message for the CLAUDE.md style (lowercase, no trailing punctuation); fix while we're here (`"conflict options"` → `"conflicting options"`).
+
+#### Compatibility
+
+Library callers that match against the *type* (`var permErr ecspresso.ErrPermissionDenied; errors.As(err, &permErr)` — see `verify_test.go:486-489`) must switch to `errors.Is(err, ecspresso.ErrPermissionDenied)`. This is a deliberate breaking change.
+
+### Unexport library internals that have no external callers
+
+Symbols currently exported but only used inside this repository (production code + tests):
+
+| Symbol | Location | Used only by |
+|---|---|---|
+| `WithConfigLoader` | ecspresso.go:188 | nothing (zero callers in this repo, no external use I can verify) |
+| `CLIParseFunc` type | cli.go:195 | `CLI()` signature — can become a concrete `func(...)` parameter |
+| `ForSubCommand` | cli.go:66 | `cli_test.go`, `docs_test.go` |
+| `ExportEnvFile` | envfile.go:10 | `cliv2.go:33` (the parser itself) |
+| `ConfigPlugin.Render` | plugin.go:35 | the config loader (added in pre-v3 #1023) |
+
+Action: unexport each, or delete outright if dead. For `ConfigPlugin.Render` specifically — it was added in pre-v3 to support the two-pass loader; we have the chance to bake that decision before v3 ships and external code starts depending on it.
+
 ### Unexport package-level tuning variables
 
 `ecspresso.go:38-41` declares `delayForServiceChanged`, `refreshInterval`, `waiterMaxDelay`, and `spcIndent` as package-level `var`s. They look like test seams, but as exported (or even just package-level mutable) names they are part of the library's surface — callers can mutate them at runtime, which is rarely intentional.
