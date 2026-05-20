@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kayac/ecspresso/v2/duration"
 	"github.com/kayac/ecspresso/v2/external"
 )
 
@@ -13,7 +14,6 @@ func TestExternalPlugin(t *testing.T) {
 		Name:    "test",
 		Command: []string{"jq", "-n"},
 		NumArgs: 1,
-		Timeout: 0,
 	}
 	p, err := external.NewPlugin(ctx, &config)
 	if err != nil {
@@ -50,7 +50,7 @@ func TestExternalPluginTimeout(t *testing.T) {
 	config := external.Config{
 		Name:    "test",
 		Command: []string{"sh", "-c", "sleep 2; echo 123"},
-		Timeout: 1,
+		Timeout: duration.Duration{Duration: time.Second},
 	}
 	p, err := external.NewPlugin(ctx, &config)
 	if err != nil {
@@ -70,7 +70,6 @@ func TestExternalPluginString(t *testing.T) {
 		Command: []string{"echo", "-n"},
 		NumArgs: 1,
 		Parser:  "string",
-		Timeout: 0,
 	}
 	p, err := external.NewPlugin(ctx, &config)
 	if err != nil {

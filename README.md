@@ -1750,7 +1750,7 @@ The `config` section defines the following parameters:
   - The command must return a JSON string or any strings to stdout.
 - `num_args`: number of arguments (optional, default 0)
 - `parser`: parser type "json" or "string" (optional, default "json")
-- `timeout`: command execution timeout seconds (optional, default never timeout)
+- `timeout`: command execution timeout (optional, default never timeout). Accepts a duration string (`"30s"`, `"5m"`, `"1h"`) or a bare number / digit string interpreted as seconds (`30` → 30 seconds).
 
 And use the template function in the definition files as follows.
 

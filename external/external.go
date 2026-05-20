@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/go-jsonnet"
 	"github.com/google/go-jsonnet/ast"
+	"github.com/kayac/ecspresso/v2/duration"
 )
 
 type Plugin struct {
@@ -19,11 +20,11 @@ type Plugin struct {
 }
 
 type Config struct {
-	Name    string   `json:"name" yaml:"name"`
-	Command []string `json:"command" yaml:"command"`
-	NumArgs int      `json:"num_args" yaml:"num_args"`
-	Parser  string   `json:"parser" yaml:"parser"`
-	Timeout int64    `json:"timeout" yaml:"timeout"`
+	Name    string            `json:"name" yaml:"name"`
+	Command []string          `json:"command" yaml:"command"`
+	NumArgs int               `json:"num_args" yaml:"num_args"`
+	Parser  string            `json:"parser" yaml:"parser"`
+	Timeout duration.Duration `json:"timeout" yaml:"timeout"`
 }
 
 func NewPlugin(ctx context.Context, cfg *Config) (*Plugin, error) {
@@ -48,9 +49,8 @@ func (p *Plugin) Exec(ctx context.Context, extraArgs []string) (any, error) {
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
 
-	if p.Config.Timeout > 0 {
-		to := time.Duration(p.Config.Timeout) * time.Second
-		_ctx, cancel := context.WithTimeout(ctx, to)
+	if p.Config.Timeout.Duration > 0 {
+		_ctx, cancel := context.WithTimeout(ctx, p.Config.Timeout.Duration)
 		defer cancel()
 		ctx = _ctx
 	}
