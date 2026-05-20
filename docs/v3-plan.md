@@ -44,7 +44,7 @@ The CLI flag and env-var pathways (`CLIOptions.FilterCommand`, `App.FilterComman
 
 ### Remove deprecated `exec` flags
 
-Replaced by the `exec portforward` subcommand. The legacy flags have been hidden since v2.
+Replaced by the `exec portforward` subcommand. The legacy flags have been hidden since v2. PR: https://github.com/kayac/ecspresso/pull/1025
 
 - Items to delete:
   - `exec.go`: `ExecRunOption.{PortForward,LocalPort,Port,Host,L}` fields and the `case run.PortForward:` branch in `App.Exec` (along with its `LogWarn`).
