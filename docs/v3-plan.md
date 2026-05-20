@@ -4,6 +4,16 @@ Tracking list of breaking changes and cleanups planned for ecspresso v3. Work la
 
 ## Breaking changes
 
+### Bump Go module path to `/v3`
+
+The Go module is currently `github.com/kayac/ecspresso/v2`. v3 bumps it to `/v3`.
+
+- Update the `module` directive in `go.mod`.
+- Rewrite every internal import (`github.com/kayac/ecspresso/v2/...` → `/v3/...`).
+- Users who consume ecspresso as a library (e.g. `import "github.com/kayac/ecspresso/v2"`) must update their import path.
+
+This is the canonical signal that the v3 line has started.
+
 ### YAML configuration must be valid YAML before template rendering
 
 Already in `pre-v3` (#1023).
@@ -109,7 +119,53 @@ With this in place:
 
 The new repo is the source of truth — keep the forwarder's `inputs` in sync with whatever inputs the new action accepts.
 
+### Unify Duration handling and reinterpret plain numbers as seconds
+
+`Duration` (`duration.go`) is currently defined inside the `ecspresso` package, so subpackages (notably `external/`) cannot import it. As a result `external.Config.Timeout` is a bare `int64` (seconds), which is inconsistent with the main `Config.Timeout` (a `*Duration` that accepts `"10m0s"` etc.).
+
+#### Plan
+
+- Move `Duration` into a new package `github.com/kayac/ecspresso/v3/duration`. Both the main package and `external/` import it.
+- Change `external.Config.Timeout` from `int64` to `duration.Duration` so plugin config can write `timeout: "30s"`, `timeout: "1h"`, `timeout: 30`, etc.
+- Adjust the value semantics of `Duration` (`UnmarshalJSON` / `UnmarshalYAML`) so plain numbers — and pure-digit strings — are interpreted as seconds, not nanoseconds:
+
+```go
+case float64:
+    d.Duration = time.Duration(value) * time.Second
+case string:
+    if n, err := strconv.ParseInt(value, 10, 64); err == nil {
+        d.Duration = time.Duration(n) * time.Second  // "30" → 30s
+        return nil
+    }
+    d.Duration, err = time.ParseDuration(value)       // "30s", "5m", "1h30m"
+```
+
+#### Nanosecond-input guard
+
+Some v2 users may have written nanosecond values (e.g. `30000000000` to mean "30 seconds") under the old semantics. After the change, that input becomes 30 000 000 000 seconds (~951 years), which is clearly wrong.
+
+To catch these without breaking realistic timeouts, emit a `slog.Warn` when the seconds-interpreted result exceeds 30 days (`30 * 24 * time.Hour`). 30 days is comfortably above any realistic ecspresso timeout and comfortably below the seconds-interpretation of typical nanosecond inputs, so the warning fires on the mistake but not on real configs. The warning shows both the raw input and the interpreted duration:
+
+```text
+duration value is unusually large for a timeout; interpreted as seconds (v2 interpreted plain numbers as nanoseconds)
+  input=30000000000 interpreted=951323y23w hint="use \"30s\" / \"5m\" / \"1h\" string notation to make the unit explicit"
+```
+
+#### Compatibility
+
+- Users who wrote `timeout: "10m0s"` (string) are unaffected.
+- Users who wrote `timeout: 600` meaning "ten minutes" but got 600 ns in v2 are silently fixed.
+- Users who deliberately wrote nanoseconds as a plain number now get a behaviour change, but they also get a clear warning at load time.
+
 ## Cleanups
+
+### Unexport package-level tuning variables
+
+`ecspresso.go:38-41` declares `delayForServiceChanged`, `refreshInterval`, `waiterMaxDelay`, and `spcIndent` as package-level `var`s. They look like test seams, but as exported (or even just package-level mutable) names they are part of the library's surface — callers can mutate them at runtime, which is rarely intentional.
+
+- Audit each one for actual usage outside the package and outside tests.
+- Unexport (lowercase) the ones used only internally / for tests.
+- For anything that legitimately wants to be tunable, expose it through an `AppOption` builder instead of a raw `var`.
 
 ### `cliv2.go` / `ParseCLIv2` naming
 
