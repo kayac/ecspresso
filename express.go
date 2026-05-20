@@ -12,7 +12,6 @@ import (
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
-	"github.com/kylelemons/godebug/diff"
 )
 
 type ExpressGatewayService struct {
@@ -174,19 +173,13 @@ func diffExpressGatewayServices(ctx context.Context, local, remote *ExpressGatew
 		return false, nil
 	}
 
-	switch {
-	case opt.External != "":
+	if opt.External != "" {
 		return true, diffExternal(ctx, opt.External, "service", remoteSv, newSv, opt)
-	case opt.Unified:
-		edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteSv, newSv)
-		ds := fmt.Sprint(gotextdiff.ToUnified(remoteArn, localPath, remoteSv, edits))
-		fmt.Fprint(opt.w, coloredDiff(ds))
-		return true, nil
-	default:
-		ds := diff.Diff(remoteSv, newSv)
-		fmt.Fprint(opt.w, coloredDiff(fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds)))
-		return true, nil
 	}
+	edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteSv, newSv)
+	ds := fmt.Sprint(gotextdiff.ToUnified(remoteArn, localPath, remoteSv, edits))
+	fmt.Fprint(opt.w, coloredDiff(ds))
+	return true, nil
 }
 
 func exToUpdateExpressGatewayServiceInput(ex *ExpressGatewayService, sv *Service) *ecs.UpdateExpressGatewayServiceInput {

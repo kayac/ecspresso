@@ -804,15 +804,6 @@ var cliTests = []struct {
 		args: []string{"diff"},
 		sub:  "diff",
 		subOption: &ecspresso.DiffOption{
-			Unified:     true,
-			WithService: true,
-		},
-	},
-	{
-		args: []string{"diff", "--no-unified"},
-		sub:  "diff",
-		subOption: &ecspresso.DiffOption{
-			Unified:     false,
 			WithService: true,
 		},
 	},
@@ -820,7 +811,6 @@ var cliTests = []struct {
 		args: []string{"diff", "--no-color"},
 		sub:  "diff",
 		subOption: &ecspresso.DiffOption{
-			Unified:     true,
 			WithService: true,
 		},
 		fn: func(t *testing.T, o any) {
@@ -833,7 +823,6 @@ var cliTests = []struct {
 		args: []string{"diff", "--color"},
 		sub:  "diff",
 		subOption: &ecspresso.DiffOption{
-			Unified:     true,
 			WithService: true,
 		},
 		fn: func(t *testing.T, o any) {
@@ -846,7 +835,6 @@ var cliTests = []struct {
 		args: []string{"diff", "--without-service"},
 		sub:  "diff",
 		subOption: &ecspresso.DiffOption{
-			Unified:     true,
 			WithService: false,
 		},
 	},

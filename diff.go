@@ -22,12 +22,10 @@ import (
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
-	"github.com/kylelemons/godebug/diff"
 	"github.com/mattn/go-shellwords"
 )
 
 type DiffOption struct {
-	Unified     bool   `help:"unified diff format" default:"true" negatable:""`
 	Jsonnet     bool   `help:"render as jsonnet format" default:"false"`
 	External    string `help:"external command to format diff" env:"ECSPRESSO_DIFF_COMMAND"`
 	WithService bool   `help:"with service definition" default:"true" negatable:"without-service"`
@@ -203,19 +201,13 @@ func diffServices(ctx context.Context, local, remote *Service, localPath string,
 		return false, nil
 	}
 
-	switch {
-	case opt.External != "":
+	if opt.External != "" {
 		return true, diffExternal(ctx, opt.External, "service", remoteSv, newSv, opt)
-	case opt.Unified:
-		edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteSv, newSv)
-		ds := fmt.Sprint(gotextdiff.ToUnified(remoteArn, localPath, remoteSv, edits))
-		fmt.Fprint(opt.w, coloredDiff(ds))
-		return true, nil
-	default:
-		ds := diff.Diff(remoteSv, newSv)
-		fmt.Fprint(opt.w, coloredDiff(fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds)))
-		return true, nil
 	}
+	edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteSv, newSv)
+	ds := fmt.Sprint(gotextdiff.ToUnified(remoteArn, localPath, remoteSv, edits))
+	fmt.Fprint(opt.w, coloredDiff(ds))
+	return true, nil
 }
 
 func diffTaskDefs(ctx context.Context, local, remote *TaskDefinitionInput, localPath, remoteArn string, opt *DiffOption) (bool, error) {
@@ -246,19 +238,13 @@ func diffTaskDefs(ctx context.Context, local, remote *TaskDefinitionInput, local
 		return false, nil
 	}
 
-	switch {
-	case opt.External != "":
+	if opt.External != "" {
 		return true, diffExternal(ctx, opt.External, "taskdef", remoteTd, newTd, opt)
-	case opt.Unified:
-		edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteTd, newTd)
-		ds := fmt.Sprint(gotextdiff.ToUnified(remoteArn, localPath, remoteTd, edits))
-		fmt.Fprint(opt.w, coloredDiff(ds))
-		return true, nil
-	default:
-		ds := diff.Diff(remoteTd, newTd)
-		fmt.Fprint(opt.w, coloredDiff(fmt.Sprintf("--- %s\n+++ %s\n%s", remoteArn, localPath, ds)))
-		return true, nil
 	}
+	edits := myers.ComputeEdits(span.URIFromPath(remoteArn), remoteTd, newTd)
+	ds := fmt.Sprint(gotextdiff.ToUnified(remoteArn, localPath, remoteTd, edits))
+	fmt.Fprint(opt.w, coloredDiff(ds))
+	return true, nil
 }
 
 func diffExternal(ctx context.Context, diffCmd string, target, remote, local string, opt *DiffOption) error {

@@ -233,7 +233,7 @@ var testServiceDefinitionHasDesiredCount = &ecspresso.Service{
 func TestDiffServices(t *testing.T) {
 	ctx := t.Context()
 	b := new(bytes.Buffer)
-	opt := &ecspresso.DiffOption{Unified: true}
+	opt := &ecspresso.DiffOption{}
 	opt.SetWriter(b)
 	color.NoColor = true
 
@@ -373,7 +373,7 @@ func TestDiffServices(t *testing.T) {
 func TestDiffServicesCodeDeployTargetGroupArn(t *testing.T) {
 	ctx := t.Context()
 	b := new(bytes.Buffer)
-	opt := &ecspresso.DiffOption{Unified: true}
+	opt := &ecspresso.DiffOption{}
 	opt.SetWriter(b)
 	color.NoColor = true
 
@@ -462,7 +462,7 @@ func TestDiffServicesCodeDeployTargetGroupArn(t *testing.T) {
 func TestDiffJsonnet(t *testing.T) {
 	ctx := t.Context()
 	b := new(bytes.Buffer)
-	opt := &ecspresso.DiffOption{Unified: true, Jsonnet: true}
+	opt := &ecspresso.DiffOption{Jsonnet: true}
 	opt.SetWriter(b)
 	color.NoColor = true
 
@@ -550,7 +550,7 @@ func TestDiffWithoutService(t *testing.T) {
 
 	t.Run("WithService=true shows service diff", func(t *testing.T) {
 		b := new(bytes.Buffer)
-		opt := &ecspresso.DiffOption{Unified: true, WithService: true}
+		opt := &ecspresso.DiffOption{WithService: true}
 		opt.SetWriter(b)
 
 		diff, err := ecspresso.DiffServices(ctx, localSv, remoteSv, "file", opt)
@@ -567,7 +567,7 @@ func TestDiffWithoutService(t *testing.T) {
 
 	t.Run("WithService=false produces only task def diff", func(t *testing.T) {
 		b := new(bytes.Buffer)
-		opt := &ecspresso.DiffOption{Unified: true, WithService: false}
+		opt := &ecspresso.DiffOption{WithService: false}
 		opt.SetWriter(b)
 
 		localTd := &ecspresso.TaskDefinitionInput{
@@ -613,7 +613,7 @@ func TestDiffWithoutService(t *testing.T) {
 
 	t.Run("WithService=true produces both service and task def diff", func(t *testing.T) {
 		b := new(bytes.Buffer)
-		opt := &ecspresso.DiffOption{Unified: true, WithService: true}
+		opt := &ecspresso.DiffOption{WithService: true}
 		opt.SetWriter(b)
 
 		localTd := &ecspresso.TaskDefinitionInput{
@@ -660,7 +660,7 @@ func TestDiffWithoutService(t *testing.T) {
 func TestDiffTaskDefs(t *testing.T) {
 	ctx := t.Context()
 	b := new(bytes.Buffer)
-	opt := &ecspresso.DiffOption{Unified: true}
+	opt := &ecspresso.DiffOption{}
 	opt.SetWriter(b)
 	color.NoColor = true
 
