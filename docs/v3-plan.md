@@ -2,6 +2,15 @@
 
 Tracking list of breaking changes and cleanups planned for ecspresso v3. Work lands on the `pre-v3` branch until v3 is released.
 
+## Status
+
+All planned work except the module-path bump has landed on `pre-v3`. Cutting the `v3` branch / tag is gated on the GitHub Action moving to its dedicated repository — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The constraint:
+
+- The forwarder `action.yml` is what keeps `uses: kayac/ecspresso@v3` resolvable for existing workflows. Without it, Dependabot's `@v2` → `@v3` PRs would break user workflows after merge with `unable to resolve action 'kayac/ecspresso@v3'`.
+- The forwarder needs a real target repo to point at, so the new repo and its `@v3` release have to exist first.
+
+Until then `pre-v3` accumulates the work and ships nothing.
+
 ## Breaking changes
 
 ### Bump Go module path to `/v3`
