@@ -248,7 +248,7 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 			return "", fmt.Errorf("failed to list task definitions: %w", err)
 		}
 		if len(out.TaskDefinitionArns) == 0 {
-			return "", fmt.Errorf("rollback target is not found: %s: %w", err, ErrNotFound)
+			return "", fmt.Errorf("rollback target is not found for family %s: %w", family, ErrNotFound)
 		}
 		for _, tdArn := range out.TaskDefinitionArns {
 			if found {
