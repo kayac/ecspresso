@@ -977,30 +977,6 @@ var cliTests = []struct {
 			},
 		},
 	},
-	// exec: deprecated --port-forward (backward compat)
-	{
-		args: []string{"exec",
-			"--id", "abcdefff",
-			"--command", "ls -la",
-			"--container", "mycontainer",
-			"--local-port", "8080",
-			"--port", "80",
-			"--host", "example.com",
-			"--port-forward",
-		},
-		sub: "exec",
-		subOption: &ecspresso.ExecOption{
-			ID:        "abcdefff",
-			Container: "mycontainer",
-			Run: &ecspresso.ExecRunOption{
-				Command:     "ls -la",
-				PortForward: true,
-				LocalPort:   8080,
-				Port:        80,
-				Host:        "example.com",
-			},
-		},
-	},
 	// exec: portforward subcommand
 	{
 		args: []string{"exec", "--id", "abcdefff", "portforward",
