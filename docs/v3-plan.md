@@ -62,6 +62,23 @@ Replaced by the `tasks find`, `tasks stop`, and `tasks trace` subcommands. The l
 
 The `create` subcommand was removed from `CLIOptions` back in v2, so the Kong parser rejects it before dispatch. The `case "create":` branch in `dispatchApp` (`cli.go:161-162`) is unreachable dead code and can go.
 
+### Drop the `--no-unified` diff path and the `kylelemons/godebug` dependency
+
+`DiffOption.Unified` is `default:"true"` and every callsite — internal (`deploy.go:137`) and every test in `diff_test.go` / `cli_test.go` — uses `Unified: true`. The non-unified branch survives only as a `default:` arm in `diffServices` / `diffTaskDefs` (`diff.go:214,257`) and the express-mode equivalent. It is the sole reason for the `github.com/kylelemons/godebug/diff` dependency, which has had no upstream pushes since 2022-06.
+
+#### Plan
+
+- Delete the `Unified` field from `DiffOption` (and the `--[no-]unified` CLI flag).
+- Delete the `default:` (non-unified) branch in `diffServices`, `diffTaskDefs`, and the express-mode diff helpers.
+- Drop the `github.com/kylelemons/godebug/diff` import here and remove `github.com/kylelemons/godebug` from `go.mod` / `go.sum`.
+- Strip `Unified: true` from internal callsites and test fixtures.
+
+#### Compatibility
+
+- Users invoking `ecspresso diff --no-unified` will get a flag-parse error. The same goes for `--unified` (no-op today, but parses fine — that also goes away).
+- Library callers passing `DiffOption{Unified: true, ...}` need to drop the field.
+- `hexops/gotextdiff` (unified output) stays. It is also stale (last push 2023-09) but is a self-contained copy of the Go language server's internal diff packages, so there is no real maintenance pressure; replacement can wait for a future major.
+
 ### Move the GitHub Action to a dedicated repository
 
 The GitHub Action (`action.yml`) currently lives in this repository, alongside the CLI source. From v3 the Action will live in its own repository so it can be versioned and released independently of the CLI.
