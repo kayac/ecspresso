@@ -64,7 +64,7 @@ The `create` subcommand was removed from `CLIOptions` back in v2, so the Kong pa
 
 ### Drop the `--no-unified` diff path and the `kylelemons/godebug` dependency
 
-`DiffOption.Unified` is `default:"true"` and every callsite — internal (`deploy.go:137`) and every test in `diff_test.go` / `cli_test.go` — uses `Unified: true`. The non-unified branch survives only as a `default:` arm in `diffServices` / `diffTaskDefs` (`diff.go:214,257`) and the express-mode equivalent. It is the sole reason for the `github.com/kylelemons/godebug/diff` dependency, which has had no upstream pushes since 2022-06.
+`DiffOption.Unified` is `default:"true"` and every callsite — internal (`deploy.go:137`) and every test in `diff_test.go` / `cli_test.go` — uses `Unified: true`. The non-unified branch survives only as a `default:` arm in `diffServices` / `diffTaskDefs` (`diff.go:214,257`) and the express-mode equivalent. It is the sole reason for the `github.com/kylelemons/godebug/diff` dependency, which has had no upstream pushes since 2022-06. PR: https://github.com/kayac/ecspresso/pull/1027
 
 #### Plan
 
