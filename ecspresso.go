@@ -35,10 +35,12 @@ const DefaultDesiredCount = -1
 const DefaultConfigFilePath = "ecspresso.yml"
 const dryRunStr = "DRY RUN"
 
-var delayForServiceChanged = 3 * time.Second
-var refreshInterval = 10 * time.Second
-var waiterMaxDelay = 15 * time.Second
-var spcIndent = "  "
+const (
+	delayForServiceChanged = 3 * time.Second
+	refreshInterval        = 10 * time.Second
+	waiterMaxDelay         = 15 * time.Second
+	spcIndent              = "  "
+)
 
 type TaskDefinition types.TaskDefinition
 
@@ -187,12 +189,6 @@ func WithConfig(c *Config) AppOption {
 	}
 }
 
-func WithConfigLoader(extstr, extcode map[string]string) AppOption {
-	return func(o *appOptions) {
-		o.loader = newConfigLoader(extstr, extcode)
-	}
-}
-
 func WithLogger(l *slog.Logger) AppOption {
 	return func(o *appOptions) {
 		o.logger = l
@@ -319,14 +315,14 @@ func (d *App) DescribeService(ctx context.Context) (*Service, error) {
 		return nil, fmt.Errorf("failed to describe service: %w", err)
 	}
 	if len(out.Services) == 0 {
-		return nil, ErrNotFound(fmt.Sprintf("service %s is not found", d.Service))
+		return nil, fmt.Errorf("service %s is not found: %w", d.Service, ErrNotFound)
 	}
 	status := aws.ToString(out.Services[0].Status)
 	switch status {
 	case "DRAINING":
 		d.LogWarn("service status warning", "status", status)
 	case "INACTIVE":
-		return nil, ErrNotFound(fmt.Sprintf("service %s is %s", d.Service, status))
+		return nil, fmt.Errorf("service %s is %s: %w", d.Service, status, ErrNotFound)
 	default:
 		d.LogDebug("service %s is %s", d.Service, status)
 	}
@@ -537,7 +533,7 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 	if err != nil {
 		var notfound *cwlTypes.ResourceNotFoundException
 		if errors.As(err, &notfound) {
-			return nextToken, ErrNotFound(err.Error())
+			return nextToken, fmt.Errorf("%s: %w", err.Error(), ErrNotFound)
 		}
 		return nextToken, wrapPermissionError(err)
 	}
@@ -575,7 +571,7 @@ func (d *App) findLatestTaskDefinitionArn(ctx context.Context, family string) (s
 		return "", fmt.Errorf("failed to list task definitions: %w", err)
 	}
 	if len(out.TaskDefinitionArns) == 0 {
-		return "", ErrNotFound(fmt.Sprintf("no task definitions family %s are found", family))
+		return "", fmt.Errorf("no task definitions family %s are found: %w", family, ErrNotFound)
 	}
 	return out.TaskDefinitionArns[0], nil
 }

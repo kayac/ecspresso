@@ -6,8 +6,8 @@ import (
 	"github.com/hashicorp/go-envparse"
 )
 
-// ExportEnvFile exports envfile to environment variables.
-func ExportEnvFile(file string) error {
+// exportEnvFile exports envfile to environment variables.
+func exportEnvFile(file string) error {
 	if file == "" {
 		return nil
 	}

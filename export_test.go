@@ -79,3 +79,7 @@ func (i *ConfigIgnore) FilterTags(tags []types.Tag) []types.Tag {
 func SleepContext(ctx context.Context, d time.Duration) {
 	sleepContext(ctx, d)
 }
+
+func (opts *CLIOptions) ForSubCommand(sub string) any {
+	return opts.forSubCommand(sub)
+}

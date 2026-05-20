@@ -100,7 +100,7 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 	}
 
 	if err := doWait(ctx, sv); err != nil {
-		if errors.As(err, &errNotFound) && sv.isCodeDeploy() {
+		if errors.Is(err, ErrNotFound) && sv.isCodeDeploy() {
 			d.LogInfo(err.Error())
 			return d.WaitTaskSetStable(ctx, sv)
 		}

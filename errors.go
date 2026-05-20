@@ -2,38 +2,20 @@ package ecspresso
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/aws/smithy-go"
 )
 
-type ErrSkipVerify string
-
-func (e ErrSkipVerify) Error() string {
-	return string(e)
-}
-
-type ErrNotFound string
-
-func (e ErrNotFound) Error() string {
-	return string(e)
-}
-
-type ErrConflictOptions string
-
-func (e ErrConflictOptions) Error() string {
-	return string(e)
-}
-
-type ErrPermissionDenied string
-
-func (e ErrPermissionDenied) Error() string {
-	return string(e)
-}
-
+// Sentinel errors. Use errors.Is to test for a specific category, and
+// fmt.Errorf("...: %w", ..., Err...) to construct a wrapped instance
+// that carries context. Detection by type (errors.As against the old
+// string-typed errors) is no longer supported.
 var (
-	errNotFound         = ErrNotFound("not found")
-	errSkipVerify       = ErrSkipVerify("skip verify")
-	errPermissionDenied = ErrPermissionDenied("permission denied")
+	ErrSkipVerify       = errors.New("skip verify")
+	ErrNotFound         = errors.New("not found")
+	ErrConflictOptions  = errors.New("conflicting options")
+	ErrPermissionDenied = errors.New("permission denied")
 )
 
 func isPermissionError(err error) bool {
@@ -60,7 +42,7 @@ func wrapPermissionError(err error) error {
 		return nil
 	}
 	if isPermissionError(err) {
-		return ErrPermissionDenied(err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), ErrPermissionDenied)
 	}
 	return err
 }

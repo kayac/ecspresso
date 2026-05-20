@@ -81,7 +81,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 
 	sleepContext(ctx, delayForServiceChanged) // wait for service updated
 	if err := doWait(ctx, sv); err != nil {
-		if errors.As(err, &errNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			d.LogInfo(err.Error())
 			return d.rollbackTaskDefinition(ctx, rollbackedTdArn, opt)
 		}
@@ -146,8 +146,7 @@ func (d *App) RollbackServiceTasks(ctx context.Context, sv *Service, targetArn s
 func (d *App) RollbackExpressService(ctx context.Context, sv *Service, _ string, opt RollbackOption) (string, error) {
 	deploymentArn, err := d.findActiveECSDeploymentArn(ctx, 0)
 	if err != nil {
-		var errNotFound ErrNotFound
-		if errors.As(err, &errNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			return "", errors.New("no active service deployment found")
 		}
 		return "", err
@@ -161,8 +160,7 @@ func (d *App) RollbackECSService(ctx context.Context, sv *Service, targetArn str
 	// Check if there's an active deployment in progress
 	deploymentArn, err := d.findActiveECSDeploymentArn(ctx, 0)
 	if err != nil {
-		var errNotFound ErrNotFound
-		if errors.As(err, &errNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			d.LogInfo("no active deployment, rolling back service tasks", withDryRun(opt.DryRun, "target", arnToName(targetArn))...)
 			return d.RollbackServiceTasks(ctx, sv, targetArn, opt)
 		}
@@ -187,7 +185,7 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, targetArn s
 		return "", fmt.Errorf("failed to list deployments: %w", err)
 	}
 	if len(ld.Deployments) == 0 {
-		return "", ErrNotFound("no deployments are found")
+		return "", fmt.Errorf("no deployments are found: %w", ErrNotFound)
 	}
 
 	out, err := d.codedeploy.GetDeployment(ctx, &codedeploy.GetDeploymentInput{
@@ -250,7 +248,7 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 			return "", fmt.Errorf("failed to list task definitions: %w", err)
 		}
 		if len(out.TaskDefinitionArns) == 0 {
-			return "", ErrNotFound(fmt.Sprintf("rollback target is not found: %s", err))
+			return "", fmt.Errorf("rollback target is not found: %s: %w", err, ErrNotFound)
 		}
 		for _, tdArn := range out.TaskDefinitionArns {
 			if found {
@@ -265,7 +263,7 @@ func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) 
 			break
 		}
 	}
-	return "", ErrNotFound("rollback target is not found")
+	return "", fmt.Errorf("rollback target is not found: %w", ErrNotFound)
 }
 
 type rollbackFunc func(ctx context.Context, sv *Service, targetArn string, opt RollbackOption) (string, error)
@@ -368,7 +366,7 @@ func (d *App) findActiveECSDeploymentArn(ctx context.Context, timeout time.Durat
 		case <-ctx.Done():
 			return "", ctx.Err()
 		case <-tm.C: // Timeout reached
-			return "", ErrNotFound("no active service deployments found")
+			return "", fmt.Errorf("no active service deployments found: %w", ErrNotFound)
 		default:
 			d.LogInfo("no service deployments found, waiting...")
 			sleepContext(ctx, delayForServiceChanged)

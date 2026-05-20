@@ -92,7 +92,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 	d.LogInfo("Starting deploy", withDryRun(opt.DryRun)...)
 	sv, err := d.DescribeServiceStatus(ctx, 0)
 	if err != nil {
-		if errors.As(err, &errNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			d.LogInfo("service not found, creating a new service", withDryRun(opt.DryRun)...)
 			if d.config.isExpressMode() {
 				return d.createExpressGatewayService(ctx, opt)
@@ -182,7 +182,7 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 	}
 
 	if err := doWait(ctx, sv); err != nil {
-		if errors.As(err, &errNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			d.LogInfo(err.Error())
 			// no need to wait
 			return nil
@@ -343,11 +343,12 @@ func (d *App) findDeploymentInfo(ctx context.Context) (*cdTypes.DeploymentInfo, 
 			}
 		}
 	}
-	return nil, ErrNotFound(fmt.Sprintf(
-		"failed to find CodeDeploy Application/DeploymentGroup for ECS service %s on cluster %s",
+	return nil, fmt.Errorf(
+		"failed to find CodeDeploy Application/DeploymentGroup for ECS service %s on cluster %s: %w",
 		d.config.Service,
 		d.config.Cluster,
-	))
+		ErrNotFound,
+	)
 }
 
 func (d *App) findCodeDeployApplications(ctx context.Context) ([]cdTypes.ApplicationInfo, error) {
@@ -365,7 +366,7 @@ func (d *App) findCodeDeployApplications(ctx context.Context) ([]cdTypes.Applica
 		}
 	}
 	if len(appNames) == 0 {
-		return nil, ErrNotFound("no CodeDeploy applications found")
+		return nil, fmt.Errorf("no CodeDeploy applications found: %w", ErrNotFound)
 	}
 	d.LogDebug("found CodeDeploy applications: %v", appNames)
 
@@ -387,7 +388,7 @@ func (d *App) findCodeDeployApplications(ctx context.Context) ([]cdTypes.Applica
 		}
 	}
 	if len(apps) == 0 {
-		return nil, ErrNotFound("no CodeDeploy applications found")
+		return nil, fmt.Errorf("no CodeDeploy applications found: %w", ErrNotFound)
 	}
 	return apps, nil
 }
@@ -562,7 +563,7 @@ func (d *App) UpdateServiceTags(ctx context.Context, sv *Service, added, updated
 func (d *App) taskDefinitionArnForDeploy(ctx context.Context, sv *Service, opt DeployOption) (string, error) {
 	if opt.Revision > 0 {
 		if opt.LatestTaskDefinition {
-			return "", ErrConflictOptions("revision and latest-task-definition are exclusive")
+			return "", fmt.Errorf("revision and latest-task-definition are exclusive: %w", ErrConflictOptions)
 		}
 		family := strings.Split(arnToName(aws.ToString(sv.TaskDefinition)), ":")[0]
 		return fmt.Sprintf("%s:%d", family, opt.Revision), nil

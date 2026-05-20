@@ -71,7 +71,7 @@ func (d *App) DescribeExpressGatewayService(ctx context.Context, sv *Service) (*
 	}
 	rex := res.Service
 	if res.Service == nil {
-		return nil, ErrNotFound("express gateway service is not found")
+		return nil, fmt.Errorf("express gateway service is not found: %w", ErrNotFound)
 	}
 	if len(rex.ActiveConfigurations) == 0 {
 		return nil, fmt.Errorf("express gateway service %s has no active configuration", aws.ToString(rex.ServiceName))

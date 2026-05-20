@@ -216,11 +216,11 @@ func (d *App) WaitRunTask(ctx context.Context, task *types.Task, watchContainer 
 					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 						return
 					}
-					if errors.As(err, &errPermissionDenied) {
+					if errors.Is(err, ErrPermissionDenied) {
 						d.LogWarn("failed to get log events: check logs:GetLogEvents permission", "error", err.Error())
 						return
 					}
-					if !errors.As(err, &errNotFound) {
+					if !errors.Is(err, ErrNotFound) {
 						d.LogWarn("failed to get log events", "error", err.Error())
 					}
 					continue
@@ -269,7 +269,7 @@ func (d *App) resolveTaskDefinitionForRun(ctx context.Context, opt RunOption) (*
 	switch {
 	case *opt.Revision > 0:
 		if opt.LatestTaskDefinition {
-			return nil, ErrConflictOptions("revision and latest-task-definition are exclusive")
+			return nil, fmt.Errorf("revision and latest-task-definition are exclusive: %w", ErrConflictOptions)
 		}
 		family, _, err := d.resolveTaskdefinition(ctx)
 		if err != nil {

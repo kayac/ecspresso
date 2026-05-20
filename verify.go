@@ -76,7 +76,7 @@ func (v *verifier) ecrClient(region string) *ecr.Client {
 
 func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 	if !v.opt.GetSecrets {
-		return ErrSkipVerify(fmt.Sprintf("get a secret value for %s", from))
+		return fmt.Errorf("get a secret value for %s: %w", from, ErrSkipVerify)
 	}
 
 	// secrets manager
@@ -135,7 +135,7 @@ func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
 
 func (v *verifier) existsEnvironmentFile(ctx context.Context, envFile types.EnvironmentFile) error {
 	if envFile.Type != types.EnvironmentFileTypeS3 {
-		return ErrSkipVerify("unsupported environment file type: " + string(envFile.Type))
+		return fmt.Errorf("unsupported environment file type: %s: %w", envFile.Type, ErrSkipVerify)
 	}
 	s3arn := aws.ToString(envFile.Value)
 	a, err := arn.Parse(s3arn)
@@ -348,13 +348,12 @@ func (vs *verifyState) VerifyResource(ctx context.Context, name string, verifyFu
 	err, hit := vs.cache.Do(ctx, name, verifyFunc)
 	r.Cached = hit
 	if err != nil {
-		var permErr ErrPermissionDenied
-		if errors.As(err, &permErr) {
+		if errors.Is(err, ErrPermissionDenied) {
 			r.Error = err.Error()
 			r.Result = verifyResultWarn
 			return r, nil
 		}
-		if errors.As(err, &errSkipVerify) {
+		if errors.Is(err, ErrSkipVerify) {
 			r.Error = err.Error()
 			r.Result = verifyResultSkip
 			return r, nil
@@ -375,7 +374,7 @@ func (d *App) verifyCluster(ctx context.Context) error {
 	if err != nil {
 		return wrapPermissionError(err)
 	} else if len(out.Clusters) == 0 {
-		return ErrNotFound(fmt.Sprintf("cluster %s is not found", cluster))
+		return fmt.Errorf("cluster %s is not found: %w", cluster, ErrNotFound)
 	}
 	return nil
 }
@@ -383,7 +382,7 @@ func (d *App) verifyCluster(ctx context.Context) error {
 func (d *App) verifyServiceDefinition(ctx context.Context) error {
 	vs := ctx.Value(verifyStateKey).(*verifyState)
 	if d.config.ServiceDefinitionPath == "" {
-		return ErrSkipVerify("no ServiceDefinition")
+		return fmt.Errorf("no ServiceDefinition: %w", ErrSkipVerify)
 	}
 	sv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
 	if err != nil {
@@ -461,7 +460,7 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 func (d *App) verifyExpressDefinition(ctx context.Context) error {
 	vs := ctx.Value(verifyStateKey).(*verifyState)
 	if d.config.ExpressDefinitionPath == "" {
-		return ErrSkipVerify("no ExpressDefinition")
+		return fmt.Errorf("no ExpressDefinition: %w", ErrSkipVerify)
 	}
 	ex, err := d.LoadExpressDefinition(d.config.ExpressDefinitionPath)
 	if err != nil {
@@ -596,7 +595,7 @@ func (d *App) verifyLoadBalancer(ctx context.Context, lb types.LoadBalancer, td 
 			return wrapPermissionError(err)
 		}
 		if len(out.TargetGroups) == 0 {
-			return ErrNotFound(fmt.Sprintf("target group %s is not found", tgArn))
+			return fmt.Errorf("target group %s is not found: %w", tgArn, ErrNotFound)
 		}
 		return nil
 	})
@@ -626,7 +625,7 @@ func (d *App) verifyLoadBalancer(ctx context.Context, lb types.LoadBalancer, td 
 				return wrapPermissionError(err)
 			}
 			if len(out.TargetGroups) == 0 {
-				return ErrNotFound(fmt.Sprintf("target group %s is not found", tgArn))
+				return fmt.Errorf("target group %s is not found: %w", tgArn, ErrNotFound)
 			}
 			return nil
 		})
@@ -746,7 +745,7 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	ok, err = repo.HasPlatformImage(ctx, tagOrDigest, arch, os)
 	if err != nil {
 		if errors.Is(err, registry.ErrDeprecatedManifest) || errors.Is(err, registry.ErrPullRateLimitExceeded) {
-			return ErrSkipVerify(err.Error())
+			return fmt.Errorf("%s: %w", err.Error(), ErrSkipVerify)
 		}
 		return err
 	}
@@ -917,7 +916,7 @@ func (d *App) verifyExpressLogConfiguration(ctx context.Context, lc *types.Expre
 	}
 
 	if !d.verifier.opt.PutLogs {
-		return ErrSkipVerify(fmt.Sprintf("putting logs to %s", group))
+		return fmt.Errorf("putting logs to %s: %w", group, ErrSkipVerify)
 	}
 
 	var stream string
@@ -961,7 +960,7 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 	}
 
 	if !d.verifier.opt.PutLogs {
-		return ErrSkipVerify(fmt.Sprintf("putting logs to %s", group))
+		return fmt.Errorf("putting logs to %s: %w", group, ErrSkipVerify)
 	}
 
 	if options["awslogs-create-group"] == "true" {

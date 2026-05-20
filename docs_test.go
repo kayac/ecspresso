@@ -162,7 +162,7 @@ func TestDocsOptionDefault(t *testing.T) {
 		JSON:    false,
 	}
 	args := []string{"docs"}
-	_, opts, _, err := ecspresso.ParseCLIv2(args)
+	_, opts, _, err := ecspresso.ParseCLI(args)
 	if err != nil {
 		t.Fatal(err)
 	}
