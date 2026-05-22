@@ -21,6 +21,19 @@ import (
 
 var defaultPluginNames = []string{"ssm", "secretsmanager"}
 
+// PluginInstance is the public surface a plugin instance exposes to the
+// config loader. tfstate.TFState, *cfn.App, *ssm.App,
+// *secretsmanager.App and *external.Plugin all satisfy this interface
+// directly. Callers can hand a pre-built instance to ecspresso.New via
+// WithPluginInstance so the loader skips the plugin's own Setup and
+// uses the provided instance instead. This lets hosts (terraform
+// providers, test harnesses) inject in-memory tfstate / cfn / ssm /
+// secretsmanager backings without touching the on-disk config.
+type PluginInstance interface {
+	FuncMap(ctx context.Context) template.FuncMap
+	JsonnetNativeFuncs(ctx context.Context) []*jsonnet.NativeFunction
+}
+
 type ConfigPlugin struct {
 	Name       string         `yaml:"name" json:"name,omitempty"`
 	Config     map[string]any `yaml:"config" json:"config,omitempty"`
@@ -97,6 +110,24 @@ func (p ConfigPlugin) Setup(ctx context.Context, c *Config) error {
 	default:
 		return fmt.Errorf("plugin %s is not available", p.Name)
 	}
+}
+
+// register binds a caller-supplied PluginInstance to this plugin
+// entry: records it in c.pluginInstances and registers its template
+// funcs and jsonnet native funcs (prefixed with p.FuncPrefix). The
+// plugin's own Setup is bypassed — no AWS calls, no tfstate file read,
+// no external command exec — so callers can drive the lookups in
+// memory.
+func (p ConfigPlugin) register(ctx context.Context, c *Config, inst PluginInstance) error {
+	c.pluginInstances = append(c.pluginInstances, pluginInstance{
+		name:       p.Name,
+		funcPrefix: p.FuncPrefix,
+		value:      inst,
+	})
+	if err := p.AppendFuncMap(c, inst.FuncMap(ctx)); err != nil {
+		return err
+	}
+	return p.AppendJsonnetNativeFuncs(c, inst.JsonnetNativeFuncs(ctx))
 }
 
 func (p ConfigPlugin) AppendFuncMap(c *Config, funcMap template.FuncMap) error {

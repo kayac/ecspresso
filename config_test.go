@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/fujiwara/tfstate-lookup/tfstate"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kayac/ecspresso/v2"
@@ -65,7 +66,7 @@ func TestLoadConfigWithPluginDuplicate(t *testing.T) {
 	t.Setenv("JSON", `{"foo":"bar"}`)
 	ctx := t.Context()
 	loader := ecspresso.NewConfigLoader(nil, nil)
-	_, err := loader.Load(ctx, "tests/config_duplicate_plugins.yaml", "")
+	_, err := loader.Load(ctx, "tests/config_duplicate_plugins.yaml", "", nil)
 	if err == nil {
 		t.Log("expected an error to occur, but it didn't.")
 		t.FailNow()
@@ -306,7 +307,7 @@ func TestLoadConfigWithoutTimeout(t *testing.T) {
 
 	ctx := t.Context()
 	loader := ecspresso.NewConfigLoader(nil, nil)
-	conf, err := loader.Load(ctx, "tests/notimeout.yml", "")
+	conf, err := loader.Load(ctx, "tests/notimeout.yml", "", nil)
 	if err != nil {
 		t.Log("unexpected an error", err)
 		t.FailNow()
@@ -328,7 +329,7 @@ func TestLoadConfigForCodeDeploy(t *testing.T) {
 	loader := ecspresso.NewConfigLoader(nil, nil)
 	for _, ext := range []string{"yml", "json", "jsonnet"} {
 		name := "tests/config_codedeploy." + ext
-		conf, err := loader.Load(ctx, name, "")
+		conf, err := loader.Load(ctx, name, "", nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -470,6 +471,64 @@ func TestLoadConfigWithTFStateInConfig(t *testing.T) {
 				t.Errorf("app.Name() = %q, want %q", got, want)
 			}
 		})
+	}
+}
+
+// A caller-supplied *tfstate.TFState injected via WithPluginInstance
+// must drive `tfstate(...)` lookups in the config even when the
+// config file has no `plugins:` block at all. Confirms the loader
+// registers funcMaps from pre-provided instances that match no
+// config plugin entry.
+func TestLoadConfigWithPluginInstanceNoConfigEntry(t *testing.T) {
+	t.Setenv("AWS_REGION", "ap-northeast-1")
+	state := tfstate.Empty()
+	state.SetOverrides(map[string]any{
+		"aws_ecs_cluster.main.name": "injected-cluster",
+		"aws_ecs_service.main.name": "injected-service",
+	})
+	ctx := t.Context()
+	app, err := ecspresso.New(ctx,
+		&ecspresso.CLIOptions{ConfigFilePath: "tests/config_tfstate_injected.yaml"},
+		ecspresso.WithPluginInstance("tfstate", "", state),
+	)
+	if err != nil {
+		t.Fatalf("New failed: %s", err)
+	}
+	if got, want := app.Config().Cluster, "injected-cluster"; got != want {
+		t.Errorf("cluster = %q, want %q (pre-provided override)", got, want)
+	}
+	if got, want := app.Config().Service, "injected-service"; got != want {
+		t.Errorf("service = %q, want %q (pre-provided override)", got, want)
+	}
+	if inst := app.PluginInstance("tfstate", ""); inst == nil {
+		t.Errorf("PluginInstance(tfstate, \"\") = nil, want the injected *tfstate.TFState")
+	}
+}
+
+// A pre-provided tfstate instance wins over a matching `plugins:`
+// entry in the config: the entry's Setup is skipped (so a broken
+// `path:` does not fail Load), and lookups resolve from the
+// in-memory overrides.
+func TestLoadConfigWithPluginInstanceWinsOverConfigEntry(t *testing.T) {
+	t.Setenv("AWS_REGION", "ap-northeast-1")
+	state := tfstate.Empty()
+	state.SetOverrides(map[string]any{
+		"aws_ecs_cluster.main.name": "from-override",
+	})
+	ctx := t.Context()
+	app, err := ecspresso.New(ctx,
+		// This fixture has plugins: [{name: tfstate, config: {path: terraform.tfstate}}].
+		// The on-disk tfstate file's value is "test-cluster"; the
+		// override below is "from-override". If the pre-provided
+		// instance correctly wins, we see "from-override".
+		&ecspresso.CLIOptions{ConfigFilePath: "tests/config_tfstate_in_config.yaml"},
+		ecspresso.WithPluginInstance("tfstate", "", state),
+	)
+	if err != nil {
+		t.Fatalf("New failed: %s", err)
+	}
+	if got, want := app.Config().Cluster, "from-override"; got != want {
+		t.Errorf("cluster = %q, want %q (pre-provided override wins)", got, want)
 	}
 }
 

@@ -135,7 +135,7 @@ type ConfigCodeDeploy struct {
 //
 // The `plugins` section itself cannot reference plugin-provided
 // functions — that would be a chicken-and-egg loop.
-func (l *configLoader) Load(ctx context.Context, path string, version string) (*Config, error) {
+func (l *configLoader) Load(ctx context.Context, path string, version string, preProvided []preProvidedPlugin) (*Config, error) {
 	conf := &Config{path: path}
 	ext := filepath.Ext(path)
 	switch ext {
@@ -151,7 +151,7 @@ func (l *configLoader) Load(ctx context.Context, path string, version string) (*
 		return nil, err
 	}
 	pre := &Config{path: path, dir: filepath.Dir(path), Plugins: plugins, Region: region}
-	if err := pre.prepareAWSAndPlugins(ctx); err != nil {
+	if err := pre.prepareAWSAndPlugins(ctx, preProvided); err != nil {
 		return nil, err
 	}
 	for _, f := range pre.jsonnetNativeFuncs {
@@ -364,7 +364,12 @@ func (c *Config) Restrict(ctx context.Context) error {
 		return err
 	}
 	if !c.pluginsConfigured {
-		if err := c.setupPlugins(ctx); err != nil {
+		// Reached only when the loader was bypassed (WithConfig). There
+		// is no preProvided list to honour here — callers wiring a
+		// Config manually are expected to populate c.pluginInstances
+		// and templateFuncs / jsonnetNativeFuncs themselves if they
+		// need that.
+		if err := c.setupPlugins(ctx, nil); err != nil {
 			return fmt.Errorf("failed to setup plugins: %w", err)
 		}
 		c.pluginsConfigured = true
@@ -400,12 +405,14 @@ func (c *Config) loadAWSConfig(ctx context.Context) error {
 
 // prepareAWSAndPlugins loads c.awsv2Config and runs plugin setup. Used
 // by the jsonnet two-pass loader before the second evaluation so plugin-
-// supplied native functions are registered on the VM.
-func (c *Config) prepareAWSAndPlugins(ctx context.Context) error {
+// supplied native functions are registered on the VM. preProvided
+// instances bypass the corresponding plugin Setup (see
+// WithPluginInstance).
+func (c *Config) prepareAWSAndPlugins(ctx context.Context, preProvided []preProvidedPlugin) error {
 	if err := c.loadAWSConfig(ctx); err != nil {
 		return err
 	}
-	if err := c.setupPlugins(ctx); err != nil {
+	if err := c.setupPlugins(ctx, preProvided); err != nil {
 		return fmt.Errorf("failed to setup plugins: %w", err)
 	}
 	c.pluginsConfigured = true
@@ -422,14 +429,51 @@ func (c *Config) AssumeRole(assumeRoleARN string) {
 	c.awsv2Config.Credentials = aws.NewCredentialsCache(assumeRoleProvider)
 }
 
-func (c *Config) setupPlugins(ctx context.Context) error {
+type pluginKey struct {
+	name       string
+	funcPrefix string
+}
+
+// setupPlugins runs Setup for every plugin in c.Plugins plus the
+// default (ssm, secretsmanager) plugins. When a (name, funcPrefix)
+// pair appears in preProvided, that plugin's Setup is bypassed and the
+// caller-supplied instance is registered instead — see
+// WithPluginInstance for the rationale. Pre-provided instances that
+// match no config plugin entry are still registered after the loop, so
+// callers can drive lookups without having to add a corresponding
+// `plugins:` entry to the config file.
+func (c *Config) setupPlugins(ctx context.Context, preProvided []preProvidedPlugin) error {
+	pre := make(map[pluginKey]PluginInstance, len(preProvided))
+	for _, p := range preProvided {
+		pre[pluginKey{p.name, p.funcPrefix}] = p.instance
+	}
+
 	plugins := []ConfigPlugin{}
 	for _, name := range defaultPluginNames {
 		plugins = append(plugins, ConfigPlugin{Name: name})
 	}
 	plugins = append(plugins, c.Plugins...)
+
 	for _, p := range plugins {
+		key := pluginKey{p.Name, p.FuncPrefix}
+		if inst, ok := pre[key]; ok {
+			if err := p.register(ctx, c, inst); err != nil {
+				return err
+			}
+			delete(pre, key)
+			continue
+		}
 		if err := p.Setup(ctx, c); err != nil {
+			return err
+		}
+	}
+
+	// Pre-provided instances with no matching config plugin entry are
+	// still registered so the host can supply funcs (e.g. `tfstate(...)`)
+	// without forcing users to add a corresponding `plugins:` block.
+	for key, inst := range pre {
+		p := ConfigPlugin{Name: key.name, FuncPrefix: key.funcPrefix}
+		if err := p.register(ctx, c, inst); err != nil {
 			return err
 		}
 	}

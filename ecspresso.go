@@ -176,9 +176,16 @@ type App struct {
 }
 
 type appOptions struct {
-	config *Config
-	loader *configLoader
-	logger *slog.Logger
+	config             *Config
+	loader             *configLoader
+	logger             *slog.Logger
+	preProvidedPlugins []preProvidedPlugin
+}
+
+type preProvidedPlugin struct {
+	name       string
+	funcPrefix string
+	instance   PluginInstance
 }
 
 type AppOption func(*appOptions)
@@ -192,6 +199,36 @@ func WithConfig(c *Config) AppOption {
 func WithLogger(l *slog.Logger) AppOption {
 	return func(o *appOptions) {
 		o.logger = l
+	}
+}
+
+// WithPluginInstance pre-provides a runtime plugin instance keyed by
+// (name, funcPrefix). When the config loader encounters a matching
+// plugin entry — or even when no such entry exists — it registers the
+// instance's template funcs and jsonnet native funcs instead of running
+// the plugin's Setup. Use this to drive tfstate / cfn / ssm /
+// secretsmanager lookups from an in-memory source (e.g. terraform
+// provider state, test fixtures) without touching ecspresso's on-disk
+// config or making AWS calls during config load.
+//
+// Match semantics: pluginKey is the pair (name, funcPrefix). For the
+// default plugins (ssm, secretsmanager) funcPrefix is "". A
+// pre-provided instance with a matching key wins; the corresponding
+// config plugin's Setup is skipped entirely. A pre-provided instance
+// that matches no config plugin entry is still registered, so
+// `plugins:` can be omitted from the config file altogether when the
+// host supplies all the bindings it needs.
+//
+// The instance must remain usable for the lifetime of the returned
+// *App: every template render and jsonnet evaluation will call into
+// it.
+func WithPluginInstance(name, funcPrefix string, instance PluginInstance) AppOption {
+	return func(o *appOptions) {
+		o.preProvidedPlugins = append(o.preProvidedPlugins, preProvidedPlugin{
+			name:       name,
+			funcPrefix: funcPrefix,
+			instance:   instance,
+		})
 	}
 }
 
@@ -210,7 +247,7 @@ func New(ctx context.Context, opt *CLIOptions, newAppOptions ...AppOption) (*App
 
 	// load config file
 	if appOpts.config == nil {
-		if config, err := appOpts.loader.Load(ctx, opt.ConfigFilePath, Version); err != nil {
+		if config, err := appOpts.loader.Load(ctx, opt.ConfigFilePath, Version, appOpts.preProvidedPlugins); err != nil {
 			return nil, fmt.Errorf("failed to load config file %s: %w", opt.ConfigFilePath, err)
 		} else {
 			appOpts.config = config
