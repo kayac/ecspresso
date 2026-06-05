@@ -145,7 +145,11 @@ func dispatchApp(ctx context.Context, sub string, usage func(), opts *CLIOptions
 	if err != nil {
 		return err
 	}
-	defer app.Close()
+	defer func() {
+		if err := app.Close(); err != nil {
+			app.LogWarn("failed to close app", "error", err.Error())
+		}
+	}()
 	app.LogDebug("dispatching subcommand: %s", sub)
 	switch sub {
 	case "deploy":

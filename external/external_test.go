@@ -182,36 +182,17 @@ func TestExternalPluginJSONRPCTimeout(t *testing.T) {
 	}
 	defer p.Close()
 
-	if _, err := p.Exec(ctx, []string{"hello"}); err == nil {
-		t.Fatal("timeout did not trigger")
-	} else {
-		t.Log(err)
-	}
-
-	// After timeout the process is restarted; a new call should succeed.
-	// Remove the delay by using a fresh config with no delay.
-	config2 := external.Config{
-		Name:    "myfunc",
-		Command: []string{jsonrpcServerBin},
-		NumArgs: 1,
-		Mode:    external.ModeJSONRPC,
-	}
-	p2, err := external.NewPlugin(ctx, &config2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer p2.Close()
-
-	result, err := p2.Exec(ctx, []string{"after-restart"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	m, ok := result.(map[string]any)
-	if !ok {
-		t.Fatalf("result is not map: %T", result)
-	}
-	if m["param"] != "after-restart" {
-		t.Errorf("unexpected param: %v", m["param"])
+	// The server delays 2s while the timeout is 200ms, so every call times
+	// out. The first timeout kills the process; the same plugin instance
+	// must restart it for the second call (rather than hanging or erroring
+	// on a dead pipe), so the second call reaches a fresh process and times
+	// out the same way.
+	for i := range 2 {
+		if _, err := p.Exec(ctx, []string{"hello"}); err == nil {
+			t.Fatalf("call %d: timeout did not trigger", i+1)
+		} else {
+			t.Logf("call %d: %v", i+1, err)
+		}
 	}
 }
 

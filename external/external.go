@@ -147,10 +147,13 @@ func (p *Plugin) startProcess() (*rpcProcess, error) {
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		stdin.Close() //nolint:errcheck
 		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
+		stdin.Close()  //nolint:errcheck
+		stdout.Close() //nolint:errcheck
 		return nil, fmt.Errorf("failed to start jsonrpc process: %w", err)
 	}
 	return &rpcProcess{
@@ -197,8 +200,12 @@ func (p *Plugin) resetProcess() {
 	proc.stdin.Close()  //nolint:errcheck
 	proc.stdout.Close() //nolint:errcheck
 
+	// Send SIGTERM synchronously so it is delivered even if the program
+	// exits right after Close(); reaping the process (and escalating to
+	// SIGKILL) happens in the background.
+	proc.cmd.Process.Signal(syscall.SIGTERM) //nolint:errcheck
+
 	go func() {
-		proc.cmd.Process.Signal(syscall.SIGTERM) //nolint:errcheck
 		done := make(chan struct{})
 		go func() {
 			proc.cmd.Wait() //nolint:errcheck
@@ -208,7 +215,7 @@ func (p *Plugin) resetProcess() {
 		case <-done:
 		case <-time.After(5 * time.Second):
 			proc.cmd.Process.Kill() //nolint:errcheck
-			proc.cmd.Wait()         //nolint:errcheck
+			<-done                  // let the single Wait above return
 		}
 	}()
 }
