@@ -1793,9 +1793,9 @@ Response format (error):
 
 - `method` is the `name` field from the plugin config.
 - `params` is an array of string arguments passed to the template function.
-- The `id` field correlates a request with its response. ecspresso rejects a response whose `id` does not match the request and restarts the process.
-- `timeout` applies per call. When a call times out the process is killed and will be restarted on the next call.
-- The process is terminated (its stdin is closed, then SIGTERM/SIGKILL) when ecspresso exits.
+- The `id` field correlates a request with its response. A response whose `id` does not match the request is treated as an error.
+- `timeout` applies per call. A call that times out fails immediately, the same as `exec` mode. The process is killed so a stalled command does not linger.
+- The process is also terminated when ecspresso exits (its stdin is closed, then SIGTERM/SIGKILL).
 
 Example configuration using a long-running Python server:
 

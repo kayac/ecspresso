@@ -176,11 +176,11 @@ func (p *Plugin) getOrStartProcess() (*rpcProcess, error) {
 	return proc, nil
 }
 
-// resetProcess clears p.proc and tears down the running process so the
-// next call will restart it. The pipes are closed synchronously so any
-// in-flight Encode/Decode unblocks immediately; the process itself is
-// reaped in the background (SIGTERM, then SIGKILL after a grace period).
-// Safe to call concurrently with callRPC.
+// resetProcess clears p.proc and tears down the running process. The
+// pipes are closed synchronously so any in-flight Encode/Decode unblocks
+// immediately; the process itself is reaped in the background (SIGTERM,
+// then SIGKILL after a grace period). Safe to call concurrently with
+// callRPC.
 func (p *Plugin) resetProcess() {
 	p.mu.Lock()
 	if p.proc == nil {
@@ -251,8 +251,9 @@ func (p *Plugin) callRPC(ctx context.Context, extraArgs []string) (any, error) {
 
 // rpcRoundtrip sends a single request and waits for its response. The
 // caller must hold proc.mu so requests are serialized and responses are
-// read in order. On any I/O error, timeout, or response-id mismatch the
-// process is reset so a subsequent call restarts it from a clean state.
+// read in order. On any I/O error, timeout, or response-id mismatch it
+// returns the error and kills the process (the stream can no longer be
+// trusted), matching exec mode where a timed-out call fails immediately.
 func (p *Plugin) rpcRoundtrip(ctx context.Context, proc *rpcProcess, params []string) (any, error) {
 	req := rpcRequest{
 		JSONRPC: "2.0",
