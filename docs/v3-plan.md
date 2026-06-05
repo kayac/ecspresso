@@ -183,6 +183,19 @@ duration value is unusually large for a timeout; interpreted as seconds (v2 inte
 - Users who wrote `timeout: 600` meaning "ten minutes" but got 600 ns in v2 are silently fixed.
 - Users who deliberately wrote nanoseconds as a plain number now get a behaviour change, but they also get a clear warning at load time.
 
+## Features
+
+### Add jsonrpc mode to the external plugin
+
+PR: https://github.com/kayac/ecspresso/pull/1041
+
+The `external` plugin execs its command once per template function call, which is costly for commands with high startup time. A new `mode: jsonrpc` starts the command once and keeps it running, communicating over stdin/stdout with JSON RPC 2.0.
+
+- New `mode` config field selects `exec` (default, unchanged behaviour) or `jsonrpc`.
+- In `jsonrpc` mode the process starts on first use and is reused across calls.
+- `timeout` applies per call. On timeout, IO error, or response-id mismatch the process is reset and restarted on the next call.
+- The process is registered as a plugin instance and terminated via `App.Close` (stdin closed, then SIGTERM/SIGKILL) when ecspresso exits.
+
 ## Cleanups
 
 All cleanup items below ship together in PR: https://github.com/kayac/ecspresso/pull/1029
