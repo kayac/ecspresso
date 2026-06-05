@@ -232,28 +232,17 @@ func (p *Plugin) callRPC(ctx context.Context, extraArgs []string) (any, error) {
 		params = []string{}
 	}
 
-	// Retry once if the process we obtained was retired (by another
-	// call's reset) between getOrStartProcess and acquiring proc.mu, so
-	// the caller transparently uses the freshly started process instead
-	// of failing on a dead pipe.
-	for range 2 {
-		proc, err := p.getOrStartProcess()
-		if err != nil {
-			return nil, err
-		}
-		proc.mu.Lock()
-		p.mu.Lock()
-		stale := p.proc != proc
-		p.mu.Unlock()
-		if stale {
-			proc.mu.Unlock()
-			continue
-		}
-		result, err := p.rpcRoundtrip(ctx, proc, params)
-		proc.mu.Unlock()
-		return result, err
+	// Calls are serialized on proc.mu (template / jsonnet rendering is
+	// single-goroutine, so this is the only contention point). A dead
+	// process surfaces as an error from rpcRoundtrip, which resets it; the
+	// next call then starts a fresh one via getOrStartProcess.
+	proc, err := p.getOrStartProcess()
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("jsonrpc process repeatedly restarted: %s", p.Config.Name)
+	proc.mu.Lock()
+	defer proc.mu.Unlock()
+	return p.rpcRoundtrip(ctx, proc, params)
 }
 
 // rpcRoundtrip sends a single request and waits for its response. The
