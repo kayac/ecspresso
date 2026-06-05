@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"sort"
@@ -307,6 +308,24 @@ func (d *App) PluginInstance(name, funcPrefix string) any {
 		}
 	}
 	return nil
+}
+
+// Close releases resources held by the App, such as long-running
+// external plugin processes started in jsonrpc mode. Plugins that do not
+// hold such resources are skipped. It is safe to call multiple times.
+func (d *App) Close() error {
+	if d.config == nil {
+		return nil
+	}
+	var errs []error
+	for _, inst := range d.config.pluginInstances {
+		if c, ok := inst.value.(io.Closer); ok {
+			if err := c.Close(); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func (d *App) Timeout() time.Duration {

@@ -145,6 +145,7 @@ func dispatchApp(ctx context.Context, sub string, usage func(), opts *CLIOptions
 	if err != nil {
 		return err
 	}
+	defer app.Close()
 	app.LogDebug("dispatching subcommand: %s", sub)
 	switch sub {
 	case "deploy":

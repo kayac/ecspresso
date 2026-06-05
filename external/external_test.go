@@ -1,12 +1,28 @@
 package external_test
 
 import (
+	"os"
+	"os/exec"
 	"testing"
 	"time"
 
 	"github.com/kayac/ecspresso/v2/duration"
 	"github.com/kayac/ecspresso/v2/external"
 )
+
+const jsonrpcServerBin = "testdata/jsonrpc_server/jsonrpc_server"
+
+func TestMain(m *testing.M) {
+	cmd := exec.Command("go", "build", "-o", jsonrpcServerBin, "./testdata/jsonrpc_server/")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		panic("failed to build jsonrpc_server: " + err.Error())
+	}
+	code := m.Run()
+	os.Remove(jsonrpcServerBin)
+	os.Exit(code)
+}
 
 func TestExternalPlugin(t *testing.T) {
 	ctx := t.Context()
@@ -88,5 +104,192 @@ func TestExternalPluginString(t *testing.T) {
 		}
 	} else {
 		t.Fatalf("result is not a string: %T", result)
+	}
+}
+
+func TestExternalPluginJSONRPC(t *testing.T) {
+	ctx := t.Context()
+	config := external.Config{
+		Name:    "myfunc",
+		Command: []string{jsonrpcServerBin},
+		NumArgs: 1,
+		Mode:    external.ModeJSONRPC,
+	}
+	p, err := external.NewPlugin(ctx, &config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	result, err := p.Exec(ctx, []string{"hello"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, ok := result.(map[string]any)
+	if !ok {
+		t.Fatalf("result is not map: %T", result)
+	}
+	if m["param"] != "hello" {
+		t.Errorf("unexpected param: %v", m["param"])
+	}
+	if m["count"] != float64(1) {
+		t.Errorf("unexpected count: %v", m["count"])
+	}
+}
+
+func TestExternalPluginJSONRPCMultipleCalls(t *testing.T) {
+	ctx := t.Context()
+	config := external.Config{
+		Name:    "myfunc",
+		Command: []string{jsonrpcServerBin},
+		NumArgs: 1,
+		Mode:    external.ModeJSONRPC,
+	}
+	p, err := external.NewPlugin(ctx, &config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	for i := 1; i <= 3; i++ {
+		result, err := p.Exec(ctx, []string{"arg"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		m, ok := result.(map[string]any)
+		if !ok {
+			t.Fatalf("call %d: result is not map: %T", i, result)
+		}
+		// count increments across calls, proving the same process is reused
+		if m["count"] != float64(i) {
+			t.Errorf("call %d: expected count=%d, got %v", i, i, m["count"])
+		}
+	}
+}
+
+func TestExternalPluginJSONRPCTimeout(t *testing.T) {
+	ctx := t.Context()
+	config := external.Config{
+		Name:    "myfunc",
+		Command: []string{jsonrpcServerBin, "-delay", "2s"},
+		NumArgs: 1,
+		Mode:    external.ModeJSONRPC,
+		Timeout: duration.Duration{Duration: 200 * time.Millisecond},
+	}
+	p, err := external.NewPlugin(ctx, &config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	if _, err := p.Exec(ctx, []string{"hello"}); err == nil {
+		t.Fatal("timeout did not trigger")
+	} else {
+		t.Log(err)
+	}
+
+	// After timeout the process is restarted; a new call should succeed.
+	// Remove the delay by using a fresh config with no delay.
+	config2 := external.Config{
+		Name:    "myfunc",
+		Command: []string{jsonrpcServerBin},
+		NumArgs: 1,
+		Mode:    external.ModeJSONRPC,
+	}
+	p2, err := external.NewPlugin(ctx, &config2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p2.Close()
+
+	result, err := p2.Exec(ctx, []string{"after-restart"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, ok := result.(map[string]any)
+	if !ok {
+		t.Fatalf("result is not map: %T", result)
+	}
+	if m["param"] != "after-restart" {
+		t.Errorf("unexpected param: %v", m["param"])
+	}
+}
+
+func TestExternalPluginJSONRPCIDMismatch(t *testing.T) {
+	ctx := t.Context()
+	config := external.Config{
+		Name:    "myfunc",
+		Command: []string{jsonrpcServerBin, "-bad-id"},
+		NumArgs: 1,
+		Mode:    external.ModeJSONRPC,
+	}
+	p, err := external.NewPlugin(ctx, &config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	if _, err := p.Exec(ctx, []string{"hello"}); err == nil {
+		t.Fatal("expected id mismatch error")
+	} else {
+		t.Log(err)
+	}
+}
+
+func TestExternalPluginJSONRPCError(t *testing.T) {
+	ctx := t.Context()
+	config := external.Config{
+		Name:    "myfunc",
+		Command: []string{jsonrpcServerBin, "-error"},
+		NumArgs: 1,
+		Mode:    external.ModeJSONRPC,
+	}
+	p, err := external.NewPlugin(ctx, &config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	if _, err := p.Exec(ctx, []string{"hello"}); err == nil {
+		t.Fatal("expected jsonrpc error")
+	} else {
+		t.Log(err)
+	}
+}
+
+func TestExternalPluginJSONRPCRestart(t *testing.T) {
+	ctx := t.Context()
+	config := external.Config{
+		Name:    "myfunc",
+		Command: []string{jsonrpcServerBin},
+		NumArgs: 1,
+		Mode:    external.ModeJSONRPC,
+	}
+	p, err := external.NewPlugin(ctx, &config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	// First call starts the process (count=1).
+	result, err := p.Exec(ctx, []string{"first"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := result.(map[string]any)
+	if m["count"] != float64(1) {
+		t.Errorf("expected count=1, got %v", m["count"])
+	}
+
+	// Close restarts the process; the next call starts a fresh process (count=1 again).
+	p.Close()
+
+	result, err = p.Exec(ctx, []string{"after-close"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m = result.(map[string]any)
+	if m["count"] != float64(1) {
+		t.Errorf("after restart expected count=1, got %v", m["count"])
 	}
 }

@@ -264,11 +264,7 @@ func setupPluginExternal(ctx context.Context, p ConfigPlugin, c *Config) error {
 	if err != nil {
 		return err
 	}
-	if err := p.AppendFuncMap(c, ext.FuncMap(ctx)); err != nil {
-		return err
-	}
-	if err := p.AppendJsonnetNativeFuncs(c, ext.JsonnetNativeFuncs(ctx)); err != nil {
-		return err
-	}
-	return nil
+	// register records ext in c.pluginInstances so its long-running
+	// jsonrpc process (if any) is torn down on App.Close.
+	return p.register(ctx, c, ext)
 }
