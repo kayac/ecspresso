@@ -1,65 +1,49 @@
+// Command jsonrpc_server is a JSON-RPC 2.0 server used by the external
+// plugin tests. It is built on the creachadair/jrpc2 library so the tests
+// exercise interoperability between ecspresso's hand-written client and a
+// standard JSON-RPC 2.0 server. It lives in its own Go module so the main
+// ecspresso module does not depend on jrpc2.
 package main
 
 import (
-	"bufio"
-	"encoding/json"
+	"context"
 	"flag"
-	"fmt"
 	"os"
+	"sync/atomic"
 	"time"
+
+	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/channel"
+	"github.com/creachadair/jrpc2/handler"
 )
-
-type request struct {
-	JSONRPC string   `json:"jsonrpc"`
-	Method  string   `json:"method"`
-	Params  []string `json:"params"`
-	ID      int64    `json:"id"`
-}
-
-type response struct {
-	JSONRPC string `json:"jsonrpc"`
-	Result  any    `json:"result,omitempty"`
-	Error   any    `json:"error,omitempty"`
-	ID      int64  `json:"id"`
-}
 
 var (
 	delay   = flag.Duration("delay", 0, "delay before each response")
-	badID   = flag.Bool("bad-id", false, "reply with a mismatched response id")
 	respErr = flag.Bool("error", false, "reply with a jsonrpc error")
 )
 
 func main() {
 	flag.Parse()
-	scanner := bufio.NewScanner(os.Stdin)
-	enc := json.NewEncoder(os.Stdout)
-	var count int
-	for scanner.Scan() {
-		count++
-		var req request
-		if err := json.Unmarshal(scanner.Bytes(), &req); err != nil {
-			fmt.Fprintf(os.Stderr, "jsonrpc_server: decode error: %v\n", err)
-			continue
-		}
+
+	var count atomic.Int64
+	myfunc := func(ctx context.Context, params []string) (map[string]any, error) {
+		n := count.Add(1)
 		if *delay > 0 {
 			time.Sleep(*delay)
 		}
-		resp := response{JSONRPC: "2.0", ID: req.ID}
-		switch {
-		case *respErr:
-			resp.Error = map[string]any{"code": -32000, "message": "boom"}
-		case *badID:
-			resp.ID = req.ID + 1000
-			resp.Result = map[string]any{"count": count}
-		default:
-			result := map[string]any{"count": count}
-			if len(req.Params) > 0 {
-				result["param"] = req.Params[0]
-			}
-			resp.Result = result
+		if *respErr {
+			return nil, jrpc2.Errorf(jrpc2.Code(-32000), "boom")
 		}
-		if err := enc.Encode(resp); err != nil {
-			fmt.Fprintf(os.Stderr, "jsonrpc_server: encode error: %v\n", err)
+		result := map[string]any{"count": n}
+		if len(params) > 0 {
+			result["param"] = params[0]
 		}
+		return result, nil
 	}
+
+	srv := jrpc2.NewServer(handler.Map{
+		"myfunc": handler.New(myfunc),
+	}, nil)
+	srv.Start(channel.Line(os.Stdin, os.Stdout))
+	srv.Wait()
 }

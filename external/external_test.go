@@ -10,17 +10,31 @@ import (
 	"github.com/kayac/ecspresso/v2/external"
 )
 
-const jsonrpcServerBin = "testdata/jsonrpc_server/jsonrpc_server"
+const (
+	jsonrpcServerBin = "testdata/jsonrpc_server/jsonrpc_server"
+	badIDServerBin   = "testdata/jsonrpc_badidserver/jsonrpc_badidserver"
+)
 
 func TestMain(m *testing.M) {
-	cmd := exec.Command("go", "build", "-o", jsonrpcServerBin, "./testdata/jsonrpc_server/")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	// The jrpc2-based server is a separate Go module, so build it with the
+	// working directory set inside that module.
+	jrpcBuild := exec.Command("go", "build", "-o", "jsonrpc_server", ".")
+	jrpcBuild.Dir = "testdata/jsonrpc_server"
+	jrpcBuild.Stdout = os.Stdout
+	jrpcBuild.Stderr = os.Stderr
+	if err := jrpcBuild.Run(); err != nil {
 		panic("failed to build jsonrpc_server: " + err.Error())
+	}
+	// The bad-id server has no dependencies and stays in the main module.
+	badBuild := exec.Command("go", "build", "-o", badIDServerBin, "./testdata/jsonrpc_badidserver/")
+	badBuild.Stdout = os.Stdout
+	badBuild.Stderr = os.Stderr
+	if err := badBuild.Run(); err != nil {
+		panic("failed to build jsonrpc_badidserver: " + err.Error())
 	}
 	code := m.Run()
 	os.Remove(jsonrpcServerBin)
+	os.Remove(badIDServerBin)
 	os.Exit(code)
 }
 
@@ -200,7 +214,7 @@ func TestExternalPluginJSONRPCIDMismatch(t *testing.T) {
 	ctx := t.Context()
 	config := external.Config{
 		Name:    "myfunc",
-		Command: []string{jsonrpcServerBin, "-bad-id"},
+		Command: []string{badIDServerBin},
 		NumArgs: 1,
 		Mode:    external.ModeJSONRPC,
 	}
