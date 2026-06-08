@@ -35,7 +35,7 @@ commands:
             DOWNLOAD_OS="<< parameters.os >>"
             DOWNLOAD_ARCH="<< parameters.arch >>"
             if [ "${VERSION}" = "latest" ]; then
-              DOWNLOAD_URL=$(curl -sS --retry 3 https://api.github.com/repos/kayac/ecspresso/releases | jq --arg arch ${DOWNLOAD_OS}.${DOWNLOAD_ARCH}. -r '[.[]|select(.tag_name > "v2.0")|select(.prerelease==false)][0].assets[].browser_download_url|select(match($arch))')
+              DOWNLOAD_URL=$(curl -sSf --retry 3 https://api.github.com/repos/kayac/ecspresso/releases | jq --arg arch ${DOWNLOAD_OS}.${DOWNLOAD_ARCH}. -r '[.[]|select(.tag_name > "v2.0")|select(.prerelease==false)][0].assets[].browser_download_url|select(match($arch))')
             else
               DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/ecspresso_${VERSION:1}_${DOWNLOAD_OS}_${DOWNLOAD_ARCH}.tar.gz
             fi
