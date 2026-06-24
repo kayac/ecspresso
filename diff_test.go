@@ -767,7 +767,14 @@ func TestDiffServicesMonitoring(t *testing.T) {
 			Service: types.Service{
 				LaunchType: types.LaunchTypeFargate,
 			},
-			Monitoring: monitoring,
+			Monitoring: &types.MonitoringConfiguration{
+				MetricConfigurations: []types.MetricConfiguration{
+					{
+						MetricNames:       []string{"CPUUtilization", "MemoryUtilization"},
+						ResolutionSeconds: aws.Int32(20),
+					},
+				},
+			},
 		}
 		diff, err := ecspresso.DiffServices(ctx, local, remote, "file", opt)
 		if err != nil {
