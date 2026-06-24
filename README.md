@@ -36,6 +36,7 @@ ecspresso also supports ECS Express mode for simplified deployments and provides
   - [EBS Volume support](#ebs-volume-support)
   - [S3 Files volume support](#s3-files-volume-support)
   - [VPC Lattice support](#vpc-lattice-support)
+  - [High resolution CloudWatch metrics](#high-resolution-cloudwatch-metrics)
   - [ECS Express mode support](#ecs-express-mode-support)
   - [Diff and Verify](#how-to-check-diff-and-verify-servicetask-definitions-before-deploy)
   - [Manipulate ECS tasks](#manipulate-ecs-tasks)
@@ -1005,6 +1006,30 @@ ecspresso supports [VPC Lattice](https://aws.amazon.com/vpc/lattice/) integratio
 ecspresso doesn't create or modify any VPC Lattice resources. You must create and associate a VPC Lattice target group with the ECS service.
 
 See also [Use Amazon VPC Lattice to connect, observe, and secure your Amazon ECS services](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-vpc-lattice.html).
+
+### High resolution CloudWatch metrics
+
+ecspresso supports [high resolution CloudWatch metrics](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cloudwatch-metrics.html) for ECS services.
+
+To configure, define `monitoring` in the service definition. The `metricConfigurations` field specifies which metrics to collect and at what resolution.
+
+```json
+{
+  "monitoring": {
+    "metricConfigurations": [
+      {
+        "metricNames": ["CPUUtilization", "MemoryUtilization"],
+        "resolutionSeconds": 20
+      }
+    ]
+  }
+}
+```
+
+- `metricNames`: The metrics to configure. Supported values are `CPUUtilization` and `MemoryUtilization`.
+- `resolutionSeconds`: The resolution in seconds. Valid values are `20` (high resolution) and `60` (default).
+
+When not specified, Amazon ECS uses the default resolution of 60 seconds. High resolution metrics enable faster auto scaling responses.
 
 ### ECS Express mode support
 

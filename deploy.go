@@ -229,6 +229,7 @@ func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 		EnableExecuteCommand:          &sv.EnableExecuteCommand,
 		HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
 		LoadBalancers:                 sv.LoadBalancers,
+		Monitoring:                    sv.Monitoring,
 		NetworkConfiguration:          sv.NetworkConfiguration,
 		PlacementConstraints:          sv.PlacementConstraints,
 		PlacementStrategy:             sv.PlacementStrategy,

@@ -1,0 +1,26 @@
+{
+  "desiredCount": 1,
+  "launchType": "FARGATE",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "subnet-abcdef00"
+      ],
+      "securityGroups": [
+        "sg-12345678"
+      ],
+      "assignPublicIp": "DISABLED"
+    }
+  },
+  "monitoring": {
+    "metricConfigurations": [
+      {
+        "metricNames": [
+          "CPUUtilization",
+          "MemoryUtilization"
+        ],
+        "resolutionSeconds": 20
+      }
+    ]
+  }
+}

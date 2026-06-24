@@ -63,6 +63,7 @@ type Service struct {
 	ServiceConnectConfiguration *types.ServiceConnectConfiguration
 	VolumeConfigurations        []types.ServiceVolumeConfiguration
 	VpcLatticeConfigurations    []types.VpcLatticeConfiguration
+	Monitoring                  *types.MonitoringConfiguration
 	DesiredCount                *int32
 }
 

@@ -712,3 +712,69 @@ func TestDiffTaskDefs(t *testing.T) {
 		}
 	})
 }
+
+func TestDiffServicesMonitoring(t *testing.T) {
+	ctx := t.Context()
+	b := new(bytes.Buffer)
+	opt := &ecspresso.DiffOption{Unified: true}
+	opt.SetWriter(b)
+	color.NoColor = true
+
+	monitoring := &types.MonitoringConfiguration{
+		MetricConfigurations: []types.MetricConfiguration{
+			{
+				MetricNames:       []string{"CPUUtilization", "MemoryUtilization"},
+				ResolutionSeconds: aws.Int32(20),
+			},
+		},
+	}
+
+	t.Run("monitoring added", func(t *testing.T) {
+		b.Reset()
+		local := &ecspresso.Service{
+			Service: types.Service{
+				LaunchType: types.LaunchTypeFargate,
+			},
+			Monitoring: monitoring,
+		}
+		remote := &ecspresso.Service{
+			Service: types.Service{
+				LaunchType: types.LaunchTypeFargate,
+			},
+		}
+		diff, err := ecspresso.DiffServices(ctx, local, remote, "file", opt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !diff {
+			t.Fatal("expected diff but got none")
+		}
+		ds := b.String()
+		if !strings.Contains(ds, "monitoring") {
+			t.Errorf("expected diff to contain 'monitoring', got: %s", ds)
+		}
+	})
+
+	t.Run("monitoring same", func(t *testing.T) {
+		b.Reset()
+		local := &ecspresso.Service{
+			Service: types.Service{
+				LaunchType: types.LaunchTypeFargate,
+			},
+			Monitoring: monitoring,
+		}
+		remote := &ecspresso.Service{
+			Service: types.Service{
+				LaunchType: types.LaunchTypeFargate,
+			},
+			Monitoring: monitoring,
+		}
+		diff, err := ecspresso.DiffServices(ctx, local, remote, "file", opt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff {
+			t.Fatalf("unexpected diff: %s", b.String())
+		}
+	})
+}
