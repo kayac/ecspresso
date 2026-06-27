@@ -257,7 +257,9 @@ File and function names date back to the v1 → v2 CLI parser switch (kingpin �
 
 ### docs/v1-v2.md
 
-Migration notes from the v1 → v2 cut. Keep as historical reference, but link to it from this document so the v3 migration story is self-contained.
+Migration notes from the v1 → v2 cut. Kept as historical reference: [docs/v1-v2.md](v1-v2.md).
+
+The v2 → v3 migration guide is at [docs/v2-v3.md](v2-v3.md).
 
 ## Out of scope (intentionally kept)
 
