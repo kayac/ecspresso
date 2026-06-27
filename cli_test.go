@@ -445,6 +445,18 @@ var cliTests = []struct {
 		},
 	},
 	{
+		args: []string{"rollback", "--with-previous-task-definition"},
+		sub:  "rollback",
+		subOption: &ecspresso.RollbackOption{
+			DryRun:                     false,
+			DeregisterTaskDefinition:   true,
+			Wait:                       true,
+			WaitUntil:                  "stable",
+			RollbackEvents:             "",
+			WithPreviousTaskDefinition: true,
+		},
+	},
+	{
 		args: []string{"delete"},
 		sub:  "delete",
 		subOption: &ecspresso.DeleteOption{
@@ -989,6 +1001,30 @@ var cliTests = []struct {
 			},
 		},
 	},
+	{
+		args: []string{"continue"},
+		sub:  "continue",
+		subOption: &ecspresso.ContinueOption{
+			Wait:      true,
+			WaitUntil: "deployed",
+		},
+	},
+	{
+		args: []string{"continue", "--no-wait"},
+		sub:  "continue",
+		subOption: &ecspresso.ContinueOption{
+			Wait:      false,
+			WaitUntil: "deployed",
+		},
+	},
+	{
+		args: []string{"continue", "--wait-until=paused"},
+		sub:  "continue",
+		subOption: &ecspresso.ContinueOption{
+			Wait:      true,
+			WaitUntil: "paused",
+		},
+	},
 }
 
 func TestParseCLI(t *testing.T) {
@@ -1027,6 +1063,16 @@ func TestParseCLIWithInvalidWaitUntilOption(t *testing.T) {
 	_, _, _, err = ecspresso.ParseCLI([]string{"deploy", "--wait-until=codedeploy:"}) // lifecycle event name is empty (i.e., prefix only)
 	if err == nil {
 		t.Errorf("invalid wait-until should return error")
+	}
+}
+
+func TestParseCLIWithPausedWaitUntil(t *testing.T) {
+	sub, _, _, err := ecspresso.ParseCLI([]string{"deploy", "--wait-until=paused"})
+	if err != nil {
+		t.Errorf("paused wait-until should be valid: %s", err)
+	}
+	if sub != "deploy" {
+		t.Errorf("unexpected sub: %s", sub)
 	}
 }
 

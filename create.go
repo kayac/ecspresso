@@ -70,6 +70,7 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 		PlatformVersion:               svd.PlatformVersion,
 		PropagateTags:                 svd.PropagateTags,
 		SchedulingStrategy:            svd.SchedulingStrategy,
+		Monitoring:                    svd.Monitoring,
 		ServiceConnectConfiguration:   svd.ServiceConnectConfiguration,
 		ServiceName:                   svd.ServiceName,
 		ServiceRegistries:             svd.ServiceRegistries,

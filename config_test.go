@@ -1,6 +1,7 @@
 package ecspresso_test
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -545,5 +546,29 @@ func TestLoadConfigWithTFStatePluginOptionalInvalidType(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "optional must be a bool") {
 		t.Errorf("unexpected error message: %s", err)
+	}
+}
+
+func TestLoadServiceDefinitionWithMonitoring(t *testing.T) {
+	src, err := os.ReadFile("tests/sv-monitoring.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sv ecspresso.Service
+	if err := ecspresso.UnmarshalJSONForStruct(src, &sv, "tests/sv-monitoring.json"); err != nil {
+		t.Fatal(err)
+	}
+	if sv.Monitoring == nil {
+		t.Fatal("monitoring is nil")
+	}
+	if len(sv.Monitoring.MetricConfigurations) != 1 {
+		t.Fatalf("unexpected metricConfigurations length: %d", len(sv.Monitoring.MetricConfigurations))
+	}
+	mc := sv.Monitoring.MetricConfigurations[0]
+	if diff := cmp.Diff(mc.MetricNames, []string{"CPUUtilization", "MemoryUtilization"}); diff != "" {
+		t.Errorf("unexpected metricNames (-want +got):\n%s", diff)
+	}
+	if aws.ToInt32(mc.ResolutionSeconds) != 20 {
+		t.Errorf("unexpected resolutionSeconds: %d", aws.ToInt32(mc.ResolutionSeconds))
 	}
 }

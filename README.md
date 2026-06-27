@@ -36,6 +36,8 @@ ecspresso also supports ECS Express mode for simplified deployments and provides
   - [EBS Volume support](#ebs-volume-support)
   - [S3 Files volume support](#s3-files-volume-support)
   - [VPC Lattice support](#vpc-lattice-support)
+  - [High resolution CloudWatch metrics](#high-resolution-cloudwatch-metrics)
+  - [Pause lifecycle hooks](#pause-lifecycle-hooks)
   - [ECS Express mode support](#ecs-express-mode-support)
   - [Diff and Verify](#how-to-check-diff-and-verify-servicetask-definitions-before-deploy)
   - [Manipulate ECS tasks](#manipulate-ecs-tasks)
@@ -676,15 +678,19 @@ Keys are in the same format as `aws ecs describe-services` output.
 
 ## Rollback
 
-`ecspresso rollback` rolls back a service to the previous task definition revision.
+`ecspresso rollback` rolls back a service.
 
 ```console
 $ ecspresso rollback --config ecspresso.yml
 ```
 
-By default, ecspresso finds the previous task definition revision by listing the task definition family in descending order and selecting the revision immediately before the current one.
+By default, `ecspresso rollback` stops an active deployment in progress. If no active deployment is found, it returns an error.
 
-For services using the ECS deployment controller, if there's an active deployment in progress, ecspresso will stop it with rollback. Otherwise, it updates the service with the previous task definition.
+To rollback by deploying the previous task definition revision (legacy behavior), use `--with-previous-task-definition`. This finds the previous revision by listing the task definition family in descending order and deploys it regardless of active deployments.
+
+```console
+$ ecspresso rollback --with-previous-task-definition
+```
 
 For services using the CodeDeploy deployment controller, if there's an active deployment, ecspresso stops it with rollback. Otherwise, it creates a new deployment with the previous task definition.
 
@@ -1005,6 +1011,76 @@ ecspresso supports [VPC Lattice](https://aws.amazon.com/vpc/lattice/) integratio
 ecspresso doesn't create or modify any VPC Lattice resources. You must create and associate a VPC Lattice target group with the ECS service.
 
 See also [Use Amazon VPC Lattice to connect, observe, and secure your Amazon ECS services](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-vpc-lattice.html).
+
+### High resolution CloudWatch metrics
+
+ecspresso supports [high resolution CloudWatch metrics](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cloudwatch-metrics.html) for ECS services.
+
+To configure, define `monitoring` in the service definition. The `metricConfigurations` field specifies which metrics to collect and at what resolution.
+
+```json
+{
+  "monitoring": {
+    "metricConfigurations": [
+      {
+        "metricNames": ["CPUUtilization", "MemoryUtilization"],
+        "resolutionSeconds": 20
+      }
+    ]
+  }
+}
+```
+
+- `metricNames`: The metrics to configure. Supported values are `CPUUtilization` and `MemoryUtilization`.
+- `resolutionSeconds`: The resolution in seconds. Valid values are `20` (high resolution) and `60` (default).
+
+When not specified, Amazon ECS uses the default resolution of 60 seconds. High resolution metrics enable faster auto scaling responses.
+
+### Pause lifecycle hooks
+
+ecspresso supports [pause lifecycle hooks](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-lifecycle-hooks.html) for ECS service deployments.
+
+Pause hooks are available for blue/green, linear, and canary deployment strategies (not rolling).
+
+To configure, define `lifecycleHooks` with `targetType: PAUSE` in `deploymentConfiguration` in the service definition.
+
+```json
+{
+  "deploymentConfiguration": {
+    "strategy": "BLUE_GREEN",
+    "lifecycleHooks": [
+      {
+        "lifecycleStages": ["POST_TEST_TRAFFIC_SHIFT"],
+        "targetType": "PAUSE",
+        "timeoutConfiguration": {
+          "timeoutInMinutes": 60,
+          "action": "ROLLBACK"
+        }
+      }
+    ]
+  }
+}
+```
+
+Use `--wait-until=paused` with `ecspresso deploy` to wait until the deployment pauses at the lifecycle hook.
+
+```console
+$ ecspresso deploy --wait-until=paused
+```
+
+After reviewing the deployment, use `ecspresso continue` to proceed or `ecspresso rollback` to roll back.
+
+```console
+# Continue the deployment to the next stage
+$ ecspresso continue
+
+# Or roll back the deployment
+$ ecspresso rollback
+```
+
+`ecspresso continue` also accepts `--wait-until` to wait after continuing (default: `deployed`). Use `--wait-until=paused` to wait for the next pause hook if multiple hooks are configured.
+
+For linear and canary deployments, pause hooks at `PRE_PRODUCTION_TRAFFIC_SHIFT` are invoked at each traffic shift step. Each step generates a unique `hookId`, so you need to run `ecspresso continue --wait-until=paused` repeatedly for each step.
 
 ### ECS Express mode support
 

@@ -27,6 +27,7 @@ commands:
           name: "Install ecspresso"
           shell: bash
           command: |
+            set -euo pipefail
             VERSION="<< parameters.version >>"
             if [ -n "<< parameters.version-file >>" ]; then
               VERSION="v$(cat << parameters.version-file >>)"
@@ -34,12 +35,12 @@ commands:
             DOWNLOAD_OS="<< parameters.os >>"
             DOWNLOAD_ARCH="<< parameters.arch >>"
             if [ "${VERSION}" = "latest" ]; then
-              DOWNLOAD_URL=$(curl -sS https://api.github.com/repos/kayac/ecspresso/releases | jq --arg arch ${DOWNLOAD_OS}.${DOWNLOAD_ARCH}. -r '[.[]|select(.tag_name > "v2.0")|select(.prerelease==false)][0].assets[].browser_download_url|select(match($arch))')
+              DOWNLOAD_URL=$(curl -sSf --retry 3 https://api.github.com/repos/kayac/ecspresso/releases | jq --arg arch ${DOWNLOAD_OS}.${DOWNLOAD_ARCH}. -r '[.[]|select(.tag_name > "v2.0")|select(.prerelease==false)][0].assets[].browser_download_url|select(match($arch))')
             else
               DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/ecspresso_${VERSION:1}_${DOWNLOAD_OS}_${DOWNLOAD_ARCH}.tar.gz
             fi
             cd /tmp
-            curl -sfLO ${DOWNLOAD_URL}
+            curl -sSfLO --retry 3 ${DOWNLOAD_URL}
             if [[ "${DOWNLOAD_URL}" =~ \.tar\.gz$ ]]; then
               FILENAME=$(basename $DOWNLOAD_URL .tar.gz)
               tar xzvf ${FILENAME}.tar.gz

@@ -25,21 +25,40 @@ type waitUntil string
 const (
 	waitUntilStable           waitUntil = "stable"
 	waitUntilDeployed         waitUntil = "deployed"
+	waitUntilPaused           waitUntil = "paused"
 	waitUntilCodeDeployPrefix           = "codedeploy:"
 )
 
 func (u waitUntil) Validate() error {
-	if u == waitUntilStable || u == waitUntilDeployed {
+	if u.forECSDeployment() {
 		return nil
 	}
-	if strings.HasPrefix(string(u), waitUntilCodeDeployPrefix) && len(u) > len(waitUntilCodeDeployPrefix) {
+	if u.forCodeDeployLifecycle() && len(u) > len(waitUntilCodeDeployPrefix) {
 		return nil
 	}
-	return fmt.Errorf("invalid waitUntil value: %s (expected: stable, deployed, or codedeploy:*)", u)
+	return fmt.Errorf("invalid waitUntil value: %s (expected: stable, deployed, paused, or codedeploy:*)", u)
+}
+
+func (u waitUntil) forECSDeployment() bool {
+	return u == waitUntilStable || u == waitUntilDeployed || u == waitUntilPaused
 }
 
 func (u waitUntil) forCodeDeployLifecycle() bool {
 	return strings.HasPrefix(string(u), waitUntilCodeDeployPrefix)
+}
+
+func (u waitUntil) doneMessage() string {
+	switch {
+	case u == waitUntilPaused:
+		// waitServiceDeployment logs the actual result (paused or completed)
+		return ""
+	case u.forECSDeployment():
+		return "service deployment completed"
+	case u.forCodeDeployLifecycle():
+		return fmt.Sprintf("CodeDeploy lifecycle event %s completed", u.codeDeployLifecycleEvent())
+	default:
+		return "service deployment completed"
+	}
 }
 
 func (u waitUntil) codeDeployLifecycleEvent() string {
@@ -65,10 +84,14 @@ func (confirm confirmFunc) wrap(wait waitFunc) waitFunc {
 	}
 }
 
-func (d *App) WaitFunc(sv *Service, confirm confirmFunc, until waitUntil) (waitFunc, error) {
+func (d *App) WaitFunc(sv *Service, confirm confirmFunc, until waitUntil, deploymentArn ...string) (waitFunc, error) {
 	defaultFunc := confirm.wrap(d.WaitServiceStable)
 	if sv == nil || sv.DeploymentController == nil {
 		return defaultFunc, nil
+	}
+	var knownArn string
+	if len(deploymentArn) > 0 {
+		knownArn = deploymentArn[0]
 	}
 	if dc := sv.DeploymentController; dc != nil {
 		switch dc.Type {
@@ -80,7 +103,13 @@ func (d *App) WaitFunc(sv *Service, confirm confirmFunc, until waitUntil) (waitF
 		case types.DeploymentControllerTypeEcs:
 			switch until {
 			case waitUntilDeployed:
-				return confirm.wrap(d.WaitServiceDeployCompleted), nil
+				return confirm.wrap(func(ctx context.Context, sv *Service) error {
+					return d.waitServiceDeployment(ctx, knownArn, false)
+				}), nil
+			case waitUntilPaused:
+				return func(ctx context.Context, sv *Service) error {
+					return d.waitServiceDeployment(ctx, knownArn, true)
+				}, nil
 			case waitUntilStable, "":
 				return defaultFunc, nil
 			default:
@@ -113,7 +142,7 @@ func (d *App) confirmPrimaryTD(tdArn string) confirmFunc {
 }
 
 type WaitOption struct {
-	WaitUntil string `aliases:"until" help:"Choose whether to wait for service stable or the deployment finishes. (stable|deployed)" default:"stable" enum:"stable,deployed"`
+	WaitUntil string `aliases:"until" help:"Choose whether to wait for service stable, the deployment finishes, or a lifecycle hook pauses. (stable|deployed|paused)" default:"stable" enum:"stable,deployed,paused"`
 }
 
 func (d *App) Wait(ctx context.Context, opt WaitOption) error {
@@ -140,7 +169,9 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 		return err
 	}
 
-	d.LogInfo("service completed", "status", string(until))
+	if msg := until.doneMessage(); msg != "" {
+		d.LogInfo(msg)
+	}
 	return nil
 }
 
@@ -221,17 +252,36 @@ func serviceRevisionsSummaries(dp *types.ServiceDeployment) []string {
 	return lines
 }
 
-func (d *App) WaitServiceDeployCompleted(ctx context.Context, sv *Service) error {
-	d.LogInfo("Waiting for service deployed...(it will take a few minutes)")
-	deploymentArn, err := d.findActiveECSDeploymentArn(ctx, time.Second*10)
-	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			d.LogInfo("No active deployment found")
-			return nil // no active deployment, nothing to wait for
+func (d *App) waitServiceDeployment(ctx context.Context, knownDeploymentArn string, waitForPause bool) error {
+	if waitForPause {
+		d.LogInfo("Waiting for service deployment paused...(it will take a few minutes)")
+	} else {
+		d.LogInfo("Waiting for service deployed...(it will take a few minutes)")
+	}
+	deploymentArn := knownDeploymentArn
+	if deploymentArn == "" {
+		var err error
+		deploymentArn, err = d.findActiveECSDeploymentArn(ctx, time.Second*10, true)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				d.LogInfo("No active deployment found")
+				return nil
+			}
+			return err
 		}
-		return err
 	}
 	d.LogInfo("waiting for service deployment", "deployment", arnToName(deploymentArn))
+
+	if waitForPause {
+		initResp, err := d.ecs.DescribeServiceDeployments(ctx, &ecs.DescribeServiceDeploymentsInput{
+			ServiceDeploymentArns: []string{deploymentArn},
+		})
+		if err == nil && len(initResp.ServiceDeployments) > 0 {
+			if dc := initResp.ServiceDeployments[0].DeploymentConfiguration; dc != nil && dc.Strategy == types.DeploymentStrategyRolling {
+				d.LogWarn("--wait-until=paused is not effective for rolling deployments. Pause lifecycle hooks are only supported with blue/green, linear, and canary strategies. Falling back to waiting for deployment completion.")
+			}
+		}
+	}
 
 	tick := time.NewTicker(refreshInterval)
 	defer tick.Stop()
@@ -270,6 +320,20 @@ func (d *App) WaitServiceDeployCompleted(ctx context.Context, sv *Service) error
 			prevRevisionSummaryOutput = revisionSummaryOutput
 		}
 
+		// check if a pause lifecycle hook is awaiting action
+		if waitForPause {
+			for _, hook := range dp.LifecycleHookDetails {
+				if hook.TargetType == types.DeploymentLifecycleHookTargetTypePause &&
+					hook.Status == types.DeploymentLifecycleHookStatusAwaitingAction {
+					d.LogInfo("deployment paused at lifecycle hook",
+						"hook_id", aws.ToString(hook.HookId),
+						"lifecycle_stage", string(dp.LifecycleStage),
+					)
+					return nil
+				}
+			}
+		}
+
 		// check deployment status
 		status := dp.Status
 		if status != prevStatus {
@@ -286,6 +350,14 @@ func (d *App) WaitServiceDeployCompleted(ctx context.Context, sv *Service) error
 			d.LogDebug("Deployment %s, waiting...", status)
 		}
 	}
+}
+
+func (d *App) WaitServiceDeployCompleted(ctx context.Context, sv *Service) error {
+	return d.waitServiceDeployment(ctx, "", false)
+}
+
+func (d *App) WaitServiceDeployPaused(ctx context.Context, sv *Service) error {
+	return d.waitServiceDeployment(ctx, "", true)
 }
 
 func (d *App) getCodeDeployDeploymentID(ctx context.Context) (string, error) {

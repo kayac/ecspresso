@@ -31,7 +31,7 @@ type DeployOption struct {
 	Revision             int64  `help:"revision of the task definition to run when --skip-task-definition" default:"0"`
 	ForceNewDeployment   bool   `help:"force a new deployment of the service" default:"false"`
 	Wait                 bool   `help:"wait for service stable" default:"true" negatable:""`
-	WaitUntil            string `help:"Choose whether to wait for service stable or the deployment finishes. For ECS deployment controller: \"(stable|deployed)\"; For CodeDeploy deployment controller: \"codedeploy:*\", this accepts CodeDeploy lifecycle event (e.g., \"codedeploy:AfterAllowTraffic\")" default:"deployed"`
+	WaitUntil            string `help:"Choose whether to wait for service stable, the deployment finishes, or a lifecycle hook pauses. For ECS deployment controller: \"(stable|deployed|paused)\"; For CodeDeploy deployment controller: \"codedeploy:*\", this accepts CodeDeploy lifecycle event (e.g., \"codedeploy:AfterAllowTraffic\")" default:"deployed"`
 	SuspendAutoScaling   *bool  `help:"suspend application auto-scaling attached with the ECS service"`
 	ResumeAutoScaling    *bool  `help:"resume application auto-scaling attached with the ECS service"`
 	AutoScalingMin       *int32 `help:"set minimum capacity of application auto-scaling attached with the ECS service"`
@@ -190,7 +190,9 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return err
 	}
 
-	d.LogInfo("service completed", "status", opt.WaitUntil)
+	if msg := waitUntil(opt.WaitUntil).doneMessage(); msg != "" {
+		d.LogInfo(msg)
+	}
 	return nil
 }
 
@@ -229,6 +231,7 @@ func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 		EnableExecuteCommand:          &sv.EnableExecuteCommand,
 		HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
 		LoadBalancers:                 sv.LoadBalancers,
+		Monitoring:                    sv.Monitoring,
 		NetworkConfiguration:          sv.NetworkConfiguration,
 		PlacementConstraints:          sv.PlacementConstraints,
 		PlacementStrategy:             sv.PlacementStrategy,
