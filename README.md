@@ -686,10 +686,10 @@ $ ecspresso rollback --config ecspresso.yml
 
 By default, `ecspresso rollback` stops an active deployment in progress. If no active deployment is found, it returns an error.
 
-To rollback by deploying the previous task definition revision (legacy behavior), use `--previous-task-def`. This finds the previous revision by listing the task definition family in descending order and deploys it regardless of active deployments.
+To rollback by deploying the previous task definition revision (legacy behavior), use `--with-previous-task-definition`. This finds the previous revision by listing the task definition family in descending order and deploys it regardless of active deployments.
 
 ```console
-$ ecspresso rollback --previous-task-def
+$ ecspresso rollback --with-previous-task-definition
 ```
 
 For services using the CodeDeploy deployment controller, if there's an active deployment, ecspresso stops it with rollback. Otherwise, it creates a new deployment with the previous task definition.

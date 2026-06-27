@@ -18,12 +18,12 @@ import (
 )
 
 type RollbackOption struct {
-	DryRun                   bool   `help:"dry run" default:"false"`
-	DeregisterTaskDefinition bool   `help:"deregister the rolled-back task definition. not works with --no-wait" default:"true" negatable:""`
-	Wait                     bool   `help:"wait for the service stable" default:"true" negatable:""`
-	WaitUntil                string `help:"Choose whether to wait for service stable or the deployment finishes. (stable|deployed)" default:"stable" enum:"stable,deployed"`
-	RollbackEvents           string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
-	PreviousTaskDef          bool   `help:"find the previous task definition revision and deploy it, regardless of active deployments" default:"false"`
+	DryRun                     bool   `help:"dry run" default:"false"`
+	DeregisterTaskDefinition   bool   `help:"deregister the rolled-back task definition. not works with --no-wait" default:"true" negatable:""`
+	Wait                       bool   `help:"wait for the service stable" default:"true" negatable:""`
+	WaitUntil                  string `help:"Choose whether to wait for service stable or the deployment finishes. (stable|deployed)" default:"stable" enum:"stable,deployed"`
+	RollbackEvents             string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
+	WithPreviousTaskDefinition bool   `help:"find the previous task definition revision and deploy it, regardless of active deployments" default:"false"`
 }
 
 func (opt RollbackOption) DryRunString() string {
@@ -48,7 +48,7 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	}
 	d.LogInfo("deployment controller", "type", string(sv.DeploymentController.Type))
 
-	if opt.PreviousTaskDef {
+	if opt.WithPreviousTaskDefinition {
 		return d.rollbackByPreviousTaskDef(ctx, sv, opt)
 	}
 
@@ -208,7 +208,7 @@ func (d *App) RollbackECSService(ctx context.Context, sv *Service, targetArn str
 	deploymentArn, err := d.findActiveECSDeploymentArn(ctx, 0, false)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			return nil, fmt.Errorf("no active deployment found. Use --previous-task-def to rollback by deploying the previous task definition revision")
+			return nil, fmt.Errorf("no active deployment found. Use --with-previous-task-definition to rollback by deploying the previous task definition revision")
 		}
 		return nil, err
 	}
