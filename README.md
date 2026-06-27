@@ -678,15 +678,19 @@ Keys are in the same format as `aws ecs describe-services` output.
 
 ## Rollback
 
-`ecspresso rollback` rolls back a service to the previous task definition revision.
+`ecspresso rollback` rolls back a service.
 
 ```console
 $ ecspresso rollback --config ecspresso.yml
 ```
 
-By default, ecspresso finds the previous task definition revision by listing the task definition family in descending order and selecting the revision immediately before the current one.
+By default, `ecspresso rollback` stops an active deployment in progress. If no active deployment is found, it returns an error.
 
-For services using the ECS deployment controller, if there's an active deployment in progress, ecspresso will stop it with rollback. Otherwise, it updates the service with the previous task definition.
+To rollback by deploying the previous task definition revision (legacy behavior), use `--previous-task-def`. This finds the previous revision by listing the task definition family in descending order and deploys it regardless of active deployments.
+
+```console
+$ ecspresso rollback --previous-task-def
+```
 
 For services using the CodeDeploy deployment controller, if there's an active deployment, ecspresso stops it with rollback. Otherwise, it creates a new deployment with the previous task definition.
 

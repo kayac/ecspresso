@@ -23,6 +23,7 @@ type RollbackOption struct {
 	Wait                     bool   `help:"wait for the service stable" default:"true" negatable:""`
 	WaitUntil                string `help:"Choose whether to wait for service stable or the deployment finishes. (stable|deployed)" default:"stable" enum:"stable,deployed"`
 	RollbackEvents           string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
+	PreviousTaskDef          bool   `help:"find the previous task definition revision and deploy it, regardless of active deployments" default:"false"`
 }
 
 func (opt RollbackOption) DryRunString() string {
@@ -45,8 +46,12 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 	if err != nil {
 		return err
 	}
-
 	d.LogInfo("deployment controller", "type", string(sv.DeploymentController.Type))
+
+	if opt.PreviousTaskDef {
+		return d.rollbackByPreviousTaskDef(ctx, sv, opt)
+	}
+
 	doRollback, err := d.RollbackFunc(sv)
 	if err != nil {
 		return err
@@ -90,6 +95,49 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 
 	d.LogInfo(waitUntil(opt.WaitUntil).doneMessage())
 
+	return d.rollbackTaskDefinition(ctx, result.taskDefinitionArn, opt)
+}
+
+func (d *App) rollbackByPreviousTaskDef(ctx context.Context, sv *Service, opt RollbackOption) error {
+	currentArn := aws.ToString(sv.TaskDefinition)
+	targetArn, err := d.FindRollbackTarget(ctx, currentArn)
+	if err != nil {
+		return err
+	}
+
+	result, err := d.RollbackServiceTasks(ctx, sv, targetArn, opt)
+	if err != nil {
+		return err
+	}
+
+	if opt.DryRun {
+		if err := d.rollbackTaskDefinition(ctx, result.taskDefinitionArn, opt); err != nil {
+			return err
+		}
+		d.LogInfo("DRY RUN OK")
+		return nil
+	}
+
+	if !opt.Wait {
+		d.LogInfo("Service is rolled back.")
+		return nil
+	}
+
+	doWait, err := d.WaitFunc(sv, d.confirmPrimaryTD(targetArn), waitUntil(opt.WaitUntil))
+	if err != nil {
+		return err
+	}
+
+	sleepContext(ctx, delayForServiceChanged)
+	if err := doWait(ctx, sv); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			d.LogInfo(err.Error())
+			return d.rollbackTaskDefinition(ctx, result.taskDefinitionArn, opt)
+		}
+		return err
+	}
+
+	d.LogInfo(waitUntil(opt.WaitUntil).doneMessage())
 	return d.rollbackTaskDefinition(ctx, result.taskDefinitionArn, opt)
 }
 
@@ -157,12 +205,10 @@ func (d *App) RollbackExpressService(ctx context.Context, sv *Service, _ string,
 }
 
 func (d *App) RollbackECSService(ctx context.Context, sv *Service, targetArn string, opt RollbackOption) (*rollbackResult, error) {
-	// Check if there's an active deployment in progress
 	deploymentArn, err := d.findActiveECSDeploymentArn(ctx, 0, false)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			d.LogInfo("no active deployment, rolling back service tasks", withDryRun(opt.DryRun, "target", arnToName(targetArn))...)
-			return d.RollbackServiceTasks(ctx, sv, targetArn, opt)
+			return nil, fmt.Errorf("no active deployment found. Use --previous-task-def to rollback by deploying the previous task definition revision")
 		}
 		return nil, err
 	}

@@ -445,6 +445,18 @@ var cliTests = []struct {
 		},
 	},
 	{
+		args: []string{"rollback", "--previous-task-def"},
+		sub:  "rollback",
+		subOption: &ecspresso.RollbackOption{
+			DryRun:                   false,
+			DeregisterTaskDefinition: true,
+			Wait:                     true,
+			WaitUntil:                "stable",
+			RollbackEvents:           "",
+			PreviousTaskDef:          true,
+		},
+	},
+	{
 		args: []string{"delete"},
 		sub:  "delete",
 		subOption: &ecspresso.DeleteOption{
