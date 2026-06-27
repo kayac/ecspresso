@@ -417,7 +417,7 @@ func (s *DescribeServiceStatusOutput) String() string {
 	if len(s.Deployments) > 0 {
 		fmt.Fprintln(buf, "Deployments:")
 		for _, dep := range s.Deployments {
-			fmt.Fprint(buf, spcIndent+formatDeployment(dep))
+			fmt.Fprintln(buf, spcIndent+formatDeployment(dep))
 		}
 	}
 	if len(s.TaskSets) > 0 {

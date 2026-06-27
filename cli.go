@@ -22,6 +22,7 @@ type CLIOptions struct {
 	LogFormat      string            `help:"log format" env:"ECSPRESSO_LOG_FORMAT" default:"text" enum:"text,json"`
 
 	Appspec    *AppSpecOption      `cmd:"" help:"output AppSpec YAML for CodeDeploy to STDOUT"`
+	Continue   *ContinueOption     `cmd:"" help:"continue a paused service deployment"`
 	Delete     *DeleteOption       `cmd:"" help:"delete service"`
 	Deploy     *DeployOption       `cmd:"" help:"deploy service"`
 	Deregister *DeregisterOption   `cmd:"" help:"deregister task definition"`
@@ -66,6 +67,8 @@ func (opts *CLIOptions) forSubCommand(sub string) any {
 	switch sub {
 	case "appspec":
 		return opts.Appspec
+	case "continue":
+		return opts.Continue
 	case "delete":
 		return opts.Delete
 	case "deploy":
@@ -147,6 +150,8 @@ func dispatchApp(ctx context.Context, sub string, usage func(), opts *CLIOptions
 	}
 	app.LogDebug("dispatching subcommand: %s", sub)
 	switch sub {
+	case "continue":
+		return app.Continue(ctx, *opts.Continue)
 	case "deploy":
 		return app.Deploy(ctx, *opts.Deploy)
 	case "refresh":

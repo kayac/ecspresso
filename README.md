@@ -37,6 +37,7 @@ ecspresso also supports ECS Express mode for simplified deployments and provides
   - [S3 Files volume support](#s3-files-volume-support)
   - [VPC Lattice support](#vpc-lattice-support)
   - [High resolution CloudWatch metrics](#high-resolution-cloudwatch-metrics)
+  - [Pause lifecycle hooks](#pause-lifecycle-hooks)
   - [ECS Express mode support](#ecs-express-mode-support)
   - [Diff and Verify](#how-to-check-diff-and-verify-servicetask-definitions-before-deploy)
   - [Manipulate ECS tasks](#manipulate-ecs-tasks)
@@ -1030,6 +1031,52 @@ To configure, define `monitoring` in the service definition. The `metricConfigur
 - `resolutionSeconds`: The resolution in seconds. Valid values are `20` (high resolution) and `60` (default).
 
 When not specified, Amazon ECS uses the default resolution of 60 seconds. High resolution metrics enable faster auto scaling responses.
+
+### Pause lifecycle hooks
+
+ecspresso supports [pause lifecycle hooks](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-lifecycle-hooks.html) for ECS service deployments.
+
+Pause hooks are available for blue/green, linear, and canary deployment strategies (not rolling).
+
+To configure, define `lifecycleHooks` with `targetType: PAUSE` in `deploymentConfiguration` in the service definition.
+
+```json
+{
+  "deploymentConfiguration": {
+    "strategy": "BLUE_GREEN",
+    "lifecycleHooks": [
+      {
+        "lifecycleStages": ["POST_TEST_TRAFFIC_SHIFT"],
+        "targetType": "PAUSE",
+        "timeoutConfiguration": {
+          "timeoutInMinutes": 60,
+          "action": "ROLLBACK"
+        }
+      }
+    ]
+  }
+}
+```
+
+Use `--wait-until=paused` with `ecspresso deploy` to wait until the deployment pauses at the lifecycle hook.
+
+```console
+$ ecspresso deploy --wait-until=paused
+```
+
+After reviewing the deployment, use `ecspresso continue` to proceed or `ecspresso rollback` to roll back.
+
+```console
+# Continue the deployment to the next stage
+$ ecspresso continue
+
+# Or roll back the deployment
+$ ecspresso rollback
+```
+
+`ecspresso continue` also accepts `--wait-until` to wait after continuing (default: `deployed`). Use `--wait-until=paused` to wait for the next pause hook if multiple hooks are configured.
+
+For linear and canary deployments, pause hooks at `PRE_PRODUCTION_TRAFFIC_SHIFT` are invoked at each traffic shift step. Each step generates a unique `hookId`, so you need to run `ecspresso continue --wait-until=paused` repeatedly for each step.
 
 ### ECS Express mode support
 

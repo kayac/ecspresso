@@ -716,7 +716,7 @@ func TestDiffTaskDefs(t *testing.T) {
 func TestDiffServicesMonitoring(t *testing.T) {
 	ctx := t.Context()
 	b := new(bytes.Buffer)
-	opt := &ecspresso.DiffOption{Unified: true}
+	opt := &ecspresso.DiffOption{}
 	opt.SetWriter(b)
 	color.NoColor = true
 
