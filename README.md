@@ -1827,6 +1827,9 @@ The `config` section defines the following parameters:
 - `num_args`: number of arguments (optional, default 0)
 - `parser`: parser type "json" or "string" (optional, default "json")
 - `timeout`: command execution timeout (optional, default never timeout). Accepts a duration string (`"30s"`, `"5m"`, `"1h"`) or a bare number / digit string interpreted as seconds (`30` → 30 seconds).
+- `mode`: execution mode "exec" or "jsonrpc" (optional, default "exec")
+  - `exec`: the command is launched once per template function call (default)
+  - `jsonrpc`: the command is launched once on the first call and kept running; subsequent calls communicate over stdin/stdout using [JSON RPC 2.0](https://www.jsonrpc.org/specification). Useful for commands with high startup cost.
 
 And use the template function in the definition files as follows.
 
@@ -1841,6 +1844,46 @@ local jq = std.native('jq');
 {
   "today": "{{ (jq `{Now: now | todateiso8601}`).Now }}"
 }
+```
+
+#### JSON RPC mode
+
+When `mode: jsonrpc` is set, ecspresso launches the command once and keeps it running. Each template function call sends a [JSON RPC 2.0](https://www.jsonrpc.org/specification) request to the process's stdin and reads the response from stdout.
+
+The external process must read newline-delimited JSON requests from stdin and write newline-delimited JSON responses to stdout.
+
+Request format:
+```json
+{"jsonrpc":"2.0","method":"<name>","params":["arg0","arg1"],"id":1}
+```
+
+Response format (success):
+```json
+{"jsonrpc":"2.0","result":<any JSON value>,"id":1}
+```
+
+Response format (error):
+```json
+{"jsonrpc":"2.0","error":{"code":-32600,"message":"error message"},"id":1}
+```
+
+- `method` is the `name` field from the plugin config.
+- `params` is an array of string arguments passed to the template function.
+- The `id` field correlates a request with its response. A response whose `id` does not match the request is treated as an error.
+- `timeout` applies per call. A call that times out fails immediately, the same as `exec` mode. The process is killed so a stalled command does not linger.
+- The process is also terminated when ecspresso exits (its stdin is closed, then SIGTERM/SIGKILL).
+
+Example configuration using a long-running Python server:
+
+```yaml
+plugins:
+  - name: external
+    config:
+      name: lookup
+      command: ["python3", "lookup_server.py"]
+      num_args: 1
+      mode: jsonrpc
+      timeout: 10
 ```
 
 ## LICENSE
