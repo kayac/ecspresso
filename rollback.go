@@ -93,7 +93,9 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 		return err
 	}
 
-	d.LogInfo(waitUntil(opt.WaitUntil).doneMessage())
+	if msg := waitUntil(opt.WaitUntil).doneMessage(); msg != "" {
+		d.LogInfo(msg)
+	}
 
 	return d.rollbackTaskDefinition(ctx, result.taskDefinitionArn, opt)
 }
@@ -137,7 +139,9 @@ func (d *App) rollbackByPreviousTaskDef(ctx context.Context, sv *Service, opt Ro
 		return err
 	}
 
-	d.LogInfo(waitUntil(opt.WaitUntil).doneMessage())
+	if msg := waitUntil(opt.WaitUntil).doneMessage(); msg != "" {
+		d.LogInfo(msg)
+	}
 	return d.rollbackTaskDefinition(ctx, result.taskDefinitionArn, opt)
 }
 

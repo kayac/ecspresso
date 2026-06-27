@@ -190,7 +190,9 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		return err
 	}
 
-	d.LogInfo(waitUntil(opt.WaitUntil).doneMessage())
+	if msg := waitUntil(opt.WaitUntil).doneMessage(); msg != "" {
+		d.LogInfo(msg)
+	}
 	return nil
 }
 

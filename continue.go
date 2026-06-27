@@ -65,6 +65,8 @@ func (d *App) Continue(ctx context.Context, opt ContinueOption) error {
 	if err := doWait(ctx, sv); err != nil {
 		return err
 	}
-	d.LogInfo(waitUntil(opt.WaitUntil).doneMessage())
+	if msg := waitUntil(opt.WaitUntil).doneMessage(); msg != "" {
+		d.LogInfo(msg)
+	}
 	return nil
 }

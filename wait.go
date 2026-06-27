@@ -49,10 +49,10 @@ func (u waitUntil) forCodeDeployLifecycle() bool {
 
 func (u waitUntil) doneMessage() string {
 	switch {
+	case u == waitUntilPaused:
+		// waitServiceDeployment logs the actual result (paused or completed)
+		return ""
 	case u.forECSDeployment():
-		if u == waitUntilPaused {
-			return "service deployment paused"
-		}
 		return "service deployment completed"
 	case u.forCodeDeployLifecycle():
 		return fmt.Sprintf("CodeDeploy lifecycle event %s completed", u.codeDeployLifecycleEvent())
@@ -169,7 +169,9 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 		return err
 	}
 
-	d.LogInfo(until.doneMessage())
+	if msg := until.doneMessage(); msg != "" {
+		d.LogInfo(msg)
+	}
 	return nil
 }
 

@@ -145,7 +145,7 @@ func (d *App) newServiceFromTypes(ctx context.Context, in types.Service) (*Servi
 				ServiceRevisionArns: []string{revArn},
 			})
 			if err != nil {
-				d.LogWarn("failed to describe service revision, skipping monitoring configuration: %s", err)
+				d.LogWarn("failed to describe service revision, skipping monitoring configuration", "error", err)
 			} else if len(revOut.ServiceRevisions) > 0 && revOut.ServiceRevisions[0].Monitoring != nil {
 				d.LogDebug("Monitoring: %#v", revOut.ServiceRevisions[0].Monitoring)
 				sv.Monitoring = revOut.ServiceRevisions[0].Monitoring
