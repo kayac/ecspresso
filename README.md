@@ -53,6 +53,7 @@ ecspresso also supports ECS Express mode for simplified deployments and provides
 
 ## Documents
 
+- [Differences between v2 and v3](docs/v2-v3.md).
 - [Differences between v1 and v2](docs/v1-v2.md).
 - [ecspresso Advent Calendar 2020](https://adventar.org/calendars/5916) (Japanese)
 - [ecspresso handbook](https://zenn.dev/fujiwara/books/ecspresso-handbook-v2) (Japanese)
