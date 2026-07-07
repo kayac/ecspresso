@@ -196,6 +196,16 @@ var imageURLTestCases = []struct {
 		expectedImageName:   "example.com:443/repo/image",
 		expectedTagOrDigest: "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
 	},
+	{
+		imageURL:            "public.ecr.aws/nginx/nginx:1.27@sha256:df80ece7fa07f8ed4f3b70e883fe322732954d0287e562f1fdc790018f7d2c66",
+		expectedImageName:   "public.ecr.aws/nginx/nginx",
+		expectedTagOrDigest: "sha256:df80ece7fa07f8ed4f3b70e883fe322732954d0287e562f1fdc790018f7d2c66",
+	},
+	{
+		imageURL:            "example.com:443/repo/image:tag@sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+		expectedImageName:   "example.com:443/repo/image",
+		expectedTagOrDigest: "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+	},
 }
 
 func TestParseImageURL(t *testing.T) {

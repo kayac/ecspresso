@@ -1098,8 +1098,13 @@ func parseIAMPolicyDocument(s string) (*iamPolicyDocument, error) {
 
 func parseImageURL(image string) (imageName string, tagOrDigest string) {
 	if strings.Contains(image, "@sha256:") {
-		p := strings.SplitN(image, "@", 2)
-		return p[0], p[1]
+		name, digest, _ := strings.Cut(image, "@")
+		// Strip a tag from "repo:tag@sha256:..." because the digest identifies
+		// the image; the registry must be queried with the bare repository name.
+		if idx := strings.LastIndex(name, ":"); idx != -1 && !strings.Contains(name[idx+1:], "/") {
+			name = name[:idx]
+		}
+		return name, digest
 	} else if idx := strings.LastIndex(image, ":"); idx != -1 && !strings.Contains(image[idx+1:], "/") {
 		// The last colon is a tag separator only if there is no slash after it.
 		// If there is a slash (e.g. "host:443/repo"), the colon indicates a port.
