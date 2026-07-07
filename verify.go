@@ -557,14 +557,25 @@ func (d *App) verifyDeploymentConfiguration(ctx context.Context, dc *types.Deplo
 	for i, hook := range dc.LifecycleHooks {
 		name := fmt.Sprintf("LifecycleHooks[%d]", i)
 		_, err := vs.VerifyResource(ctx, name, func(context.Context) error {
-			roleArn := *hook.RoleArn
-			_, err := vs.VerifyResource(ctx, fmt.Sprintf("RoleArn[%s]", roleArn), func(ctx context.Context) error {
-				return d.verifyRole(ctx, roleArn, "ecs.amazonaws.com")
-			})
-			if err != nil {
-				return err
+			if hook.TargetType == types.DeploymentLifecycleHookTargetTypePause {
+				// PAUSE hooks have no role and no hook target.
+				return nil
 			}
-			_, err = vs.VerifyResource(ctx, fmt.Sprintf("HookTargetArn[%s]", aws.ToString(hook.HookTargetArn)), func(ctx context.Context) error {
+			// AWS_LAMBDA hooks (the default when targetType is not specified)
+			roleArn := aws.ToString(hook.RoleArn)
+			if roleArn != "" {
+				_, err := vs.VerifyResource(ctx, fmt.Sprintf("RoleArn[%s]", roleArn), func(ctx context.Context) error {
+					return d.verifyRole(ctx, roleArn, "ecs.amazonaws.com")
+				})
+				if err != nil {
+					return err
+				}
+			}
+			hookTargetArn := aws.ToString(hook.HookTargetArn)
+			if hookTargetArn == "" {
+				return fmt.Errorf("hookTargetArn is required for %s lifecycle hooks", types.DeploymentLifecycleHookTargetTypeAwsLambda)
+			}
+			_, err := vs.VerifyResource(ctx, fmt.Sprintf("HookTargetArn[%s]", hookTargetArn), func(ctx context.Context) error {
 				_, err := d.lambda.GetFunction(ctx, &lambda.GetFunctionInput{
 					FunctionName: hook.HookTargetArn,
 				})

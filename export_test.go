@@ -83,3 +83,11 @@ func SleepContext(ctx context.Context, d time.Duration) {
 func (opts *CLIOptions) ForSubCommand(sub string) any {
 	return opts.forSubCommand(sub)
 }
+
+func (d *App) VerifyDeploymentConfiguration(ctx context.Context, dc *types.DeploymentConfiguration) error {
+	return d.verifyDeploymentConfiguration(ctx, dc)
+}
+
+func ContextWithVerifyState(ctx context.Context, vs *verifyState) context.Context {
+	return context.WithValue(ctx, verifyStateKey, vs)
+}

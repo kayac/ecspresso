@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -597,4 +598,50 @@ func TestParseIAMPolicyDocument(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestVerifyDeploymentConfigurationLifecycleHooks(t *testing.T) {
+	color.NoColor = true
+	app := &ecspresso.App{}
+
+	t.Run("nil deployment configuration", func(t *testing.T) {
+		ctx := ecspresso.ContextWithVerifyState(t.Context(), ecspresso.NewVerifyState(false))
+		if err := app.VerifyDeploymentConfiguration(ctx, nil); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
+	})
+
+	t.Run("pause hook without roleArn and hookTargetArn", func(t *testing.T) {
+		ctx := ecspresso.ContextWithVerifyState(t.Context(), ecspresso.NewVerifyState(false))
+		dc := &types.DeploymentConfiguration{
+			LifecycleHooks: []types.DeploymentLifecycleHook{
+				{
+					TargetType:      types.DeploymentLifecycleHookTargetTypePause,
+					LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostScaleUp},
+				},
+			},
+		}
+		if err := app.VerifyDeploymentConfiguration(ctx, dc); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
+	})
+
+	t.Run("lambda hook without hookTargetArn", func(t *testing.T) {
+		ctx := ecspresso.ContextWithVerifyState(t.Context(), ecspresso.NewVerifyState(false))
+		dc := &types.DeploymentConfiguration{
+			LifecycleHooks: []types.DeploymentLifecycleHook{
+				{
+					// targetType is not specified, so it defaults to AWS_LAMBDA
+					LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostScaleUp},
+				},
+			},
+		}
+		err := app.VerifyDeploymentConfiguration(ctx, dc)
+		if err == nil {
+			t.Fatal("error must be returned for a lambda hook without hookTargetArn")
+		}
+		if !strings.Contains(err.Error(), "hookTargetArn is required") {
+			t.Errorf("unexpected error: %s", err)
+		}
+	})
 }
