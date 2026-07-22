@@ -30,9 +30,27 @@ ecspresso docs --search "fargate" --json
 
 # Read the full documentation
 ecspresso docs --json
+
+# List available articles (README and migration guides)
+ecspresso docs --list --json
+
+# Read a specific article
+ecspresso docs --article v2-v3 --json
 ```
 
 Always use `--json` for structured output that is easier to parse.
+
+### Version upgrades
+
+When upgrading ecspresso across major versions (v1 to v2, or v2 to v3), always read the embedded migration guide first to learn about breaking changes:
+
+```bash
+# Migration guide from v1 to v2
+ecspresso docs --article v1-v2 --json
+
+# Migration guide from v2 to v3
+ecspresso docs --article v2-v3 --json
+```
 
 ## Common workflows
 
@@ -185,3 +203,4 @@ Use `ecspresso init --jsonnet` to generate Jsonnet files from an existing servic
 - Use `--dry-run` on destructive operations (`deploy`, `rollback`, `delete`, `scale`) to preview the action.
 - The `verify` command checks IAM roles, container images, secrets, and log groups referenced in definitions.
 - When you need to learn more about a specific feature, use `ecspresso docs --search "<keyword>" --json` to find the relevant documentation section.
+- When upgrading ecspresso to a new major version, read the migration guide via `ecspresso docs --article <version>-<next-version> --json` (e.g. `v2-v3`) before changing any configuration.

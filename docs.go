@@ -11,7 +11,7 @@ import (
 
 // DocsOption defines CLI options for the docs subcommand.
 type DocsOption struct {
-	Article string `help:"article name to display" default:"readme" enum:"readme"`
+	Article string `help:"article name to display" default:"readme" enum:"readme,v1-v2,v2-v3"`
 	List    bool   `help:"list available articles" default:"false"`
 	Index   bool   `help:"show table of contents" default:"false"`
 	Search  string `help:"search keyword in documents" default:""`
@@ -39,6 +39,8 @@ type docsArticle struct {
 
 var articles = []docsArticle{
 	{Name: "readme", Description: "ecspresso README"},
+	{Name: "v1-v2", Description: "Migration guide from v1 to v2"},
+	{Name: "v2-v3", Description: "Migration guide from v2 to v3"},
 }
 
 func dispatchDocs(ctx context.Context, opt *DocsOption) error {
@@ -72,6 +74,10 @@ func getArticle(name string) (string, error) {
 	switch name {
 	case "readme":
 		return readmeContent, nil
+	case "v1-v2":
+		return docsV1V2Content, nil
+	case "v2-v3":
+		return docsV2V3Content, nil
 	default:
 		return "", fmt.Errorf("unknown article: %s", name)
 	}

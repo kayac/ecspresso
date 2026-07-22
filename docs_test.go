@@ -105,6 +105,35 @@ func TestParseSectionsReadme(t *testing.T) {
 	}
 }
 
+func TestGetArticleMigrationGuides(t *testing.T) {
+	tests := []struct {
+		article string
+		heading string
+	}{
+		{"v1-v2", "# Differences of ecspresso v1 and v2."},
+		{"v2-v3", "# Differences of ecspresso v2 and v3."},
+	}
+	for _, tt := range tests {
+		content, err := ecspresso.GetArticle(tt.article)
+		if err != nil {
+			t.Fatalf("article %q: %v", tt.article, err)
+		}
+		if !strings.HasPrefix(content, tt.heading) {
+			t.Errorf("article %q should start with %q", tt.article, tt.heading)
+		}
+		sections := ecspresso.ParseSections(content)
+		if len(sections) == 0 {
+			t.Errorf("article %q: expected non-zero sections", tt.article)
+		}
+	}
+}
+
+func TestGetArticleUnknown(t *testing.T) {
+	if _, err := ecspresso.GetArticle("unknown"); err == nil {
+		t.Error("expected an error for unknown article")
+	}
+}
+
 func TestDocsSearch(t *testing.T) {
 	content := ecspresso.ReadmeContent
 	sections := ecspresso.ParseSections(content)
