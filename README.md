@@ -1427,7 +1427,7 @@ Flags:
 
 ### Show documentation
 
-The `docs` command shows the embedded documentation (this README) directly from the ecspresso binary. This command does not require AWS credentials or a configuration file.
+The `docs` command shows the embedded documentation (this README and migration guides) directly from the ecspresso binary. This command does not require AWS credentials or a configuration file.
 
 ```
 Flags:
@@ -1469,6 +1469,14 @@ List available articles:
 ```console
 $ ecspresso docs --list
 readme	ecspresso README
+v1-v2	Migration guide from v1 to v2
+v2-v3	Migration guide from v2 to v3
+```
+
+Show a migration guide:
+
+```console
+$ ecspresso docs --article v2-v3
 ```
 
 ### LLM agent integration
