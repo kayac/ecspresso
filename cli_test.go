@@ -231,6 +231,24 @@ var cliTests = []struct {
 		},
 	},
 	{
+		args: []string{"deploy", "--wait-until=ecs:BAKE_TIME"},
+		sub:  "deploy",
+		subOption: &ecspresso.DeployOption{
+			SuspendAutoScaling:   nil,
+			ResumeAutoScaling:    nil,
+			DryRun:               false,
+			DesiredCount:         ptr(int32(-1)),
+			SkipTaskDefinition:   false,
+			Revision:             0,
+			ForceNewDeployment:   false,
+			Wait:                 true,
+			WaitUntil:            "ecs:BAKE_TIME",
+			RollbackEvents:       "",
+			UpdateService:        true,
+			LatestTaskDefinition: false,
+		},
+	},
+	{
 		args: []string{"scale", "--tasks=5"},
 		sub:  "scale",
 		subOption: &ecspresso.ScaleOption{
@@ -1061,6 +1079,18 @@ func TestParseCLIWithInvalidWaitUntilOption(t *testing.T) {
 		t.Errorf("invalid wait-until should return error")
 	}
 	_, _, _, err = ecspresso.ParseCLI([]string{"deploy", "--wait-until=codedeploy:"}) // lifecycle event name is empty (i.e., prefix only)
+	if err == nil {
+		t.Errorf("invalid wait-until should return error")
+	}
+	_, _, _, err = ecspresso.ParseCLI([]string{"deploy", "--wait-until=ecs:"}) // lifecycle stage is empty (i.e., prefix only)
+	if err == nil {
+		t.Errorf("invalid wait-until should return error")
+	}
+	_, _, _, err = ecspresso.ParseCLI([]string{"deploy", "--wait-until=ecs:NO_SUCH_STAGE"})
+	if err == nil {
+		t.Errorf("invalid wait-until should return error")
+	}
+	_, _, _, err = ecspresso.ParseCLI([]string{"deploy", "--wait-until=ecs:bake_time"}) // lifecycle stage is case sensitive
 	if err == nil {
 		t.Errorf("invalid wait-until should return error")
 	}

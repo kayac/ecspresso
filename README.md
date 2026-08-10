@@ -485,8 +485,10 @@ Events:
   --revision=0                           revision of the task definition to run when --skip-task-definition
   --force-new-deployment                 force a new deployment of the service
   --[no-]wait                            wait for service stable
-  --wait-until="deployed"                Choose whether to wait for service stable or the deployment finishes. For
-                                         ECS deployment controller: "(stable|deployed)"; For CodeDeploy deployment
+  --wait-until="deployed"                Choose whether to wait for service stable, the deployment finishes, or a
+                                         lifecycle hook pauses. For ECS deployment controller:
+                                         "(stable|deployed|paused)", or "ecs:*", this accepts a deployment
+                                         lifecycle stage (e.g., "ecs:BAKE_TIME"); For CodeDeploy deployment
                                          controller: "codedeploy:*", this accepts CodeDeploy lifecycle event (e.g.,
                                          "codedeploy:AfterAllowTraffic")
   --suspend-auto-scaling                 suspend application auto-scaling attached with the ECS service
@@ -1082,6 +1084,14 @@ $ ecspresso rollback
 `ecspresso continue` also accepts `--wait-until` to wait after continuing (default: `deployed`). Use `--wait-until=paused` to wait for the next pause hook if multiple hooks are configured.
 
 For linear and canary deployments, pause hooks at `PRE_PRODUCTION_TRAFFIC_SHIFT` are invoked at each traffic shift step. Each step generates a unique `hookId`, so you need to run `ecspresso continue --wait-until=paused` repeatedly for each step.
+
+Use `--wait-until=ecs:<lifecycle stage>` (e.g., `ecs:BAKE_TIME`) with `ecspresso deploy` to return when the deployment reaches the specified [lifecycle stage](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/blue-green-deployment-how-it-works.html#blue-green-deployment-stages), instead of waiting for the whole deployment to finish. This is useful to finish a CI job without waiting for a long bake time.
+
+```console
+$ ecspresso deploy --wait-until=ecs:BAKE_TIME
+```
+
+This option requires a traffic shifting deployment strategy (blue/green, linear, or canary). If the deployment is rolled back before reaching the target stage, `ecspresso deploy` exits with a non-zero status.
 
 ### ECS Express mode support
 
