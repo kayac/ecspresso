@@ -6,8 +6,39 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/google/go-cmp/cmp"
 	"github.com/kayac/ecspresso/v2"
 )
+
+func TestPausedHookIDs(t *testing.T) {
+	dp := &types.ServiceDeployment{
+		LifecycleHookDetails: []types.DeploymentLifecycleHookDetail{
+			{
+				HookId:     aws.String("hook-awaiting"),
+				TargetType: types.DeploymentLifecycleHookTargetTypePause,
+				Status:     types.DeploymentLifecycleHookStatusAwaitingAction,
+			},
+			{
+				HookId:     aws.String("hook-in-progress"),
+				TargetType: types.DeploymentLifecycleHookTargetTypePause,
+				Status:     types.DeploymentLifecycleHookStatusInProgress,
+			},
+			{
+				HookId:     aws.String("hook-lambda"),
+				TargetType: types.DeploymentLifecycleHookTargetTypeAwsLambda,
+				Status:     types.DeploymentLifecycleHookStatusAwaitingAction,
+			},
+		},
+	}
+	want := []string{"hook-awaiting"}
+	if diff := cmp.Diff(want, ecspresso.PausedHookIDs(dp)); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
+
+	if got := ecspresso.PausedHookIDs(&types.ServiceDeployment{}); got != nil {
+		t.Errorf("expected nil for no hooks, got %v", got)
+	}
+}
 
 func TestLifecycleStageIndex(t *testing.T) {
 	// The waiter compares positions instead of equality, so pin the full

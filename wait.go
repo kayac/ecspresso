@@ -460,17 +460,27 @@ func evaluateDeploymentStatus(dp *types.ServiceDeployment, done func(*types.Serv
 // deploymentPaused reports whether a pause lifecycle hook of the deployment is
 // awaiting action.
 func (d *App) deploymentPaused(dp *types.ServiceDeployment) bool {
+	ids := pausedHookIDs(dp)
+	for _, id := range ids {
+		d.LogInfo("deployment paused at lifecycle hook",
+			"hook_id", id,
+			"lifecycle_stage", string(dp.LifecycleStage),
+		)
+	}
+	return len(ids) > 0
+}
+
+// pausedHookIDs returns the IDs of pause lifecycle hooks of the deployment
+// that are awaiting action.
+func pausedHookIDs(dp *types.ServiceDeployment) []string {
+	var ids []string
 	for _, hook := range dp.LifecycleHookDetails {
 		if hook.TargetType == types.DeploymentLifecycleHookTargetTypePause &&
 			hook.Status == types.DeploymentLifecycleHookStatusAwaitingAction {
-			d.LogInfo("deployment paused at lifecycle hook",
-				"hook_id", aws.ToString(hook.HookId),
-				"lifecycle_stage", string(dp.LifecycleStage),
-			)
-			return true
+			ids = append(ids, aws.ToString(hook.HookId))
 		}
 	}
-	return false
+	return ids
 }
 
 // WaitServiceDeployLifecycleStage returns a waitFunc that waits until the
@@ -492,12 +502,26 @@ func (d *App) WaitServiceDeployLifecycleStage(stage types.ServiceDeploymentLifec
 			d.LogWarn("deployment strategy is not set; a ROLLING deployment reports no lifecycle stage, so this waits until the deployment completes")
 		}
 		d.LogInfo("Waiting for service deployment lifecycle stage...", "stage", string(stage))
+		notified := map[string]struct{}{}
 		// Stages such as PRODUCTION_TRAFFIC_SHIFT are transient and can be
 		// skipped between polls, so compare positions rather than equality.
 		return d.waitServiceDeployment(ctx, knownDeploymentArn, func(dp *types.ServiceDeployment) bool {
 			if lifecycleStageIndex(dp.LifecycleStage) >= target {
 				d.LogInfo("service deployment reached the lifecycle stage", "stage", string(dp.LifecycleStage))
 				return true
+			}
+			// A pause lifecycle hook awaiting action blocks the deployment, so
+			// the target stage never arrives until the deployment is continued.
+			for _, id := range pausedHookIDs(dp) {
+				if _, ok := notified[id]; ok {
+					continue
+				}
+				notified[id] = struct{}{}
+				d.LogWarn("deployment is paused at a lifecycle hook; the target lifecycle stage will not be reached until the deployment is continued (run `ecspresso continue`)",
+					"hook_id", id,
+					"lifecycle_stage", string(dp.LifecycleStage),
+					"target_stage", string(stage),
+				)
 			}
 			return false
 		})
