@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -27,6 +28,7 @@ const (
 	waitUntilDeployed         waitUntil = "deployed"
 	waitUntilPaused           waitUntil = "paused"
 	waitUntilCodeDeployPrefix           = "codedeploy:"
+	waitUntilECSPrefix                  = "ecs:"
 )
 
 func (u waitUntil) Validate() error {
@@ -36,7 +38,14 @@ func (u waitUntil) Validate() error {
 	if u.forCodeDeployLifecycle() && len(u) > len(waitUntilCodeDeployPrefix) {
 		return nil
 	}
-	return fmt.Errorf("invalid waitUntil value: %s (expected: stable, deployed, paused, or codedeploy:*)", u)
+	if u.forECSLifecycleStage() {
+		stage := types.ServiceDeploymentLifecycleStage(u.ecsLifecycleStage())
+		if lifecycleStageIndex(stage) < 0 {
+			return fmt.Errorf("invalid waitUntil value: %s (expected one of %s)", u, strings.Join(lifecycleStageNames(), ", "))
+		}
+		return nil
+	}
+	return fmt.Errorf("invalid waitUntil value: %s (expected: stable, deployed, paused, codedeploy:*, or ecs:*)", u)
 }
 
 func (u waitUntil) forECSDeployment() bool {
@@ -49,8 +58,8 @@ func (u waitUntil) forCodeDeployLifecycle() bool {
 
 func (u waitUntil) doneMessage() string {
 	switch {
-	case u == waitUntilPaused:
-		// waitServiceDeployment logs the actual result (paused or completed)
+	case u == waitUntilPaused, u.forECSLifecycleStage():
+		// waitServiceDeployment logs the actual result
 		return ""
 	case u.forECSDeployment():
 		return "service deployment completed"
@@ -66,6 +75,53 @@ func (u waitUntil) codeDeployLifecycleEvent() string {
 		return strings.TrimPrefix(string(u), waitUntilCodeDeployPrefix)
 	}
 	return ""
+}
+
+func (u waitUntil) forECSLifecycleStage() bool {
+	return strings.HasPrefix(string(u), waitUntilECSPrefix)
+}
+
+func (u waitUntil) ecsLifecycleStage() string {
+	if u.forECSLifecycleStage() {
+		return strings.TrimPrefix(string(u), waitUntilECSPrefix)
+	}
+	return ""
+}
+
+// lifecycleStages are the deployment lifecycle stages in the order they occur
+// during a deployment, as documented in "Deployment lifecycle stages" at
+// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/blue-green-deployment-how-it-works.html#blue-green-deployment-stages
+// The waiter compares stage positions, so this must not be derived from
+// types.ServiceDeploymentLifecycleStage.Values(), whose ordering is documented
+// as not guaranteed to be stable across SDK updates. When the SDK introduces a
+// new stage (TestLifecycleStageIndex fails), insert it here at the position
+// the document above describes.
+var lifecycleStages = []types.ServiceDeploymentLifecycleStage{
+	types.ServiceDeploymentLifecycleStageReconcileService,
+	types.ServiceDeploymentLifecycleStagePreScaleUp,
+	types.ServiceDeploymentLifecycleStageScaleUp,
+	types.ServiceDeploymentLifecycleStagePostScaleUp,
+	types.ServiceDeploymentLifecycleStageTestTrafficShift,
+	types.ServiceDeploymentLifecycleStagePostTestTrafficShift,
+	types.ServiceDeploymentLifecycleStageProductionTrafficShift,
+	types.ServiceDeploymentLifecycleStagePostProductionTrafficShift,
+	types.ServiceDeploymentLifecycleStageBakeTime,
+	types.ServiceDeploymentLifecycleStageCleanUp,
+}
+
+// lifecycleStageIndex returns the position of the stage in the deployment
+// lifecycle, or -1 when the stage is unknown (including an empty stage, which
+// is what a rolling deployment reports).
+func lifecycleStageIndex(stage types.ServiceDeploymentLifecycleStage) int {
+	return slices.Index(lifecycleStages, stage)
+}
+
+func lifecycleStageNames() []string {
+	names := make([]string, 0, len(lifecycleStages))
+	for _, s := range lifecycleStages {
+		names = append(names, waitUntilECSPrefix+string(s))
+	}
+	return names
 }
 
 type waitFunc func(ctx context.Context, sv *Service) error
@@ -86,12 +142,22 @@ func (confirm confirmFunc) wrap(wait waitFunc) waitFunc {
 
 func (d *App) WaitFunc(sv *Service, confirm confirmFunc, until waitUntil, deploymentArn ...string) (waitFunc, error) {
 	defaultFunc := confirm.wrap(d.WaitServiceStable)
-	if sv == nil || sv.DeploymentController == nil {
-		return defaultFunc, nil
-	}
 	var knownArn string
 	if len(deploymentArn) > 0 {
 		knownArn = deploymentArn[0]
+	}
+	if sv == nil {
+		return defaultFunc, nil
+	}
+	if sv.DeploymentController == nil {
+		// ECS is the default deployment controller when the service doesn't set
+		// one explicitly, so a lifecycle stage target must not fall back to the
+		// service-stable waiter silently.
+		if until.forECSLifecycleStage() {
+			stage := types.ServiceDeploymentLifecycleStage(until.ecsLifecycleStage())
+			return d.WaitServiceDeployLifecycleStage(stage, knownArn), nil
+		}
+		return defaultFunc, nil
 	}
 	if dc := sv.DeploymentController; dc != nil {
 		switch dc.Type {
@@ -99,16 +165,25 @@ func (d *App) WaitFunc(sv *Service, confirm confirmFunc, until waitUntil, deploy
 			if until.forCodeDeployLifecycle() {
 				return d.WaitForCodeDeployLifecycle(until.codeDeployLifecycleEvent()), nil
 			}
+			if until.forECSLifecycleStage() {
+				return nil, fmt.Errorf("unsupported waitUntil: %s (a deployment lifecycle stage is only reported by the ECS deployment controller)", until)
+			}
 			return d.WaitForCodeDeploy, nil
 		case types.DeploymentControllerTypeEcs:
+			if until.forECSLifecycleStage() {
+				stage := types.ServiceDeploymentLifecycleStage(until.ecsLifecycleStage())
+				return d.WaitServiceDeployLifecycleStage(stage, knownArn), nil
+			}
 			switch until {
 			case waitUntilDeployed:
 				return confirm.wrap(func(ctx context.Context, sv *Service) error {
-					return d.waitServiceDeployment(ctx, knownArn, false)
+					d.LogInfo("Waiting for service deployed...(it will take a few minutes)")
+					return d.waitServiceDeployment(ctx, knownArn, nil)
 				}), nil
 			case waitUntilPaused:
 				return func(ctx context.Context, sv *Service) error {
-					return d.waitServiceDeployment(ctx, knownArn, true)
+					d.LogInfo("Waiting for service deployment paused...(it will take a few minutes)")
+					return d.waitServiceDeployment(ctx, knownArn, d.deploymentPaused)
 				}, nil
 			case waitUntilStable, "":
 				return defaultFunc, nil
@@ -252,12 +327,11 @@ func serviceRevisionsSummaries(dp *types.ServiceDeployment) []string {
 	return lines
 }
 
-func (d *App) waitServiceDeployment(ctx context.Context, knownDeploymentArn string, waitForPause bool) error {
-	if waitForPause {
-		d.LogInfo("Waiting for service deployment paused...(it will take a few minutes)")
-	} else {
-		d.LogInfo("Waiting for service deployed...(it will take a few minutes)")
-	}
+// waitServiceDeployment polls the active service deployment until done reports
+// true, or until the deployment reaches a terminal status. A nil done waits for
+// the deployment to finish. done implementations log their own reason when
+// returning true.
+func (d *App) waitServiceDeployment(ctx context.Context, knownDeploymentArn string, done func(*types.ServiceDeployment) bool) error {
 	deploymentArn := knownDeploymentArn
 	if deploymentArn == "" {
 		var err error
@@ -272,13 +346,13 @@ func (d *App) waitServiceDeployment(ctx context.Context, knownDeploymentArn stri
 	}
 	d.LogInfo("waiting for service deployment", "deployment", arnToName(deploymentArn))
 
-	if waitForPause {
+	if done != nil {
 		initResp, err := d.ecs.DescribeServiceDeployments(ctx, &ecs.DescribeServiceDeploymentsInput{
 			ServiceDeploymentArns: []string{deploymentArn},
 		})
 		if err == nil && len(initResp.ServiceDeployments) > 0 {
 			if dc := initResp.ServiceDeployments[0].DeploymentConfiguration; dc != nil && dc.Strategy == types.DeploymentStrategyRolling {
-				d.LogWarn("--wait-until=paused is not effective for rolling deployments. Pause lifecycle hooks are only supported with blue/green, linear, and canary strategies. Falling back to waiting for deployment completion.")
+				d.LogWarn("the deployment strategy is ROLLING. Pause lifecycle hooks and deployment lifecycle stages are only supported with blue/green, linear, and canary strategies. Falling back to waiting for deployment completion.")
 			}
 		}
 	}
@@ -320,44 +394,143 @@ func (d *App) waitServiceDeployment(ctx context.Context, knownDeploymentArn stri
 			prevRevisionSummaryOutput = revisionSummaryOutput
 		}
 
-		// check if a pause lifecycle hook is awaiting action
-		if waitForPause {
-			for _, hook := range dp.LifecycleHookDetails {
-				if hook.TargetType == types.DeploymentLifecycleHookTargetTypePause &&
-					hook.Status == types.DeploymentLifecycleHookStatusAwaitingAction {
-					d.LogInfo("deployment paused at lifecycle hook",
-						"hook_id", aws.ToString(hook.HookId),
-						"lifecycle_stage", string(dp.LifecycleStage),
-					)
-					return nil
-				}
-			}
-		}
-
 		// check deployment status
 		status := dp.Status
 		if status != prevStatus {
 			d.LogInfo("service deployment status", "status", string(status))
 			prevStatus = status
 		}
-		switch status {
-		case types.ServiceDeploymentStatusSuccessful, types.ServiceDeploymentStatusRollbackSuccessful:
+		result, err := evaluateDeploymentStatus(&dp, done)
+		if err != nil {
+			return err
+		}
+		switch result {
+		case waitDeploymentCompleted:
 			d.LogInfo("service deployment completed", "status", string(status))
 			return nil
-		case types.ServiceDeploymentStatusStopped, types.ServiceDeploymentStatusRollbackFailed, types.ServiceDeploymentStatusStopRequested:
-			return fmt.Errorf("Service deployment failed %s", status)
+		case waitDeploymentDone:
+			// the done func has already logged the reason
+			return nil
 		default:
 			d.LogDebug("Deployment %s, waiting...", status)
 		}
 	}
 }
 
+type waitDeploymentResult int
+
+const (
+	waitDeploymentContinue waitDeploymentResult = iota
+	waitDeploymentCompleted
+	waitDeploymentDone
+)
+
+// evaluateDeploymentStatus decides whether polling the service deployment can
+// stop. A non-nil done means the caller waits for a condition of this
+// deployment (a pause or a lifecycle stage), so a rollback is a failure
+// instead of a terminal success: the condition will never be met.
+func evaluateDeploymentStatus(dp *types.ServiceDeployment, done func(*types.ServiceDeployment) bool) (waitDeploymentResult, error) {
+	switch dp.Status {
+	case types.ServiceDeploymentStatusSuccessful:
+		return waitDeploymentCompleted, nil
+	case types.ServiceDeploymentStatusRollbackSuccessful:
+		if done != nil {
+			if reason := aws.ToString(dp.StatusReason); reason != "" {
+				return waitDeploymentContinue, fmt.Errorf("service deployment has been rolled back: %s", reason)
+			}
+			return waitDeploymentContinue, fmt.Errorf("service deployment has been rolled back")
+		}
+		return waitDeploymentCompleted, nil
+	case types.ServiceDeploymentStatusStopped, types.ServiceDeploymentStatusRollbackFailed, types.ServiceDeploymentStatusStopRequested:
+		if reason := aws.ToString(dp.StatusReason); reason != "" {
+			return waitDeploymentContinue, fmt.Errorf("service deployment failed: %s (%s)", dp.Status, reason)
+		}
+		return waitDeploymentContinue, fmt.Errorf("service deployment failed: %s", dp.Status)
+	case types.ServiceDeploymentStatusPending, types.ServiceDeploymentStatusInProgress:
+		// The done condition is only meaningful while the deployment is
+		// progressing. During a rollback a lifecycle stage can still read as
+		// the target, so keep waiting for a terminal status instead.
+		if done != nil && done(dp) {
+			return waitDeploymentDone, nil
+		}
+	}
+	return waitDeploymentContinue, nil
+}
+
+// deploymentPaused reports whether a pause lifecycle hook of the deployment is
+// awaiting action.
+func (d *App) deploymentPaused(dp *types.ServiceDeployment) bool {
+	for _, hook := range dp.LifecycleHookDetails {
+		if hook.TargetType == types.DeploymentLifecycleHookTargetTypePause &&
+			hook.Status == types.DeploymentLifecycleHookStatusAwaitingAction {
+			d.LogInfo("deployment paused at lifecycle hook",
+				"hook_id", aws.ToString(hook.HookId),
+				"lifecycle_stage", string(dp.LifecycleStage),
+			)
+			return true
+		}
+	}
+	return false
+}
+
+// WaitServiceDeployLifecycleStage returns a waitFunc that waits until the
+// deployment reaches the target lifecycle stage, instead of waiting for the
+// whole deployment to finish. This allows returning before a long
+// bakeTimeInMinutes elapses.
+func (d *App) WaitServiceDeployLifecycleStage(stage types.ServiceDeploymentLifecycleStage, knownDeploymentArn string) waitFunc {
+	return func(ctx context.Context, sv *Service) error {
+		target := lifecycleStageIndex(stage)
+		if target < 0 {
+			// An unknown stage would index to -1 and be satisfied by any
+			// deployment state immediately, so reject it up front.
+			return fmt.Errorf("unknown lifecycle stage: %s (expected one of %s)", stage, strings.Join(lifecycleStageNames(), ", "))
+		}
+		if err := validateLifecycleStageSupported(sv, stage); err != nil {
+			return err
+		}
+		if sv == nil || sv.DeploymentConfiguration == nil || sv.DeploymentConfiguration.Strategy == "" {
+			d.LogWarn("deployment strategy is not set; a ROLLING deployment reports no lifecycle stage, so this waits until the deployment completes")
+		}
+		d.LogInfo("Waiting for service deployment lifecycle stage...", "stage", string(stage))
+		// Stages such as PRODUCTION_TRAFFIC_SHIFT are transient and can be
+		// skipped between polls, so compare positions rather than equality.
+		return d.waitServiceDeployment(ctx, knownDeploymentArn, func(dp *types.ServiceDeployment) bool {
+			if lifecycleStageIndex(dp.LifecycleStage) >= target {
+				d.LogInfo("service deployment reached the lifecycle stage", "stage", string(dp.LifecycleStage))
+				return true
+			}
+			return false
+		})
+	}
+}
+
+// validateLifecycleStageSupported rejects a lifecycle stage target on a service
+// whose deployment never reports one, which would otherwise wait until timeout.
+func validateLifecycleStageSupported(sv *Service, stage types.ServiceDeploymentLifecycleStage) error {
+	if sv == nil || sv.DeploymentConfiguration == nil {
+		return nil
+	}
+	switch strategy := sv.DeploymentConfiguration.Strategy; strategy {
+	case types.DeploymentStrategyBlueGreen, types.DeploymentStrategyLinear, types.DeploymentStrategyCanary:
+		return nil
+	case "":
+		return nil // not set by the service definition, let the deployment decide
+	default:
+		return fmt.Errorf(
+			"waiting for lifecycle stage %s requires a traffic shifting deployment strategy, but the service uses %s",
+			stage, strategy,
+		)
+	}
+}
+
 func (d *App) WaitServiceDeployCompleted(ctx context.Context, sv *Service) error {
-	return d.waitServiceDeployment(ctx, "", false)
+	d.LogInfo("Waiting for service deployed...(it will take a few minutes)")
+	return d.waitServiceDeployment(ctx, "", nil)
 }
 
 func (d *App) WaitServiceDeployPaused(ctx context.Context, sv *Service) error {
-	return d.waitServiceDeployment(ctx, "", true)
+	d.LogInfo("Waiting for service deployment paused...(it will take a few minutes)")
+	return d.waitServiceDeployment(ctx, "", d.deploymentPaused)
 }
 
 func (d *App) getCodeDeployDeploymentID(ctx context.Context) (string, error) {

@@ -36,7 +36,23 @@ var (
 	ParseSections          = parseSections
 	ReadmeContent          = readmeContent
 	GetArticle             = getArticle
+
+	LifecycleStageIndex             = lifecycleStageIndex
+	ValidateLifecycleStageSupported = validateLifecycleStageSupported
+	EvaluateDeploymentStatus        = evaluateDeploymentStatus
 )
+
+type WaitDeploymentResult = waitDeploymentResult
+
+const (
+	WaitDeploymentContinue  = waitDeploymentContinue
+	WaitDeploymentCompleted = waitDeploymentCompleted
+	WaitDeploymentDone      = waitDeploymentDone
+)
+
+func (d *App) DeploymentPaused(dp *types.ServiceDeployment) bool {
+	return d.deploymentPaused(dp)
+}
 
 type ModifyAutoScalingParams = modifyAutoScalingParams
 type IAMPolicyDocument = iamPolicyDocument
