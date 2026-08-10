@@ -40,6 +40,7 @@ var (
 	LifecycleStageIndex             = lifecycleStageIndex
 	ValidateLifecycleStageSupported = validateLifecycleStageSupported
 	EvaluateDeploymentStatus        = evaluateDeploymentStatus
+	PausedHookIDs                   = pausedHookIDs
 )
 
 type WaitDeploymentResult = waitDeploymentResult
