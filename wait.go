@@ -442,7 +442,10 @@ func evaluateDeploymentStatus(dp *types.ServiceDeployment, done func(*types.Serv
 		}
 		return waitDeploymentCompleted, nil
 	case types.ServiceDeploymentStatusStopped, types.ServiceDeploymentStatusRollbackFailed, types.ServiceDeploymentStatusStopRequested:
-		return waitDeploymentContinue, fmt.Errorf("Service deployment failed %s", dp.Status)
+		if reason := aws.ToString(dp.StatusReason); reason != "" {
+			return waitDeploymentContinue, fmt.Errorf("service deployment failed: %s (%s)", dp.Status, reason)
+		}
+		return waitDeploymentContinue, fmt.Errorf("service deployment failed: %s", dp.Status)
 	case types.ServiceDeploymentStatusPending, types.ServiceDeploymentStatusInProgress:
 		// The done condition is only meaningful while the deployment is
 		// progressing. During a rollback a lifecycle stage can still read as

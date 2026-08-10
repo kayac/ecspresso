@@ -162,8 +162,9 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 		d.LogInfo("desired count: unchanged")
 	}
 
-	// fail fast before mutating anything: at this point sv reflects the service
-	// definition to be deployed, so the strategy check sees the effective value
+	// fail fast before starting the deployment: at this point sv reflects the
+	// service definition to be deployed, so the strategy check sees the
+	// effective value
 	if until := waitUntil(opt.WaitUntil); until.forECSLifecycleStage() {
 		stage := types.ServiceDeploymentLifecycleStage(until.ecsLifecycleStage())
 		if err := validateLifecycleStageSupported(sv, stage); err != nil {
