@@ -21,6 +21,7 @@ ecspresso also supports ECS Express mode for simplified deployments and provides
 - [Template syntax](#template-syntax)
 - [Deployment](#example-of-deployment)
   - [Rolling deployment](#rolling-deployment)
+  - [Waiting for the deployment](#waiting-for-the-deployment)
   - [Blue/Green deployment (ECS)](#bluegreen-deployment-with-ecs-deployment-controller)
   - [Blue/Green deployment (CodeDeploy)](#bluegreen-deployment-with-aws-codedeploy)
 - [Scale out/in](#scale-outin)
@@ -501,6 +502,24 @@ Events:
   --[no-]update-service                  update service attributes by service definition
   --latest-task-definition               deploy with the latest task definition without registering a new task definition
 ```
+
+### Waiting for the deployment
+
+`ecspresso deploy` waits until the deployment completes by default. Use `--no-wait` to return immediately after starting the deployment, or `--wait-until` to choose what to wait for.
+
+For the ECS deployment controller:
+- `deployed` (default): Waits until the service deployment completes.
+- `stable`: Waits until the service becomes stable (same as `aws ecs wait services-stable`).
+- `paused`: Waits until the deployment pauses at a lifecycle hook. See [Pause lifecycle hooks](#pause-lifecycle-hooks).
+- `ecs:<lifecycle stage>` (e.g., `ecs:BAKE_TIME`): Waits until the deployment reaches the specified [deployment lifecycle stage](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/blue-green-deployment-how-it-works.html#blue-green-deployment-stages). This is useful to finish a CI job without waiting for a long bake time. Requires a traffic shifting deployment strategy (e.g., `BLUE_GREEN`).
+
+For the CodeDeploy deployment controller:
+- `codedeploy:<lifecycle event>` (e.g., `codedeploy:AfterAllowTraffic`): Waits until the specified CodeDeploy lifecycle event completes.
+- Other values wait until the CodeDeploy deployment succeeds.
+
+In all cases, `ecspresso deploy` exits with a non-zero status when the deployment fails or is rolled back before the wait condition is met.
+
+The `ecspresso wait` command also accepts `--wait-until` (`stable`, `deployed`, or `paused`) to wait for an ongoing deployment without deploying.
 
 ### Blue/Green deployment (with ECS deployment controller)
 
