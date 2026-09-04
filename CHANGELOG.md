@@ -1,5 +1,16 @@
 # Changelog
 
+## [v2.8.6](https://github.com/kayac/ecspresso/compare/v2.8.5...v2.8.6) - 2026-09-04
+- Bump golang.org/x/crypto from 0.51.0 to 0.52.0 by @dependabot[bot] in https://github.com/kayac/ecspresso/pull/1056
+- Support --wait-until ecs:<lifecycle stage> by @draftcode in https://github.com/kayac/ecspresso/pull/1063
+- Bump google.golang.org/grpc from 1.80.0 to 1.82.1 by @dependabot[bot] in https://github.com/kayac/ecspresso/pull/1062
+- Harden --wait-until ecs:<lifecycle stage> by @fujiwara in https://github.com/kayac/ecspresso/pull/1064
+- Add documentation for --wait-until to README by @fujiwara in https://github.com/kayac/ecspresso/pull/1066
+- Note that a pause hook at an earlier stage blocks the ecs:* wait by @fujiwara in https://github.com/kayac/ecspresso/pull/1068
+- Warn when a pause hook blocks the ecs:* lifecycle stage wait by @fujiwara in https://github.com/kayac/ecspresso/pull/1069
+- Bump GitHub Actions by @fujiwara in https://github.com/kayac/ecspresso/pull/1072
+- Bump Go module dependencies by @fujiwara in https://github.com/kayac/ecspresso/pull/1073
+
 ## [v2.8.5](https://github.com/kayac/ecspresso/compare/v2.8.4...v2.8.5) - 2026-07-07
 - Add `optional: true` to tfstate plugin by @fujiwara in https://github.com/kayac/ecspresso/pull/1017
 - Add App.HasDiff for library callers by @fujiwara in https://github.com/kayac/ecspresso/pull/1019
