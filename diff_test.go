@@ -785,3 +785,113 @@ func TestDiffServicesMonitoring(t *testing.T) {
 		}
 	})
 }
+
+// DescribeServices fills deploymentCircuitBreaker, earlySuccessCriteria and
+// lifecycleHooks with default values that a service definition usually
+// omits, so they must not be reported as differences.
+func TestDiffServicesDeploymentConfigurationDefaults(t *testing.T) {
+	ctx := t.Context()
+	color.NoColor = true
+	local := &ecspresso.Service{
+		Service: types.Service{
+			DeploymentConfiguration: &types.DeploymentConfiguration{
+				DeploymentCircuitBreaker: &types.DeploymentCircuitBreaker{
+					Enable:   false,
+					Rollback: false,
+				},
+				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+					Enable: false,
+				},
+				LifecycleHooks: []types.DeploymentLifecycleHook{
+					{
+						HookTargetArn:   aws.String("arn:aws:lambda:ap-northeast-1:123456789012:function:hook"),
+						RoleArn:         aws.String("arn:aws:iam::123456789012:role/ECSServiceRole"),
+						LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostScaleUp},
+					},
+					{
+						TargetType:      types.DeploymentLifecycleHookTargetTypePause,
+						LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostTestTrafficShift},
+						TimeoutConfiguration: &types.DeploymentLifecycleHookTimeoutConfiguration{
+							TimeoutInMinutes: aws.Int32(30),
+						},
+					},
+				},
+			},
+		},
+	}
+	remote := &ecspresso.Service{
+		Service: types.Service{
+			DeploymentConfiguration: &types.DeploymentConfiguration{
+				DeploymentCircuitBreaker: &types.DeploymentCircuitBreaker{
+					Enable:             false,
+					Rollback:           false,
+					ResetOnHealthyTask: aws.Bool(true),
+					ThresholdConfiguration: &types.ThresholdConfiguration{
+						Type:  types.ThresholdTypeBoundedPercent,
+						Value: 50,
+					},
+				},
+				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+					Enable:                       false,
+					HealthyPercent:               aws.Int32(100),
+					SourceServiceRevisionCleanup: types.ServiceRevisionCleanupBlocking,
+				},
+				LifecycleHooks: []types.DeploymentLifecycleHook{
+					{
+						TargetType:      types.DeploymentLifecycleHookTargetTypeAwsLambda,
+						HookTargetArn:   aws.String("arn:aws:lambda:ap-northeast-1:123456789012:function:hook"),
+						RoleArn:         aws.String("arn:aws:iam::123456789012:role/ECSServiceRole"),
+						LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostScaleUp},
+						TimeoutConfiguration: &types.DeploymentLifecycleHookTimeoutConfiguration{
+							Action:           types.DeploymentLifecycleHookActionRollback,
+							TimeoutInMinutes: aws.Int32(1440),
+						},
+					},
+					{
+						TargetType:      types.DeploymentLifecycleHookTargetTypePause,
+						LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostTestTrafficShift},
+						TimeoutConfiguration: &types.DeploymentLifecycleHookTimeoutConfiguration{
+							Action:           types.DeploymentLifecycleHookActionRollback,
+							TimeoutInMinutes: aws.Int32(30),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	t.Run("defaults are not reported", func(t *testing.T) {
+		b := new(bytes.Buffer)
+		opt := &ecspresso.DiffOption{Unified: true}
+		opt.SetWriter(b)
+		diff, err := ecspresso.DiffServices(ctx, local, remote, "file", opt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff {
+			t.Errorf("unexpected diff:\n%s", b.String())
+		}
+	})
+
+	t.Run("explicit non-default values are reported", func(t *testing.T) {
+		b := new(bytes.Buffer)
+		opt := &ecspresso.DiffOption{Unified: true}
+		opt.SetWriter(b)
+		local.DeploymentConfiguration.DeploymentCircuitBreaker.ResetOnHealthyTask = aws.Bool(false)
+		local.DeploymentConfiguration.LifecycleHooks[0].TimeoutConfiguration = &types.DeploymentLifecycleHookTimeoutConfiguration{
+			Action: types.DeploymentLifecycleHookActionContinue,
+		}
+		diff, err := ecspresso.DiffServices(ctx, local, remote, "file", opt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !diff {
+			t.Fatal("diff must be detected")
+		}
+		for _, want := range []string{`+      "resetOnHealthyTask": false`, `+          "action": "CONTINUE"`} {
+			if !strings.Contains(b.String(), want) {
+				t.Errorf("diff must contain %q:\n%s", want, b.String())
+			}
+		}
+	})
+}
