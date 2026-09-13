@@ -645,3 +645,94 @@ func TestVerifyDeploymentConfigurationLifecycleHooks(t *testing.T) {
 		}
 	})
 }
+
+func TestVerifyDeploymentConfigurationEarlySuccessCriteria(t *testing.T) {
+	color.NoColor = true
+	app := &ecspresso.App{}
+	valid := func() *types.DeploymentConfiguration {
+		return &types.DeploymentConfiguration{
+			Strategy:              types.DeploymentStrategyRolling,
+			MinimumHealthyPercent: aws.Int32(50),
+			EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+				Enable:                       true,
+				HealthyPercent:               aws.Int32(90),
+				SourceServiceRevisionCleanup: types.ServiceRevisionCleanupDeferred,
+			},
+		}
+	}
+	tests := []struct {
+		name    string
+		modify  func(dc *types.DeploymentConfiguration)
+		wantErr string
+	}{
+		{name: "valid"},
+		{
+			name:   "strategy is not set",
+			modify: func(dc *types.DeploymentConfiguration) { dc.Strategy = "" },
+		},
+		{
+			name:   "minimumHealthyPercent is not set",
+			modify: func(dc *types.DeploymentConfiguration) { dc.MinimumHealthyPercent = nil },
+		},
+		{
+			name: "disabled criteria is not validated",
+			modify: func(dc *types.DeploymentConfiguration) {
+				dc.EarlySuccessCriteria = &types.DeploymentEarlySuccessCriteria{Enable: false}
+			},
+		},
+		{
+			name:    "blue/green strategy",
+			modify:  func(dc *types.DeploymentConfiguration) { dc.Strategy = types.DeploymentStrategyBlueGreen },
+			wantErr: "only supported by the ROLLING deployment strategy",
+		},
+		{
+			name:    "healthyPercent is missing",
+			modify:  func(dc *types.DeploymentConfiguration) { dc.EarlySuccessCriteria.HealthyPercent = nil },
+			wantErr: "healthyPercent is required",
+		},
+		{
+			name:    "healthyPercent is over 100",
+			modify:  func(dc *types.DeploymentConfiguration) { dc.EarlySuccessCriteria.HealthyPercent = aws.Int32(101) },
+			wantErr: "must be between 0 and 100",
+		},
+		{
+			name:    "healthyPercent is less than minimumHealthyPercent",
+			modify:  func(dc *types.DeploymentConfiguration) { dc.EarlySuccessCriteria.HealthyPercent = aws.Int32(49) },
+			wantErr: "greater than or equal to minimumHealthyPercent",
+		},
+		{
+			name:    "sourceServiceRevisionCleanup is missing",
+			modify:  func(dc *types.DeploymentConfiguration) { dc.EarlySuccessCriteria.SourceServiceRevisionCleanup = "" },
+			wantErr: "sourceServiceRevisionCleanup is required",
+		},
+		{
+			name: "sourceServiceRevisionCleanup is invalid",
+			modify: func(dc *types.DeploymentConfiguration) {
+				dc.EarlySuccessCriteria.SourceServiceRevisionCleanup = "LATER"
+			},
+			wantErr: "must be BLOCKING or DEFERRED",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := ecspresso.ContextWithVerifyState(t.Context(), ecspresso.NewVerifyState(false))
+			dc := valid()
+			if tt.modify != nil {
+				tt.modify(dc)
+			}
+			err := app.VerifyDeploymentConfiguration(ctx, dc)
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("error containing %q must be returned", tt.wantErr)
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("unexpected error: %s", err)
+			}
+		})
+	}
+}

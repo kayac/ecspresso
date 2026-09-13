@@ -555,6 +555,14 @@ func (d *App) verifyDeploymentConfiguration(ctx context.Context, dc *types.Deplo
 	if dc == nil {
 		return nil
 	}
+	if dc.EarlySuccessCriteria != nil {
+		_, err := vs.VerifyResource(ctx, "EarlySuccessCriteria", func(context.Context) error {
+			return verifyEarlySuccessCriteria(dc)
+		})
+		if err != nil {
+			return err
+		}
+	}
 	for i, hook := range dc.LifecycleHooks {
 		name := fmt.Sprintf("LifecycleHooks[%d]", i)
 		_, err := vs.VerifyResource(ctx, name, func(context.Context) error {
@@ -589,6 +597,41 @@ func (d *App) verifyDeploymentConfiguration(ctx context.Context, dc *types.Deplo
 		}
 	}
 
+	return nil
+}
+
+// verifyEarlySuccessCriteria validates earlySuccessCriteria locally before a
+// deployment, so that an invalid value fails before a task definition is
+// registered.
+// See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/early-success-criteria.html
+func verifyEarlySuccessCriteria(dc *types.DeploymentConfiguration) error {
+	esc := dc.EarlySuccessCriteria
+	if esc == nil || !esc.Enable {
+		return nil
+	}
+	switch dc.Strategy {
+	case types.DeploymentStrategyRolling, "":
+	default:
+		return fmt.Errorf("earlySuccessCriteria is only supported by the %s deployment strategy, but the strategy is %s", types.DeploymentStrategyRolling, dc.Strategy)
+	}
+	if esc.HealthyPercent == nil {
+		return errors.New("earlySuccessCriteria.healthyPercent is required when earlySuccessCriteria is enabled")
+	}
+	hp := aws.ToInt32(esc.HealthyPercent)
+	if hp < 0 || hp > 100 {
+		return fmt.Errorf("earlySuccessCriteria.healthyPercent must be between 0 and 100, but %d", hp)
+	}
+	if mhp := dc.MinimumHealthyPercent; mhp != nil && hp < aws.ToInt32(mhp) {
+		return fmt.Errorf("earlySuccessCriteria.healthyPercent (%d) must be greater than or equal to minimumHealthyPercent (%d)", hp, aws.ToInt32(mhp))
+	}
+	switch esc.SourceServiceRevisionCleanup {
+	case types.ServiceRevisionCleanupBlocking, types.ServiceRevisionCleanupDeferred:
+	case "":
+		return errors.New("earlySuccessCriteria.sourceServiceRevisionCleanup is required when earlySuccessCriteria is enabled")
+	default:
+		return fmt.Errorf("earlySuccessCriteria.sourceServiceRevisionCleanup must be %s or %s, but %s",
+			types.ServiceRevisionCleanupBlocking, types.ServiceRevisionCleanupDeferred, esc.SourceServiceRevisionCleanup)
+	}
 	return nil
 }
 
