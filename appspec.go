@@ -27,7 +27,7 @@ func (d *App) AppSpec(ctx context.Context, opt AppSpecOption) error {
 	case "current":
 		taskDefinitionArn = aws.ToString(sv.TaskDefinition)
 	case "latest":
-		family := strings.Split(arnToName(aws.ToString(sv.TaskDefinition)), ":")[0]
+		family, _, _ := strings.Cut(arnToName(aws.ToString(sv.TaskDefinition)), ":")
 		taskDefinitionArn, err = d.findLatestTaskDefinitionArn(ctx, family)
 		if err != nil {
 			return err
