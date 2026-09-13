@@ -1,5 +1,10 @@
 # Changelog
 
+## [v2.8.7](https://github.com/kayac/ecspresso/compare/v2.8.6...v2.8.7) - 2026-09-13
+- Bump google.golang.org/grpc from 1.83.1 to 1.83.2 by @dependabot[bot] in https://github.com/kayac/ecspresso/pull/1079
+- Support early success criteria for rolling deployments by @fujiwara in https://github.com/kayac/ecspresso/pull/1080
+- Fill deploymentConfiguration defaults in diff by @fujiwara in https://github.com/kayac/ecspresso/pull/1082
+
 ## [v2.8.6](https://github.com/kayac/ecspresso/compare/v2.8.5...v2.8.6) - 2026-09-04
 - Bump golang.org/x/crypto from 0.51.0 to 0.52.0 by @dependabot[bot] in https://github.com/kayac/ecspresso/pull/1056
 - Support --wait-until ecs:<lifecycle stage> by @draftcode in https://github.com/kayac/ecspresso/pull/1063
