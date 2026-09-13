@@ -408,6 +408,7 @@ func ServiceDefinitionForDiff(sv *Service) *ServiceForDiff {
 			MinimumHealthyPercent: aws.Int32(0),
 		}
 	}
+	fillDeploymentConfigurationDefaults(sv.DeploymentConfiguration)
 
 	if nc := sv.NetworkConfiguration; nc != nil {
 		if ac := nc.AwsvpcConfiguration; ac != nil {
@@ -435,6 +436,49 @@ func ServiceDefinitionForDiff(sv *Service) *ServiceForDiff {
 		}
 	}
 	return sfd
+}
+
+// fillDeploymentConfigurationDefaults fills the fields that DescribeServices
+// returns with their default values when the service definition omits them,
+// so that they don't appear as differences.
+func fillDeploymentConfigurationDefaults(dc *types.DeploymentConfiguration) {
+	if dc == nil {
+		return
+	}
+	if cb := dc.DeploymentCircuitBreaker; cb != nil {
+		if cb.ResetOnHealthyTask == nil {
+			cb.ResetOnHealthyTask = aws.Bool(true)
+		}
+		if cb.ThresholdConfiguration == nil {
+			cb.ThresholdConfiguration = &types.ThresholdConfiguration{
+				Type:  types.ThresholdTypeBoundedPercent,
+				Value: 50,
+			}
+		}
+	}
+	if esc := dc.EarlySuccessCriteria; esc != nil {
+		if esc.HealthyPercent == nil {
+			esc.HealthyPercent = aws.Int32(100)
+		}
+		if esc.SourceServiceRevisionCleanup == "" {
+			esc.SourceServiceRevisionCleanup = types.ServiceRevisionCleanupBlocking
+		}
+	}
+	for i := range dc.LifecycleHooks {
+		hook := &dc.LifecycleHooks[i]
+		if hook.TargetType == "" {
+			hook.TargetType = types.DeploymentLifecycleHookTargetTypeAwsLambda
+		}
+		if hook.TimeoutConfiguration == nil {
+			hook.TimeoutConfiguration = &types.DeploymentLifecycleHookTimeoutConfiguration{}
+		}
+		if hook.TimeoutConfiguration.Action == "" {
+			hook.TimeoutConfiguration.Action = types.DeploymentLifecycleHookActionRollback
+		}
+		if hook.TimeoutConfiguration.TimeoutInMinutes == nil {
+			hook.TimeoutConfiguration.TimeoutInMinutes = aws.Int32(1440)
+		}
+	}
 }
 
 func sortTaskDefinition(td *TaskDefinitionInput) {
