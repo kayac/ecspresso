@@ -470,6 +470,14 @@ func fillDeploymentConfigurationDefaults(dc *types.DeploymentConfiguration) {
 			}
 		}
 	}
+	if esc := dc.EarlySuccessCriteria; esc != nil {
+		if esc.HealthyPercent == nil {
+			esc.HealthyPercent = aws.Int32(100)
+		}
+		if esc.SourceServiceRevisionCleanup == "" {
+			esc.SourceServiceRevisionCleanup = types.ServiceRevisionCleanupBlocking
+		}
+	}
 	for i := range dc.LifecycleHooks {
 		hook := &dc.LifecycleHooks[i]
 		if hook.TargetType == "" {

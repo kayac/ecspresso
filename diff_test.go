@@ -786,9 +786,9 @@ func TestDiffServicesMonitoring(t *testing.T) {
 	})
 }
 
-// DescribeServices fills deploymentCircuitBreaker and lifecycleHooks with
-// default values that a service definition usually omits, so they must not
-// be reported as differences.
+// DescribeServices fills deploymentCircuitBreaker, earlySuccessCriteria and
+// lifecycleHooks with default values that a service definition usually
+// omits, so they must not be reported as differences.
 func TestDiffServicesDeploymentConfigurationDefaults(t *testing.T) {
 	ctx := t.Context()
 	color.NoColor = true
@@ -798,6 +798,9 @@ func TestDiffServicesDeploymentConfigurationDefaults(t *testing.T) {
 				DeploymentCircuitBreaker: &types.DeploymentCircuitBreaker{
 					Enable:   false,
 					Rollback: false,
+				},
+				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+					Enable: false,
 				},
 				LifecycleHooks: []types.DeploymentLifecycleHook{
 					{
@@ -827,6 +830,11 @@ func TestDiffServicesDeploymentConfigurationDefaults(t *testing.T) {
 						Type:  types.ThresholdTypeBoundedPercent,
 						Value: 50,
 					},
+				},
+				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+					Enable:                       false,
+					HealthyPercent:               aws.Int32(100),
+					SourceServiceRevisionCleanup: types.ServiceRevisionCleanupBlocking,
 				},
 				LifecycleHooks: []types.DeploymentLifecycleHook{
 					{

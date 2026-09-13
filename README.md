@@ -482,6 +482,8 @@ The `ecspresso wait` command also accepts `--wait-until` (`stable` or `deployed`
 
 `ecspresso deploy` returns as soon as the deployment completes (with the default `--wait-until=deployed`), and `ecspresso verify` validates `earlySuccessCriteria` before deploying.
 
+To turn it off on a service that already has it, set `"enable": false` explicitly. Omitting `earlySuccessCriteria` keeps the current setting of the service, and ECS rejects switching to another deployment strategy while it is enabled.
+
 ```console
 $ ecspresso deploy --config ecspresso.yml
 ...
