@@ -423,6 +423,15 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 		}
 	}
 
+	if sv.earlySuccessCriteriaEnabled() {
+		_, err := vs.VerifyResource(ctx, "EarlySuccessCriteria", func(context.Context) error {
+			return verifyEarlySuccessCriteria(sv)
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	for i, vc := range sv.VolumeConfigurations {
 		name := fmt.Sprintf("VolumeConfigurations[%d]", i)
 		_, err := vs.VerifyResource(ctx, name, func(context.Context) error {
@@ -590,6 +599,60 @@ func (d *App) verifyDeploymentConfiguration(ctx context.Context, dc *types.Deplo
 	}
 
 	return nil
+}
+
+// verifyEarlySuccessCriteria validates earlySuccessCriteria locally before a
+// deployment, so that an invalid value fails before a task definition is
+// registered.
+// See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/early-success-criteria.html
+func verifyEarlySuccessCriteria(sv *Service) error {
+	if !sv.earlySuccessCriteriaEnabled() {
+		return nil
+	}
+	dc := sv.DeploymentConfiguration
+	esc := dc.EarlySuccessCriteria
+	if sv.isCodeDeploy() {
+		return fmt.Errorf("earlySuccessCriteria is only supported by the %s deployment controller, but the deployment controller is %s", types.DeploymentControllerTypeEcs, types.DeploymentControllerTypeCodeDeploy)
+	}
+	switch dc.Strategy {
+	case types.DeploymentStrategyRolling, "":
+	default:
+		return fmt.Errorf("earlySuccessCriteria is only supported by the %s deployment strategy, but the strategy is %s", types.DeploymentStrategyRolling, dc.Strategy)
+	}
+	if esc.HealthyPercent == nil {
+		return errors.New("earlySuccessCriteria.healthyPercent is required when earlySuccessCriteria is enabled")
+	}
+	hp := aws.ToInt32(esc.HealthyPercent)
+	if hp < 0 || hp > 100 {
+		return fmt.Errorf("earlySuccessCriteria.healthyPercent must be between 0 and 100, but %d", hp)
+	}
+	// ECS applies the default minimumHealthyPercent when it is omitted, and
+	// rejects a healthyPercent below the effective value.
+	mhp := defaultMinimumHealthyPercent(sv)
+	if dc.MinimumHealthyPercent != nil {
+		mhp = aws.ToInt32(dc.MinimumHealthyPercent)
+	}
+	if hp < mhp {
+		return fmt.Errorf("earlySuccessCriteria.healthyPercent (%d) must be greater than or equal to minimumHealthyPercent (%d)", hp, mhp)
+	}
+	switch esc.SourceServiceRevisionCleanup {
+	case types.ServiceRevisionCleanupBlocking, types.ServiceRevisionCleanupDeferred:
+	case "":
+		return errors.New("earlySuccessCriteria.sourceServiceRevisionCleanup is required when earlySuccessCriteria is enabled")
+	default:
+		return fmt.Errorf("earlySuccessCriteria.sourceServiceRevisionCleanup must be %s or %s, but %s",
+			types.ServiceRevisionCleanupBlocking, types.ServiceRevisionCleanupDeferred, esc.SourceServiceRevisionCleanup)
+	}
+	return nil
+}
+
+// defaultMinimumHealthyPercent returns the minimumHealthyPercent that ECS
+// applies when the service definition omits it.
+func defaultMinimumHealthyPercent(sv *Service) int32 {
+	if sv.SchedulingStrategy == types.SchedulingStrategyDaemon {
+		return 0
+	}
+	return 100
 }
 
 func (d *App) verifyLoadBalancer(ctx context.Context, lb types.LoadBalancer, td *TaskDefinitionInput) error {

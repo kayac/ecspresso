@@ -645,3 +645,135 @@ func TestVerifyDeploymentConfigurationLifecycleHooks(t *testing.T) {
 		}
 	})
 }
+
+func TestVerifyEarlySuccessCriteria(t *testing.T) {
+	valid := func() *ecspresso.Service {
+		return &ecspresso.Service{
+			Service: types.Service{
+				DeploymentController: &types.DeploymentController{Type: types.DeploymentControllerTypeEcs},
+				DeploymentConfiguration: &types.DeploymentConfiguration{
+					Strategy:              types.DeploymentStrategyRolling,
+					MinimumHealthyPercent: aws.Int32(50),
+					EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+						Enable:                       true,
+						HealthyPercent:               aws.Int32(90),
+						SourceServiceRevisionCleanup: types.ServiceRevisionCleanupDeferred,
+					},
+				},
+			},
+		}
+	}
+	tests := []struct {
+		name    string
+		modify  func(sv *ecspresso.Service)
+		wantErr string
+	}{
+		{name: "valid"},
+		{
+			name:   "strategy is not set",
+			modify: func(sv *ecspresso.Service) { sv.DeploymentConfiguration.Strategy = "" },
+		},
+		{
+			name:   "deployment controller is not set",
+			modify: func(sv *ecspresso.Service) { sv.DeploymentController = nil },
+		},
+		{
+			name: "minimumHealthyPercent is not set and healthyPercent is 100",
+			modify: func(sv *ecspresso.Service) {
+				sv.DeploymentConfiguration.MinimumHealthyPercent = nil
+				sv.DeploymentConfiguration.EarlySuccessCriteria.HealthyPercent = aws.Int32(100)
+			},
+		},
+		{
+			name: "minimumHealthyPercent is not set for a daemon service",
+			modify: func(sv *ecspresso.Service) {
+				sv.SchedulingStrategy = types.SchedulingStrategyDaemon
+				sv.DeploymentConfiguration.MinimumHealthyPercent = nil
+			},
+		},
+		{
+			name: "disabled criteria is not validated",
+			modify: func(sv *ecspresso.Service) {
+				sv.DeploymentController = &types.DeploymentController{Type: types.DeploymentControllerTypeCodeDeploy}
+				sv.DeploymentConfiguration.EarlySuccessCriteria = &types.DeploymentEarlySuccessCriteria{Enable: false}
+			},
+		},
+		{
+			name:   "no deployment configuration",
+			modify: func(sv *ecspresso.Service) { sv.DeploymentConfiguration = nil },
+		},
+		{
+			// ECS applies the default minimumHealthyPercent (100) and rejects
+			// a lower healthyPercent, so verify must reject it too.
+			name:    "minimumHealthyPercent is not set and healthyPercent is less than 100",
+			modify:  func(sv *ecspresso.Service) { sv.DeploymentConfiguration.MinimumHealthyPercent = nil },
+			wantErr: "greater than or equal to minimumHealthyPercent (100)",
+		},
+		{
+			name: "CodeDeploy deployment controller",
+			modify: func(sv *ecspresso.Service) {
+				sv.DeploymentController = &types.DeploymentController{Type: types.DeploymentControllerTypeCodeDeploy}
+			},
+			wantErr: "only supported by the ECS deployment controller",
+		},
+		{
+			name:    "blue/green strategy",
+			modify:  func(sv *ecspresso.Service) { sv.DeploymentConfiguration.Strategy = types.DeploymentStrategyBlueGreen },
+			wantErr: "only supported by the ROLLING deployment strategy",
+		},
+		{
+			name:    "healthyPercent is missing",
+			modify:  func(sv *ecspresso.Service) { sv.DeploymentConfiguration.EarlySuccessCriteria.HealthyPercent = nil },
+			wantErr: "healthyPercent is required",
+		},
+		{
+			name: "healthyPercent is over 100",
+			modify: func(sv *ecspresso.Service) {
+				sv.DeploymentConfiguration.EarlySuccessCriteria.HealthyPercent = aws.Int32(101)
+			},
+			wantErr: "must be between 0 and 100",
+		},
+		{
+			name: "healthyPercent is less than minimumHealthyPercent",
+			modify: func(sv *ecspresso.Service) {
+				sv.DeploymentConfiguration.EarlySuccessCriteria.HealthyPercent = aws.Int32(49)
+			},
+			wantErr: "greater than or equal to minimumHealthyPercent (50)",
+		},
+		{
+			name: "sourceServiceRevisionCleanup is missing",
+			modify: func(sv *ecspresso.Service) {
+				sv.DeploymentConfiguration.EarlySuccessCriteria.SourceServiceRevisionCleanup = ""
+			},
+			wantErr: "sourceServiceRevisionCleanup is required",
+		},
+		{
+			name: "sourceServiceRevisionCleanup is invalid",
+			modify: func(sv *ecspresso.Service) {
+				sv.DeploymentConfiguration.EarlySuccessCriteria.SourceServiceRevisionCleanup = "LATER"
+			},
+			wantErr: "must be BLOCKING or DEFERRED",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sv := valid()
+			if tt.modify != nil {
+				tt.modify(sv)
+			}
+			err := ecspresso.VerifyEarlySuccessCriteria(sv)
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("error containing %q must be returned", tt.wantErr)
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("unexpected error: %s", err)
+			}
+		})
+	}
+}

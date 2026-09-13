@@ -36,13 +36,25 @@ var (
 	ParseSections          = parseSections
 	ReadmeContent          = readmeContent
 
-	LifecycleStageIndex             = lifecycleStageIndex
-	ValidateLifecycleStageSupported = validateLifecycleStageSupported
-	EvaluateDeploymentStatus        = evaluateDeploymentStatus
-	PausedHookIDs                   = pausedHookIDs
+	LifecycleStageIndex                  = lifecycleStageIndex
+	ValidateLifecycleStageSupported      = validateLifecycleStageSupported
+	EvaluateDeploymentStatus             = evaluateDeploymentStatus
+	PausedHookIDs                        = pausedHookIDs
+	EarlySuccessCriteriaOf               = earlySuccessCriteriaOf
+	VerifyEarlySuccessCriteria           = verifyEarlySuccessCriteria
+	EarlySuccessCriteriaCompletedMessage = earlySuccessCriteriaCompletedMessage
 )
 
+func (d *App) WarnEarlySuccessCriteriaWait(sv *Service, until waitUntil) bool {
+	return d.warnEarlySuccessCriteriaWait(sv, until)
+}
+
+func (sv *Service) EarlySuccessCriteriaEnabled() bool {
+	return sv.earlySuccessCriteriaEnabled()
+}
+
 type WaitDeploymentResult = waitDeploymentResult
+type WaitUntil = waitUntil
 
 const (
 	WaitDeploymentContinue     = waitDeploymentContinue

@@ -167,6 +167,16 @@ func (sv *Service) isCodeDeploy() bool {
 	return sv.DeploymentController != nil && sv.DeploymentController.Type == types.DeploymentControllerTypeCodeDeploy
 }
 
+// earlySuccessCriteriaEnabled reports whether the service uses early success
+// criteria for rolling deployments.
+func (sv *Service) earlySuccessCriteriaEnabled() bool {
+	if sv == nil || sv.DeploymentConfiguration == nil {
+		return false
+	}
+	esc := sv.DeploymentConfiguration.EarlySuccessCriteria
+	return esc != nil && esc.Enable
+}
+
 type App struct {
 	Service string
 	Cluster string
