@@ -170,6 +170,9 @@ func (d *App) Deploy(ctx context.Context, opt DeployOption) error {
 			return err
 		}
 	}
+	if opt.Wait {
+		d.warnEarlySuccessCriteriaWait(sv, waitUntil(opt.WaitUntil))
+	}
 
 	// manage auto scaling
 	if err := d.modifyAutoScaling(ctx, opt); err != nil {

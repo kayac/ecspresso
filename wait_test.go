@@ -274,8 +274,6 @@ func waiterOf(f any) uintptr {
 
 func TestWaitFuncSelectsWaiter(t *testing.T) {
 	app := &ecspresso.App{}
-	logs := new(bytes.Buffer)
-	app.SetLogger(ecspresso.NewLogger(logs))
 	withController := &ecspresso.Service{
 		Service: types.Service{
 			DeploymentController: &types.DeploymentController{
@@ -320,13 +318,6 @@ func TestWaitFuncSelectsWaiter(t *testing.T) {
 			if got := waiterOf(doWait); got != tt.want {
 				t.Errorf("unexpected waiter selected for --wait-until=%q", tt.until)
 			}
-			// Waiting for service stable defeats early success criteria, so
-			// that combination must be warned about, and only that one.
-			warned := strings.Contains(logs.String(), "early success criteria is enabled but waiting for service stable")
-			if want := tt.sv.EarlySuccessCriteriaEnabled() && tt.until != "deployed"; warned != want {
-				t.Errorf("warning logged = %v, want %v", warned, want)
-			}
-			logs.Reset()
 		})
 	}
 
@@ -375,5 +366,111 @@ func TestEarlySuccessCriteria(t *testing.T) {
 	var nilSv *ecspresso.Service
 	if nilSv.EarlySuccessCriteriaEnabled() {
 		t.Error("nil service should not enable early success criteria")
+	}
+}
+
+func TestWarnEarlySuccessCriteriaWait(t *testing.T) {
+	app := &ecspresso.App{}
+	logs := new(bytes.Buffer)
+	app.SetLogger(ecspresso.NewLogger(logs))
+	esc := &types.DeploymentEarlySuccessCriteria{
+		Enable:                       true,
+		HealthyPercent:               aws.Int32(90),
+		SourceServiceRevisionCleanup: types.ServiceRevisionCleanupDeferred,
+	}
+	enabled := &ecspresso.Service{
+		Service: types.Service{
+			DeploymentConfiguration: &types.DeploymentConfiguration{EarlySuccessCriteria: esc},
+		},
+	}
+	codeDeploy := &ecspresso.Service{
+		Service: types.Service{
+			DeploymentController:    &types.DeploymentController{Type: types.DeploymentControllerTypeCodeDeploy},
+			DeploymentConfiguration: &types.DeploymentConfiguration{EarlySuccessCriteria: esc},
+		},
+	}
+	disabled := &ecspresso.Service{
+		Service: types.Service{
+			DeploymentConfiguration: &types.DeploymentConfiguration{
+				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{Enable: false},
+			},
+		},
+	}
+	tests := []struct {
+		name  string
+		sv    *ecspresso.Service
+		until string
+		want  bool
+	}{
+		{"stable defeats early success criteria", enabled, "stable", true},
+		{"empty means stable", enabled, "", true},
+		{"deployed returns early", enabled, "deployed", false},
+		{"lifecycle stage", enabled, "ecs:BAKE_TIME", false},
+		{"disabled criteria", disabled, "stable", false},
+		{"no deployment configuration", &ecspresso.Service{}, "stable", false},
+		{"nil service", nil, "stable", false},
+		{"CodeDeploy never uses the criteria", codeDeploy, "stable", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logs.Reset()
+			got := app.WarnEarlySuccessCriteriaWait(tt.sv, ecspresso.WaitUntil(tt.until))
+			if got != tt.want {
+				t.Errorf("warned = %v, want %v", got, tt.want)
+			}
+			if logged := strings.Contains(logs.String(), "early success criteria is enabled but waiting for service stable"); logged != tt.want {
+				t.Errorf("warning logged = %v, want %v", logged, tt.want)
+			}
+		})
+	}
+}
+
+func TestEarlySuccessCriteriaCompletedMessage(t *testing.T) {
+	criteria := func(cleanup types.ServiceRevisionCleanup) *types.DeploymentConfiguration {
+		return &types.DeploymentConfiguration{
+			EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+				Enable:                       true,
+				HealthyPercent:               aws.Int32(50),
+				SourceServiceRevisionCleanup: cleanup,
+			},
+		}
+	}
+	tests := []struct {
+		name string
+		dp   types.ServiceDeployment
+		want string
+	}{
+		{
+			name: "deferred cleanup",
+			dp:   types.ServiceDeployment{Status: types.ServiceDeploymentStatusSuccessful, DeploymentConfiguration: criteria(types.ServiceRevisionCleanupDeferred)},
+			want: "early success criteria is enabled; remaining tasks are launched and the previous tasks are removed in the background",
+		},
+		{
+			name: "blocking cleanup",
+			dp:   types.ServiceDeployment{Status: types.ServiceDeploymentStatusSuccessful, DeploymentConfiguration: criteria(types.ServiceRevisionCleanupBlocking)},
+			want: "early success criteria is enabled; remaining tasks are launched in the background",
+		},
+		{
+			// A rollback also ends the wait, but nothing continues in the background.
+			name: "rolled back",
+			dp:   types.ServiceDeployment{Status: types.ServiceDeploymentStatusRollbackSuccessful, DeploymentConfiguration: criteria(types.ServiceRevisionCleanupDeferred)},
+		},
+		{
+			name: "no criteria",
+			dp:   types.ServiceDeployment{Status: types.ServiceDeploymentStatusSuccessful, DeploymentConfiguration: &types.DeploymentConfiguration{}},
+		},
+		{
+			name: "disabled criteria",
+			dp: types.ServiceDeployment{Status: types.ServiceDeploymentStatusSuccessful, DeploymentConfiguration: &types.DeploymentConfiguration{
+				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{Enable: false},
+			}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ecspresso.EarlySuccessCriteriaCompletedMessage(&tt.dp); got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
 	}
 }

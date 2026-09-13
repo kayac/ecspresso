@@ -151,9 +151,6 @@ func (d *App) WaitFunc(sv *Service, confirm confirmFunc, until waitUntil) (waitF
 		case waitUntilDeployed:
 			return confirm.wrap(d.WaitServiceDeployCompleted), nil
 		case waitUntilStable, "":
-			if sv.earlySuccessCriteriaEnabled() {
-				d.LogWarn("early success criteria is enabled but waiting for service stable; the wait continues until all tasks are running and the source revision is cleaned up, use --wait-until=deployed to return when the deployment completes")
-			}
 			return defaultFunc, nil
 		default:
 			return nil, fmt.Errorf("unsupported waitUntil: %s", until)
@@ -161,6 +158,22 @@ func (d *App) WaitFunc(sv *Service, confirm confirmFunc, until waitUntil) (waitF
 	default:
 		return nil, fmt.Errorf("unsupported deployment controller type: %s", controllerType)
 	}
+}
+
+// warnEarlySuccessCriteriaWait warns when waiting for service stable defeats
+// early success criteria. The service-stable waiter waits until all tasks are
+// running and the previous tasks are removed, so the deployment completing
+// early gains nothing. It reports whether a warning was logged.
+func (d *App) warnEarlySuccessCriteriaWait(sv *Service, until waitUntil) bool {
+	if sv == nil || sv.isCodeDeploy() || !sv.earlySuccessCriteriaEnabled() {
+		return false
+	}
+	switch until {
+	case waitUntilStable, "":
+		d.LogWarn("early success criteria is enabled but waiting for service stable; the wait continues until all tasks are running and the previous tasks are removed, use --wait-until=deployed to return when the deployment completes")
+		return true
+	}
+	return false
 }
 
 func (d *App) confirmPrimaryTD(tdArn string) confirmFunc {
@@ -202,6 +215,7 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 	if err != nil {
 		return err
 	}
+	d.warnEarlySuccessCriteriaWait(sv, until)
 	if err := doWait(ctx, sv); err != nil {
 		if errors.As(err, &errNotFound) && sv.isCodeDeploy() {
 			d.LogInfo(err.Error())
@@ -351,6 +365,24 @@ func earlySuccessCriteriaOf(dp *types.ServiceDeployment) *types.DeploymentEarlyS
 	return nil
 }
 
+// earlySuccessCriteriaCompletedMessage returns the message to log when a
+// deployment with early success criteria completes successfully, describing
+// what ECS continues to do outside of the deployment. It returns an empty
+// string when the message doesn't apply (e.g., the deployment was rolled back).
+func earlySuccessCriteriaCompletedMessage(dp *types.ServiceDeployment) string {
+	if dp.Status != types.ServiceDeploymentStatusSuccessful {
+		return ""
+	}
+	esc := earlySuccessCriteriaOf(dp)
+	if esc == nil {
+		return ""
+	}
+	if esc.SourceServiceRevisionCleanup == types.ServiceRevisionCleanupDeferred {
+		return "early success criteria is enabled; remaining tasks are launched and the previous tasks are removed in the background"
+	}
+	return "early success criteria is enabled; remaining tasks are launched in the background"
+}
+
 // pausedHookIDs returns the IDs of pause lifecycle hooks of the deployment
 // that are awaiting action.
 func pausedHookIDs(dp *types.ServiceDeployment) []string {
@@ -451,8 +483,9 @@ func (d *App) waitServiceDeployment(ctx context.Context, done func(*types.Servic
 			} else {
 				d.LogInfo("service deployment completed", "status", string(status))
 			}
-			if esc := earlySuccessCriteriaOf(&dp); esc != nil {
-				d.LogInfo("service deployment completed by early success criteria; remaining tasks are launched and the source revision is cleaned up in the background",
+			if msg := earlySuccessCriteriaCompletedMessage(&dp); msg != "" {
+				esc := dp.DeploymentConfiguration.EarlySuccessCriteria
+				d.LogInfo(msg,
 					"healthy_percent", aws.ToInt32(esc.HealthyPercent),
 					"source_service_revision_cleanup", string(esc.SourceServiceRevisionCleanup),
 				)

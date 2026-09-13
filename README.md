@@ -450,7 +450,7 @@ Events:
 `ecspresso deploy` waits until the deployment completes by default. Use `--no-wait` to return immediately after starting the deployment, or `--wait-until` to choose what to wait for.
 
 For the ECS deployment controller (also used when `deploymentController` is not set in the service definition):
-- `deployed` (default): Waits until the service deployment completes. When [early success criteria](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/early-success-criteria.html) is enabled in `deploymentConfiguration.earlySuccessCriteria`, the deployment completes once the configured healthy percent of tasks is running, and `ecspresso deploy` returns while the remaining tasks are launched and the source revision is cleaned up in the background.
+- `deployed` (default): Waits until the service deployment completes. When [early success criteria](#early-success-criteria-for-rolling-deployment) is enabled, the deployment completes once the configured healthy percent of tasks is running, and `ecspresso deploy` returns while the remaining tasks are launched in the background (and, with `sourceServiceRevisionCleanup: "DEFERRED"`, the previous tasks are also removed in the background).
 - `stable`: Waits until the service becomes stable (same as `aws ecs wait services-stable`). Note that this waits until all tasks are running and the previous tasks are removed even if early success criteria is enabled, so ecspresso warns about this combination.
 - `ecs:<lifecycle stage>` (e.g., `ecs:BAKE_TIME`): Waits until the deployment reaches the specified [deployment lifecycle stage](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/blue-green-deployment-how-it-works.html#blue-green-deployment-stages). This is useful to finish a CI job without waiting for a long bake time. Requires a traffic shifting deployment strategy (e.g., `BLUE_GREEN`). Note that if a pause lifecycle hook is configured at an earlier stage, the wait continues until the deployment is resumed (e.g., by `aws ecs continue-service-deployment`) or times out.
 
@@ -473,7 +473,7 @@ The `ecspresso wait` command also accepts `--wait-until` (`stable` or `deployed`
     "minimumHealthyPercent": 50,
     "earlySuccessCriteria": {
       "enable": true,
-      "healthyPercent": 50, // between minimumHealthyPercent and 100
+      "healthyPercent": 50, // between minimumHealthyPercent (default 100) and 100
       "sourceServiceRevisionCleanup": "DEFERRED" // or "BLOCKING"
     }
   },
@@ -487,7 +487,7 @@ $ ecspresso deploy --config ecspresso.yml
 ...
 2024-01-01T00:03:10.000+09:00 [INFO] [myService/default] TARGET 0071231069967943254 pending:2 running:2
 2024-01-01T00:03:10.000+09:00 [INFO] [myService/default] service deployment completed [status:SUCCESSFUL] [reason:Service deployment met early success criteria.]
-2024-01-01T00:03:10.000+09:00 [INFO] [myService/default] service deployment completed by early success criteria; remaining tasks are launched and the source revision is cleaned up in the background [healthy_percent:50] [source_service_revision_cleanup:DEFERRED]
+2024-01-01T00:03:10.000+09:00 [INFO] [myService/default] early success criteria is enabled; remaining tasks are launched and the previous tasks are removed in the background [healthy_percent:50] [source_service_revision_cleanup:DEFERRED]
 ```
 
 Note that the deployment circuit breaker and CloudWatch alarm rollback no longer apply after the deployment completes.
