@@ -1,11 +1,15 @@
 package ecspresso_test
 
 import (
+	"bytes"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kayac/ecspresso/v2"
 )
 
@@ -258,5 +262,118 @@ func TestEvaluateDeploymentStatus(t *testing.T) {
 				t.Errorf("evaluateDeploymentStatus = %v, expected %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// waiterOf returns the code pointer of a waiter to identify which method
+// WaitFunc selected. It only works without a confirm func, which would wrap
+// the waiter in a new closure.
+func waiterOf(f any) uintptr {
+	return reflect.ValueOf(f).Pointer()
+}
+
+func TestWaitFuncSelectsWaiter(t *testing.T) {
+	app := &ecspresso.App{}
+	logs := new(bytes.Buffer)
+	app.SetLogger(ecspresso.NewLogger(logs))
+	withController := &ecspresso.Service{
+		Service: types.Service{
+			DeploymentController: &types.DeploymentController{
+				Type: types.DeploymentControllerTypeEcs,
+			},
+		},
+	}
+	// ECS is the default deployment controller, so a service definition
+	// without one must select the same waiter as an explicit ECS controller.
+	noController := &ecspresso.Service{Service: types.Service{}}
+	earlySuccess := &ecspresso.Service{
+		Service: types.Service{
+			DeploymentConfiguration: &types.DeploymentConfiguration{
+				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+					Enable:                       true,
+					HealthyPercent:               aws.Int32(90),
+					SourceServiceRevisionCleanup: types.ServiceRevisionCleanupDeferred,
+				},
+			},
+		},
+	}
+	tests := []struct {
+		name  string
+		sv    *ecspresso.Service
+		until string
+		want  uintptr
+	}{
+		{"deployed with ECS controller", withController, "deployed", waiterOf(app.WaitServiceDeployCompleted)},
+		{"deployed without controller", noController, "deployed", waiterOf(app.WaitServiceDeployCompleted)},
+		{"stable with ECS controller", withController, "stable", waiterOf(app.WaitServiceStable)},
+		{"stable without controller", noController, "stable", waiterOf(app.WaitServiceStable)},
+		{"empty without controller", noController, "", waiterOf(app.WaitServiceStable)},
+		{"deployed with early success criteria", earlySuccess, "deployed", waiterOf(app.WaitServiceDeployCompleted)},
+		{"stable with early success criteria", earlySuccess, "stable", waiterOf(app.WaitServiceStable)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doWait, err := app.WaitFunc(tt.sv, nil, ecspresso.WaitUntil(tt.until))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got := waiterOf(doWait); got != tt.want {
+				t.Errorf("unexpected waiter selected for --wait-until=%q", tt.until)
+			}
+			// Waiting for service stable defeats early success criteria, so
+			// that combination must be warned about, and only that one.
+			warned := strings.Contains(logs.String(), "early success criteria is enabled but waiting for service stable")
+			if want := tt.sv.EarlySuccessCriteriaEnabled() && tt.until != "deployed"; warned != want {
+				t.Errorf("warning logged = %v, want %v", warned, want)
+			}
+			logs.Reset()
+		})
+	}
+
+	if _, err := app.WaitFunc(noController, nil, "no-such-value"); err == nil {
+		t.Error("an unknown waitUntil should be rejected without an explicit deployment controller")
+	}
+}
+
+func TestEarlySuccessCriteria(t *testing.T) {
+	enabled := &types.DeploymentEarlySuccessCriteria{
+		Enable:                       true,
+		HealthyPercent:               aws.Int32(80),
+		SourceServiceRevisionCleanup: types.ServiceRevisionCleanupBlocking,
+	}
+	tests := []struct {
+		name string
+		dc   *types.DeploymentConfiguration
+		want *types.DeploymentEarlySuccessCriteria
+	}{
+		{"no deployment configuration", nil, nil},
+		{"no early success criteria", &types.DeploymentConfiguration{}, nil},
+		{
+			"disabled",
+			&types.DeploymentConfiguration{
+				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{Enable: false, HealthyPercent: aws.Int32(80)},
+			},
+			nil,
+		},
+		{"enabled", &types.DeploymentConfiguration{EarlySuccessCriteria: enabled}, enabled},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dp := &types.ServiceDeployment{DeploymentConfiguration: tt.dc}
+			if diff := cmp.Diff(tt.want, ecspresso.EarlySuccessCriteriaOf(dp), cmpopts.IgnoreUnexported(types.DeploymentEarlySuccessCriteria{})); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+			sv := &ecspresso.Service{Service: types.Service{DeploymentConfiguration: tt.dc}}
+			if got, want := sv.EarlySuccessCriteriaEnabled(), tt.want != nil; got != want {
+				t.Errorf("EarlySuccessCriteriaEnabled = %v, want %v", got, want)
+			}
+		})
+	}
+	if ecspresso.EarlySuccessCriteriaOf(nil) != nil {
+		t.Error("nil deployment should not have early success criteria")
+	}
+	var nilSv *ecspresso.Service
+	if nilSv.EarlySuccessCriteriaEnabled() {
+		t.Error("nil service should not enable early success criteria")
 	}
 }

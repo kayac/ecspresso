@@ -448,9 +448,9 @@ Events:
 
 `ecspresso deploy` waits until the deployment completes by default. Use `--no-wait` to return immediately after starting the deployment, or `--wait-until` to choose what to wait for.
 
-For the ECS deployment controller:
-- `deployed` (default): Waits until the service deployment completes.
-- `stable`: Waits until the service becomes stable (same as `aws ecs wait services-stable`).
+For the ECS deployment controller (also used when `deploymentController` is not set in the service definition):
+- `deployed` (default): Waits until the service deployment completes. When [early success criteria](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/early-success-criteria.html) is enabled in `deploymentConfiguration.earlySuccessCriteria`, the deployment completes once the configured healthy percent of tasks is running, and `ecspresso deploy` returns while the remaining tasks are launched and the source revision is cleaned up in the background.
+- `stable`: Waits until the service becomes stable (same as `aws ecs wait services-stable`). Note that this waits until all tasks are running and the previous tasks are removed even if early success criteria is enabled, so ecspresso warns about this combination.
 - `ecs:<lifecycle stage>` (e.g., `ecs:BAKE_TIME`): Waits until the deployment reaches the specified [deployment lifecycle stage](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/blue-green-deployment-how-it-works.html#blue-green-deployment-stages). This is useful to finish a CI job without waiting for a long bake time. Requires a traffic shifting deployment strategy (e.g., `BLUE_GREEN`). Note that if a pause lifecycle hook is configured at an earlier stage, the wait continues until the deployment is resumed (e.g., by `aws ecs continue-service-deployment`) or times out.
 
 For the CodeDeploy deployment controller:

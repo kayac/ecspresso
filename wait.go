@@ -126,44 +126,41 @@ func (d *App) WaitFunc(sv *Service, confirm confirmFunc, until waitUntil) (waitF
 	if sv == nil {
 		return defaultFunc, nil
 	}
-	if sv.DeploymentController == nil {
-		// ECS is the default deployment controller when the service doesn't set
-		// one explicitly, so a lifecycle stage target must not fall back to the
-		// service-stable waiter silently.
+	// ECS is the default deployment controller when the service doesn't set
+	// one explicitly, so it must behave the same as an explicit ECS controller
+	// instead of falling back to the service-stable waiter silently.
+	controllerType := types.DeploymentControllerTypeEcs
+	if dc := sv.DeploymentController; dc != nil {
+		controllerType = dc.Type
+	}
+	switch controllerType {
+	case types.DeploymentControllerTypeCodeDeploy:
+		if until.forCodeDeployLifecycle() {
+			return d.WaitForCodeDeployLifecycle(until.codeDeployLifecycleEvent()), nil
+		}
+		if until.forECSLifecycleStage() {
+			return nil, fmt.Errorf("unsupported waitUntil: %s (a deployment lifecycle stage is only reported by the ECS deployment controller)", until)
+		}
+		return d.WaitForCodeDeploy, nil
+	case types.DeploymentControllerTypeEcs:
 		if until.forECSLifecycleStage() {
 			stage := types.ServiceDeploymentLifecycleStage(until.ecsLifecycleStage())
 			return d.WaitServiceDeployLifecycleStage(stage), nil
 		}
-		return defaultFunc, nil
-	}
-	if dc := sv.DeploymentController; dc != nil {
-		switch dc.Type {
-		case types.DeploymentControllerTypeCodeDeploy:
-			if until.forCodeDeployLifecycle() {
-				return d.WaitForCodeDeployLifecycle(until.codeDeployLifecycleEvent()), nil
+		switch until {
+		case waitUntilDeployed:
+			return confirm.wrap(d.WaitServiceDeployCompleted), nil
+		case waitUntilStable, "":
+			if sv.earlySuccessCriteriaEnabled() {
+				d.LogWarn("early success criteria is enabled but waiting for service stable; the wait continues until all tasks are running and the source revision is cleaned up, use --wait-until=deployed to return when the deployment completes")
 			}
-			if until.forECSLifecycleStage() {
-				return nil, fmt.Errorf("unsupported waitUntil: %s (a deployment lifecycle stage is only reported by the ECS deployment controller)", until)
-			}
-			return d.WaitForCodeDeploy, nil
-		case types.DeploymentControllerTypeEcs:
-			if until.forECSLifecycleStage() {
-				stage := types.ServiceDeploymentLifecycleStage(until.ecsLifecycleStage())
-				return d.WaitServiceDeployLifecycleStage(stage), nil
-			}
-			switch until {
-			case waitUntilDeployed:
-				return confirm.wrap(d.WaitServiceDeployCompleted), nil
-			case waitUntilStable, "":
-				return defaultFunc, nil
-			default:
-				return nil, fmt.Errorf("unsupported waitUntil: %s", until)
-			}
+			return defaultFunc, nil
 		default:
-			return nil, fmt.Errorf("unsupported deployment controller type: %s", dc.Type)
+			return nil, fmt.Errorf("unsupported waitUntil: %s", until)
 		}
+	default:
+		return nil, fmt.Errorf("unsupported deployment controller type: %s", controllerType)
 	}
-	return defaultFunc, nil
 }
 
 func (d *App) confirmPrimaryTD(tdArn string) confirmFunc {
@@ -342,6 +339,18 @@ func (d *App) WaitServiceDeployLifecycleStage(stage types.ServiceDeploymentLifec
 	}
 }
 
+// earlySuccessCriteriaOf returns the enabled early success criteria of the
+// deployment, or nil when the deployment doesn't use it.
+func earlySuccessCriteriaOf(dp *types.ServiceDeployment) *types.DeploymentEarlySuccessCriteria {
+	if dp == nil || dp.DeploymentConfiguration == nil {
+		return nil
+	}
+	if esc := dp.DeploymentConfiguration.EarlySuccessCriteria; esc != nil && esc.Enable {
+		return esc
+	}
+	return nil
+}
+
 // pausedHookIDs returns the IDs of pause lifecycle hooks of the deployment
 // that are awaiting action.
 func pausedHookIDs(dp *types.ServiceDeployment) []string {
@@ -437,7 +446,17 @@ func (d *App) waitServiceDeployment(ctx context.Context, done func(*types.Servic
 		}
 		switch result {
 		case waitDeploymentCompleted:
-			d.LogInfo("service deployment completed", "status", string(status))
+			if reason := aws.ToString(dp.StatusReason); reason != "" {
+				d.LogInfo("service deployment completed", "status", string(status), "reason", reason)
+			} else {
+				d.LogInfo("service deployment completed", "status", string(status))
+			}
+			if esc := earlySuccessCriteriaOf(&dp); esc != nil {
+				d.LogInfo("service deployment completed by early success criteria; remaining tasks are launched and the source revision is cleaned up in the background",
+					"healthy_percent", aws.ToInt32(esc.HealthyPercent),
+					"source_service_revision_cleanup", string(esc.SourceServiceRevisionCleanup),
+				)
+			}
 			return nil
 		case waitDeploymentReachedStage:
 			d.LogInfo("service deployment reached the lifecycle stage", "stage", string(dp.LifecycleStage))

@@ -40,9 +40,15 @@ var (
 	ValidateLifecycleStageSupported = validateLifecycleStageSupported
 	EvaluateDeploymentStatus        = evaluateDeploymentStatus
 	PausedHookIDs                   = pausedHookIDs
+	EarlySuccessCriteriaOf          = earlySuccessCriteriaOf
 )
 
+func (sv *Service) EarlySuccessCriteriaEnabled() bool {
+	return sv.earlySuccessCriteriaEnabled()
+}
+
 type WaitDeploymentResult = waitDeploymentResult
+type WaitUntil = waitUntil
 
 const (
 	WaitDeploymentContinue     = waitDeploymentContinue
