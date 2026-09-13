@@ -464,46 +464,33 @@ The `ecspresso wait` command also accepts `--wait-until` (`stable` or `deployed`
 
 ### Early success criteria (for rolling deployment)
 
-[Early success criteria](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/early-success-criteria.html) completes a rolling deployment once a percentage of the desired tasks is running and healthy on the new service revision, instead of waiting for all tasks and the removal of the previous tasks. Configure `deploymentConfiguration.earlySuccessCriteria` in the service definition.
+[Early success criteria](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/early-success-criteria.html) completes a rolling deployment once `healthyPercent` of the desired tasks are running and healthy on the new service revision. The remaining tasks are launched and the previous tasks are removed outside of the deployment (`sourceServiceRevisionCleanup: "DEFERRED"`), or the previous tasks are removed before the deployment completes (`"BLOCKING"`).
 
 ```jsonnet
 {
   "deploymentConfiguration": {
     "strategy": "ROLLING",
     "minimumHealthyPercent": 50,
-    "maximumPercent": 200,
     "earlySuccessCriteria": {
       "enable": true,
-      "healthyPercent": 50,
+      "healthyPercent": 50, // between minimumHealthyPercent and 100
       "sourceServiceRevisionCleanup": "DEFERRED" // or "BLOCKING"
     }
   },
   // ...
 ```
 
-- `healthyPercent`: The percentage of the desired count that must be running and healthy on the new service revision. It must be between `minimumHealthyPercent` and 100. The remaining tasks are launched outside of the deployment.
-- `sourceServiceRevisionCleanup`: `BLOCKING` removes the previous tasks before the deployment completes. `DEFERRED` completes the deployment first and removes the previous tasks in the background.
-
-`ecspresso deploy` (with the default `--wait-until=deployed`) returns as soon as the deployment completes, so a CI job doesn't wait for the remaining tasks or the cleanup of the previous tasks.
+`ecspresso deploy` returns as soon as the deployment completes (with the default `--wait-until=deployed`), and `ecspresso verify` validates `earlySuccessCriteria` before deploying.
 
 ```console
 $ ecspresso deploy --config ecspresso.yml
 ...
 2024-01-01T00:03:10.000+09:00 [INFO] [myService/default] TARGET 0071231069967943254 pending:2 running:2
-2024-01-01T00:03:10.000+09:00 [INFO] [myService/default] service deployment status [status:SUCCESSFUL]
 2024-01-01T00:03:10.000+09:00 [INFO] [myService/default] service deployment completed [status:SUCCESSFUL] [reason:Service deployment met early success criteria.]
 2024-01-01T00:03:10.000+09:00 [INFO] [myService/default] service deployment completed by early success criteria; remaining tasks are launched and the source revision is cleaned up in the background [healthy_percent:50] [source_service_revision_cleanup:DEFERRED]
-2024-01-01T00:03:10.000+09:00 [INFO] [myService/default] service completed [status:deployed]
 ```
 
-`ecspresso verify` checks that `earlySuccessCriteria` is valid (the strategy is `ROLLING`, `healthyPercent` and `sourceServiceRevisionCleanup` are set, and `healthyPercent` is between `minimumHealthyPercent` and 100) before deploying.
-
-Notes:
-
-- Early success criteria is only supported by the `ROLLING` deployment strategy with the ECS deployment controller.
-- After the deployment completes, the deployment circuit breaker and CloudWatch alarm rollback no longer apply. `ecspresso rollback` after that starts a new deployment with the previous task definition, because there is no deployment in progress to stop.
-- With `DEFERRED`, tasks on the previous revision that are protected (e.g. by task scale-in protection) may keep running. Use `ecspresso status` to monitor them.
-- ECS Express mode can't update `deploymentConfiguration`, so this feature isn't available in Express mode.
+Note that the deployment circuit breaker and CloudWatch alarm rollback no longer apply after the deployment completes.
 
 ### Blue/Green deployment (with ECS deployment controller)
 
