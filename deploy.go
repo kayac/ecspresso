@@ -578,12 +578,12 @@ func (d *App) taskDefinitionArnForDeploy(ctx context.Context, sv *Service, opt D
 		if opt.LatestTaskDefinition {
 			return "", fmt.Errorf("revision and latest-task-definition are exclusive: %w", ErrConflictOptions)
 		}
-		family := strings.Split(arnToName(aws.ToString(sv.TaskDefinition)), ":")[0]
+		family, _, _ := strings.Cut(arnToName(aws.ToString(sv.TaskDefinition)), ":")
 		return fmt.Sprintf("%s:%d", family, opt.Revision), nil
 	}
 
 	if opt.LatestTaskDefinition {
-		family := strings.Split(arnToName(aws.ToString(sv.TaskDefinition)), ":")[0]
+		family, _, _ := strings.Cut(arnToName(aws.ToString(sv.TaskDefinition)), ":")
 		tdArn, err := d.findLatestTaskDefinitionArn(ctx, family)
 		if err != nil {
 			return "", err

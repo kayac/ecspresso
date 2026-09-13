@@ -284,7 +284,7 @@ func (d *App) RollbackByCodeDeploy(ctx context.Context, sv *Service, targetArn s
 func (d *App) FindRollbackTarget(ctx context.Context, taskDefinitionArn string) (string, error) {
 	var found bool
 	var nextToken *string
-	family := strings.Split(arnToName(taskDefinitionArn), ":")[0]
+	family, _, _ := strings.Cut(arnToName(taskDefinitionArn), ":")
 	for {
 		out, err := d.ecs.ListTaskDefinitions(ctx,
 			&ecs.ListTaskDefinitionsInput{
