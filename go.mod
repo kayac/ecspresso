@@ -25,7 +25,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/vpclattice v1.25.6
 	github.com/aws/smithy-go v1.28.1
 	github.com/fatih/color v1.19.0
-	github.com/fujiwara/cfn-lookup v1.1.0
+	github.com/fujiwara/cfn-lookup v1.1.1
 	github.com/fujiwara/ecsta v0.8.2
 	github.com/fujiwara/sloghandler v0.1.0
 	github.com/fujiwara/ssm-lookup v0.1.1
@@ -81,7 +81,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.37 // indirect
-	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.71.9 // indirect
+	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.76.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.16 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.29 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.36 // indirect
@@ -140,7 +140,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.44.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
-	go.yaml.in/yaml/v2 v2.4.3 // indirect
+	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
