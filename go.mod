@@ -1,6 +1,6 @@
 module github.com/kayac/ecspresso/v2
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/Songmu/prompter v0.5.1
@@ -46,7 +46,7 @@ require (
 	github.com/samber/lo v1.53.0
 	github.com/schollz/progressbar/v3 v3.19.1
 	github.com/shogo82148/go-retry v1.3.1
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.48.0
 )
 
 require (
