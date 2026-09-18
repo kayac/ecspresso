@@ -11,7 +11,7 @@
 // After Kong parsing, dispatch with:
 //
 //	smith, _ := skillsmith.New("mytool", version, skillsFS)
-//	err := opts.Skills.Run(ctx, smith)
+//	err := opts.Skills.Dispatch(ctx, smith)
 package skillscmd
 
 import (
@@ -65,8 +65,11 @@ func (o *StatusOption) options() skillsmith.Options {
 	}
 }
 
-// Run dispatches to the active subcommand based on which option is non-nil.
-func (c *Commands) Run(ctx context.Context, s *skillsmith.Smith) error {
+// Dispatch dispatches to the active subcommand based on which option is non-nil.
+//
+// Do not name this method "Run". Kong treats a Run() method of a command struct specially:
+// Kong v1.16+ does not require a subcommand for a struct that has it.
+func (c *Commands) Dispatch(ctx context.Context, s *skillsmith.Smith) error {
 	switch {
 	case c.List != nil:
 		return runList(ctx, s)
