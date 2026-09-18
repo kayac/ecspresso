@@ -16,5 +16,5 @@ func dispatchSkills(ctx context.Context, opts *skillscmd.Commands) error {
 	if err != nil {
 		return err
 	}
-	return opts.Run(ctx, s)
+	return opts.Dispatch(ctx, s)
 }
