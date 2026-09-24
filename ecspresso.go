@@ -36,6 +36,16 @@ const DefaultConfigFilePath = "ecspresso.yml"
 const dryRunStr = "DRY RUN"
 
 var delayForServiceChanged = 3 * time.Second
+
+// findServiceDeploymentTimeout is the time to search for the service deployment
+// created by the deployment.
+var findServiceDeploymentTimeout = 10 * time.Second
+
+// findStartedServiceDeploymentTimeout is the time to search for the service
+// deployment when the service has a new primary deployment started by this
+// command, but its service deployment is not created yet.
+var findStartedServiceDeploymentTimeout = 5 * time.Minute
+
 var refreshInterval = 10 * time.Second
 var waiterMaxDelay = 15 * time.Second
 var spcIndent = "  "
@@ -77,6 +87,16 @@ func (sv *Service) PrimaryDeployment() (types.Deployment, bool) {
 	return lo.Find(sv.Deployments, func(dp types.Deployment) bool {
 		return aws.ToString(dp.Status) == "PRIMARY"
 	})
+}
+
+// primaryDeploymentStartedAfter reports whether the primary deployment of the
+// service was created after t.
+func (sv *Service) primaryDeploymentStartedAfter(t time.Time) bool {
+	dp, ok := sv.PrimaryDeployment()
+	if !ok || dp.CreatedAt == nil {
+		return false
+	}
+	return dp.CreatedAt.After(t)
 }
 
 func (sv *Service) getTaskDefinitionArn() (string, error) {

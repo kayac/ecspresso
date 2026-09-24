@@ -332,6 +332,15 @@ func (d *App) waitForCodeDeployRollback(ctx context.Context, id string) error {
 
 func (d *App) findActiveECSDeploymentArn(ctx context.Context, timeout time.Duration) (string, error) {
 	d.LogDebug("finding active ECS service deployment...")
+	return d.findECSDeploymentArn(ctx, timeout, []types.ServiceDeploymentStatus{
+		types.ServiceDeploymentStatusPending,
+		types.ServiceDeploymentStatusInProgress,
+	})
+}
+
+// findECSDeploymentArn finds the most recent service deployment in the statuses
+// started after the application started. Empty statuses means any status.
+func (d *App) findECSDeploymentArn(ctx context.Context, timeout time.Duration, statuses []types.ServiceDeploymentStatus) (string, error) {
 	tm := time.NewTimer(timeout)
 	defer tm.Stop()
 	activeDeployments := make([]types.ServiceDeploymentBrief, 0)
@@ -339,8 +348,9 @@ func (d *App) findActiveECSDeploymentArn(ctx context.Context, timeout time.Durat
 		resp, err := d.ecs.ListServiceDeployments(ctx, &ecs.ListServiceDeploymentsInput{
 			Cluster: &d.Cluster,
 			Service: &d.Service,
-			Status: []types.ServiceDeploymentStatus{
-				types.ServiceDeploymentStatusInProgress,
+			Status:  statuses,
+			CreatedAt: &types.CreatedAt{
+				After: aws.Time(d.startedAt),
 			},
 		})
 		if err != nil {
