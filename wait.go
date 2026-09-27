@@ -415,11 +415,45 @@ func validateLifecycleStageSupported(sv *Service, stage types.ServiceDeploymentL
 	}
 }
 
+// findServiceDeploymentToWait finds the service deployment started by this
+// command. ECS creates the service deployment asynchronously after
+// UpdateService, and it may take more than a few seconds (especially for the
+// blue/green deployments). So when the service has a new primary deployment
+// started by this command, it keeps searching instead of treating "not found"
+// as "nothing to wait for", which would report success before the deployment
+// finishes.
+func (d *App) findServiceDeploymentToWait(ctx context.Context) (string, error) {
+	deploymentArn, err := d.findActiveECSDeploymentArn(ctx, findServiceDeploymentTimeout)
+	if err == nil || !errors.As(err, &errNotFound) {
+		return deploymentArn, err
+	}
+	sv, err := d.DescribeService(ctx)
+	if err != nil {
+		return "", err
+	}
+	if !sv.primaryDeploymentStartedAfter(d.startedAt) {
+		return "", ErrNotFound("no active service deployments found")
+	}
+	d.LogInfo("a new deployment has started but its service deployment is not created yet, waiting...")
+	// Search in any status, because the deployment may already be finished
+	// (e.g. a rolling deployment without tasks completes in a few seconds).
+	d.LogDebug("finding ECS service deployment started by this command...")
+	deploymentArn, err = d.findECSDeploymentArn(ctx, findStartedServiceDeploymentTimeout, nil)
+	if err != nil {
+		if errors.As(err, &errNotFound) {
+			// Do not return ErrNotFound. The callers treat it as success.
+			return "", fmt.Errorf("a new deployment has started but its service deployment is not found in %s", findStartedServiceDeploymentTimeout)
+		}
+		return "", err
+	}
+	return deploymentArn, nil
+}
+
 // waitServiceDeployment polls the active service deployment until done reports
 // true, or until the deployment reaches a terminal status. A nil done waits for
 // the deployment to finish.
 func (d *App) waitServiceDeployment(ctx context.Context, done func(*types.ServiceDeployment) bool) error {
-	deploymentArn, err := d.findActiveECSDeploymentArn(ctx, time.Second*10)
+	deploymentArn, err := d.findServiceDeploymentToWait(ctx)
 	if err != nil {
 		if errors.As(err, &errNotFound) {
 			d.LogInfo("No active deployment found")

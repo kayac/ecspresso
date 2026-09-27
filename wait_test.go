@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
@@ -470,6 +471,61 @@ func TestEarlySuccessCriteriaCompletedMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := ecspresso.EarlySuccessCriteriaCompletedMessage(&tt.dp); got != tt.want {
 				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPrimaryDeploymentStartedAfter(t *testing.T) {
+	startedAt := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
+	before := startedAt.Add(-time.Minute)
+	after := startedAt.Add(time.Second)
+	tests := []struct {
+		name        string
+		deployments []types.Deployment
+		want        bool
+	}{
+		{
+			name: "no deployments",
+			want: false,
+		},
+		{
+			name: "primary deployment started before the command",
+			deployments: []types.Deployment{
+				{Status: aws.String("PRIMARY"), CreatedAt: &before},
+			},
+			want: false,
+		},
+		{
+			name: "primary deployment started by the command",
+			deployments: []types.Deployment{
+				{Status: aws.String("PRIMARY"), CreatedAt: &after},
+				{Status: aws.String("ACTIVE"), CreatedAt: &before},
+			},
+			want: true,
+		},
+		{
+			name: "only an active deployment started after the command",
+			deployments: []types.Deployment{
+				{Status: aws.String("PRIMARY"), CreatedAt: &before},
+				{Status: aws.String("ACTIVE"), CreatedAt: &after},
+			},
+			want: false,
+		},
+		{
+			name: "primary deployment without created at",
+			deployments: []types.Deployment{
+				{Status: aws.String("PRIMARY")},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sv := &ecspresso.Service{}
+			sv.Deployments = tt.deployments
+			if got := sv.PrimaryDeploymentStartedAfter(startedAt); got != tt.want {
+				t.Errorf("PrimaryDeploymentStartedAfter() = %v, want %v", got, tt.want)
 			}
 		})
 	}
