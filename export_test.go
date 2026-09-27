@@ -50,6 +50,10 @@ func (d *App) WarnEarlySuccessCriteriaWait(sv *Service, until waitUntil) bool {
 	return d.warnEarlySuccessCriteriaWait(sv, until)
 }
 
+func (sv *Service) PrimaryDeploymentStartedAfter(t time.Time) bool {
+	return sv.primaryDeploymentStartedAfter(t)
+}
+
 func (sv *Service) EarlySuccessCriteriaEnabled() bool {
 	return sv.earlySuccessCriteriaEnabled()
 }
