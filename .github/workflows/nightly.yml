@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
         with:
           ref: ${{ github.event.inputs.ref }}
           fetch-depth: 0 # it is required for the changelog to work correctly.
