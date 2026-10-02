@@ -1073,6 +1073,24 @@ func TestParseCLI(t *testing.T) {
 	}
 }
 
+func TestParseCLIMissingSubcommand(t *testing.T) {
+	// kong v1.16+ accepts no subcommand if the command struct has a method named Run()
+	_, _, _, err := ecspresso.ParseCLI([]string{"skills"})
+	if err == nil {
+		t.Fatal("expected an error for skills without a subcommand")
+	}
+	if !strings.Contains(err.Error(), `expected one of "list", "install"`) {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// commands that have a default subcommand accept no subcommand
+	for _, args := range [][]string{{"skills", "list"}, {"tasks"}, {"exec"}} {
+		if _, _, _, err := ecspresso.ParseCLI(args); err != nil {
+			t.Errorf("unexpected error for %v: %v", args, err)
+		}
+	}
+}
+
 func TestParseCLIWithInvalidWaitUntilOption(t *testing.T) {
 	_, _, _, err := ecspresso.ParseCLI([]string{"deploy", "--wait-until=UNSUPPORTED"})
 	if err == nil {

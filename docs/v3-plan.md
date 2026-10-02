@@ -104,10 +104,10 @@ The GitHub Action (`action.yml`) currently lives in this repository, alongside t
 - Migration for users: `uses: kayac/ecspresso@v2` → `uses: <new-org-or-owner>/<new-repo>@v3`.
 - Items to move out:
   - `action.yml` at the repo root.
-  - The `v2-action-testing` branch workflow (currently the CI gate for `action.yml` changes — see [CLAUDE.md](../CLAUDE.md)). The new repo will run its own CI directly on PRs, so the `v2-action-testing` force-push convention goes away.
+  - The `v2-action-testing` branch workflow (currently the CI gate for `action.yml` changes — see [AGENTS.md](../AGENTS.md)). The new repo will run its own CI directly on PRs, so the `v2-action-testing` force-push convention goes away.
 - Items to update in this repo on cutover:
   - README "GitHub Actions" section (currently around L142) — point users to the new repo.
-  - CLAUDE.md — drop the `v2-action-testing` push instruction.
+  - AGENTS.md — drop the `v2-action-testing` push instruction.
 
 #### Keep `action.yml` as a forwarder, do not delete it
 
@@ -220,7 +220,7 @@ var (
 - Construction wraps the sentinel: `fmt.Errorf("service %s is not found: %w", name, ErrNotFound)`.
 - Detection becomes `errors.Is(err, ErrNotFound)` everywhere (drop the local `var errNotFound ErrNotFound` declarations).
 - `wrapPermissionError` returns a wrapped sentinel instead of constructing a typed value.
-- Audit each message for the CLAUDE.md style (lowercase, no trailing punctuation); fix while we're here (`"conflict options"` → `"conflicting options"`).
+- Audit each message for the AGENTS.md style (lowercase, no trailing punctuation); fix while we're here (`"conflict options"` → `"conflicting options"`).
 
 #### Compatibility
 
