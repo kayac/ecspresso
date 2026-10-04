@@ -460,6 +460,8 @@ For the CodeDeploy deployment controller:
 
 In all cases, `ecspresso deploy` exits with a non-zero status when the deployment fails or is rolled back before the wait condition is met.
 
+With the ECS deployment controller, `--wait-until=deployed` calls the ECS service deployment APIs. The IAM principal that runs ecspresso needs `ecs:ListServiceDeployments` on the service ARN and `ecs:DescribeServiceDeployments` on the service deployment ARN (`arn:aws:ecs:<region>:<account>:service-deployment/<cluster>/<service>/*`), which is a different resource from the service ARN.
+
 The `ecspresso wait` command also accepts `--wait-until` (`stable` or `deployed`) to wait for an ongoing deployment without deploying.
 
 ### Early success criteria (for rolling deployment)
