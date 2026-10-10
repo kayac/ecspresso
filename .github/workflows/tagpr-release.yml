@@ -26,6 +26,8 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5
         with:
           ref: ${{ inputs.tag || github.ref }}
+          # workflow_dispatch needs the v2 branch and tags (tagpr is skipped)
+          fetch-depth: 0
       - name: Get current branch
         run: |
           git checkout v2
