@@ -196,6 +196,15 @@ The `external` plugin execs its command once per template function call, which i
 - `timeout` applies per call. On timeout, IO error, or response-id mismatch the process is reset and restarted on the next call.
 - The process is registered as a plugin instance and terminated via `App.Close` (stdin closed, then SIGTERM/SIGKILL) when ecspresso exits.
 
+### Publish a signed packslip manifest with each release
+
+PR: https://github.com/kayac/ecspresso/pull/1105 (proposed in #1104)
+
+Attach a [packslip](https://packslip.dev/) manifest (`packslip.sigstore.json`) to every release starting with v3.0.0, so installers such as mise can verify the publisher and the archive digests.
+
+- GoReleaser runs with `--draft`; a read-only job signs the manifest and a final job uploads it and publishes the release, because immutable releases cannot gain assets after publishing.
+- If signing fails, the release stays a draft (re-run the failed jobs) instead of being published without a manifest.
+
 ## Cleanups
 
 All cleanup items below ship together in PR: https://github.com/kayac/ecspresso/pull/1029
