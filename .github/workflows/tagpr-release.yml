@@ -19,6 +19,9 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.metadata.outputs.tag }}
+      commit: ${{ steps.metadata.outputs.commit }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5
         with:
@@ -42,9 +45,26 @@ jobs:
         uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
           version: "~> v2"
-          args: release
+          # Keep the release as a draft so that packslip.sigstore.json can be
+          # attached before publishing (immutable releases are enabled).
+          args: release --draft
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ steps.tagpr.outputs.tag != '' || github.event_name == 'workflow_dispatch' }}
+
+      - name: Read release metadata
+        id: metadata
+        run: |
+          echo "tag=$(jq -r .tag dist/metadata.json)" >> "$GITHUB_OUTPUT"
+          echo "commit=$(jq -r .commit dist/metadata.json)" >> "$GITHUB_OUTPUT"
+        if: ${{ steps.tagpr.outputs.tag != '' || github.event_name == 'workflow_dispatch' }}
+
+      - name: Upload release archives for packslip
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-archives
+          path: dist/ecspresso_*.tar.gz
+          if-no-files-found: error
         if: ${{ steps.tagpr.outputs.tag != '' || github.event_name == 'workflow_dispatch' }}
 
       - name: Set up QEMU
@@ -69,3 +89,59 @@ jobs:
         env:
           IMAGE_VERSION: ${{ steps.tagpr.outputs.tag || github.event.inputs.tag || 'latest' }}
         if: ${{ steps.tagpr.outputs.tag != '' || github.event_name == 'workflow_dispatch' }}
+
+  # Sign a packslip (https://packslip.dev) for the release archives.
+  # This job has no write access to the release; the bundle is uploaded by publish.
+  packslip:
+    needs: deploy
+    if: ${{ needs.deploy.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-archives
+          path: dist
+      - uses: jdx/packslip@2af36e792faa28130987c8af509e475c7458405d # v1.6.0
+        id: packslip
+        with:
+          artifacts: dist/ecspresso_*.tar.gz
+          tag: ${{ needs.deploy.outputs.tag }}
+          commit: ${{ needs.deploy.outputs.commit }}
+          bin: ecspresso
+          resources: |
+            skill/ecspresso=repo:skills/ecspresso
+          upload: false
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packslip-bundle
+          path: ${{ steps.packslip.outputs.bundle }}
+          if-no-files-found: error
+
+  # Attach the packslip bundle and publish the draft release.
+  # If packslip fails, the release stays a draft; re-run the failed jobs to
+  # publish it. Publishing without the bundle would leave that version
+  # uninstallable via packslip forever, as immutable releases cannot add it later.
+  publish:
+    needs: [deploy, packslip]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: packslip-bundle
+          path: packslip
+      - name: Upload the packslip bundle and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.deploy.outputs.tag }}
+        run: |
+          set -euo pipefail
+          test -f packslip/packslip.sigstore.json
+          gh release upload "$TAG" packslip/packslip.sigstore.json \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false

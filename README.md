@@ -88,9 +88,23 @@ $ asdf set -u ecspresso 2.3.0
 $ aqua g -i kayac/ecspresso
 ```
 
+### mise (macOS and Linux)
+
+[mise](https://mise.jdx.dev/) can install ecspresso via its [packslip backend](https://mise.jdx.dev/dev-tools/backends/packslip.html), which verifies the signed release manifest before installing.
+
+```console
+$ mise use packslip:github.com/kayac/ecspresso
+```
+
+The packslip backend can install only releases that ship a `packslip.sigstore.json` manifest (v3.0.0 and later). v2 releases are available via aqua (`mise use aqua:kayac/ecspresso@2.8.7`).
+
+The [agent skill](skills/ecspresso/SKILL.md) for the installed version can be linked into a project with `mise skills sync`.
+
 ### Binary packages
 
 [Releases](https://github.com/kayac/ecspresso/releases)
+
+Releases since v3.0.0 include `packslip.sigstore.json`, a [packslip](https://packslip.dev/) manifest signed by the release workflow. It lists the digests of the archives and can be checked with `packslip verify`.
 
 ### Docker image
 
