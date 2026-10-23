@@ -164,11 +164,20 @@ func (d *App) newServiceFromTypes(ctx context.Context, in types.Service) (*Servi
 			revOut, err := d.ecs.DescribeServiceRevisions(ctx, &ecs.DescribeServiceRevisionsInput{
 				ServiceRevisionArns: []string{revArn},
 			})
+			// Fail instead of skipping, because a missing attribute would make
+			// diff and deploy treat it as removed.
 			if err != nil {
-				d.LogWarn("failed to describe service revision, skipping monitoring configuration", "error", err)
-			} else if len(revOut.ServiceRevisions) > 0 && revOut.ServiceRevisions[0].Monitoring != nil {
-				d.LogDebug("Monitoring: %#v", revOut.ServiceRevisions[0].Monitoring)
-				sv.Monitoring = revOut.ServiceRevisions[0].Monitoring
+				return nil, fmt.Errorf("failed to describe service revision %s: %w", revArn, err)
+			}
+			if len(revOut.ServiceRevisions) == 0 {
+				reasons := lo.Map(revOut.Failures, func(f types.Failure, _ int) string {
+					return aws.ToString(f.Reason)
+				})
+				return nil, fmt.Errorf("service revision %s is not found: %s", revArn, strings.Join(reasons, ", "))
+			}
+			if m := revOut.ServiceRevisions[0].Monitoring; m != nil {
+				d.LogDebug("Monitoring: %#v", m)
+				sv.Monitoring = m
 			}
 		}
 	}
