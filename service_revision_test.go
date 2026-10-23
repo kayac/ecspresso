@@ -69,17 +69,23 @@ func TestDescribeServiceRevision(t *testing.T) {
 		revisions      func() (any, error)
 		wantErr        string
 		wantMonitoring *types.MonitoringConfiguration
+		wantGateway    []types.GatewayConnector
 	}{
 		{
 			name: "success",
 			revisions: func() (any, error) {
 				return &ecs.DescribeServiceRevisionsOutput{
 					ServiceRevisions: []types.ServiceRevision{
-						{ServiceRevisionArn: aws.String(testServiceRevisionArn), Monitoring: monitoring},
+						{
+							ServiceRevisionArn: aws.String(testServiceRevisionArn),
+							Monitoring:         monitoring,
+							GatewayConnectors:  testGatewayConnectors(),
+						},
 					},
 				}, nil
 			},
 			wantMonitoring: monitoring,
+			wantGateway:    testGatewayConnectors(),
 		},
 		{
 			name: "api error",
@@ -125,6 +131,9 @@ func TestDescribeServiceRevision(t *testing.T) {
 				t.Fatal(err)
 			}
 			if diff := cmp.Diff(c.wantMonitoring, sv.Monitoring, cmpopts.IgnoreUnexported(types.MonitoringConfiguration{}, types.MetricConfiguration{})); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(c.wantGateway, sv.GatewayConnectors, ignoreGatewayConnectorUnexported); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})

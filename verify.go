@@ -452,6 +452,16 @@ func (d *App) verifyServiceDefinition(ctx context.Context) error {
 		}
 	}
 
+	// ECS Gateway
+	if len(sv.GatewayConnectors) > 0 {
+		_, err := vs.VerifyResource(ctx, "GatewayConnectors", func(context.Context) error {
+			return d.verifyGatewayConnectors(ctx, sv, td)
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	// VPC Lattice
 	for i, lc := range sv.VpcLatticeConfigurations {
 		name := fmt.Sprintf("VpcLatticeConfiguration[%d]", i)
@@ -514,6 +524,59 @@ func (d *App) verifyExpressDefinition(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+func (d *App) verifyGatewayConnectors(ctx context.Context, sv *Service, td *TaskDefinitionInput) error {
+	vs := ctx.Value(verifyStateKey).(*verifyState)
+	if _, err := vs.VerifyResource(ctx, "Definition", func(context.Context) error {
+		return verifyGatewayConnectorsDefinition(sv, td)
+	}); err != nil {
+		return err
+	}
+	if _, err := vs.VerifyResource(ctx, fmt.Sprintf("ClusterAssociation[%s]", d.Cluster), func(ctx context.Context) error {
+		out, err := d.ecs.ListGatewayClusterAssociations(ctx, &ecs.ListGatewayClusterAssociationsInput{
+			Cluster: aws.String(d.Cluster),
+			Status:  []types.GatewayClusterAssociationStatus{types.GatewayClusterAssociationStatusActive},
+		})
+		if err != nil {
+			return wrapPermissionError(err)
+		}
+		if len(out.GatewayClusterAssociations) == 0 {
+			return fmt.Errorf("no gateway is associated with cluster %s", d.Cluster)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// verifyGatewayConnectorsDefinition checks gatewayConnectors against the
+// constraints of ECS Gateway that can be validated without AWS API calls.
+func verifyGatewayConnectorsDefinition(sv *Service, td *TaskDefinitionInput) error {
+	if len(sv.GatewayConnectors) > 1 {
+		return fmt.Errorf("a service supports at most one gateway connector, got %d", len(sv.GatewayConnectors))
+	}
+	if sv.isCodeDeploy() {
+		return errors.New("gatewayConnectors is not supported with the CODE_DEPLOY deployment controller")
+	}
+	if td.NetworkMode != types.NetworkModeAwsvpc {
+		return fmt.Errorf("gatewayConnectors requires the awsvpc network mode, got %q", td.NetworkMode)
+	}
+	portName := aws.ToString(sv.GatewayConnectors[0].PortName)
+	if portName == "" {
+		return errors.New("portName is required for gatewayConnectors")
+	}
+	var portMappings []types.PortMapping
+	for _, cd := range td.ContainerDefinitions {
+		portMappings = append(portMappings, cd.PortMappings...)
+	}
+	if _, found := lo.Find(portMappings, func(pm types.PortMapping) bool {
+		return portName == aws.ToString(pm.Name)
+	}); !found {
+		return fmt.Errorf("portName %s is not found in any containerDefinitions", portName)
+	}
 	return nil
 }
 

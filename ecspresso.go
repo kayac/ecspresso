@@ -73,6 +73,7 @@ type Service struct {
 	ServiceConnectConfiguration *types.ServiceConnectConfiguration
 	VolumeConfigurations        []types.ServiceVolumeConfiguration
 	VpcLatticeConfigurations    []types.VpcLatticeConfiguration
+	GatewayConnectors           []types.GatewayConnector
 	Monitoring                  *types.MonitoringConfiguration
 	DesiredCount                *int32
 }
@@ -156,7 +157,7 @@ func (d *App) newServiceFromTypes(ctx context.Context, in types.Service) (*Servi
 		sv.VpcLatticeConfigurations = dp.VpcLatticeConfigurations
 	}
 
-	// Monitoring is not available on Deployment or types.Service.
+	// Monitoring and GatewayConnectors are not available on Deployment or types.Service.
 	// It only exists on ServiceRevision, so we need to call DescribeServiceRevisions.
 	if len(in.CurrentServiceRevisions) > 0 {
 		revArn := aws.ToString(in.CurrentServiceRevisions[0].Arn)
@@ -175,9 +176,14 @@ func (d *App) newServiceFromTypes(ctx context.Context, in types.Service) (*Servi
 				})
 				return nil, fmt.Errorf("service revision %s is not found: %s", revArn, strings.Join(reasons, ", "))
 			}
-			if m := revOut.ServiceRevisions[0].Monitoring; m != nil {
+			rev := revOut.ServiceRevisions[0]
+			if m := rev.Monitoring; m != nil {
 				d.LogDebug("Monitoring: %#v", m)
 				sv.Monitoring = m
+			}
+			if gc := rev.GatewayConnectors; gc != nil {
+				d.LogDebug("GatewayConnectors: %#v", gc)
+				sv.GatewayConnectors = gc
 			}
 		}
 	}
