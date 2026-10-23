@@ -183,6 +183,15 @@ duration value is unusually large for a timeout; interpreted as seconds (v2 inte
 - Users who wrote `timeout: 600` meaning "ten minutes" but got 600 ns in v2 are silently fixed.
 - Users who deliberately wrote nanoseconds as a plain number now get a behaviour change, but they also get a clear warning at load time.
 
+### Fail when `DescribeServiceRevisions` fails
+
+PR: https://github.com/kayac/ecspresso/pull/1107
+
+Some service attributes exist only on the service revision, not on `DescribeServices` output (currently `monitoring`, and `gatewayConnectors` once ECS Gateway is supported). v2 logs a warning and continues when `DescribeServiceRevisions` fails, so those attributes look unset on the remote side: `diff` hides them and `deploy` sends them as removed. For ECS Gateway this disconnects the service, and its generated hostname cannot be recovered.
+
+- `newServiceFromTypes` returns an error when the call fails or returns no revision.
+- Compatibility: an IAM principal without `ecs:DescribeServiceRevisions` now fails on commands that describe the service (`deploy`, `diff`, `status`, etc.).
+
 ## Features
 
 ### Add jsonrpc mode to the external plugin
