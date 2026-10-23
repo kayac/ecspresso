@@ -214,6 +214,15 @@ Attach a [packslip](https://packslip.dev/) manifest (`packslip.sigstore.json`) t
 - GoReleaser runs with `--draft`; a read-only job signs the manifest and a final job uploads it and publishes the release, because immutable releases cannot gain assets after publishing.
 - If signing fails, the release stays a draft (re-run the failed jobs) instead of being published without a manifest.
 
+### Support Amazon ECS Gateway
+
+PR: https://github.com/kayac/ecspresso/pull/1108 (depends on #1107)
+
+Support `gatewayConnectors` in the service definition. ecspresso manages only the service side; gateways and their cluster associations are out of scope.
+
+- Phase 1 (#1108): read `gatewayConnectors` from the service revision, pass it to `CreateService` / `UpdateService` (an empty slice disconnects, like `loadBalancers`), and `verify` the connector and the cluster association.
+- Phase 2 (planned): show gateway connections (`serviceUrl`, `accessType`, `status`) in `status`, wait for connections to become `ACTIVE` on `deploy` / `wait`, and verify that a gateway covers the service's VPC and Availability Zones.
+
 ## Cleanups
 
 All cleanup items below ship together in PR: https://github.com/kayac/ecspresso/pull/1029
