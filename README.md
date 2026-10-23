@@ -1091,6 +1091,8 @@ To configure, define `monitoring` in the service definition. The `metricConfigur
 
 When not specified, Amazon ECS uses the default resolution of 60 seconds. High resolution metrics enable faster auto scaling responses.
 
+`monitoring` is not returned by `DescribeServices`, so ecspresso reads it from the current service revision by `DescribeServiceRevisions`. The IAM principal that runs ecspresso needs `ecs:DescribeServiceRevisions` on the service revision ARN (`arn:aws:ecs:<region>:<account>:service-revision/<cluster>/<service>/*`). If the call fails, commands that describe the service (`deploy`, `diff`, `status`, etc.) fail instead of treating the attribute as unset.
+
 ### Pause lifecycle hooks
 
 ecspresso supports [pause lifecycle hooks](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-lifecycle-hooks.html) for ECS service deployments.
