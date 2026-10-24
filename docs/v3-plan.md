@@ -231,6 +231,15 @@ Support `gatewayConnectors` in the service definition. ecspresso manages only th
 - Phase 1 (#1108): read `gatewayConnectors` from the service revision, pass it to `CreateService` / `UpdateService` (an empty slice disconnects, like `loadBalancers`), and `verify` the connector and the cluster association.
 - Phase 2 (planned): show gateway connections (`serviceUrl`, `accessType`, `status`) in `status`, wait for connections to become `ACTIVE` on `deploy` / `wait`, and verify that a gateway covers the service's VPC and Availability Zones.
 
+### Authenticate to ECR Public in verify
+
+PR: https://github.com/kayac/ecspresso/pull/1112
+
+Anonymous pulls from `public.ecr.aws` are limited to 1 per second, which `verify` can hit on shared IPs such as CI runners.
+
+- `verify` gets an ECR Public authorization token with the current session and falls back to anonymous access on failure.
+- The registry client follows the `WWW-Authenticate` challenge (Basic or Bearer) instead of sending ECR Basic credentials up front.
+
 ## Cleanups
 
 All cleanup items below ship together in PR: https://github.com/kayac/ecspresso/pull/1029
