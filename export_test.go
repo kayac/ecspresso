@@ -128,7 +128,10 @@ func ContextWithVerifyState(ctx context.Context, vs *verifyState) context.Contex
 	return context.WithValue(ctx, verifyStateKey, vs)
 }
 
-var DecodeAuthorizationToken = decodeAuthorizationToken
+var (
+	DecodeAuthorizationToken   = decodeAuthorizationToken
+	WithECRPublicAnonymousHint = withECRPublicAnonymousHint
+)
 
 func (v *verifier) ECRPublicCredentials(ctx context.Context) (string, string, error) {
 	return v.ecrPublicCredentials(ctx)

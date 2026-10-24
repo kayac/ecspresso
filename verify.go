@@ -53,6 +53,7 @@ type registryAuth struct {
 	user     string
 	password string
 	err      error
+	logged   bool
 }
 
 func (v *verifier) IsAssumed() bool {
@@ -899,12 +900,23 @@ func (d *App) verifyECRImage(ctx context.Context, image, region string) error {
 
 func (d *App) verifyECRPublicImage(ctx context.Context, image string) error {
 	user, password, err := d.verifier.ecrPublicCredentials(ctx)
-	if err != nil {
-		// fall back to anonymous access, which has a lower rate limit
-		d.LogDebug("failed to get ECR Public authorization token, continuing anonymously: %s", err)
-		return d.verifyRegistryImage(ctx, image, "", "")
+	if err == nil {
+		return d.verifyRegistryImage(ctx, image, user, password)
 	}
-	return d.verifyRegistryImage(ctx, image, user, password)
+	// fall back to anonymous access, which has a lower rate limit
+	if a := d.verifier.ecrPublicAuth; !a.logged {
+		d.LogDebug("failed to get ECR Public authorization token, continuing anonymously: %s", err)
+		a.logged = true
+	}
+	return withECRPublicAnonymousHint(d.verifyRegistryImage(ctx, image, "", ""))
+}
+
+// withECRPublicAnonymousHint adds a hint to a rate limit error of anonymous access to ECR Public.
+func withECRPublicAnonymousHint(err error) error {
+	if errors.Is(err, registry.ErrPullRateLimitExceeded) {
+		return fmt.Errorf("%w (accessed anonymously; allow ecr-public:GetAuthorizationToken and sts:GetServiceBearerToken for a higher rate limit)", err)
+	}
+	return err
 }
 
 func (d *App) verifyRegistryImage(ctx context.Context, image, user, password string) error {
@@ -942,7 +954,7 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	ok, err = repo.HasPlatformImage(ctx, tagOrDigest, arch, os)
 	if err != nil {
 		if errors.Is(err, registry.ErrDeprecatedManifest) || errors.Is(err, registry.ErrPullRateLimitExceeded) {
-			return fmt.Errorf("%s: %w", err.Error(), ErrSkipVerify)
+			return fmt.Errorf("%w: %w", err, ErrSkipVerify)
 		}
 		return err
 	}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -14,6 +16,7 @@ import (
 	"github.com/aws/smithy-go/middleware"
 	"github.com/google/go-cmp/cmp"
 	"github.com/kayac/ecspresso/v2"
+	"github.com/kayac/ecspresso/v2/registry"
 )
 
 func TestDecodeAuthorizationToken(t *testing.T) {
@@ -119,5 +122,25 @@ func TestVerifierECRPublicCredentials(t *testing.T) {
 				t.Errorf("region mismatch (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestWithECRPublicAnonymousHint(t *testing.T) {
+	rateLimited := fmt.Errorf("%w: %w", fmt.Errorf("failed to fetch manifests: %w", registry.ErrPullRateLimitExceeded), ecspresso.ErrSkipVerify)
+	got := ecspresso.WithECRPublicAnonymousHint(rateLimited)
+	if !strings.Contains(got.Error(), "ecr-public:GetAuthorizationToken") {
+		t.Errorf("hint is not added: %s", got)
+	}
+	// keep the result as SKIP
+	if !errors.Is(got, ecspresso.ErrSkipVerify) || !errors.Is(got, registry.ErrPullRateLimitExceeded) {
+		t.Errorf("wrapped errors are lost: %s", got)
+	}
+
+	other := errors.New("not found")
+	if got := ecspresso.WithECRPublicAnonymousHint(other); got != other {
+		t.Errorf("unexpected change: %s", got)
+	}
+	if got := ecspresso.WithECRPublicAnonymousHint(nil); got != nil {
+		t.Errorf("unexpected error: %s", got)
 	}
 }
