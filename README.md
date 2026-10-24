@@ -38,6 +38,7 @@ ecspresso also supports ECS Express mode for simplified deployments and provides
   - [EBS Volume support](#ebs-volume-support)
   - [S3 Files volume support](#s3-files-volume-support)
   - [VPC Lattice support](#vpc-lattice-support)
+  - [ECS Gateway support](#ecs-gateway-support)
   - [High resolution CloudWatch metrics](#high-resolution-cloudwatch-metrics)
   - [Pause lifecycle hooks](#pause-lifecycle-hooks)
   - [ECS Express mode support](#ecs-express-mode-support)
@@ -1066,6 +1067,41 @@ ecspresso supports [VPC Lattice](https://aws.amazon.com/vpc/lattice/) integratio
 ecspresso doesn't create or modify any VPC Lattice resources. You must create and associate a VPC Lattice target group with the ECS service.
 
 See also [Use Amazon VPC Lattice to connect, observe, and secure your Amazon ECS services](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-vpc-lattice.html).
+
+### ECS Gateway support
+
+ecspresso supports connecting a service to [Amazon ECS Gateway](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/gateway-overview.html), a managed ingress that provisions shared Application Load Balancers for ECS services.
+
+1. Define `portMappings` with the `name` field in the task definition. The task definition must use the `awsvpc` network mode.
+
+2. Define `gatewayConnectors` in the service definition. A service supports at most one gateway connector, and the `portName` field is required.
+
+```json
+{
+  "gatewayConnectors": [
+    {
+      "portName": "web-80-tcp",
+      "filters": {
+        "accessTypes": ["PRIVATE"]
+      },
+      "healthCheck": {
+        "healthCheckPath": "/health"
+      }
+    }
+  ],
+```
+
+- The `portName` must match the `name` field of the `portMappings` in the task definition.
+- `filters.accessTypes` (optional) limits the gateways the service connects to (`PUBLIC`, `PRIVATE`, or both). A service that must not be reachable from the internet should set `PRIVATE`.
+- `healthCheck` (optional) configures the target group health check. A health check change replaces the target group, so it cannot be applied to a service using the `ROLLING` deployment strategy.
+
+When `gatewayConnectors` is not defined in the service definition, `ecspresso deploy` disconnects the service from all gateways, in the same way as `loadBalancers` and `vpcLatticeConfigurations`. A gateway connected again later gives the service a new hostname, so if the connector was added outside of ecspresso, run `ecspresso diff` to check before deploying.
+
+`gatewayConnectors` is read from the current service revision (`DescribeServiceRevisions`), like [`monitoring`](#high-resolution-cloudwatch-metrics).
+
+ecspresso doesn't create or modify gateways or their cluster associations. You must create a gateway and associate it with the cluster before connecting the service. `ecspresso verify` checks the connector definition and that an `ACTIVE` gateway is associated with the cluster (requires `ecs:ListGatewayClusterAssociations`).
+
+`gatewayConnectors` is not supported with the `CODE_DEPLOY` deployment controller or in Express mode.
 
 ### High resolution CloudWatch metrics
 

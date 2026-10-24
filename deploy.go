@@ -242,6 +242,7 @@ func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 		DesiredCount:                  sv.DesiredCount,
 		EnableECSManagedTags:          &sv.EnableECSManagedTags,
 		EnableExecuteCommand:          &sv.EnableExecuteCommand,
+		GatewayConnectors:             sv.GatewayConnectors,
 		HealthCheckGracePeriodSeconds: sv.HealthCheckGracePeriodSeconds,
 		LoadBalancers:                 sv.LoadBalancers,
 		Monitoring:                    sv.Monitoring,
@@ -270,6 +271,10 @@ func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 	if len(sv.VpcLatticeConfigurations) == 0 {
 		in.VpcLatticeConfigurations = []types.VpcLatticeConfiguration{}
 	}
+	// explicitly set empty slice (to disconnect from gateways)
+	if len(sv.GatewayConnectors) == 0 {
+		in.GatewayConnectors = []types.GatewayConnector{}
+	}
 	// explicitly disable ServiceConnect (to remove the configuration)
 	if sv.ServiceConnectConfiguration == nil {
 		in.ServiceConnectConfiguration = &types.ServiceConnectConfiguration{
@@ -281,6 +286,7 @@ func svToUpdateServiceInput(sv *Service) *ecs.UpdateServiceInput {
 	if sv.isExpressMode() {
 		in.DeploymentConfiguration = nil
 		in.LoadBalancers = nil
+		in.GatewayConnectors = nil
 	}
 
 	return in
@@ -295,6 +301,7 @@ func (d *App) BuildServiceAttributes(sv *Service) *ecs.UpdateServiceInput {
 		in.LoadBalancers = nil
 		in.ServiceRegistries = nil
 		in.CapacityProviderStrategy = nil
+		in.GatewayConnectors = nil
 	}
 	// Do not set TaskDefinition or ForceNewDeployment here.
 	// These will be set by the caller (UpdateServiceTasks or Deploy for CodeDeploy).

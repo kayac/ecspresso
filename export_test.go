@@ -44,6 +44,8 @@ var (
 	EarlySuccessCriteriaOf               = earlySuccessCriteriaOf
 	VerifyEarlySuccessCriteria           = verifyEarlySuccessCriteria
 	EarlySuccessCriteriaCompletedMessage = earlySuccessCriteriaCompletedMessage
+
+	VerifyGatewayConnectorsDefinition = verifyGatewayConnectorsDefinition
 )
 
 func (d *App) WarnEarlySuccessCriteriaWait(sv *Service, until waitUntil) bool {
