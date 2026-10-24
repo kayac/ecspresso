@@ -216,7 +216,7 @@ Attach a [packslip](https://packslip.dev/) manifest (`packslip.sigstore.json`) t
 
 ### Support Amazon ECS Gateway
 
-PR: https://github.com/kayac/ecspresso/pull/1108 (depends on #1107)
+PR: https://github.com/kayac/ecspresso/pull/1108
 
 Support `gatewayConnectors` in the service definition. ecspresso manages only the service side; gateways and their cluster associations are out of scope.
 
