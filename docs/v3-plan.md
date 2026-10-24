@@ -192,6 +192,14 @@ Some service attributes exist only on the service revision, not on `DescribeServ
 - `newServiceFromTypes` returns an error when the call fails or returns no revision.
 - Compatibility: an IAM principal without `ecs:DescribeServiceRevisions` now fails on commands that describe the service (`deploy`, `diff`, `status`, etc.).
 
+### Require Go 1.26
+
+PR: https://github.com/kayac/ecspresso/pull/1111
+
+- Bump the `go` directive to 1.26 and test against Go 1.26 and 1.27.
+- Build release and nightly binaries with Go 1.27.
+- Compatibility: building ecspresso or importing it as a library requires Go 1.26 or later.
+
 ## Features
 
 ### Add jsonrpc mode to the external plugin
