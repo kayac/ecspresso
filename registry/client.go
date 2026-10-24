@@ -35,12 +35,13 @@ var (
 
 // Repository represents a repository using Docker Registry API v2.
 type Repository struct {
-	client   *http.Client
-	host     string
-	repo     string
-	user     string
-	password string
-	token    string
+	client    *http.Client
+	host      string
+	repo      string
+	user      string
+	password  string
+	token     string
+	basicAuth bool
 }
 
 // New creates a client for a repository.
@@ -178,11 +179,11 @@ func (c *Repository) getImageConfig(ctx context.Context, digest string) (io.Read
 }
 
 func (c *Repository) setAuthHeader(req *http.Request) {
-	if c.user == "AWS" && c.password != "" {
-		// ECR
-		req.Header.Set("Authorization", "Basic "+c.password)
-	} else if c.token != "" {
+	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
+	} else if c.basicAuth {
+		// e.g. ECR private registries
+		req.SetBasicAuth(c.user, c.password)
 	}
 }
 
@@ -277,12 +278,16 @@ func (c *Repository) HasImage(ctx context.Context, tagOrDigest string) (bool, er
 		switch resp.StatusCode {
 		case http.StatusUnauthorized:
 			h := resp.Header.Get("Www-Authenticate")
-			if strings.HasPrefix(h, "Bearer ") {
+			switch {
+			case strings.HasPrefix(h, "Bearer "):
+				// get a token with the credentials (if any), e.g. DockerHub, public.ecr.aws
 				auth := strings.SplitN(h, " ", 2)[1]
 				e, svc, scope := parseAuthHeader(auth)
 				if err := c.login(ctx, e, svc, scope); err != nil {
 					return false, err
 				}
+			case strings.HasPrefix(h, "Basic ") && c.user != "" && c.password != "":
+				c.basicAuth = true
 			}
 		case http.StatusOK:
 			return true, nil

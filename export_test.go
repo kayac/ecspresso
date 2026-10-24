@@ -127,3 +127,9 @@ func (d *App) VerifyDeploymentConfiguration(ctx context.Context, dc *types.Deplo
 func ContextWithVerifyState(ctx context.Context, vs *verifyState) context.Context {
 	return context.WithValue(ctx, verifyStateKey, vs)
 }
+
+var DecodeAuthorizationToken = decodeAuthorizationToken
+
+func (v *verifier) ECRPublicCredentials(ctx context.Context) (string, string, error) {
+	return v.ecrPublicCredentials(ctx)
+}
