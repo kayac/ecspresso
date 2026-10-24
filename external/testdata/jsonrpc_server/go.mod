@@ -1,6 +1,6 @@
 module ecspresso.test/jsonrpcserver
 
-go 1.25.0
+go 1.26.0
 
 require github.com/creachadair/jrpc2 v1.3.5
 

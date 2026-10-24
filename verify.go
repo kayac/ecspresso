@@ -1104,8 +1104,7 @@ func (d *App) verifyLogConfiguration(ctx context.Context, c *types.ContainerDefi
 		if _, err := d.verifier.cwl.CreateLogGroup(ctx, &cloudwatchlogs.CreateLogGroupInput{
 			LogGroupName: &group,
 		}); err != nil {
-			var ex *cloudwatchlogsTypes.ResourceAlreadyExistsException
-			if errors.As(err, &ex) {
+			if _, ok := errors.AsType[*cloudwatchlogsTypes.ResourceAlreadyExistsException](err); ok {
 				// ignore error if log group already exists
 				d.LogDebug("log group %s already exists, ignored", group)
 			} else if d.verifier.IsAssumed() {
