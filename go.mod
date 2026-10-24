@@ -13,6 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.82.1
 	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.38.5
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.60.5
+	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.47.6
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.102.1
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.58.6
 	github.com/aws/aws-sdk-go-v2/service/iam v1.59.0

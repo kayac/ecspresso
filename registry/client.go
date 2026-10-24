@@ -35,12 +35,13 @@ var (
 
 // Repository represents a repository using Docker Registry API v2.
 type Repository struct {
-	client   *http.Client
-	host     string
-	repo     string
-	user     string
-	password string
-	token    string
+	client    *http.Client
+	host      string
+	repo      string
+	user      string
+	password  string
+	token     string
+	basicAuth bool
 }
 
 // New creates a client for a repository.
@@ -119,10 +120,49 @@ func (c *Repository) fetchManifests(ctx context.Context, method, tagOrDigest str
 	return c.client.Do(req)
 }
 
+// fetchManifestsWithAuth fetches manifests and, when the registry returns an
+// authentication challenge, retries once with the authentication it asks for.
+func (c *Repository) fetchManifestsWithAuth(ctx context.Context, method, tagOrDigest string) (*http.Response, error) {
+	resp, err := c.fetchManifests(ctx, method, tagOrDigest)
+	if err != nil || resp.StatusCode != http.StatusUnauthorized {
+		return resp, err
+	}
+	retry, err := c.handleChallenge(ctx, resp.Header.Get("Www-Authenticate"))
+	if err != nil {
+		resp.Body.Close()
+		return nil, err
+	}
+	if !retry {
+		return resp, nil
+	}
+	resp.Body.Close()
+	return c.fetchManifests(ctx, method, tagOrDigest)
+}
+
+// handleChallenge prepares authentication for a WWW-Authenticate challenge.
+// It returns true if the request should be retried.
+func (c *Repository) handleChallenge(ctx context.Context, challenge string) (bool, error) {
+	switch {
+	case strings.HasPrefix(challenge, "Bearer "):
+		// get a token with the credentials (if any), e.g. DockerHub, public.ecr.aws
+		auth := strings.SplitN(challenge, " ", 2)[1]
+		e, svc, scope := parseAuthHeader(auth)
+		if err := c.login(ctx, e, svc, scope); err != nil {
+			return false, err
+		}
+		return true, nil
+	case strings.HasPrefix(challenge, "Basic ") && c.user != "" && c.password != "" && !c.basicAuth:
+		// e.g. ECR private registries
+		c.basicAuth = true
+		return true, nil
+	}
+	return false, nil
+}
+
 func (c *Repository) getAvailability(ctx context.Context, tagOrDigest string) (*http.Response, error) {
 	retryer := retryPolicy.Start(ctx)
 	for retryer.Continue() {
-		resp, err := c.fetchManifests(ctx, http.MethodHead, tagOrDigest)
+		resp, err := c.fetchManifestsWithAuth(ctx, http.MethodHead, tagOrDigest)
 		if err != nil {
 			return nil, err
 		}
@@ -140,11 +180,15 @@ func (c *Repository) getManifests(ctx context.Context, tag string) (mediaType st
 	retryer := retryPolicy.Start(ctx)
 	var lastErr error
 	for retryer.Continue() {
-		resp, err := c.fetchManifests(ctx, http.MethodGet, tag)
-		if err == nil && resp.StatusCode == http.StatusOK {
+		resp, err := c.fetchManifestsWithAuth(ctx, http.MethodGet, tag)
+		if err != nil {
+			return "", nil, err
+		}
+		if resp.StatusCode == http.StatusOK {
 			mediaType = parseContentType(resp.Header.Get("Content-Type"))
 			return mediaType, resp.Body, nil
 		}
+		resp.Body.Close()
 		switch resp.StatusCode {
 		case http.StatusNotFound, http.StatusUnauthorized:
 			// should not be retried
@@ -178,11 +222,11 @@ func (c *Repository) getImageConfig(ctx context.Context, digest string) (io.Read
 }
 
 func (c *Repository) setAuthHeader(req *http.Request) {
-	if c.user == "AWS" && c.password != "" {
-		// ECR
-		req.Header.Set("Authorization", "Basic "+c.password)
-	} else if c.token != "" {
+	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
+	} else if c.basicAuth {
+		// e.g. ECR private registries
+		req.SetBasicAuth(c.user, c.password)
 	}
 }
 
@@ -267,30 +311,14 @@ func (c *Repository) HasPlatformImage(ctx context.Context, tagOrDigest, arch, os
 
 // HasImage returns whether an image with the specified tagOrDigest exists in the repository.
 func (c *Repository) HasImage(ctx context.Context, tagOrDigest string) (bool, error) {
-	tries := 2
-	for tries > 0 {
-		tries--
-		resp, err := c.getAvailability(ctx, tagOrDigest)
-		if err != nil {
-			return false, err
-		}
-		switch resp.StatusCode {
-		case http.StatusUnauthorized:
-			h := resp.Header.Get("Www-Authenticate")
-			if strings.HasPrefix(h, "Bearer ") {
-				auth := strings.SplitN(h, " ", 2)[1]
-				e, svc, scope := parseAuthHeader(auth)
-				if err := c.login(ctx, e, svc, scope); err != nil {
-					return false, err
-				}
-			}
-		case http.StatusOK:
-			return true, nil
-		default:
-			return false, errors.New(resp.Status)
-		}
+	resp, err := c.getAvailability(ctx, tagOrDigest)
+	if err != nil {
+		return false, err
 	}
-	return false, fmt.Errorf("aborted")
+	if resp.StatusCode != http.StatusOK {
+		return false, errors.New(resp.Status)
+	}
+	return true, nil
 }
 
 var (

@@ -1342,11 +1342,13 @@ For example it checks if,
 - An ECS cluster exists.
 - The target groups in service definitions match the container name and port defined in the definitions.
 - A task role and a task execution role exist and can be assumed by ecs-tasks.amazonaws.com.
-- Container images exist at the URL defined in task definitions. (Checks only for ECR or DockerHub public images.)
+- Container images exist at the URL defined in task definitions. (Checks only for ECR, ECR Public or DockerHub public images.)
 - Secrets in task definitions exist and are readable.
 - Log streams can be created and messages can be put into the specified CloudWatch log groups streams.
 
 ecspresso verify tries to assume the task execution role defined in task definitions to verify these items. If it fails to assume the role, it continues to verify with the current session.
+
+For images on Amazon ECR Public (`public.ecr.aws`), ecspresso verify gets an authorization token with the current session to avoid the low rate limit of anonymous pulls. This requires the `ecr-public:GetAuthorizationToken` and `sts:GetServiceBearerToken` permissions. If it fails to get the token, it continues to verify anonymously.
 
 ```console
 $ ecspresso verify

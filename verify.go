@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	cloudwatchlogsTypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
+	"github.com/aws/aws-sdk-go-v2/service/ecrpublic"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
@@ -38,10 +40,20 @@ type verifier struct {
 	ssm            *ssm.Client
 	secretsmanager *secretsmanager.Client
 	ecr            map[string]*ecr.Client
+	ecrPublic      *ecrpublic.Client
 	s3             *s3.Client
 	opt            *VerifyOption
 	isAssumed      bool
 	execCfg        *aws.Config
+
+	ecrPublicAuth *registryAuth
+}
+
+type registryAuth struct {
+	user     string
+	password string
+	err      error
+	logged   bool
 }
 
 func (v *verifier) IsAssumed() bool {
@@ -56,6 +68,8 @@ func newVerifier(execCfg, appCfg *aws.Config, opt *VerifyOption) *verifier {
 		ecr: map[string]*ecr.Client{
 			execCfg.Region: ecr.NewFromConfig(*execCfg),
 		},
+		// ECR Public authorization tokens are issued only in us-east-1
+		ecrPublic: ecrpublic.NewFromConfig(*appCfg, func(o *ecrpublic.Options) { o.Region = "us-east-1" }),
 		s3:        s3.NewFromConfig(*appCfg),
 		opt:       opt,
 		isAssumed: execCfg != appCfg,
@@ -72,6 +86,38 @@ func (v *verifier) ecrClient(region string) *ecr.Client {
 	client := ecr.NewFromConfig(cfg)
 	v.ecr[region] = client
 	return client
+}
+
+// ecrPublicCredentials returns credentials for public.ecr.aws.
+// Authenticated pulls have a higher rate limit than anonymous pulls.
+// The result (including an error) is cached for the verifier.
+func (v *verifier) ecrPublicCredentials(ctx context.Context) (string, string, error) {
+	if v.ecrPublicAuth == nil {
+		a := &registryAuth{}
+		out, err := v.ecrPublic.GetAuthorizationToken(ctx, &ecrpublic.GetAuthorizationTokenInput{})
+		if err != nil {
+			a.err = err
+		} else if out.AuthorizationData == nil {
+			a.err = errors.New("no authorization data")
+		} else {
+			a.user, a.password, a.err = decodeAuthorizationToken(aws.ToString(out.AuthorizationData.AuthorizationToken))
+		}
+		v.ecrPublicAuth = a
+	}
+	return v.ecrPublicAuth.user, v.ecrPublicAuth.password, v.ecrPublicAuth.err
+}
+
+// decodeAuthorizationToken decodes a base64 encoded "user:password" token returned by ECR.
+func decodeAuthorizationToken(token string) (string, string, error) {
+	b, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to decode authorization token: %w", err)
+	}
+	user, password, ok := strings.Cut(string(b), ":")
+	if !ok {
+		return "", "", errors.New("invalid authorization token")
+	}
+	return user, password, nil
 }
 
 func (v *verifier) existsSecretValue(ctx context.Context, from string) error {
@@ -830,6 +876,8 @@ func (d *App) verifyTaskDefinition(ctx context.Context) error {
 	return nil
 }
 
+const ecrPublicHost = "public.ecr.aws"
+
 var (
 	// e.g. {aws_account_id}.dkr.ecr.{region}.amazonaws.com/amazonlinux:latest
 	ecrImageURLRegex = regexp.MustCompile(`^([0-9]+)\.dkr\.ecr\.([0-9a-zA-Z-]+)\.amazonaws\.com(?:\.cn)?\/.*`)
@@ -843,8 +891,32 @@ func (d *App) verifyECRImage(ctx context.Context, image, region string) error {
 	if err != nil {
 		return err
 	}
-	token := out.AuthorizationData[0].AuthorizationToken
-	return d.verifyRegistryImage(ctx, image, "AWS", aws.ToString(token))
+	user, password, err := decodeAuthorizationToken(aws.ToString(out.AuthorizationData[0].AuthorizationToken))
+	if err != nil {
+		return err
+	}
+	return d.verifyRegistryImage(ctx, image, user, password)
+}
+
+func (d *App) verifyECRPublicImage(ctx context.Context, image string) error {
+	user, password, err := d.verifier.ecrPublicCredentials(ctx)
+	if err == nil {
+		return d.verifyRegistryImage(ctx, image, user, password)
+	}
+	// fall back to anonymous access, which has a lower rate limit
+	if a := d.verifier.ecrPublicAuth; !a.logged {
+		d.LogDebug("failed to get ECR Public authorization token, continuing anonymously: %s", err)
+		a.logged = true
+	}
+	return withECRPublicAnonymousHint(d.verifyRegistryImage(ctx, image, "", ""))
+}
+
+// withECRPublicAnonymousHint adds a hint to a rate limit error of anonymous access to ECR Public.
+func withECRPublicAnonymousHint(err error) error {
+	if errors.Is(err, registry.ErrPullRateLimitExceeded) {
+		return fmt.Errorf("%w (accessed anonymously; allow ecr-public:GetAuthorizationToken and sts:GetServiceBearerToken for a higher rate limit)", err)
+	}
+	return err
 }
 
 func (d *App) verifyRegistryImage(ctx context.Context, image, user, password string) error {
@@ -882,7 +954,7 @@ func (d *App) verifyRegistryImage(ctx context.Context, image, user, password str
 	ok, err = repo.HasPlatformImage(ctx, tagOrDigest, arch, os)
 	if err != nil {
 		if errors.Is(err, registry.ErrDeprecatedManifest) || errors.Is(err, registry.ErrPullRateLimitExceeded) {
-			return fmt.Errorf("%s: %w", err.Error(), ErrSkipVerify)
+			return fmt.Errorf("%w: %w", err, ErrSkipVerify)
 		}
 		return err
 	}
@@ -948,6 +1020,10 @@ func (d *App) verifyImage(ctx context.Context, image string) error {
 	if m := ecrImageURLRegex.FindStringSubmatch(image); len(m) == 3 {
 		d.LogDebug("VERIFY ECR Image %s in region %s", image, m[2])
 		return d.verifyECRImage(ctx, image, m[2]) // m[1] is aws account id, m[2] is region
+	}
+	if strings.HasPrefix(image, ecrPublicHost+"/") {
+		d.LogDebug("VERIFY ECR Public Image %s", image)
+		return d.verifyECRPublicImage(ctx, image)
 	}
 	d.LogDebug("VERIFY Registry Image %s", image)
 	return d.verifyRegistryImage(ctx, image, "", "")
