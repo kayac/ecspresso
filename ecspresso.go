@@ -559,8 +559,7 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) ([]aasTypes.S
 		},
 	)
 	if err != nil {
-		var oe *smithy.OperationError
-		if errors.As(err, &oe) {
+		if oe, ok := errors.AsType[*smithy.OperationError](err); ok {
 			d.LogWarn("failed to describe scalable targets", "error", oe.Error())
 			return nil, nil, nil
 		}
@@ -579,8 +578,7 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) ([]aasTypes.S
 		},
 	)
 	if err != nil {
-		var oe *smithy.OperationError
-		if errors.As(err, &oe) {
+		if oe, ok := errors.AsType[*smithy.OperationError](err); ok {
 			d.LogWarn("failed to describe scaling policies", "error", oe.Error())
 			return tout.ScalableTargets, nil, nil
 		}
@@ -649,8 +647,7 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 	ms := startedAt.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 	out, err := d.cwl.GetLogEvents(ctx, d.GetLogEventsInput(logGroup, logStream, ms, nextToken))
 	if err != nil {
-		var notfound *cwlTypes.ResourceNotFoundException
-		if errors.As(err, &notfound) {
+		if _, ok := errors.AsType[*cwlTypes.ResourceNotFoundException](err); ok {
 			return nextToken, fmt.Errorf("%s: %w", err.Error(), ErrNotFound)
 		}
 		return nextToken, wrapPermissionError(err)

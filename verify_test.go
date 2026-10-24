@@ -500,8 +500,7 @@ func TestWrapPermissionError(t *testing.T) {
 					t.Errorf("expected ErrPermissionDenied, got %T", result)
 				}
 			case "mockAPIError":
-				var mockErr mockAPIError
-				if !errors.As(result, &mockErr) {
+				if _, ok := errors.AsType[mockAPIError](result); !ok {
 					t.Errorf("expected mockAPIError, got %T", result)
 				}
 			case "*errors.errorString":

@@ -227,7 +227,7 @@ var testServiceDefinitionHasDesiredCount = &ecspresso.Service{
 	Service: types.Service{
 		LaunchType: types.LaunchTypeFargate,
 	},
-	DesiredCount: ptr(int32(2)),
+	DesiredCount: new(int32(2)),
 }
 
 func TestDiffServices(t *testing.T) {

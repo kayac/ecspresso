@@ -372,9 +372,9 @@ var ConfigIgnoreTests = []struct {
 		name:   "ignore all",
 		ignore: &ecspresso.ConfigIgnore{Tags: []string{"foo", "bar", "baz"}},
 		resourceTags: []types.Tag{
-			{Key: ptr("foo"), Value: ptr("x")},
-			{Key: ptr("bar"), Value: ptr("y")},
-			{Key: ptr("baz"), Value: ptr("z")},
+			{Key: new("foo"), Value: new("x")},
+			{Key: new("bar"), Value: new("y")},
+			{Key: new("baz"), Value: new("z")},
 		},
 		expectedTags: []types.Tag{},
 	},
@@ -382,35 +382,35 @@ var ConfigIgnoreTests = []struct {
 		name:   "ignore some",
 		ignore: &ecspresso.ConfigIgnore{Tags: []string{"foo", "bar"}},
 		resourceTags: []types.Tag{
-			{Key: ptr("foo"), Value: ptr("x")},
-			{Key: ptr("bar"), Value: ptr("y")},
-			{Key: ptr("baz"), Value: ptr("z")},
+			{Key: new("foo"), Value: new("x")},
+			{Key: new("bar"), Value: new("y")},
+			{Key: new("baz"), Value: new("z")},
 		},
 		expectedTags: []types.Tag{
-			{Key: ptr("baz"), Value: ptr("z")},
+			{Key: new("baz"), Value: new("z")},
 		},
 	},
 	{
 		name:   "ignore nil",
 		ignore: nil,
 		resourceTags: []types.Tag{
-			{Key: ptr("foo"), Value: ptr("x")},
-			{Key: ptr("bar"), Value: ptr("y")},
+			{Key: new("foo"), Value: new("x")},
+			{Key: new("bar"), Value: new("y")},
 		},
 		expectedTags: []types.Tag{
-			{Key: ptr("foo"), Value: ptr("x")},
-			{Key: ptr("bar"), Value: ptr("y")},
+			{Key: new("foo"), Value: new("x")},
+			{Key: new("bar"), Value: new("y")},
 		},
 	},
 	{
 		name:   "ignore case sensitive",
 		ignore: &ecspresso.ConfigIgnore{Tags: []string{"Foo"}},
 		resourceTags: []types.Tag{
-			{Key: ptr("foo"), Value: ptr("x")},
-			{Key: ptr("Foo"), Value: ptr("y")},
+			{Key: new("foo"), Value: new("x")},
+			{Key: new("Foo"), Value: new("y")},
 		},
 		expectedTags: []types.Tag{
-			{Key: ptr("foo"), Value: ptr("x")},
+			{Key: new("foo"), Value: new("x")},
 		},
 	},
 }
