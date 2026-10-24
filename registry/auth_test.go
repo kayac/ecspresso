@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type fakeRegistry struct {
@@ -55,7 +56,8 @@ func (f *fakeRegistry) handler(srv **httptest.Server) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", ocispec.MediaTypeImageIndex)
+		w.Write([]byte(`{"manifests":[{"platform":{"architecture":"amd64","os":"linux"}}]}`))
 	})
 	return mux
 }
@@ -131,6 +133,41 @@ func TestHasImageAuth(t *testing.T) {
 				if diff := cmp.Diff(tt.wantManifestAuth, tt.registry.manifestAuth); diff != "" {
 					t.Errorf("manifest auth mismatch (-want +got):\n%s", diff)
 				}
+			}
+		})
+	}
+}
+
+// HasPlatformImage must authenticate by itself without calling HasImage first.
+func TestHasPlatformImageAuth(t *testing.T) {
+	tests := []struct {
+		name             string
+		registry         *fakeRegistry
+		wantManifestAuth []string
+	}{
+		{
+			name:             "basic challenge",
+			registry:         &fakeRegistry{challenge: "Basic", user: "AWS", password: "secret"},
+			wantManifestAuth: []string{"", "Basic QVdTOnNlY3JldA=="},
+		},
+		{
+			name:             "bearer challenge",
+			registry:         &fakeRegistry{challenge: "Bearer", user: "AWS", password: "secret"},
+			wantManifestAuth: []string{"", "Bearer " + fakeToken},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newFakeRepository(t, tt.registry, "AWS", "secret")
+			ok, err := c.HasPlatformImage(t.Context(), "latest", "amd64", "linux")
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if !ok {
+				t.Fatal("platform image should be found")
+			}
+			if diff := cmp.Diff(tt.wantManifestAuth, tt.registry.manifestAuth); diff != "" {
+				t.Errorf("manifest auth mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
