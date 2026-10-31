@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -90,7 +91,7 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 		return nil
 	}
 
-	task, err := d.RunTask(ctx, tdForRun.Arn, &ov, &opt)
+	tasks, err := d.runTasks(ctx, tdForRun.Arn, &ov, &opt)
 	if err != nil {
 		return err
 	}
@@ -98,10 +99,23 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 		d.LogInfo("Run task invoked")
 		return nil
 	}
-	if err := d.WaitRunTask(ctx, task, watchContainer, time.Now(), opt.waitUntilRunning()); err != nil {
-		return err
+	startedAt := time.Now()
+	var wg sync.WaitGroup
+	errs := make([]error, len(tasks))
+	for i := range tasks {
+		wg.Go(func() {
+			task := &tasks[i]
+			if err := d.WaitRunTask(ctx, task, watchContainer, startedAt, opt.waitUntilRunning()); err != nil {
+				errs[i] = fmt.Errorf("failed to wait for task %s: %w", aws.ToString(task.TaskArn), err)
+				return
+			}
+			if err := d.DescribeTaskStatus(ctx, task, watchContainer); err != nil {
+				errs[i] = fmt.Errorf("failed to run task %s: %w", aws.ToString(task.TaskArn), err)
+			}
+		})
 	}
-	if err := d.DescribeTaskStatus(ctx, task, watchContainer); err != nil {
+	wg.Wait()
+	if err := errors.Join(errs...); err != nil {
 		return err
 	}
 	d.LogInfo("Run task completed!")
@@ -109,7 +123,16 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 	return nil
 }
 
+// RunTask invokes tasks and returns the first task for compatibility.
 func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride, opt *RunOption) (*types.Task, error) {
+	tasks, err := d.runTasks(ctx, tdArn, ov, opt)
+	if err != nil {
+		return nil, err
+	}
+	return &tasks[0], nil
+}
+
+func (d *App) runTasks(ctx context.Context, tdArn string, ov *types.TaskOverride, opt *RunOption) ([]types.Task, error) {
 	d.LogInfo("running task", "task_definition", tdArn)
 
 	sv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
@@ -179,9 +202,10 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 	if len(out.Tasks) == 0 {
 		return nil, fmt.Errorf("failed to run task: no tasks run")
 	}
-	task := out.Tasks[0]
-	d.LogInfo("task started", "task_arn", aws.ToString(task.TaskArn))
-	return &task, nil
+	for _, task := range out.Tasks {
+		d.LogInfo("task started", "task_arn", aws.ToString(task.TaskArn))
+	}
+	return out.Tasks, nil
 }
 
 func (d *App) WaitRunTask(ctx context.Context, task *types.Task, watchContainer *types.ContainerDefinition, startedAt time.Time, untilRunning bool) error {
@@ -216,6 +240,8 @@ func (d *App) WaitRunTask(ctx context.Context, task *types.Task, watchContainer 
 					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 						return
 					}
+					var errPermissionDenied ErrPermissionDenied
+					var errNotFound ErrNotFound
 					if errors.As(err, &errPermissionDenied) {
 						d.LogWarn("failed to get log events: check logs:GetLogEvents permission", "error", err.Error())
 						return
