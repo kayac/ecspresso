@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -162,7 +161,7 @@ func TestRunMultipleTasks(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tasks := runTestTasks("STOPPED", tc.exitCodes...)
-			app, described := newRunTestApp(t, tasks)
+			app := newRunTestApp(t, tasks, nil)
 
 			err := app.Run(t.Context(), ecspresso.RunOption{
 				Revision: aws.Int64(1), Count: int32(len(tasks)), Wait: true, WaitUntil: "stopped",
@@ -182,32 +181,76 @@ func TestRunMultipleTasks(t *testing.T) {
 					}
 				}
 			}
-			for i, calls := range described {
-				if calls != 2 { // Waiter and exit status check.
-					t.Errorf("task %d: got %d status checks, want 2", i, calls)
+		})
+	}
+}
+
+func TestRunWaitsForAllTasks(t *testing.T) {
+	for _, tc := range []struct {
+		until  string
+		status string
+	}{
+		{until: "stopped", status: "STOPPED"},
+		{until: "running", status: "RUNNING"},
+	} {
+		t.Run(tc.until, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+			tasks := runTestTasks(tc.status, 0, 0)
+			secondStarted := make(chan struct{}, 1)
+			releaseSecond := make(chan struct{})
+			app := newRunTestApp(t, tasks, func(ctx context.Context, task types.Task) (types.Task, error) {
+				if aws.ToString(task.TaskArn) == aws.ToString(tasks[1].TaskArn) {
+					select {
+					case secondStarted <- struct{}{}:
+					default:
+					}
+					select {
+					case <-releaseSecond:
+					case <-ctx.Done():
+						return types.Task{}, ctx.Err()
+					}
 				}
+				return task, nil
+			})
+
+			done := make(chan error, 1)
+			go func() {
+				done <- app.Run(ctx, ecspresso.RunOption{
+					Revision: aws.Int64(1), Count: 2, Wait: true, WaitUntil: tc.until,
+				})
+			}()
+
+			select {
+			case <-secondStarted:
+			case err := <-done:
+				t.Fatalf("Run returned without waiting for the second task: %v", err)
+			case <-ctx.Done():
+				t.Fatal("second task was not checked")
+			}
+			select {
+			case err := <-done:
+				t.Fatalf("Run returned while the second task was still waiting: %v", err)
+			case <-time.After(50 * time.Millisecond):
+			}
+			close(releaseSecond)
+			select {
+			case err := <-done:
+				if err != nil {
+					t.Fatal(err)
+				}
+			case <-ctx.Done():
+				t.Fatal("Run did not finish after both tasks reached the target status")
 			}
 		})
 	}
 }
 
-func TestRunWaitUntilRunning(t *testing.T) {
-	app, described := newRunTestApp(t, runTestTasks("RUNNING", 0, 0))
-
-	err := app.Run(t.Context(), ecspresso.RunOption{
-		Revision: aws.Int64(1), Count: 2, Wait: true, WaitUntil: "running",
-	})
-
-	if err != nil {
-		t.Fatal(err)
-	}
-	if diff := cmp.Diff([]int{2, 2}, described); diff != "" {
-		t.Errorf("task status checks mismatch (-want +got):\n%s", diff)
-	}
-}
-
 func TestRunNoWait(t *testing.T) {
-	app, described := newRunTestApp(t, runTestTasks("PENDING", 0, 0))
+	app := newRunTestApp(t, runTestTasks("PENDING", 0, 0), func(ctx context.Context, task types.Task) (types.Task, error) {
+		t.Error("--no-wait must not describe task status")
+		return types.Task{}, fmt.Errorf("unexpected DescribeTasks call")
+	})
 
 	err := app.Run(t.Context(), ecspresso.RunOption{
 		Revision: aws.Int64(1), Count: 2, Wait: false,
@@ -216,14 +259,11 @@ func TestRunNoWait(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff([]int{0, 0}, described); diff != "" {
-		t.Errorf("unexpected task status checks (-want +got):\n%s", diff)
-	}
 }
 
 func TestRunTaskCompatibility(t *testing.T) {
 	tasks := runTestTasks("PENDING", 0, 0)
-	app, described := newRunTestApp(t, tasks)
+	app := newRunTestApp(t, tasks, nil)
 
 	var task *types.Task
 	task, err := app.RunTask(t.Context(), "test:1", &types.TaskOverride{}, &ecspresso.RunOption{Count: 2})
@@ -236,9 +276,6 @@ func TestRunTaskCompatibility(t *testing.T) {
 	}
 	if diff := cmp.Diff(tasks[0].TaskArn, task.TaskArn); diff != "" {
 		t.Errorf("first task mismatch (-want +got):\n%s", diff)
-	}
-	if diff := cmp.Diff([]int{0, 0}, described); diff != "" {
-		t.Errorf("unexpected task status checks (-want +got):\n%s", diff)
 	}
 }
 
@@ -257,12 +294,9 @@ func runTestTasks(status string, exitCodes ...int32) []types.Task {
 	return tasks
 }
 
-// The returned counts may be read after Run or RunTask returns.
 // AWS configuration is global, so callers must not use t.Parallel.
-func newRunTestApp(t *testing.T, tasks []types.Task) (*ecspresso.App, []int) {
+func newRunTestApp(t *testing.T, tasks []types.Task, describeTask func(context.Context, types.Task) (types.Task, error)) *ecspresso.App {
 	t.Helper()
-	var mu sync.Mutex
-	described := make([]int, len(tasks))
 	mock := func(stack *middleware.Stack) error {
 		return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("test-run", func(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (middleware.InitializeOutput, middleware.Metadata, error) {
 			var result any
@@ -280,11 +314,15 @@ func newRunTestApp(t *testing.T, tasks []types.Task) (*ecspresso.App, []int) {
 			case *ecs.DescribeTasksInput:
 				var found []types.Task
 				for _, arn := range input.Tasks {
-					for i, task := range tasks {
+					for _, task := range tasks {
 						if arn == aws.ToString(task.TaskArn) {
-							mu.Lock()
-							described[i]++
-							mu.Unlock()
+							if describeTask != nil {
+								var err error
+								task, err = describeTask(ctx, task)
+								if err != nil {
+									return middleware.InitializeOutput{}, middleware.Metadata{}, err
+								}
+							}
 							found = append(found, task)
 						}
 					}
@@ -307,5 +345,5 @@ func newRunTestApp(t *testing.T, tasks []types.Task) (*ecspresso.App, []int) {
 		t.Fatal(err)
 	}
 	app.Config().Timeout.Duration = 5 * time.Second
-	return app, described
+	return app
 }
