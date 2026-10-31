@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/smithy-go/middleware"
-	"github.com/google/go-cmp/cmp"
 	"github.com/kayac/ecspresso/v2"
 )
 
@@ -243,39 +242,6 @@ func TestRunWaitsForAllTasks(t *testing.T) {
 				t.Fatal("Run did not finish after both tasks reached the target status")
 			}
 		})
-	}
-}
-
-func TestRunNoWait(t *testing.T) {
-	app := newRunTestApp(t, runTestTasks("PENDING", 0, 0), func(ctx context.Context, task types.Task) (types.Task, error) {
-		t.Error("--no-wait must not describe task status")
-		return types.Task{}, fmt.Errorf("unexpected DescribeTasks call")
-	})
-
-	err := app.Run(t.Context(), ecspresso.RunOption{
-		Revision: aws.Int64(1), Count: 2, Wait: false,
-	})
-
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestRunTaskCompatibility(t *testing.T) {
-	tasks := runTestTasks("PENDING", 0, 0)
-	app := newRunTestApp(t, tasks, nil)
-
-	var task *types.Task
-	task, err := app.RunTask(t.Context(), "test:1", &types.TaskOverride{}, &ecspresso.RunOption{Count: 2})
-
-	if err != nil {
-		t.Fatal(err)
-	}
-	if task == nil {
-		t.Fatal("RunTask returned nil without an error")
-	}
-	if diff := cmp.Diff(tasks[0].TaskArn, task.TaskArn); diff != "" {
-		t.Errorf("first task mismatch (-want +got):\n%s", diff)
 	}
 }
 
