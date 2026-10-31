@@ -1,4 +1,6 @@
 name: test action
+# Intentionally excluded from actions.lock: these tests must exercise the latest
+# code on v2 and v2-action-testing, rather than a previously locked commit.
 on:
   push:
     branches:
