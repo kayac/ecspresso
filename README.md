@@ -689,6 +689,8 @@ For services using the CodeDeploy deployment controller, if there's an active de
 
 ## Example of run task
 
+When `--count` is greater than one, `run` waits for every task and checks the watched container in each task. If any watched container exits with a nonzero code, the command fails. `--wait-until=running` waits for every task to reach RUNNING, while `--no-wait` returns after the tasks are started.
+
 ```console
 $ ecspresso run --config ecspresso.yml --task-def=db-migrate.json
 ```
