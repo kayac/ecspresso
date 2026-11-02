@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -186,11 +187,9 @@ func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride,
 	return out.Tasks, nil
 }
 
-// WaitRunTask waits for all of the tasks with a single waiter, following the logs of the watch container in each task.
+// WaitRunTask waits for all of the tasks, following the logs of the watch container in each task.
 func (d *App) WaitRunTask(ctx context.Context, tasks []types.Task, watchContainer *types.ContainerDefinition, startedAt time.Time, untilRunning bool) error {
 	d.LogInfo("Waiting for run task...(it may take a while)")
-	waitCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	lc := watchContainer.LogConfiguration
 	if lc == nil || lc.LogDriver != types.LogDriverAwslogs || lc.Options["awslogs-stream-prefix"] == "" {
@@ -200,6 +199,10 @@ func (d *App) WaitRunTask(ctx context.Context, tasks []types.Task, watchContaine
 
 	d.LogInfo("watching container", "container", *watchContainer.Name)
 	sleepContext(ctx, 3*time.Second) // wait for log stream
+	// Stop the followers by a channel instead of canceling their context,
+	// so that in-flight GetLogEvents requests are not aborted.
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
 	for _, task := range tasks {
 		logGroup, logStream := d.GetLogInfo(&task, watchContainer)
 		var taskID string
@@ -207,36 +210,47 @@ func (d *App) WaitRunTask(ctx context.Context, tasks []types.Task, watchContaine
 			// distinguish interleaved logs of multiple tasks
 			taskID = arnToName(aws.ToString(task.TaskArn))
 		}
-		go d.followLogEvents(waitCtx, logGroup, logStream, taskID, startedAt)
+		wg.Go(func() {
+			d.followLogEvents(ctx, stop, logGroup, logStream, taskID, startedAt)
+		})
 	}
-
-	return d.waitTasks(ctx, tasks, untilRunning)
+	err := d.waitTasks(ctx, tasks, untilRunning)
+	close(stop)
+	wg.Wait()
+	return err
 }
 
-func (d *App) followLogEvents(ctx context.Context, logGroup, logStream, taskID string, startedAt time.Time) {
+// followLogEvents prints log events until stop is closed, and then fetches the remaining events once.
+func (d *App) followLogEvents(ctx context.Context, stop <-chan struct{}, logGroup, logStream, taskID string, startedAt time.Time) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	var nextToken *string
 	for {
+		var stopped bool
 		select {
 		case <-ctx.Done():
 			return
+		case <-stop:
+			stopped = true
 		case <-ticker.C:
-			token, err := d.getLogEvents(ctx, logGroup, logStream, taskID, startedAt, nextToken)
-			if err != nil {
-				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					return
-				}
-				if errors.Is(err, ErrPermissionDenied) {
-					d.LogWarn("failed to get log events: check logs:GetLogEvents permission", "error", err.Error())
-					return
-				}
-				if !errors.Is(err, ErrNotFound) {
-					d.LogWarn("failed to get log events", "error", err.Error())
-				}
-				continue
+		}
+		token, err := d.getLogEvents(ctx, logGroup, logStream, taskID, startedAt, nextToken)
+		if err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return
 			}
+			if errors.Is(err, ErrPermissionDenied) {
+				d.LogWarn("failed to get log events: check logs:GetLogEvents permission", "error", err.Error())
+				return
+			}
+			if !errors.Is(err, ErrNotFound) {
+				d.LogWarn("failed to get log events", "error", err.Error())
+			}
+		} else {
 			nextToken = token
+		}
+		if stopped {
+			return
 		}
 	}
 }
