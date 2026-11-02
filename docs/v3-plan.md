@@ -108,6 +108,7 @@ The GitHub Action (`action.yml`) currently lives in this repository, alongside t
 - Items to update in this repo on cutover:
   - README "GitHub Actions" section (currently around L142) — point users to the new repo.
   - AGENTS.md — drop the `v2-action-testing` push instruction.
+  - `.github/workflows/actions.lock` — onboard every remaining workflow (see [Workflow dependency lockfiles](#workflow-dependency-lockfiles)).
 
 #### Keep `action.yml` as a forwarder, do not delete it
 
@@ -131,7 +132,7 @@ runs:
   steps:
     - run: echo "::warning::kayac/ecspresso action is deprecated; use <new-org-or-owner>/<new-repo>@v3 instead"
       shell: bash
-    - uses: <new-org-or-owner>/<new-repo>@v3
+    - uses: <new-org-or-owner>/<new-repo>@<full-commit-sha> # v3.x.y
       with:
         version: ${{ inputs.version }}
         version-file: ${{ inputs.version-file }}
@@ -144,6 +145,16 @@ With this in place:
 - The forwarder can be removed in a future major (or simply left in place indefinitely; it is cheap).
 
 The new repo is the source of truth — keep the forwarder's `inputs` in sync with whatever inputs the new action accepts.
+
+#### Workflow dependency lockfiles
+
+`v2` adopted [workflow dependency lockfiles](https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles) (`.github/workflows/actions.lock`) in #1114, except for `.github/workflows/action.yml`, which must test the latest action code on `v2` and `v2-action-testing`. The action split removes the reason for that exception.
+
+- **This repo:** on cutover, regenerate `actions.lock` with `gh actions-lock` so every remaining workflow is onboarded. Dependabot keeps the lockfile in sync for onboarded workflows.
+- **Forwarder `action.yml`:** pin the new action by full commit SHA with a version comment, as in the sketch above. Lockfiles cover workflows only, not action files, so users without a lockfile would otherwise resolve a mutable `@v3` ref. Forwarder updates then ship with CLI releases, which is fine for a deprecated shim.
+- **New action repo:** onboard all workflows to a lockfile from the start, with Dependabot `github-actions` updates enabled. Pin any action used inside its `action.yml` by full commit SHA.
+- **Never move full version tags** (e.g. `v3.1.0`) in the new repo. For users who lock it, a moved full version tag is an error, while a moved major tag (`v3`) only produces a `ref-moved` warning. Enable immutable releases to enforce this.
+- **Pinning rules:** update AGENTS.md so that onboarded workflows are managed with `gh actions-lock`, and only action files and reusable workflows are pinned with `pinact`. pinact leaves lockfile-managed actions alone starting with the release after v5.0.2 (suzuki-shunsuke/pinact#1826); older versions rewrite them back to SHAs and break the lockfile.
 
 ### Unify Duration handling and reinterpret plain numbers as seconds
 
