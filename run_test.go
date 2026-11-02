@@ -278,6 +278,10 @@ func newRunTestApp(t *testing.T, tasks []types.Task, describeTask func(context.C
 				}
 				result = &ecs.RunTaskOutput{Tasks: tasks}
 			case *ecs.DescribeTasksInput:
+				// all tasks are described in a single request
+				if got, want := len(input.Tasks), len(tasks); got != want {
+					t.Errorf("described tasks = %d, want %d", got, want)
+				}
 				var found []types.Task
 				for _, arn := range input.Tasks {
 					for _, task := range tasks {

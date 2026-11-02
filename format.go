@@ -17,9 +17,10 @@ import (
 var EventTimeFormat = sloghandler.TimeFormat
 
 type genericLogEvent struct {
-	Time  time.Time `json:"time"`
-	Level string    `json:"level"`
-	Msg   string    `json:"msg"`
+	Time   time.Time `json:"time"`
+	Level  string    `json:"level"`
+	Msg    string    `json:"msg"`
+	TaskID string    `json:"task_id,omitempty"`
 }
 
 func formatDeployment(dp types.Deployment) string {
@@ -76,22 +77,27 @@ func (e serviceEvent) JSON() string {
 	return string(b)
 }
 
-type logEvent logsTypes.OutputLogEvent
+// logEvent is a log event of a task container. taskID is set to distinguish logs of multiple tasks.
+type logEvent struct {
+	event  logsTypes.OutputLogEvent
+	taskID string
+}
 
 func (e logEvent) String() string {
-	t := time.Unix((*e.Timestamp / int64(1000)), 0)
-	return fmt.Sprintf("%s %s",
-		t.In(time.Local).Format(EventTimeFormat),
-		*e.Message,
-	)
+	t := time.Unix((*e.event.Timestamp / int64(1000)), 0).In(time.Local).Format(EventTimeFormat)
+	if e.taskID != "" {
+		return fmt.Sprintf("%s [%s] %s", t, e.taskID, *e.event.Message)
+	}
+	return fmt.Sprintf("%s %s", t, *e.event.Message)
 }
 
 func (e logEvent) JSON() string {
-	t := time.Unix((*e.Timestamp / int64(1000)), 0).In(time.Local)
+	t := time.Unix((*e.event.Timestamp / int64(1000)), 0).In(time.Local)
 	b, _ := json.Marshal(genericLogEvent{
-		Time:  t,
-		Level: slog.LevelInfo.String(),
-		Msg:   *e.Message,
+		Time:   t,
+		Level:  slog.LevelInfo.String(),
+		Msg:    *e.event.Message,
+		TaskID: e.taskID,
 	})
 	return string(b)
 }

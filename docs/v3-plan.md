@@ -211,6 +211,18 @@ PR: https://github.com/kayac/ecspresso/pull/1111
 - Build release and nightly binaries with Go 1.27.
 - Compatibility: building ecspresso or importing it as a library requires Go 1.26 or later.
 
+### Wait for all tasks started by `run`
+
+PR: https://github.com/kayac/ecspresso/pull/1113
+
+`run --count N` (N > 1) waited only for the first task, so failures in the other tasks went unnoticed. v3 waits for every task and checks the watch container in each.
+
+- A single waiter and a single `DescribeTasks` request cover all tasks.
+- Container logs of every task are followed. With multiple tasks, each log line is tagged with the task ID (`[<task-id>]` in text, `task_id` in JSON).
+- Errors of all failed tasks are reported together, each with its task ARN.
+- Library: `App.RunTask` returns all started tasks (`[]types.Task`), and `App.WaitRunTask`, `App.DescribeTaskStatus`, and `App.DescribeTasksInput` take `[]types.Task`.
+- Compatibility: `run --count N` fails if any task fails, not only the first one.
+
 ## Features
 
 ### Add jsonrpc mode to the external plugin

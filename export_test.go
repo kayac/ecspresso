@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	logsTypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
@@ -135,4 +136,10 @@ var (
 
 func (v *verifier) ECRPublicCredentials(ctx context.Context) (string, string, error) {
 	return v.ecrPublicCredentials(ctx)
+}
+
+// FormatLogEvent returns the text and JSON representations of a task log event.
+func FormatLogEvent(event logsTypes.OutputLogEvent, taskID string) (string, string) {
+	e := logEvent{event: event, taskID: taskID}
+	return e.String(), e.JSON()
 }
