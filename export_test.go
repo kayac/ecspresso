@@ -143,3 +143,10 @@ func FormatLogEvent(event logsTypes.OutputLogEvent, taskID string) (string, stri
 	e := logEvent{event: event, taskID: taskID}
 	return e.String(), e.JSON()
 }
+
+// SetTaskPollInterval overrides the task polling interval until the test ends.
+func SetTaskPollInterval(t interface{ Cleanup(func()) }, d time.Duration) {
+	orig := taskPollInterval
+	taskPollInterval = d
+	t.Cleanup(func() { taskPollInterval = orig })
+}

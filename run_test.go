@@ -2,8 +2,10 @@ package ecspresso_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -245,6 +247,81 @@ func TestRunWaitsForAllTasks(t *testing.T) {
 	}
 }
 
+// errTaskMissing makes the mock report the task as a MISSING failure.
+var errTaskMissing = errors.New("task missing")
+
+// taskSequence returns a describeTask hook that returns the states of each task in order, keeping the last one.
+func taskSequence(states map[string][]types.Task) func(context.Context, types.Task) (types.Task, error) {
+	var mu sync.Mutex
+	calls := map[string]int{}
+	return func(_ context.Context, task types.Task) (types.Task, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		arn := aws.ToString(task.TaskArn)
+		seq := states[arn]
+		i := min(calls[arn], len(seq)-1)
+		calls[arn]++
+		if seq[i].TaskArn == nil {
+			return types.Task{}, errTaskMissing
+		}
+		return seq[i], nil
+	}
+}
+
+func TestRunWaitsForTasksTransitioningAtDifferentTimes(t *testing.T) {
+	stopped := runTestTasks("STOPPED", 0, 42)
+	running := runTestTasks("RUNNING", 0, 0)
+	pending := runTestTasks("PENDING", 0, 0)
+	missing := types.Task{}
+	for _, tc := range []struct {
+		name    string
+		until   string
+		states  map[string][]types.Task
+		wantErr []string
+	}{
+		{
+			// the first response lacks the second task, which must not be treated as stopped
+			name:  "stopped with a missing task",
+			until: "stopped",
+			states: map[string][]types.Task{
+				aws.ToString(stopped[0].TaskArn): {stopped[0]},
+				aws.ToString(stopped[1].TaskArn): {missing, running[1], stopped[1]},
+			},
+			wantErr: []string{"task-1", "exit code: 42"},
+		},
+		{
+			// the first task stops after it has been observed running
+			name:  "running with staggered transitions",
+			until: "running",
+			states: map[string][]types.Task{
+				aws.ToString(stopped[0].TaskArn): {running[0], stopped[0]},
+				aws.ToString(stopped[1].TaskArn): {pending[1], running[1]},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app := newRunTestApp(t, stopped, taskSequence(tc.states))
+			err := app.Run(t.Context(), ecspresso.RunOption{
+				Revision: aws.Int64(1), Count: 2, Wait: true, WaitUntil: tc.until,
+			})
+			if len(tc.wantErr) == 0 {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatal("expected task failures, got nil")
+			}
+			for _, want := range tc.wantErr {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("error %q does not contain %q", err, want)
+				}
+			}
+		})
+	}
+}
+
 func runTestTasks(status string, exitCodes ...int32) []types.Task {
 	tasks := make([]types.Task, len(exitCodes))
 	for i, code := range exitCodes {
@@ -263,6 +340,7 @@ func runTestTasks(status string, exitCodes ...int32) []types.Task {
 // AWS configuration is global, so callers must not use t.Parallel.
 func newRunTestApp(t *testing.T, tasks []types.Task, describeTask func(context.Context, types.Task) (types.Task, error)) *ecspresso.App {
 	t.Helper()
+	ecspresso.SetTaskPollInterval(t, 10*time.Millisecond)
 	mock := func(stack *middleware.Stack) error {
 		return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("test-run", func(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (middleware.InitializeOutput, middleware.Metadata, error) {
 			var result any
@@ -282,22 +360,25 @@ func newRunTestApp(t *testing.T, tasks []types.Task, describeTask func(context.C
 				if got, want := len(input.Tasks), len(tasks); got != want {
 					t.Errorf("described tasks = %d, want %d", got, want)
 				}
-				var found []types.Task
+				out := &ecs.DescribeTasksOutput{}
 				for _, arn := range input.Tasks {
 					for _, task := range tasks {
 						if arn == aws.ToString(task.TaskArn) {
 							if describeTask != nil {
 								var err error
 								task, err = describeTask(ctx, task)
-								if err != nil {
+								if errors.Is(err, errTaskMissing) {
+									out.Failures = append(out.Failures, types.Failure{Arn: aws.String(arn), Reason: aws.String("MISSING")})
+									continue
+								} else if err != nil {
 									return middleware.InitializeOutput{}, middleware.Metadata{}, err
 								}
 							}
-							found = append(found, task)
+							out.Tasks = append(out.Tasks, task)
 						}
 					}
 				}
-				result = &ecs.DescribeTasksOutput{Tasks: found}
+				result = out
 			default:
 				return middleware.InitializeOutput{}, middleware.Metadata{}, fmt.Errorf("unexpected request %T", input)
 			}

@@ -86,7 +86,10 @@ type logEvent struct {
 func (e logEvent) String() string {
 	t := time.Unix((*e.event.Timestamp / int64(1000)), 0).In(time.Local).Format(EventTimeFormat)
 	if e.taskID != "" {
-		return fmt.Sprintf("%s [%s] %s", t, e.taskID, *e.event.Message)
+		// prefix every line, as a multiline event (e.g. a stack trace) has no other way to tell its task
+		prefix := fmt.Sprintf("%s [%s] ", t, e.taskID)
+		msg := strings.TrimSuffix(*e.event.Message, "\n")
+		return prefix + strings.ReplaceAll(msg, "\n", "\n"+prefix)
 	}
 	return fmt.Sprintf("%s %s", t, *e.event.Message)
 }

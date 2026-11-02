@@ -48,3 +48,26 @@ func TestFormatLogEvent(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatLogEventMultiline(t *testing.T) {
+	event := logsTypes.OutputLogEvent{
+		Timestamp: aws.Int64(1700000000000),
+		Message:   aws.String("panic: boom\n\tat main.go:1\n"),
+	}
+	text, _ := ecspresso.FormatLogEvent(event, "abcdef")
+	lines := strings.Split(text, "\n")
+	if len(lines) != 2 {
+		t.Fatalf("lines = %q, want 2 lines", lines)
+	}
+	for _, want := range []string{" [abcdef] panic: boom", " [abcdef] \tat main.go:1"} {
+		found := false
+		for _, line := range lines {
+			if strings.HasSuffix(line, want) {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("text %q has no line ending with %q", text, want)
+		}
+	}
+}

@@ -241,31 +241,66 @@ func (d *App) followLogEvents(ctx context.Context, logGroup, logStream, taskID s
 	}
 }
 
+// taskPollInterval is the interval of polling tasks in waitTasks. It is a variable to be shortened in tests.
+var taskPollInterval = refreshInterval
+
+// waitTasks polls all of the tasks in a single DescribeTasks request until every task reaches the target status.
+// Progress of each task is kept across polls, so tasks may reach the target status at different times.
+// A task that is not found yet (MISSING) is retried, because DescribeTasks is eventually consistent just after RunTask.
+// With untilRunning, a task that has already stopped is also done; DescribeTaskStatus reports its exit status.
 func (d *App) waitTasks(ctx context.Context, tasks []types.Task, untilRunning bool) error {
+	target := "STOPPED"
+	if untilRunning {
+		target = "RUNNING"
+	}
+	waiting := make(map[string]struct{}, len(tasks))
 	ids := make([]string, 0, len(tasks))
 	for _, task := range tasks {
+		waiting[aws.ToString(task.TaskArn)] = struct{}{}
 		ids = append(ids, arnToName(aws.ToString(task.TaskArn)))
 	}
-	if untilRunning {
-		d.LogInfo("waiting for tasks until running", "task_ids", ids)
-		waiter := ecs.NewTasksRunningWaiter(d.ecs, func(o *ecs.TasksRunningWaiterOptions) {
-			o.MaxDelay = waiterMaxDelay
-		})
-		if err := waiter.Wait(ctx, d.DescribeTasksInput(tasks), d.Timeout()); err != nil {
-			return fmt.Errorf("failed to wait tasks: %w", err)
-		}
-		d.LogInfo("tasks are running", "task_ids", ids)
-		return nil
-	}
+	d.LogInfo("waiting for tasks", "until", strings.ToLower(target), "task_ids", ids)
 
-	d.LogInfo("waiting for tasks until stopped", "task_ids", ids)
-	waiter := ecs.NewTasksStoppedWaiter(d.ecs, func(o *ecs.TasksStoppedWaiterOptions) {
-		o.MaxDelay = waiterMaxDelay
-	})
-	if err := waiter.Wait(ctx, d.DescribeTasksInput(tasks), d.Timeout()); err != nil {
-		return fmt.Errorf("failed to wait tasks: %w", err)
+	ctx, cancel := context.WithTimeout(ctx, d.Timeout())
+	defer cancel()
+	in := d.DescribeTasksInput(tasks)
+	ticker := time.NewTicker(taskPollInterval)
+	defer ticker.Stop()
+	for {
+		out, err := d.ecs.DescribeTasks(ctx, in)
+		if err != nil {
+			if ctx.Err() != nil {
+				return fmt.Errorf("failed to wait tasks: %w", ctx.Err())
+			}
+			return fmt.Errorf("failed to describe tasks: %w", err)
+		}
+		for _, f := range out.Failures {
+			if aws.ToString(f.Reason) == "MISSING" {
+				d.LogDebug("task %s is not found yet", aws.ToString(f.Arn))
+				continue
+			}
+			return fmt.Errorf("failed to wait tasks: task %s: %s", aws.ToString(f.Arn), aws.ToString(f.Reason))
+		}
+		for _, task := range out.Tasks {
+			arn := aws.ToString(task.TaskArn)
+			if _, ok := waiting[arn]; !ok {
+				continue
+			}
+			status := aws.ToString(task.LastStatus)
+			if status == target || status == "STOPPED" {
+				d.LogInfo("task reached status", "task_id", arnToName(arn), "status", status)
+				delete(waiting, arn)
+			}
+		}
+		if len(waiting) == 0 {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("failed to wait tasks: %w", ctx.Err())
+		case <-ticker.C:
+		}
 	}
-	return nil
 }
 
 type taskDefinitionForRun struct {
