@@ -411,10 +411,14 @@ func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
 	}
 }
 
-func (d *App) DescribeTasksInput(task *types.Task) *ecs.DescribeTasksInput {
+func (d *App) DescribeTasksInput(tasks []types.Task) *ecs.DescribeTasksInput {
+	arns := make([]string, 0, len(tasks))
+	for _, task := range tasks {
+		arns = append(arns, aws.ToString(task.TaskArn))
+	}
 	return &ecs.DescribeTasksInput{
 		Cluster: aws.String(d.Cluster),
-		Tasks:   []string{*task.TaskArn},
+		Tasks:   arns,
 	}
 }
 
@@ -588,18 +592,26 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) ([]aasTypes.S
 	return tout.ScalableTargets, pout.ScalingPolicies, nil
 }
 
-func (d *App) DescribeTaskStatus(ctx context.Context, task *types.Task, watchContainer *types.ContainerDefinition) error {
-	out, err := d.ecs.DescribeTasks(ctx, d.DescribeTasksInput(task))
+// DescribeTaskStatus describes the tasks in a single request and returns errors of all failed tasks.
+func (d *App) DescribeTaskStatus(ctx context.Context, tasks []types.Task, watchContainer *types.ContainerDefinition) error {
+	out, err := d.ecs.DescribeTasks(ctx, d.DescribeTasksInput(tasks))
 	if err != nil {
 		return fmt.Errorf("failed to describe tasks: %w", err)
 	}
-	if len(out.Failures) > 0 {
-		f := out.Failures[0]
-		d.LogInfo("task failure", "task_arn", *f.Arn)
-		return errors.New(*f.Reason)
+	var errs []error
+	for _, f := range out.Failures {
+		d.LogInfo("task failure", "task_arn", aws.ToString(f.Arn))
+		errs = append(errs, fmt.Errorf("task %s: %s", aws.ToString(f.Arn), aws.ToString(f.Reason)))
 	}
+	for _, ts := range out.Tasks {
+		if err := taskStatusError(ts, watchContainer); err != nil {
+			errs = append(errs, fmt.Errorf("task %s: %w", aws.ToString(ts.TaskArn), err))
+		}
+	}
+	return errors.Join(errs...)
+}
 
-	ts := out.Tasks[0]
+func taskStatusError(ts types.Task, watchContainer *types.ContainerDefinition) error {
 	if ts.StopCode == types.TaskStopCodeTaskFailedToStart {
 		return fmt.Errorf("task failed to start: %s", aws.ToString(ts.StoppedReason))
 	}
@@ -644,6 +656,10 @@ func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDe
 }
 
 func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream string, startedAt time.Time, nextToken *string) (*string, error) {
+	return d.getLogEvents(ctx, logGroup, logStream, "", startedAt, nextToken)
+}
+
+func (d *App) getLogEvents(ctx context.Context, logGroup, logStream, taskID string, startedAt time.Time, nextToken *string) (*string, error) {
 	ms := startedAt.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 	out, err := d.cwl.GetLogEvents(ctx, d.GetLogEventsInput(logGroup, logStream, ms, nextToken))
 	if err != nil {
@@ -656,7 +672,7 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 		return nextToken, nil
 	}
 	for _, event := range out.Events {
-		WriteOutput(logEvent(event))
+		WriteOutput(logEvent{event: event, taskID: taskID})
 	}
 	return out.NextForwardToken, nil
 }

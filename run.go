@@ -91,7 +91,7 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 		return nil
 	}
 
-	tasks, err := d.runTasks(ctx, tdForRun.Arn, &ov, &opt)
+	tasks, err := d.RunTask(ctx, tdForRun.Arn, &ov, &opt)
 	if err != nil {
 		return err
 	}
@@ -99,23 +99,10 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 		d.LogInfo("Run task invoked")
 		return nil
 	}
-	startedAt := time.Now()
-	var wg sync.WaitGroup
-	errs := make([]error, len(tasks))
-	for i := range tasks {
-		wg.Go(func() {
-			task := &tasks[i]
-			if err := d.WaitRunTask(ctx, task, watchContainer, startedAt, opt.waitUntilRunning()); err != nil {
-				errs[i] = fmt.Errorf("failed to wait for task %s: %w", aws.ToString(task.TaskArn), err)
-				return
-			}
-			if err := d.DescribeTaskStatus(ctx, task, watchContainer); err != nil {
-				errs[i] = fmt.Errorf("failed to run task %s: %w", aws.ToString(task.TaskArn), err)
-			}
-		})
+	if err := d.WaitRunTask(ctx, tasks, watchContainer, time.Now(), opt.waitUntilRunning()); err != nil {
+		return err
 	}
-	wg.Wait()
-	if err := errors.Join(errs...); err != nil {
+	if err := d.DescribeTaskStatus(ctx, tasks, watchContainer); err != nil {
 		return err
 	}
 	d.LogInfo("Run task completed!")
@@ -123,16 +110,8 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 	return nil
 }
 
-// RunTask invokes tasks and returns the first task for compatibility.
-func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride, opt *RunOption) (*types.Task, error) {
-	tasks, err := d.runTasks(ctx, tdArn, ov, opt)
-	if err != nil {
-		return nil, err
-	}
-	return &tasks[0], nil
-}
-
-func (d *App) runTasks(ctx context.Context, tdArn string, ov *types.TaskOverride, opt *RunOption) ([]types.Task, error) {
+// RunTask runs tasks and returns all of the started tasks.
+func (d *App) RunTask(ctx context.Context, tdArn string, ov *types.TaskOverride, opt *RunOption) ([]types.Task, error) {
 	d.LogInfo("running task", "task_definition", tdArn)
 
 	sv, err := d.LoadServiceDefinition(d.config.ServiceDefinitionPath)
@@ -208,80 +187,134 @@ func (d *App) runTasks(ctx context.Context, tdArn string, ov *types.TaskOverride
 	return out.Tasks, nil
 }
 
-func (d *App) WaitRunTask(ctx context.Context, task *types.Task, watchContainer *types.ContainerDefinition, startedAt time.Time, untilRunning bool) error {
+// WaitRunTask waits for all of the tasks, following the logs of the watch container in each task.
+func (d *App) WaitRunTask(ctx context.Context, tasks []types.Task, watchContainer *types.ContainerDefinition, startedAt time.Time, untilRunning bool) error {
 	d.LogInfo("Waiting for run task...(it may take a while)")
-	waitCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	lc := watchContainer.LogConfiguration
 	if lc == nil || lc.LogDriver != types.LogDriverAwslogs || lc.Options["awslogs-stream-prefix"] == "" {
 		d.LogInfo("awslogs not configured")
-		if err := d.waitTask(ctx, task, untilRunning); err != nil {
-			return err
-		}
-		return nil
+		return d.waitTasks(ctx, tasks, untilRunning)
 	}
 
 	d.LogInfo("watching container", "container", *watchContainer.Name)
-	logGroup, logStream := d.GetLogInfo(task, watchContainer)
 	sleepContext(ctx, 3*time.Second) // wait for log stream
-
-	go func() {
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
-		var nextToken *string
-		for {
-			select {
-			case <-waitCtx.Done():
-				return
-			case <-ticker.C:
-				token, err := d.GetLogEvents(waitCtx, logGroup, logStream, startedAt, nextToken)
-				if err != nil {
-					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-						return
-					}
-					if errors.Is(err, ErrPermissionDenied) {
-						d.LogWarn("failed to get log events: check logs:GetLogEvents permission", "error", err.Error())
-						return
-					}
-					if !errors.Is(err, ErrNotFound) {
-						d.LogWarn("failed to get log events", "error", err.Error())
-					}
-					continue
-				}
-				nextToken = token
-			}
+	// Stop the followers by a channel instead of canceling their context,
+	// so that in-flight GetLogEvents requests are not aborted.
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+	for _, task := range tasks {
+		logGroup, logStream := d.GetLogInfo(&task, watchContainer)
+		var taskID string
+		if len(tasks) > 1 {
+			// distinguish interleaved logs of multiple tasks
+			taskID = arnToName(aws.ToString(task.TaskArn))
 		}
-	}()
-
-	if err := d.waitTask(ctx, task, untilRunning); err != nil {
-		return err
+		wg.Go(func() {
+			d.followLogEvents(ctx, stop, logGroup, logStream, taskID, startedAt)
+		})
 	}
-	return nil
+	err := d.waitTasks(ctx, tasks, untilRunning)
+	close(stop)
+	wg.Wait()
+	return err
 }
 
-func (d *App) waitTask(ctx context.Context, task *types.Task, untilRunning bool) error {
-	id := arnToName(*task.TaskArn)
-	if untilRunning {
-		d.LogInfo("waiting for task until running", "task_id", id)
-		waiter := ecs.NewTasksRunningWaiter(d.ecs, func(o *ecs.TasksRunningWaiterOptions) {
-			o.MaxDelay = waiterMaxDelay
-		})
-		if err := waiter.Wait(ctx, d.DescribeTasksInput(task), d.Timeout()); err != nil {
-			return err
+// followLogEvents prints log events until stop is closed, and then fetches the remaining events once.
+func (d *App) followLogEvents(ctx context.Context, stop <-chan struct{}, logGroup, logStream, taskID string, startedAt time.Time) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	var nextToken *string
+	for {
+		var stopped bool
+		select {
+		case <-ctx.Done():
+			return
+		case <-stop:
+			stopped = true
+		case <-ticker.C:
 		}
-		d.LogInfo("task is running", "task_id", id)
-		return nil
+		token, err := d.getLogEvents(ctx, logGroup, logStream, taskID, startedAt, nextToken)
+		if err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return
+			}
+			if errors.Is(err, ErrPermissionDenied) {
+				d.LogWarn("failed to get log events: check logs:GetLogEvents permission", "error", err.Error())
+				return
+			}
+			if !errors.Is(err, ErrNotFound) {
+				d.LogWarn("failed to get log events", "error", err.Error())
+			}
+		} else {
+			nextToken = token
+		}
+		if stopped {
+			return
+		}
 	}
+}
 
-	d.LogInfo("waiting for task until stopped", "task_id", id)
-	waiter := ecs.NewTasksStoppedWaiter(d.ecs, func(o *ecs.TasksStoppedWaiterOptions) {
-		o.MaxDelay = waiterMaxDelay
-	})
-	if err := waiter.Wait(ctx, d.DescribeTasksInput(task), d.Timeout()); err != nil {
-		return fmt.Errorf("failed to wait task: %w", err)
+// taskPollInterval is the interval of polling tasks in waitTasks. It is a variable to be shortened in tests.
+var taskPollInterval = refreshInterval
+
+// waitTasks polls all of the tasks in a single DescribeTasks request until every task reaches the target status.
+// Progress of each task is kept across polls, so tasks may reach the target status at different times.
+// A task that is not found yet (MISSING) is retried, because DescribeTasks is eventually consistent just after RunTask.
+// With untilRunning, a task that has already stopped is also done; DescribeTaskStatus reports its exit status.
+func (d *App) waitTasks(ctx context.Context, tasks []types.Task, untilRunning bool) error {
+	target := "STOPPED"
+	if untilRunning {
+		target = "RUNNING"
 	}
-	return nil
+	waiting := make(map[string]struct{}, len(tasks))
+	ids := make([]string, 0, len(tasks))
+	for _, task := range tasks {
+		waiting[aws.ToString(task.TaskArn)] = struct{}{}
+		ids = append(ids, arnToName(aws.ToString(task.TaskArn)))
+	}
+	d.LogInfo("waiting for tasks", "until", strings.ToLower(target), "task_ids", ids)
+
+	ctx, cancel := context.WithTimeout(ctx, d.Timeout())
+	defer cancel()
+	in := d.DescribeTasksInput(tasks)
+	ticker := time.NewTicker(taskPollInterval)
+	defer ticker.Stop()
+	for {
+		out, err := d.ecs.DescribeTasks(ctx, in)
+		if err != nil {
+			if ctx.Err() != nil {
+				return fmt.Errorf("failed to wait tasks: %w", ctx.Err())
+			}
+			return fmt.Errorf("failed to describe tasks: %w", err)
+		}
+		for _, f := range out.Failures {
+			if aws.ToString(f.Reason) == "MISSING" {
+				d.LogDebug("task %s is not found yet", aws.ToString(f.Arn))
+				continue
+			}
+			return fmt.Errorf("failed to wait tasks: task %s: %s", aws.ToString(f.Arn), aws.ToString(f.Reason))
+		}
+		for _, task := range out.Tasks {
+			arn := aws.ToString(task.TaskArn)
+			if _, ok := waiting[arn]; !ok {
+				continue
+			}
+			status := aws.ToString(task.LastStatus)
+			if status == target || status == "STOPPED" {
+				d.LogInfo("task reached status", "task_id", arnToName(arn), "status", status)
+				delete(waiting, arn)
+			}
+		}
+		if len(waiting) == 0 {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("failed to wait tasks: %w", ctx.Err())
+		case <-ticker.C:
+		}
+	}
 }
 
 type taskDefinitionForRun struct {

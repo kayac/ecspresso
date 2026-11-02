@@ -211,6 +211,19 @@ PR: https://github.com/kayac/ecspresso/pull/1111
 - Build release and nightly binaries with Go 1.27.
 - Compatibility: building ecspresso or importing it as a library requires Go 1.26 or later.
 
+### Wait for all tasks started by `run`
+
+PR: https://github.com/kayac/ecspresso/pull/1113, https://github.com/kayac/ecspresso/pull/1117
+
+`run --count N` (N > 1) waited only for the first task, so failures in the other tasks went unnoticed. v3 waits for every task and checks the watch container in each.
+
+- Each poll describes all tasks in a single `DescribeTasks` request. The SDK waiters are replaced with a polling loop that keeps each task's progress across polls, so tasks may reach the target status at different times. A task not found yet (`MISSING`, as `DescribeTasks` is eventually consistent just after `RunTask`) is retried instead of being ignored.
+- With `--wait-until=running`, a task that has already stopped counts as done, and its exit status is checked afterwards. v2 (SDK `TasksRunning` waiter) failed as soon as any task was `STOPPED`.
+- Container logs of every task are followed. With multiple tasks, each log line is tagged with the task ID (`[<task-id>]` in text, `task_id` in JSON), including every line of a multiline event.
+- Errors of all failed tasks are reported together, each with its task ARN.
+- Library: `App.RunTask` returns all started tasks (`[]types.Task`), and `App.WaitRunTask`, `App.DescribeTaskStatus`, and `App.DescribeTasksInput` take `[]types.Task`.
+- Compatibility: `run --count N` fails if any task fails, not only the first one.
+
 ## Features
 
 ### Add jsonrpc mode to the external plugin
