@@ -213,7 +213,7 @@ PR: https://github.com/kayac/ecspresso/pull/1111
 
 ### Wait for all tasks started by `run`
 
-PR: https://github.com/kayac/ecspresso/pull/1113
+PR: https://github.com/kayac/ecspresso/pull/1113, https://github.com/kayac/ecspresso/pull/1117
 
 `run --count N` (N > 1) waited only for the first task, so failures in the other tasks went unnoticed. v3 waits for every task and checks the watch container in each.
 
