@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.8.8](https://github.com/kayac/ecspresso/compare/v2.8.7...v2.8.8) - 2026-11-05
+- Document IAM permissions required by --wait-until=deployed by @nishimoto265 in https://github.com/kayac/ecspresso/pull/1102
+- Skip registry tests on pull rate limit errors by @fujiwara in https://github.com/kayac/ecspresso/pull/1109
+- Add lockfile for CI and release action dependencies by @shmokmt in https://github.com/kayac/ecspresso/pull/1114
+- Bump github.com/go-jose/go-jose/v4 from 4.1.4 to 4.1.6 by @dependabot[bot] in https://github.com/kayac/ecspresso/pull/1115
+- Bump aws-sdk-go-v2 modules (service/ecs v1.103.0) by @fujiwara in https://github.com/kayac/ecspresso/pull/1119
+
 ## [v2.8.7](https://github.com/kayac/ecspresso/compare/v2.8.6...v2.8.7) - 2026-09-27
 - Bump google.golang.org/grpc from 1.83.1 to 1.83.2 by @dependabot[bot] in https://github.com/kayac/ecspresso/pull/1079
 - Support early success criteria for rolling deployments by @fujiwara in https://github.com/kayac/ecspresso/pull/1080
