@@ -97,7 +97,7 @@ The GitHub Action (`action.yml`) currently lives in this repository, alongside t
 
 - Repository name: [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (https://github.com/kayac/ecspresso-action/pull/1, released as v3.0.0).
 - Migration for users: `uses: kayac/ecspresso@v2` → `uses: kayac/ecspresso-action@v3`.
-- Cutover in this repo: PR: TBD
+- Cutover in this repo: PR: https://github.com/kayac/ecspresso/pull/1120
 - Items to move out:
   - `action.yml` at the repo root.
   - The `v2-action-testing` branch workflow (currently the CI gate for `action.yml` changes — see [AGENTS.md](../AGENTS.md)). The new repo will run its own CI directly on PRs, so the `v2-action-testing` force-push convention goes away.
