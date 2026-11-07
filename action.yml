@@ -1,3 +1,8 @@
+# The ecspresso GitHub Action has moved to kayac/ecspresso-action.
+# This file forwards calls to it so that `uses: kayac/ecspresso@v3` keeps working.
+# Keep the inputs in sync with kayac/ecspresso-action.
+name: ecspresso (moved to kayac/ecspresso-action)
+description: Deprecated. Use kayac/ecspresso-action instead.
 inputs:
   version:
     description: "A version to install ecspresso"
@@ -18,61 +23,10 @@ runs:
   using: "composite"
   steps:
     - shell: bash
-      env:
-        github_token: ${{ inputs.github-token }}
-      run: |
-        set -eo pipefail
-        ARCH=$(uname -m)
-        if [ "${ARCH}" = "x86_64" ]; then
-          GOARCH="amd64"
-        elif [ "${ARCH}" = "aarch64" ]; then
-          GOARCH="arm64"
-        else
-          echo "Unsupported architecture: ${ARCH}"
-          exit 1
-        fi
-
-        VERSION="${{ inputs.version }}"
-        if [ -n "${{ inputs.version-file }}" ]; then
-          VERSION="v$(cat ${{ inputs.version-file }})"
-        fi
-
-        echo "VERSION=${VERSION} GOARCH=${GOARCH}"
-
-        api_request_args=("-sS" "--fail-with-body")
-        if [[ -n "$github_token" ]]; then
-          api_request_args=("${api_request_args[@]}" -H "authorization: token $github_token")
-        fi
-        if [ "${VERSION}" = "latest" ]; then
-          DOWNLOAD_URL=$(curl "${api_request_args[@]}" https://api.github.com/repos/kayac/ecspresso/releases \
-            | jq --arg matcher "linux.${GOARCH}." -r '[.[]?|select(.tag_name? > "v2.0")|select(.draft==false)|select(.prerelease==false)][0].assets[]?.browser_download_url|select(match($matcher))')
-          if [ -z "${DOWNLOAD_URL}" ]; then
-            echo "No matching release asset found for linux/${GOARCH}"
-            exit 1
-          fi
-        else
-          DOWNLOAD_URL=https://github.com/kayac/ecspresso/releases/download/${VERSION}/ecspresso_${VERSION:1}_linux_${GOARCH}.tar.gz
-        fi
-        echo "DOWNLOAD_URL=${DOWNLOAD_URL}"
-        mkdir -p ${RUNNER_TOOL_CACHE}/ecspresso
-        cd /tmp
-        curl -sfLO --retry 3 ${DOWNLOAD_URL}
-        if [[ "${DOWNLOAD_URL}" =~ \.tar\.gz$ ]]; then
-          FILENAME=$(basename $DOWNLOAD_URL .tar.gz)
-          tar xzvf ${FILENAME}.tar.gz
-          sudo install ecspresso ${RUNNER_TOOL_CACHE}/ecspresso/ecspresso
-        elif [[ "${DOWNLOAD_URL}" =~ \.zip$ ]]; then
-          FILENAME=$(basename $DOWNLOAD_URL .zip)
-          unzip ${FILENAME}.zip
-          sudo install ${FILENAME} ${RUNNER_TOOL_CACHE}/ecspresso/ecspresso
-        fi
-
-        echo "Adding ${RUNNER_TOOL_CACHE}/ecspresso to path..."
-        echo "${RUNNER_TOOL_CACHE}/ecspresso" >> $GITHUB_PATH
-        "${RUNNER_TOOL_CACHE}/ecspresso/ecspresso" version
-    - name: Run ecspresso with args
-      shell: bash
-      run: |
-        set -e
-        ecspresso ${{ inputs.args }}
-      if: ${{ inputs.args != '' }}
+      run: echo "::warning::kayac/ecspresso action is deprecated. Use kayac/ecspresso-action@v3 instead."
+    - uses: kayac/ecspresso-action@v3.0.0
+      with:
+        version: ${{ inputs.version }}
+        version-file: ${{ inputs.version-file }}
+        github-token: ${{ inputs.github-token }}
+        args: ${{ inputs.args }}

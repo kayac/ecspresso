@@ -10,7 +10,12 @@ ecspresso is a deployment tool for Amazon ECS written in Go. It manages ECS serv
 
 - Default branch: `v2`
 - Do not commit directly to `v2`. Always create a feature branch first.
-- When changing `action.yml`, force-push the same commit to the `v2-action-testing` branch as well. CI for the GitHub Action runs against that branch, so pushing there is how `action.yml` changes get exercised end-to-end.
+
+## GitHub Actions
+
+- The GitHub Action lives in [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action). `action.yml` in this repository is a deprecated forwarder to it. Keep its inputs in sync with kayac/ecspresso-action.
+- All workflows under `.github/workflows/` are onboarded to the [workflow dependency lockfile](https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles) (`.github/workflows/actions.lock`). Reference actions by version tag (e.g. `actions/checkout@v6.0.2`) and run `gh actions-lock` to update the lockfile. Do not pin them by SHA, and do not run `pinact` on them.
+- Workflows reference `action.yml` as `uses: $/`, so `gh actions-lock` also manages the action referenced in `action.yml` (`kayac/ecspresso-action@vX.Y.Z`). Releases of kayac/ecspresso-action are immutable, so the full version tag cannot be moved.
 
 ## Build Commands
 

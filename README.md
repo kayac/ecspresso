@@ -147,52 +147,23 @@ Orb `fujiwara/ecspresso@2.0.2` supports `version-file: path/to/file`, which inst
 
 ### GitHub Actions
 
-Action kayac/ecspresso@v2 installs an ecspresso binary for Linux(x86_64) into /usr/local/bin. This action installs ecspresso. When `args` input is provided, it runs `ecspresso` with the specified arguments after installation.
+The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action). See its README for inputs and details.
 
 ```yml
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: kayac/ecspresso@v2
+      - uses: actions/checkout@v6
+      - uses: kayac/ecspresso-action@v3
         with:
-          version: v2.3.0 # or latest
+          version: v3.0.0 # or latest
           # version-file: .ecspresso-version
       - run: |
           ecspresso deploy --config ecspresso.yml
 ```
 
-To use the latest version of ecspresso, pass the parameter "latest".
-
-```yaml
-      - uses: kayac/ecspresso@v2
-        with:
-          version: latest
-```
-
-`version: latest` installs different versions of ecspresso for each Action version.
-- kayac/ecspresso@v1
-  - The latest version of v1.x
-- kayac/ecspresso@v2
-  - The latest version of v2.x
-
-Note: `version: latest` is not recommended as it may cause unexpected behavior when a new version of ecspresso is released.
-
-Action `kayac/ecspresso@v2` supports `version-file: path/to/file`, which installs the ecspresso version specified in the file. This version number does not have a `v` prefix, For example `2.3.0`.
-
-### Run ecspresso after installation
-
-When the `args` input is provided, the action runs `ecspresso` with the specified arguments after installation.
-
-```yaml
-      - uses: kayac/ecspresso@v2
-        with:
-          version: latest
-          args: deploy
-        env:
-          ECSPRESSO_CONFIG: ecspresso.yml
-```
+`kayac/ecspresso@v3` is a deprecated wrapper that calls `kayac/ecspresso-action` and prints a deprecation warning. Replace `uses: kayac/ecspresso@v2` with `uses: kayac/ecspresso-action@v3`. `kayac/ecspresso@v2` keeps working as before.
 
 ## Usage
 

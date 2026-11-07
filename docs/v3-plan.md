@@ -4,12 +4,7 @@ Tracking list of breaking changes and cleanups planned for ecspresso v3. Work la
 
 ## Status
 
-All planned work except the module-path bump has landed on `pre-v3`. Cutting the `v3` branch / tag is gated on the GitHub Action moving to its dedicated repository — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The constraint:
-
-- The forwarder `action.yml` is what keeps `uses: kayac/ecspresso@v3` resolvable for existing workflows. Without it, Dependabot's `@v2` → `@v3` PRs would break user workflows after merge with `unable to resolve action 'kayac/ecspresso@v3'`.
-- The forwarder needs a real target repo to point at, so the new repo and its `@v3` release have to exist first.
-
-Until then `pre-v3` accumulates the work and ships nothing.
+All planned work except the module-path bump has landed on `pre-v3`. The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (v3.0.0 released), and `action.yml` in this repo is a forwarder to it — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The `v3` branch / tag can be cut once the module-path bump lands.
 
 ## Breaking changes
 
@@ -100,8 +95,9 @@ The GitHub Action (`action.yml`) currently lives in this repository, alongside t
 
 #### Plan
 
-- Repository name: **TBD**.
-- Migration for users: `uses: kayac/ecspresso@v2` → `uses: <new-org-or-owner>/<new-repo>@v3`.
+- Repository name: [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (https://github.com/kayac/ecspresso-action/pull/1, released as v3.0.0).
+- Migration for users: `uses: kayac/ecspresso@v2` → `uses: kayac/ecspresso-action@v3`.
+- Cutover in this repo: PR: https://github.com/kayac/ecspresso/pull/1120
 - Items to move out:
   - `action.yml` at the repo root.
   - The `v2-action-testing` branch workflow (currently the CI gate for `action.yml` changes — see [AGENTS.md](../AGENTS.md)). The new repo will run its own CI directly on PRs, so the `v2-action-testing` force-push convention goes away.
@@ -152,6 +148,7 @@ The new repo is the source of truth — keep the forwarder's `inputs` in sync wi
 
 - **This repo:** on cutover, regenerate `actions.lock` with `gh actions-lock` so every remaining workflow is onboarded. Dependabot keeps the lockfile in sync for onboarded workflows.
 - **Forwarder `action.yml`:** pin the new action by full commit SHA with a version comment, as in the sketch above. Lockfiles cover workflows only, not action files, so users without a lockfile would otherwise resolve a mutable `@v3` ref. Forwarder updates then ship with CLI releases, which is fine for a deprecated shim.
+  - Outcome: the forwarder references a full version tag (`kayac/ecspresso-action@v3.0.0`) instead of a SHA. The forwarder test workflow uses it as `uses: $/` so that `gh actions-lock` can lock the action it calls (a `./` reference cannot be locked, and fails once the lockfile is enforced), and `gh actions-lock` rewrites SHA references in `$/` action files to version tags. A full version tag of kayac/ecspresso-action cannot move because its releases are immutable, so it is as fixed as a SHA for users without a lockfile.
 - **New action repo:** onboard all workflows to a lockfile from the start, with Dependabot `github-actions` updates enabled. Pin any action used inside its `action.yml` by full commit SHA.
 - **Never move full version tags** (e.g. `v3.1.0`) in the new repo. For users who lock it, a moved full version tag is an error, while a moved major tag (`v3`) only produces a `ref-moved` warning. Enable immutable releases to enforce this.
 - **Pinning rules:** update AGENTS.md so that onboarded workflows are managed with `gh actions-lock`, and only action files and reusable workflows are pinned with `pinact`. pinact leaves lockfile-managed actions alone starting with the release after v5.0.2 (suzuki-shunsuke/pinact#1826); older versions rewrite them back to SHAs and break the lockfile.
