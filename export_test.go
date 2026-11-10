@@ -32,6 +32,8 @@ var (
 	DiffTaskDefs           = diffTaskDefs
 	SvToUpdateServiceInput = svToUpdateServiceInput
 	ExtractHookDetails     = extractHookDetails
+	IsFloat64Number        = isFloat64Number
+	InexactNumbers         = inexactNumbers
 	IsPermissionError      = isPermissionError
 	WrapPermissionError    = wrapPermissionError
 	ParseIAMPolicyDocument = parseIAMPolicyDocument

@@ -38,6 +38,9 @@ func MarshalJSONForAPI(v any, queries ...string) ([]byte, error) {
 		return nil, err
 	}
 	walkMap(m, jsonKeyForAPI)
+	if err := fillHookDetailsJSON(v, m); err != nil {
+		return nil, err
+	}
 	if len(queries) > 0 {
 		for _, q := range queries {
 			if m, err = jqFilter(m, q); err != nil {

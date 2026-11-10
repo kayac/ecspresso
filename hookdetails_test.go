@@ -6,12 +6,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/fatih/color"
 	"github.com/google/go-cmp/cmp"
 	"github.com/kayac/ecspresso/v2"
 )
@@ -191,10 +193,126 @@ func loadHookDetailsServiceDefinition(t *testing.T, path string) *ecspresso.Serv
 	return sv
 }
 
+func TestLoadServiceDefinitionHookDetails(t *testing.T) {
+	for _, path := range []string{"tests/sv-hookdetails.json", "tests/sv-hookdetails.jsonnet"} {
+		t.Run(path, func(t *testing.T) {
+			sv := loadHookDetailsServiceDefinition(t, path)
+			b, err := ecspresso.MarshalJSONForAPI(sv)
+			if err != nil {
+				t.Fatal(err)
+			}
+			checkHookDetails(t, b)
+		})
+	}
+}
+
+type embeddedService struct{ ecspresso.Service }
+
+func TestMarshalJSONForAPIHookDetails(t *testing.T) {
+	sv := loadHookDetailsServiceDefinition(t, "tests/sv-hookdetails.json")
+	in := ecspresso.SvToUpdateServiceInput(sv)
+	cases := map[string]any{
+		"embedded unexported type": struct{ embeddedService }{embeddedService{*sv}},
+		"*Service":                 sv,
+		"Service":                  *sv,
+		"*types.Service":           &sv.Service,
+		"*ServiceForDiff":          &ecspresso.ServiceForDiff{UpdateServiceInput: in},
+		"*ecs.UpdateServiceInput":  in,
+		"ecs.UpdateServiceInput":   *in,
+		"*ecs.CreateServiceInput":  &ecs.CreateServiceInput{DeploymentConfiguration: sv.DeploymentConfiguration},
+	}
+	for name, v := range cases {
+		t.Run(name, func(t *testing.T) {
+			b, err := ecspresso.MarshalJSONForAPI(v)
+			if err != nil {
+				t.Fatal(err)
+			}
+			checkHookDetails(t, b)
+		})
+	}
+	// values without deploymentConfiguration
+	for name, v := range map[string]any{
+		"nil *Service":             (*ecspresso.Service)(nil),
+		"empty *ServiceForDiff":    &ecspresso.ServiceForDiff{},
+		"*ecs.RunTaskInput":        &ecs.RunTaskInput{},
+		"nil DeploymentConfigMap":  map[string]any{"deploymentConfiguration": nil},
+		"*TaskDefinitionInput":     &ecspresso.TaskDefinitionInput{},
+		"Service without the hook": ecspresso.Service{},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := ecspresso.MarshalJSONForAPI(v); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestExtractHookDetailsNumberOutOfRange(t *testing.T) {
+	for _, n := range []string{"1e400", "-1e400", "1e999999999"} {
+		src := `{"deploymentConfiguration":{"lifecycleHooks":[{"roleArn":"a"},{"hookDetails":{"a":[{"b":` + n + `}]}}]}}`
+		want := "failed to load hookDetails of lifecycleHooks[1]: number " + n + " is out of the range of float64"
+		if _, _, err := ecspresso.ExtractHookDetails([]byte(src)); err == nil || err.Error() != want {
+			t.Errorf("expected error %q, got %v", want, err)
+		}
+	}
+}
+
+func TestExtractHookDetailsEmptyKey(t *testing.T) {
+	for _, d := range []string{`{"": 1}`, `{"a": [{"": 1}]}`} {
+		src := `{"deploymentConfiguration":{"lifecycleHooks":[{"hookDetails":` + d + `}]}}`
+		if _, _, err := ecspresso.ExtractHookDetails([]byte(src)); err == nil || !strings.HasSuffix(err.Error(), "key must not be empty") {
+			t.Errorf("expected error for %s, got %v", d, err)
+		}
+	}
+}
+
+func TestInexactNumbers(t *testing.T) {
+	// the first hookDetails is not used, as the later one wins
+	src := `{"deploymentConfiguration":{"lifecycleHooks":[{"hookDetails":{"id":9007199254740995},"HookDetails":{"b":[1.0,9007199254740993,{"c":"9007199254740993"}],"a":0.1000000000000000001}}]}}`
+	_, details, err := ecspresso.ExtractHookDetails([]byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"0.1000000000000000001", "9007199254740993"}
+	if diff := cmp.Diff(want, ecspresso.InexactNumbers(details[0])); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestIsFloat64Number(t *testing.T) {
+	cases := map[string]bool{
+		"0":                      true,
+		"-0":                     true,
+		"1":                      true,
+		"1.0":                    true,
+		"1e3":                    true,
+		"0.1":                    true,
+		"0.10":                   true,
+		"-0.5":                   true,
+		"9007199254740992":       true,
+		"9007199254740993":       false,
+		"9007199254740993.0":     false,
+		"-12345678901234567890":  false,
+		"12345678901234567168":   true,
+		"0.1000000000000000001":  false,
+		"1e400":                  false,
+		"1e-400":                 false,
+		"1e-999999999":           false,
+		"1e999999999":            false,
+		"1.7976931348623157e308": true,
+	}
+	for n, want := range cases {
+		if got := ecspresso.IsFloat64Number(json.Number(n)); got != want {
+			t.Errorf("IsFloat64Number(%s) = %v, want %v", n, got, want)
+		}
+	}
+}
+
 type fakeECSServer struct {
 	*httptest.Server
-	mu     sync.Mutex
-	bodies map[string][]byte
+	mu               sync.Mutex
+	bodies           map[string][]byte
+	describeServices []byte
 }
 
 func newFakeECSServer(t *testing.T) *fakeECSServer {
@@ -207,6 +325,10 @@ func newFakeECSServer(t *testing.T) *fakeECSServer {
 		defer s.mu.Unlock()
 		s.bodies[op] = b
 		w.Header().Set("Content-Type", "application/x-amz-json-1.1")
+		if op == "DescribeServices" {
+			_, _ = w.Write(s.describeServices)
+			return
+		}
 		_, _ = io.WriteString(w, "{}")
 	}))
 	t.Cleanup(s.Close)
@@ -225,6 +347,41 @@ func (s *fakeECSServer) client() *ecs.Client {
 		BaseEndpoint: aws.String(s.URL),
 		Credentials:  aws.AnonymousCredentials{},
 	})
+}
+
+func (s *fakeECSServer) setRemoteService(t *testing.T, path string, hookDetails any) {
+	t.Helper()
+	src, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sv := decodeJSON(t, src).(map[string]any)
+	hooks := sv["deploymentConfiguration"].(map[string]any)["lifecycleHooks"].([]any)
+	if hookDetails == nil {
+		delete(hooks[0].(map[string]any), "hookDetails")
+	} else {
+		hooks[0].(map[string]any)["hookDetails"] = hookDetails
+	}
+	sv["serviceName"] = "test"
+	sv["serviceArn"] = "arn:aws:ecs:us-east-1:123456789012:service/default/test"
+	b, err := json.Marshal(map[string]any{"services": []any{sv}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.describeServices = b
+}
+
+func (s *fakeECSServer) describeService(t *testing.T) *ecspresso.Service {
+	t.Helper()
+	out, err := s.client().DescribeServices(t.Context(), &ecs.DescribeServicesInput{
+		Services: []string{"test"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &ecspresso.Service{Service: out.Services[0]}
 }
 
 func TestHookDetailsRequestBody(t *testing.T) {
@@ -257,4 +414,58 @@ func TestHookDetailsRequestBody(t *testing.T) {
 		}
 		checkHookDetails(t, s.body("CreateService"))
 	})
+}
+
+func TestDiffServicesHookDetails(t *testing.T) {
+	ctx := t.Context()
+	noColor := color.NoColor
+	color.NoColor = true
+	t.Cleanup(func() { color.NoColor = noColor })
+	const path = "tests/sv-hookdetails.json"
+	s := newFakeECSServer(t)
+	want := decodeJSON(t, []byte(wantHookDetails))
+
+	// init writes the remote service definition with MarshalJSONForAPI
+	t.Run("remote service definition", func(t *testing.T) {
+		s.setRemoteService(t, path, want)
+		b, err := ecspresso.MarshalJSONForAPI(s.describeService(t))
+		if err != nil {
+			t.Fatal(err)
+		}
+		checkHookDetails(t, b)
+	})
+
+	changed := decodeJSON(t, []byte(strings.Replace(wantHookDetails, "/health_check", "/old_health_check", 1)))
+	cases := []struct {
+		name        string
+		remote      any
+		jsonnet     bool
+		wantDiff    bool
+		wantContain string
+	}{
+		{name: "same", remote: want},
+		{name: "same in jsonnet", remote: want, jsonnet: true},
+		{name: "changed", remote: changed, wantDiff: true, wantContain: "/old_health_check"},
+		{name: "changed in jsonnet", remote: changed, jsonnet: true, wantDiff: true, wantContain: "/old_health_check"},
+		{name: "not in remote", remote: nil, wantDiff: true, wantContain: "hookDetails"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			s.setRemoteService(t, path, c.remote)
+			b := new(bytes.Buffer)
+			opt := &ecspresso.DiffOption{Unified: true, Jsonnet: c.jsonnet}
+			opt.SetWriter(b)
+			local := loadHookDetailsServiceDefinition(t, path)
+			diff, err := ecspresso.DiffServices(ctx, local, s.describeService(t), path, opt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff != c.wantDiff {
+				t.Errorf("expected diff %v, got %v:\n%s", c.wantDiff, diff, b.String())
+			}
+			if c.wantContain != "" && !strings.Contains(b.String(), c.wantContain) {
+				t.Errorf("expected diff to contain %q, got:\n%s", c.wantContain, b.String())
+			}
+		})
+	}
 }
