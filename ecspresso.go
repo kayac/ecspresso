@@ -709,7 +709,14 @@ func (d *App) LoadServiceDefinition(path string) (*Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load service definition %s: %w", path, err)
 	}
+	src, hookDetails, err := extractHookDetails(src)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load service definition %s: %w", path, err)
+	}
 	if err := unmarshalJSON(src, &sv, path); err != nil {
+		return nil, fmt.Errorf("failed to load service definition %s: %w", path, err)
+	}
+	if err := setHookDetails(sv.DeploymentConfiguration, hookDetails); err != nil {
 		return nil, fmt.Errorf("failed to load service definition %s: %w", path, err)
 	}
 
