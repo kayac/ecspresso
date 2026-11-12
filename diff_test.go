@@ -152,56 +152,52 @@ func TestTaskDefinitionDiffer(t *testing.T) {
 }
 
 var testServiceDefinition1 = &ecspresso.Service{
-	Service: types.Service{
-		LaunchType: types.LaunchTypeFargate,
-		NetworkConfiguration: &types.NetworkConfiguration{
-			AwsvpcConfiguration: &types.AwsVpcConfiguration{
-				Subnets: []string{
-					"subnet-876543210",
-					"subnet-012345678",
-				},
-				SecurityGroups: []string{
-					"sg-99999999",
-					"sg-11111111",
-				},
+	LaunchType: types.LaunchTypeFargate,
+	NetworkConfiguration: &types.NetworkConfiguration{
+		AwsvpcConfiguration: &types.AwsVpcConfiguration{
+			Subnets: []string{
+				"subnet-876543210",
+				"subnet-012345678",
+			},
+			SecurityGroups: []string{
+				"sg-99999999",
+				"sg-11111111",
 			},
 		},
-		Tags: []types.Tag{
-			{
-				Key:   aws.String("Environment"),
-				Value: aws.String("Dev"),
-			},
+	},
+	Tags: []types.Tag{
+		{
+			Key:   aws.String("Environment"),
+			Value: aws.String("Dev"),
 		},
 	},
 }
 
 var testServiceDefinition2 = &ecspresso.Service{
-	Service: types.Service{
-		DeploymentConfiguration: &types.DeploymentConfiguration{
-			MaximumPercent:        aws.Int32(200),
-			MinimumHealthyPercent: aws.Int32(100),
-		},
-		NetworkConfiguration: &types.NetworkConfiguration{
-			AwsvpcConfiguration: &types.AwsVpcConfiguration{
-				Subnets: []string{
-					"subnet-012345678",
-					"subnet-876543210",
-				},
-				SecurityGroups: []string{
-					"sg-11111111",
-					"sg-99999999",
-				},
-				AssignPublicIp: types.AssignPublicIpDisabled,
+	DeploymentConfiguration: &types.DeploymentConfiguration{
+		MaximumPercent:        aws.Int32(200),
+		MinimumHealthyPercent: aws.Int32(100),
+	},
+	NetworkConfiguration: &types.NetworkConfiguration{
+		AwsvpcConfiguration: &types.AwsVpcConfiguration{
+			Subnets: []string{
+				"subnet-012345678",
+				"subnet-876543210",
 			},
-		},
-		LaunchType:         types.LaunchTypeFargate,
-		PlatformVersion:    aws.String("LATEST"),
-		SchedulingStrategy: types.SchedulingStrategyReplica,
-		Tags: []types.Tag{
-			{
-				Key:   aws.String("Environment"),
-				Value: aws.String("Dev"),
+			SecurityGroups: []string{
+				"sg-11111111",
+				"sg-99999999",
 			},
+			AssignPublicIp: types.AssignPublicIpDisabled,
+		},
+	},
+	LaunchType:         types.LaunchTypeFargate,
+	PlatformVersion:    aws.String("LATEST"),
+	SchedulingStrategy: types.SchedulingStrategyReplica,
+	Tags: []types.Tag{
+		{
+			Key:   aws.String("Environment"),
+			Value: aws.String("Dev"),
 		},
 	},
 }
@@ -217,16 +213,12 @@ func TestServiceDefinitionDiffer(t *testing.T) {
 }
 
 var testServiceDefinitionNoDesiredCount = &ecspresso.Service{
-	Service: types.Service{
-		LaunchType: types.LaunchTypeFargate,
-	},
+	LaunchType:   types.LaunchTypeFargate,
 	DesiredCount: nil,
 }
 
 var testServiceDefinitionHasDesiredCount = &ecspresso.Service{
-	Service: types.Service{
-		LaunchType: types.LaunchTypeFargate,
-	},
+	LaunchType:   types.LaunchTypeFargate,
 	DesiredCount: new(int32(2)),
 }
 
@@ -306,23 +298,19 @@ func TestDiffServices(t *testing.T) {
 	t.Run("when local.DeploymentConfiguration.MaximumPercent is nil, filled with default and no diff", func(t *testing.T) {
 		b.Reset()
 		local := &ecspresso.Service{
-			Service: types.Service{
-				DeploymentConfiguration: &types.DeploymentConfiguration{
-					MinimumHealthyPercent: aws.Int32(100),
-					Strategy:              types.DeploymentStrategyRolling,
-				},
-				SchedulingStrategy: types.SchedulingStrategyReplica,
+			DeploymentConfiguration: &types.DeploymentConfiguration{
+				MinimumHealthyPercent: aws.Int32(100),
+				Strategy:              types.DeploymentStrategyRolling,
 			},
+			SchedulingStrategy: types.SchedulingStrategyReplica,
 		}
 		remote := &ecspresso.Service{
-			Service: types.Service{
-				DeploymentConfiguration: &types.DeploymentConfiguration{
-					MaximumPercent:        aws.Int32(200),
-					MinimumHealthyPercent: aws.Int32(100),
-					Strategy:              types.DeploymentStrategyRolling,
-				},
-				SchedulingStrategy: types.SchedulingStrategyReplica,
+			DeploymentConfiguration: &types.DeploymentConfiguration{
+				MaximumPercent:        aws.Int32(200),
+				MinimumHealthyPercent: aws.Int32(100),
+				Strategy:              types.DeploymentStrategyRolling,
 			},
+			SchedulingStrategy: types.SchedulingStrategyReplica,
 		}
 		diff, err := ecspresso.DiffServices(ctx, local, remote, "file", opt)
 		if err != nil {
@@ -339,23 +327,19 @@ func TestDiffServices(t *testing.T) {
 	t.Run("when local.DeploymentConfiguration.MinimumHealthyPercent is nil, filled with default and no diff", func(t *testing.T) {
 		b.Reset()
 		local := &ecspresso.Service{
-			Service: types.Service{
-				DeploymentConfiguration: &types.DeploymentConfiguration{
-					MaximumPercent: aws.Int32(200),
-					Strategy:       types.DeploymentStrategyRolling,
-				},
-				SchedulingStrategy: types.SchedulingStrategyReplica,
+			DeploymentConfiguration: &types.DeploymentConfiguration{
+				MaximumPercent: aws.Int32(200),
+				Strategy:       types.DeploymentStrategyRolling,
 			},
+			SchedulingStrategy: types.SchedulingStrategyReplica,
 		}
 		remote := &ecspresso.Service{
-			Service: types.Service{
-				DeploymentConfiguration: &types.DeploymentConfiguration{
-					MaximumPercent:        aws.Int32(200),
-					MinimumHealthyPercent: aws.Int32(100),
-					Strategy:              types.DeploymentStrategyRolling,
-				},
-				SchedulingStrategy: types.SchedulingStrategyReplica,
+			DeploymentConfiguration: &types.DeploymentConfiguration{
+				MaximumPercent:        aws.Int32(200),
+				MinimumHealthyPercent: aws.Int32(100),
+				Strategy:              types.DeploymentStrategyRolling,
 			},
+			SchedulingStrategy: types.SchedulingStrategyReplica,
 		}
 		diff, err := ecspresso.DiffServices(ctx, local, remote, "file", opt)
 		if err != nil {
@@ -380,30 +364,26 @@ func TestDiffServicesCodeDeployTargetGroupArn(t *testing.T) {
 	t.Run("CodeDeploy service ignores targetGroupArn diff", func(t *testing.T) {
 		b.Reset()
 		local := &ecspresso.Service{
-			Service: types.Service{
-				DeploymentController: &types.DeploymentController{
-					Type: types.DeploymentControllerTypeCodeDeploy,
-				},
-				LoadBalancers: []types.LoadBalancer{
-					{
-						ContainerName:  aws.String("app"),
-						ContainerPort:  aws.Int32(8080),
-						TargetGroupArn: aws.String("arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/green/1234567890123456"),
-					},
+			DeploymentController: &types.DeploymentController{
+				Type: types.DeploymentControllerTypeCodeDeploy,
+			},
+			LoadBalancers: []types.LoadBalancer{
+				{
+					ContainerName:  aws.String("app"),
+					ContainerPort:  aws.Int32(8080),
+					TargetGroupArn: aws.String("arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/green/1234567890123456"),
 				},
 			},
 		}
 		remote := &ecspresso.Service{
-			Service: types.Service{
-				DeploymentController: &types.DeploymentController{
-					Type: types.DeploymentControllerTypeCodeDeploy,
-				},
-				LoadBalancers: []types.LoadBalancer{
-					{
-						ContainerName:  aws.String("app"),
-						ContainerPort:  aws.Int32(8080),
-						TargetGroupArn: aws.String("arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/blue/6543210987654321"),
-					},
+			DeploymentController: &types.DeploymentController{
+				Type: types.DeploymentControllerTypeCodeDeploy,
+			},
+			LoadBalancers: []types.LoadBalancer{
+				{
+					ContainerName:  aws.String("app"),
+					ContainerPort:  aws.Int32(8080),
+					TargetGroupArn: aws.String("arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/blue/6543210987654321"),
 				},
 			},
 		}
@@ -419,30 +399,26 @@ func TestDiffServicesCodeDeployTargetGroupArn(t *testing.T) {
 	t.Run("ECS service detects targetGroupArn diff", func(t *testing.T) {
 		b.Reset()
 		local := &ecspresso.Service{
-			Service: types.Service{
-				DeploymentController: &types.DeploymentController{
-					Type: types.DeploymentControllerTypeEcs,
-				},
-				LoadBalancers: []types.LoadBalancer{
-					{
-						ContainerName:  aws.String("app"),
-						ContainerPort:  aws.Int32(8080),
-						TargetGroupArn: aws.String("arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/green/1234567890123456"),
-					},
+			DeploymentController: &types.DeploymentController{
+				Type: types.DeploymentControllerTypeEcs,
+			},
+			LoadBalancers: []types.LoadBalancer{
+				{
+					ContainerName:  aws.String("app"),
+					ContainerPort:  aws.Int32(8080),
+					TargetGroupArn: aws.String("arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/green/1234567890123456"),
 				},
 			},
 		}
 		remote := &ecspresso.Service{
-			Service: types.Service{
-				DeploymentController: &types.DeploymentController{
-					Type: types.DeploymentControllerTypeEcs,
-				},
-				LoadBalancers: []types.LoadBalancer{
-					{
-						ContainerName:  aws.String("app"),
-						ContainerPort:  aws.Int32(8080),
-						TargetGroupArn: aws.String("arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/blue/6543210987654321"),
-					},
+			DeploymentController: &types.DeploymentController{
+				Type: types.DeploymentControllerTypeEcs,
+			},
+			LoadBalancers: []types.LoadBalancer{
+				{
+					ContainerName:  aws.String("app"),
+					ContainerPort:  aws.Int32(8080),
+					TargetGroupArn: aws.String("arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/blue/6543210987654321"),
 				},
 			},
 		}
@@ -526,24 +502,20 @@ func TestDiffWithoutService(t *testing.T) {
 	color.NoColor = true
 
 	localSv := &ecspresso.Service{
-		Service: types.Service{
-			LaunchType: types.LaunchTypeFargate,
-			NetworkConfiguration: &types.NetworkConfiguration{
-				AwsvpcConfiguration: &types.AwsVpcConfiguration{
-					Subnets:        []string{"subnet-111"},
-					SecurityGroups: []string{"sg-111"},
-				},
+		LaunchType: types.LaunchTypeFargate,
+		NetworkConfiguration: &types.NetworkConfiguration{
+			AwsvpcConfiguration: &types.AwsVpcConfiguration{
+				Subnets:        []string{"subnet-111"},
+				SecurityGroups: []string{"sg-111"},
 			},
 		},
 	}
 	remoteSv := &ecspresso.Service{
-		Service: types.Service{
-			LaunchType: types.LaunchTypeFargate,
-			NetworkConfiguration: &types.NetworkConfiguration{
-				AwsvpcConfiguration: &types.AwsVpcConfiguration{
-					Subnets:        []string{"subnet-222"},
-					SecurityGroups: []string{"sg-222"},
-				},
+		LaunchType: types.LaunchTypeFargate,
+		NetworkConfiguration: &types.NetworkConfiguration{
+			AwsvpcConfiguration: &types.AwsVpcConfiguration{
+				Subnets:        []string{"subnet-222"},
+				SecurityGroups: []string{"sg-222"},
 			},
 		},
 	}
@@ -732,15 +704,11 @@ func TestDiffServicesMonitoring(t *testing.T) {
 	t.Run("monitoring added", func(t *testing.T) {
 		b.Reset()
 		local := &ecspresso.Service{
-			Service: types.Service{
-				LaunchType: types.LaunchTypeFargate,
-			},
+			LaunchType: types.LaunchTypeFargate,
 			Monitoring: monitoring,
 		}
 		remote := &ecspresso.Service{
-			Service: types.Service{
-				LaunchType: types.LaunchTypeFargate,
-			},
+			LaunchType: types.LaunchTypeFargate,
 		}
 		diff, err := ecspresso.DiffServices(ctx, local, remote, "file", opt)
 		if err != nil {
@@ -758,15 +726,11 @@ func TestDiffServicesMonitoring(t *testing.T) {
 	t.Run("monitoring same", func(t *testing.T) {
 		b.Reset()
 		local := &ecspresso.Service{
-			Service: types.Service{
-				LaunchType: types.LaunchTypeFargate,
-			},
+			LaunchType: types.LaunchTypeFargate,
 			Monitoring: monitoring,
 		}
 		remote := &ecspresso.Service{
-			Service: types.Service{
-				LaunchType: types.LaunchTypeFargate,
-			},
+			LaunchType: types.LaunchTypeFargate,
 			Monitoring: &types.MonitoringConfiguration{
 				MetricConfigurations: []types.MetricConfiguration{
 					{
@@ -793,67 +757,63 @@ func TestDiffServicesDeploymentConfigurationDefaults(t *testing.T) {
 	ctx := t.Context()
 	color.NoColor = true
 	local := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentConfiguration: &types.DeploymentConfiguration{
-				DeploymentCircuitBreaker: &types.DeploymentCircuitBreaker{
-					Enable:   false,
-					Rollback: false,
+		DeploymentConfiguration: &types.DeploymentConfiguration{
+			DeploymentCircuitBreaker: &types.DeploymentCircuitBreaker{
+				Enable:   false,
+				Rollback: false,
+			},
+			EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+				Enable: false,
+			},
+			LifecycleHooks: []types.DeploymentLifecycleHook{
+				{
+					HookTargetArn:   aws.String("arn:aws:lambda:ap-northeast-1:123456789012:function:hook"),
+					RoleArn:         aws.String("arn:aws:iam::123456789012:role/ECSServiceRole"),
+					LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostScaleUp},
 				},
-				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
-					Enable: false,
-				},
-				LifecycleHooks: []types.DeploymentLifecycleHook{
-					{
-						HookTargetArn:   aws.String("arn:aws:lambda:ap-northeast-1:123456789012:function:hook"),
-						RoleArn:         aws.String("arn:aws:iam::123456789012:role/ECSServiceRole"),
-						LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostScaleUp},
-					},
-					{
-						TargetType:      types.DeploymentLifecycleHookTargetTypePause,
-						LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostTestTrafficShift},
-						TimeoutConfiguration: &types.DeploymentLifecycleHookTimeoutConfiguration{
-							TimeoutInMinutes: aws.Int32(30),
-						},
+				{
+					TargetType:      types.DeploymentLifecycleHookTargetTypePause,
+					LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostTestTrafficShift},
+					TimeoutConfiguration: &types.DeploymentLifecycleHookTimeoutConfiguration{
+						TimeoutInMinutes: aws.Int32(30),
 					},
 				},
 			},
 		},
 	}
 	remote := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentConfiguration: &types.DeploymentConfiguration{
-				DeploymentCircuitBreaker: &types.DeploymentCircuitBreaker{
-					Enable:             false,
-					Rollback:           false,
-					ResetOnHealthyTask: aws.Bool(true),
-					ThresholdConfiguration: &types.ThresholdConfiguration{
-						Type:  types.ThresholdTypeBoundedPercent,
-						Value: 50,
+		DeploymentConfiguration: &types.DeploymentConfiguration{
+			DeploymentCircuitBreaker: &types.DeploymentCircuitBreaker{
+				Enable:             false,
+				Rollback:           false,
+				ResetOnHealthyTask: aws.Bool(true),
+				ThresholdConfiguration: &types.ThresholdConfiguration{
+					Type:  types.ThresholdTypeBoundedPercent,
+					Value: 50,
+				},
+			},
+			EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+				Enable:                       false,
+				HealthyPercent:               aws.Int32(100),
+				SourceServiceRevisionCleanup: types.ServiceRevisionCleanupBlocking,
+			},
+			LifecycleHooks: []types.DeploymentLifecycleHook{
+				{
+					TargetType:      types.DeploymentLifecycleHookTargetTypeAwsLambda,
+					HookTargetArn:   aws.String("arn:aws:lambda:ap-northeast-1:123456789012:function:hook"),
+					RoleArn:         aws.String("arn:aws:iam::123456789012:role/ECSServiceRole"),
+					LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostScaleUp},
+					TimeoutConfiguration: &types.DeploymentLifecycleHookTimeoutConfiguration{
+						Action:           types.DeploymentLifecycleHookActionRollback,
+						TimeoutInMinutes: aws.Int32(1440),
 					},
 				},
-				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
-					Enable:                       false,
-					HealthyPercent:               aws.Int32(100),
-					SourceServiceRevisionCleanup: types.ServiceRevisionCleanupBlocking,
-				},
-				LifecycleHooks: []types.DeploymentLifecycleHook{
-					{
-						TargetType:      types.DeploymentLifecycleHookTargetTypeAwsLambda,
-						HookTargetArn:   aws.String("arn:aws:lambda:ap-northeast-1:123456789012:function:hook"),
-						RoleArn:         aws.String("arn:aws:iam::123456789012:role/ECSServiceRole"),
-						LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostScaleUp},
-						TimeoutConfiguration: &types.DeploymentLifecycleHookTimeoutConfiguration{
-							Action:           types.DeploymentLifecycleHookActionRollback,
-							TimeoutInMinutes: aws.Int32(1440),
-						},
-					},
-					{
-						TargetType:      types.DeploymentLifecycleHookTargetTypePause,
-						LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostTestTrafficShift},
-						TimeoutConfiguration: &types.DeploymentLifecycleHookTimeoutConfiguration{
-							Action:           types.DeploymentLifecycleHookActionRollback,
-							TimeoutInMinutes: aws.Int32(30),
-						},
+				{
+					TargetType:      types.DeploymentLifecycleHookTargetTypePause,
+					LifecycleStages: []types.DeploymentLifecycleHookStage{types.DeploymentLifecycleHookStagePostTestTrafficShift},
+					TimeoutConfiguration: &types.DeploymentLifecycleHookTimeoutConfiguration{
+						Action:           types.DeploymentLifecycleHookActionRollback,
+						TimeoutInMinutes: aws.Int32(30),
 					},
 				},
 			},

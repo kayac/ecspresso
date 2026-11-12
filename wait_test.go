@@ -93,9 +93,7 @@ func TestValidateLifecycleStageSupported(t *testing.T) {
 		"",
 	} {
 		sv := &ecspresso.Service{
-			Service: types.Service{
-				DeploymentConfiguration: &types.DeploymentConfiguration{Strategy: strategy},
-			},
+			DeploymentConfiguration: &types.DeploymentConfiguration{Strategy: strategy},
 		}
 		if err := ecspresso.ValidateLifecycleStageSupported(sv, stage); err != nil {
 			t.Errorf("strategy %q should be supported, got %v", strategy, err)
@@ -105,10 +103,8 @@ func TestValidateLifecycleStageSupported(t *testing.T) {
 	// ROLLING never reports a lifecycle stage, so waiting for one would block
 	// until the timeout expires. Fail fast instead.
 	sv := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentConfiguration: &types.DeploymentConfiguration{
-				Strategy: types.DeploymentStrategyRolling,
-			},
+		DeploymentConfiguration: &types.DeploymentConfiguration{
+			Strategy: types.DeploymentStrategyRolling,
 		},
 	}
 	if err := ecspresso.ValidateLifecycleStageSupported(sv, stage); err == nil {
@@ -124,10 +120,8 @@ func TestWaitFuncForECSLifecycleStage(t *testing.T) {
 	app := &ecspresso.App{}
 	app.SetLogger(ecspresso.NewLogger(new(bytes.Buffer)))
 	sv := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentController: &types.DeploymentController{
-				Type: types.DeploymentControllerTypeEcs,
-			},
+		DeploymentController: &types.DeploymentController{
+			Type: types.DeploymentControllerTypeEcs,
 		},
 	}
 
@@ -140,10 +134,8 @@ func TestWaitFuncForECSLifecycleStage(t *testing.T) {
 
 	// The lifecycle stage of an ECS deployment has no meaning for CodeDeploy.
 	cd := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentController: &types.DeploymentController{
-				Type: types.DeploymentControllerTypeCodeDeploy,
-			},
+		DeploymentController: &types.DeploymentController{
+			Type: types.DeploymentControllerTypeCodeDeploy,
 		},
 	}
 	if _, err := app.WaitFunc(cd, nil, "ecs:BAKE_TIME"); err == nil {
@@ -159,10 +151,8 @@ func TestWaitFuncForECSLifecycleStage(t *testing.T) {
 	}
 	// The returned waiter must reject a rolling service before polling AWS.
 	rolling := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentConfiguration: &types.DeploymentConfiguration{
-				Strategy: types.DeploymentStrategyRolling,
-			},
+		DeploymentConfiguration: &types.DeploymentConfiguration{
+			Strategy: types.DeploymentStrategyRolling,
 		},
 	}
 	if err := doWait(t.Context(), rolling); err == nil {
@@ -173,10 +163,8 @@ func TestWaitFuncForECSLifecycleStage(t *testing.T) {
 func TestWaitServiceDeployLifecycleStageUnknownStage(t *testing.T) {
 	app := &ecspresso.App{}
 	sv := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentConfiguration: &types.DeploymentConfiguration{
-				Strategy: types.DeploymentStrategyBlueGreen,
-			},
+		DeploymentConfiguration: &types.DeploymentConfiguration{
+			Strategy: types.DeploymentStrategyBlueGreen,
 		},
 	}
 	// An unknown stage would index to -1 and be satisfied immediately, so the
@@ -334,23 +322,19 @@ func waiterOf(f any) uintptr {
 func TestWaitFuncSelectsWaiter(t *testing.T) {
 	app := &ecspresso.App{}
 	withController := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentController: &types.DeploymentController{
-				Type: types.DeploymentControllerTypeEcs,
-			},
+		DeploymentController: &types.DeploymentController{
+			Type: types.DeploymentControllerTypeEcs,
 		},
 	}
 	// ECS is the default deployment controller, so a service definition
 	// without one must select the same waiter as an explicit ECS controller.
 	noController := &ecspresso.Service{Service: types.Service{}}
 	earlySuccess := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentConfiguration: &types.DeploymentConfiguration{
-				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
-					Enable:                       true,
-					HealthyPercent:               aws.Int32(90),
-					SourceServiceRevisionCleanup: types.ServiceRevisionCleanupDeferred,
-				},
+		DeploymentConfiguration: &types.DeploymentConfiguration{
+			EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+				Enable:                       true,
+				HealthyPercent:               aws.Int32(90),
+				SourceServiceRevisionCleanup: types.ServiceRevisionCleanupDeferred,
 			},
 		},
 	}
@@ -429,7 +413,7 @@ func TestEarlySuccessCriteria(t *testing.T) {
 			if diff := cmp.Diff(tt.want, ecspresso.EarlySuccessCriteriaOf(dp), cmpopts.IgnoreUnexported(types.DeploymentEarlySuccessCriteria{})); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
-			sv := &ecspresso.Service{Service: types.Service{DeploymentConfiguration: tt.dc}}
+			sv := &ecspresso.Service{DeploymentConfiguration: tt.dc}
 			if got, want := sv.EarlySuccessCriteriaEnabled(), tt.want != nil; got != want {
 				t.Errorf("EarlySuccessCriteriaEnabled = %v, want %v", got, want)
 			}
@@ -454,21 +438,15 @@ func TestWarnEarlySuccessCriteriaWait(t *testing.T) {
 		SourceServiceRevisionCleanup: types.ServiceRevisionCleanupDeferred,
 	}
 	enabled := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentConfiguration: &types.DeploymentConfiguration{EarlySuccessCriteria: esc},
-		},
+		DeploymentConfiguration: &types.DeploymentConfiguration{EarlySuccessCriteria: esc},
 	}
 	codeDeploy := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentController:    &types.DeploymentController{Type: types.DeploymentControllerTypeCodeDeploy},
-			DeploymentConfiguration: &types.DeploymentConfiguration{EarlySuccessCriteria: esc},
-		},
+		DeploymentController:    &types.DeploymentController{Type: types.DeploymentControllerTypeCodeDeploy},
+		DeploymentConfiguration: &types.DeploymentConfiguration{EarlySuccessCriteria: esc},
 	}
 	disabled := &ecspresso.Service{
-		Service: types.Service{
-			DeploymentConfiguration: &types.DeploymentConfiguration{
-				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{Enable: false},
-			},
+		DeploymentConfiguration: &types.DeploymentConfiguration{
+			EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{Enable: false},
 		},
 	}
 	tests := []struct {

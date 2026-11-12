@@ -648,16 +648,14 @@ func TestVerifyDeploymentConfigurationLifecycleHooks(t *testing.T) {
 func TestVerifyEarlySuccessCriteria(t *testing.T) {
 	valid := func() *ecspresso.Service {
 		return &ecspresso.Service{
-			Service: types.Service{
-				DeploymentController: &types.DeploymentController{Type: types.DeploymentControllerTypeEcs},
-				DeploymentConfiguration: &types.DeploymentConfiguration{
-					Strategy:              types.DeploymentStrategyRolling,
-					MinimumHealthyPercent: aws.Int32(50),
-					EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
-						Enable:                       true,
-						HealthyPercent:               aws.Int32(90),
-						SourceServiceRevisionCleanup: types.ServiceRevisionCleanupDeferred,
-					},
+			DeploymentController: &types.DeploymentController{Type: types.DeploymentControllerTypeEcs},
+			DeploymentConfiguration: &types.DeploymentConfiguration{
+				Strategy:              types.DeploymentStrategyRolling,
+				MinimumHealthyPercent: aws.Int32(50),
+				EarlySuccessCriteria: &types.DeploymentEarlySuccessCriteria{
+					Enable:                       true,
+					HealthyPercent:               aws.Int32(90),
+					SourceServiceRevisionCleanup: types.ServiceRevisionCleanupDeferred,
 				},
 			},
 		}
