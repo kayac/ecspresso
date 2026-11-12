@@ -4,7 +4,7 @@ Tracking list of breaking changes and cleanups planned for ecspresso v3. Work la
 
 ## Status
 
-All planned work except the module-path bump has landed on `pre-v3`. The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (v3.0.0 released), and `action.yml` in this repo is a forwarder to it — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The `v3` branch / tag can be cut once the module-path bump lands.
+All planned work except [strict JSON keys](#match-json-keys-case-sensitively-with-encodingjsonv2) and the module-path bump has landed on `pre-v3`. The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (v3.0.0 released), and `action.yml` in this repo is a forwarder to it — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The `v3` branch / tag can be cut once the module-path bump lands.
 
 ## Breaking changes
 
@@ -200,13 +200,26 @@ Some service attributes exist only on the service revision, not on `DescribeServ
 - `newServiceFromTypes` returns an error when the call fails or returns no revision.
 - Compatibility: an IAM principal without `ecs:DescribeServiceRevisions` now fails on commands that describe the service (`deploy`, `diff`, `status`, etc.).
 
-### Require Go 1.26
+### Require Go 1.27
 
-PR: https://github.com/kayac/ecspresso/pull/1111
+PR: https://github.com/kayac/ecspresso/pull/1111 (Go 1.26)
 
-- Bump the `go` directive to 1.26 and test against Go 1.26 and 1.27.
+- Bump the `go` directive to 1.27 and test against Go 1.27. #1111 required Go 1.26; `encoding/json/v2` raises it to 1.27 (see [Match JSON keys case-sensitively](#match-json-keys-case-sensitively-with-encodingjsonv2)).
 - Build release and nightly binaries with Go 1.27.
-- Compatibility: building ecspresso or importing it as a library requires Go 1.26 or later.
+- Compatibility: building ecspresso or importing it as a library requires Go 1.27 or later, without `GOEXPERIMENT=nojsonv2`.
+
+### Match JSON keys case-sensitively with `encoding/json/v2`
+
+v2 decodes definition files with `encoding/json`, which matches object keys to struct fields case-insensitively. A mistyped key such as `desiredcount` or `DesiredCount` loads as `desiredCount`, although the ECS API and aws-cli accept only `desiredCount`. v3 decodes with `encoding/json/v2`, which is case-sensitive, so that definitions are written as the API defines them. PR: https://github.com/kayac/ecspresso/pull/1126
+
+- Applies to every file decoded into a struct: service / task / express definitions, `run --overrides` and `--overrides-file`, the configuration file (YAML, JSON, and Jsonnet all go through JSON), and the config of the `external` plugin.
+- The AWS SDK types have no json tags, so `unmarshalJSON` rewrites the keys by the type being decoded before handing them to `encoding/json/v2`: an untagged field `DesiredCount` is matched only by `desiredCount`. This replaces the type-blind `walkMap` rewriting for task definitions, and makes service definitions (which relied on case-insensitive matching alone) go through the same path.
+- A key that matches a field only case-insensitively is an error, reported with its JSON pointer and the expected key. All such keys in a file are reported at once. Silently dropping a key that worked in v2 would change what `deploy` sends.
+- Other unknown keys are still ignored with a warning (e.g. attributes in `describe-task-definition` output, or API fields newer than the SDK). Every unknown key is now reported, with its JSON pointer. v2 reported only the first one.
+- Keys of maps (`dockerLabels`, `options`, `driverOpts`, `labels`) are kept as they are. v2 upper-cased the first letter of the keys in `driverOpts` and `labels` of `dockerVolumeConfiguration` in task definitions, because only `dockerLabels` and `options` were excluded from the rewriting by name.
+- `encoding/json/v2` also rejects duplicate keys in an object and invalid UTF-8.
+- `encoding/json/v2` cannot be built with Go 1.26 unless `GOEXPERIMENT=jsonv2` is set, so the `go` directive is bumped to 1.27 (see [Require Go 1.27](#require-go-127)).
+- Encoding (`MarshalJSONForAPI` etc.) stays on `encoding/json`.
 
 ### Wait for all tasks started by `run`
 

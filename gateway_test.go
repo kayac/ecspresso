@@ -73,16 +73,14 @@ func TestBuildServiceAttributesGatewayConnectors(t *testing.T) {
 		{
 			name: "not sent with CODE_DEPLOY deployment controller",
 			sv: &ecspresso.Service{
-				Service: types.Service{
-					DeploymentController: &types.DeploymentController{Type: types.DeploymentControllerTypeCodeDeploy},
-				},
+				DeploymentController: &types.DeploymentController{Type: types.DeploymentControllerTypeCodeDeploy},
 			},
 			want: nil,
 		},
 		{
 			name: "not sent in Express Mode",
 			sv: &ecspresso.Service{
-				Service: types.Service{ResourceManagementType: types.ResourceManagementTypeEcs},
+				ResourceManagementType: types.ResourceManagementTypeEcs,
 			},
 			want: nil,
 		},
@@ -108,7 +106,7 @@ func TestDiffServicesGatewayConnectors(t *testing.T) {
 
 	newSv := func(gc []types.GatewayConnector) *ecspresso.Service {
 		return &ecspresso.Service{
-			Service:           types.Service{LaunchType: types.LaunchTypeFargate},
+			LaunchType:        types.LaunchTypeFargate,
 			GatewayConnectors: gc,
 		}
 	}

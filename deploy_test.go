@@ -22,9 +22,7 @@ var desiredCountTestSuite = []desiredCountTestCase{
 	},
 	{
 		sv: &ecspresso.Service{
-			Service: types.Service{
-				SchedulingStrategy: types.SchedulingStrategyDaemon,
-			},
+			SchedulingStrategy: types.SchedulingStrategyDaemon,
 		},
 		opt:      ecspresso.DeployOption{DesiredCount: aws.Int32(10)},
 		expected: nil,

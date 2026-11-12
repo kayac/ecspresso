@@ -1,9 +1,9 @@
 package ecspresso
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -734,15 +734,9 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load task definition %s: %w", path, err)
 	}
-	c := struct {
-		TaskDefinition json.RawMessage `json:"taskDefinition"`
-	}{}
-	dec := json.NewDecoder(bytes.NewReader(src))
-	if err := dec.Decode(&c); err != nil {
+	src, err = unwrapTaskDefinition(src)
+	if err != nil {
 		return nil, fmt.Errorf("failed to load task definition %s: %w", path, err)
-	}
-	if c.TaskDefinition != nil {
-		src = c.TaskDefinition
 	}
 	var td TaskDefinitionInput
 	if err := UnmarshalJSONForStruct(src, &td, path); err != nil {
@@ -766,19 +760,23 @@ func unmarshalYAML(src []byte, v any, path string) error {
 	return unmarshalJSON(b, v, path)
 }
 
-func unmarshalJSON(src []byte, v any, path string) error {
-	strict := json.NewDecoder(bytes.NewReader(src))
-	strict.DisallowUnknownFields()
-	if err := strict.Decode(&v); err != nil {
-		if !strings.Contains(err.Error(), "unknown field") {
-			return err
-		}
-		LogWarn("unknown field in definition", "error", err.Error(), "path", path)
-		// unknown field -> try lax decoder
-		lax := json.NewDecoder(bytes.NewReader(src))
-		return lax.Decode(&v)
+// unwrapTaskDefinition returns the value of "taskDefinition" in src if it
+// exists, as in the output of describe-task-definition. Otherwise returns src.
+func unwrapTaskDefinition(src []byte) ([]byte, error) {
+	var m map[string]jsontext.Value
+	if err := jsonv2.Unmarshal(src, &m); err != nil {
+		return nil, err
 	}
-	return nil
+	const key = "taskDefinition"
+	for k := range m {
+		if k != key && strings.EqualFold(k, key) {
+			return nil, fmt.Errorf("unknown field %q at /%s: keys are case-sensitive, use %q", k, k, key)
+		}
+	}
+	if td, ok := m[key]; ok && td.Kind() != 'n' {
+		return td, nil
+	}
+	return src, nil
 }
 
 func (d *App) LoadServiceDefinition(path string) (*Service, error) {

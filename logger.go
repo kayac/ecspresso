@@ -16,9 +16,7 @@ var (
 	commonLogger       = newLogger(os.Stderr)
 	slogHandlerOptions = &sloghandler.HandlerOptions{
 		Color: true,
-		HandlerOptions: slog.HandlerOptions{
-			Level: logLevel,
-		},
+		Level: logLevel,
 	}
 )
 
