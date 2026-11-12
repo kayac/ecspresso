@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/kayac/ecspresso/v2/skillscmd"
+	"github.com/kayac/ecspresso/v3/skillscmd"
 )
 
 type CLIOptions struct {

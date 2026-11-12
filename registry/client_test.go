@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kayac/ecspresso/v2/registry"
+	"github.com/kayac/ecspresso/v3/registry"
 )
 
 var testImages = []struct {

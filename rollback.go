@@ -12,7 +12,7 @@ import (
 	cdTypes "github.com/aws/aws-sdk-go-v2/service/codedeploy/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/kayac/ecspresso/v2/appspec"
+	"github.com/kayac/ecspresso/v3/appspec"
 	"github.com/samber/lo"
 	"github.com/shogo82148/go-retry"
 )

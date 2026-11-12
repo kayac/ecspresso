@@ -16,7 +16,7 @@ import (
 
 	"github.com/google/go-jsonnet"
 	"github.com/google/go-jsonnet/ast"
-	"github.com/kayac/ecspresso/v2/duration"
+	"github.com/kayac/ecspresso/v3/duration"
 )
 
 const (

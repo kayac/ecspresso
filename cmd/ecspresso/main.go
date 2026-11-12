@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/kayac/ecspresso/v2"
+	"github.com/kayac/ecspresso/v3"
 )
 
 func main() {

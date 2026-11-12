@@ -1,4 +1,4 @@
-module github.com/kayac/ecspresso/v2
+module github.com/kayac/ecspresso/v3
 
 go 1.27.0
 

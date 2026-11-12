@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/Songmu/skillsmith"
-	"github.com/kayac/ecspresso/v2/skillscmd"
+	"github.com/kayac/ecspresso/v3/skillscmd"
 )
 
 func dispatchSkills(ctx context.Context, opts *skillscmd.Commands) error {

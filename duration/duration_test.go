@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/goccy/go-yaml"
-	"github.com/kayac/ecspresso/v2/duration"
+	"github.com/kayac/ecspresso/v3/duration"
 )
 
 func TestDurationRoundTrip(t *testing.T) {

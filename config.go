@@ -19,8 +19,8 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-jsonnet"
 	goVersion "github.com/hashicorp/go-version"
-	"github.com/kayac/ecspresso/v2/appspec"
-	"github.com/kayac/ecspresso/v2/duration"
+	"github.com/kayac/ecspresso/v3/appspec"
+	"github.com/kayac/ecspresso/v3/duration"
 	goConfig "github.com/kayac/go-config"
 	"github.com/samber/lo"
 )

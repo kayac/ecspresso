@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kayac/ecspresso/v2/duration"
-	"github.com/kayac/ecspresso/v2/external"
+	"github.com/kayac/ecspresso/v3/duration"
+	"github.com/kayac/ecspresso/v3/external"
 )
 
 const (

@@ -14,7 +14,7 @@ builds:
       - no_azurerm
     ldflags:
       - -s -w
-      - -X github.com/kayac/ecspresso/v2.Version=v{{.Version}}
+      - -X github.com/kayac/ecspresso/v3.Version=v{{.Version}}
     goos:
       - darwin
       - linux

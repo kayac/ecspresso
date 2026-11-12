@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/google/go-jsonnet"
-	sm "github.com/kayac/ecspresso/v2/secretsmanager"
+	sm "github.com/kayac/ecspresso/v3/secretsmanager"
 )
 
 type mockSecretsManagerClient struct{}

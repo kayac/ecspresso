@@ -14,8 +14,8 @@ import (
 	"github.com/fujiwara/ssm-lookup/ssm"
 	"github.com/fujiwara/tfstate-lookup/tfstate"
 	"github.com/google/go-jsonnet"
-	"github.com/kayac/ecspresso/v2/external"
-	"github.com/kayac/ecspresso/v2/secretsmanager"
+	"github.com/kayac/ecspresso/v3/external"
+	"github.com/kayac/ecspresso/v3/secretsmanager"
 	"github.com/samber/lo"
 )
 
