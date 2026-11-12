@@ -97,7 +97,7 @@ Docker images are available on GitHub Container Registry.
 $ docker pull ghcr.io/kayac/ecspresso:v2.7.0
 ```
 
-The image is based on `gcr.io/distroless/static-debian12` and supports both `linux/amd64` and `linux/arm64` architectures.
+The image is based on `gcr.io/distroless/static-debian13` and supports both `linux/amd64` and `linux/arm64` architectures.
 
 ```console
 $ docker run --rm \
