@@ -210,7 +210,7 @@ PR: https://github.com/kayac/ecspresso/pull/1111 (Go 1.26)
 
 ### Match JSON keys case-sensitively with `encoding/json/v2`
 
-v2 decodes definition files with `encoding/json`, which matches object keys to struct fields case-insensitively. A mistyped key such as `desiredcount` or `DesiredCount` loads as `desiredCount`, although the ECS API and aws-cli accept only `desiredCount`. v3 decodes with `encoding/json/v2`, which is case-sensitive, so that definitions are written as the API defines them.
+v2 decodes definition files with `encoding/json`, which matches object keys to struct fields case-insensitively. A mistyped key such as `desiredcount` or `DesiredCount` loads as `desiredCount`, although the ECS API and aws-cli accept only `desiredCount`. v3 decodes with `encoding/json/v2`, which is case-sensitive, so that definitions are written as the API defines them. PR: https://github.com/kayac/ecspresso/pull/1126
 
 - Applies to every file decoded into a struct: service / task / express definitions, `run --overrides` and `--overrides-file`, the configuration file (YAML, JSON, and Jsonnet all go through JSON), and the config of the `external` plugin.
 - The AWS SDK types have no json tags, so `unmarshalJSON` rewrites the keys by the type being decoded before handing them to `encoding/json/v2`: an untagged field `DesiredCount` is matched only by `desiredCount`. This replaces the type-blind `walkMap` rewriting for task definitions, and makes service definitions (which relied on case-insensitive matching alone) go through the same path.
