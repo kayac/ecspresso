@@ -635,7 +635,7 @@ For more advanced settings, you can define `deploymentConfiguration`, `loadBalan
   // ...
 ```
 
-`hookDetails` is passed to the hook target as it is. To use it, write the keys `deploymentConfiguration`, `lifecycleHooks` and `hookDetails` exactly in this case. Numbers in `hookDetails` are handled as float64, so use a string for a value that float64 cannot represent exactly (e.g. an integer larger than 2^53).
+`hookDetails` is passed to the hook target as it is. Numbers in `hookDetails` are handled as float64, so use a string for a value that float64 cannot represent exactly (e.g. an integer larger than 2^53).
 
 For more details, See [Amazon ECS blue/green deployments
 ](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-type-blue-green.html).
