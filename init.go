@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/goccy/go-yaml"
-	"github.com/kayac/ecspresso/v2/duration"
+	"github.com/kayac/ecspresso/v3/duration"
 )
 
 var CreateFileMode = os.FileMode(0644)

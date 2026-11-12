@@ -31,7 +31,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go-v2/service/vpclattice"
 	"github.com/fatih/color"
-	"github.com/kayac/ecspresso/v2/registry"
+	"github.com/kayac/ecspresso/v3/registry"
 	"github.com/samber/lo"
 )
 

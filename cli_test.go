@@ -9,7 +9,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/kayac/ecspresso/v2"
+	"github.com/kayac/ecspresso/v3"
 )
 
 var cliTests = []struct {

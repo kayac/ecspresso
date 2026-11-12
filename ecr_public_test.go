@@ -15,8 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecrpublic/types"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/google/go-cmp/cmp"
-	"github.com/kayac/ecspresso/v2"
-	"github.com/kayac/ecspresso/v2/registry"
+	"github.com/kayac/ecspresso/v3"
+	"github.com/kayac/ecspresso/v3/registry"
 )
 
 func TestDecodeAuthorizationToken(t *testing.T) {

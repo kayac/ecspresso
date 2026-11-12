@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/fatih/color"
 	"github.com/google/go-cmp/cmp"
-	"github.com/kayac/ecspresso/v2"
+	"github.com/kayac/ecspresso/v3"
 )
 
 var testSuiteToNumberCPU = [][]string{

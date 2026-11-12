@@ -4,13 +4,13 @@ Tracking list of breaking changes and cleanups planned for ecspresso v3. Work la
 
 ## Status
 
-All planned work except the module-path bump has landed on `pre-v3`. The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (v3.0.0 released), and `action.yml` in this repo is a forwarder to it — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The `v3` branch / tag can be cut once the module-path bump lands.
+All planned work has landed on `pre-v3`. The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (v3.0.0 released), and `action.yml` in this repo is a forwarder to it — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The `v3` branch / tag can be cut.
 
 ## Breaking changes
 
 ### Bump Go module path to `/v3`
 
-The Go module is currently `github.com/kayac/ecspresso/v2`. v3 bumps it to `/v3`.
+The Go module was `github.com/kayac/ecspresso/v2`. v3 bumps it to `/v3`. PR: https://github.com/kayac/ecspresso/pull/1132
 
 - Update the `module` directive in `go.mod`.
 - Rewrite every internal import (`github.com/kayac/ecspresso/v2/...` → `/v3/...`).

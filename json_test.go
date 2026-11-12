@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/kayac/ecspresso/v2"
+	"github.com/kayac/ecspresso/v3"
 )
 
 type testJSONStruct struct {

@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/kayac/ecspresso/v2"
+	"github.com/kayac/ecspresso/v3"
 )
 
 var ecsArns = []struct {
