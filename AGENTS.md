@@ -113,6 +113,15 @@ Do not start a fake HTTP server (e.g. `httptest.Server`) to test what is sent to
   - The operation is in the `X-Amz-Target` request header (e.g. `AmazonEC2ContainerServiceV20141113.UpdateService`).
   - The client needs `Region` and `Credentials` (`aws.AnonymousCredentials{}` is enough), because the middlewares before it (endpoint resolution, signing) still run.
 
+## Scope of `verify`
+
+`verify` checks what the AWS APIs do not report when `deploy` calls them. `deploy` succeeds with such a problem, and it shows up later in a way that is hard to trace (e.g. tasks fail to start).
+
+- Add checks on the facts of the user's environment: a resource referenced by the definitions exists and is accessible (images, IAM roles, secrets, log groups, target groups, Lambda functions, etc.).
+- Do not add checks that copy the validation rules of the AWS APIs: allowed values, required fields, constraints on combinations of settings, and default values. The API rejects such a request immediately with a message that states the cause, so the check saves little. The rules belong to AWS and change without notice, so each copy has to be followed forever, and a stale one rejects a valid definition.
+- "It fails only after the task definition is registered" is not a reason to add a check of the latter kind.
+- Some long-standing checks on the definitions remain (e.g. `networkConfiguration.awsvpcConfiguration` is required for the `awsvpc` network mode, `name` and `valueFrom` are required for `secrets`). They call no API, and what they check is self-evident and unlikely to change on the AWS side. They are not a precedent for copying the rules of a new feature. `verifyEarlySuccessCriteria` and `verifyGatewayConnectorsDefinition` were removed in v3 for this reason.
+
 ## Documentation
 
 - When adding or changing features, always check README.md for inconsistencies and update it if needed (e.g. command examples, flag lists, log output examples)
