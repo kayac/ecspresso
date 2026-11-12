@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/static-debian12
+FROM gcr.io/distroless/static-debian13
 LABEL maintainer="fujiwara <fujiwara.shunichiro@gmail.com>"
 
 ARG TARGETOS
