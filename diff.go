@@ -175,6 +175,16 @@ func diffServices(ctx context.Context, local, remote *Service, localPath string,
 
 	localSvForDiff := ServiceDefinitionForDiff(local)
 	remoteSvForDiff := ServiceDefinitionForDiff(remote)
+	if remoteSvForDiff != nil {
+		// ECS treats a service that has never had availabilityZoneRebalancing as DISABLED.
+		if remoteSvForDiff.AvailabilityZoneRebalancing == "" {
+			remoteSvForDiff.AvailabilityZoneRebalancing = types.AvailabilityZoneRebalancingDisabled
+		}
+		// UpdateService keeps the current value when availabilityZoneRebalancing is omitted.
+		if localSvForDiff.AvailabilityZoneRebalancing == "" {
+			localSvForDiff.AvailabilityZoneRebalancing = remoteSvForDiff.AvailabilityZoneRebalancing
+		}
+	}
 
 	newSvBytes, err := MarshalJSONForAPI(localSvForDiff)
 	if err != nil {
@@ -360,10 +370,6 @@ func ServiceDefinitionForDiff(sv *Service) *ServiceForDiff {
 	if sv == nil {
 		return nil
 	}
-	if sv.AvailabilityZoneRebalancing == "" {
-		sv.AvailabilityZoneRebalancing = types.AvailabilityZoneRebalancingDisabled
-	}
-
 	sort.SliceStable(sv.PlacementConstraints, func(i, j int) bool {
 		return jsonStr(sv.PlacementConstraints[i]) < jsonStr(sv.PlacementConstraints[j])
 	})
