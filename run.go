@@ -2,7 +2,6 @@ package ecspresso
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -50,7 +49,7 @@ func (d *App) Run(ctx context.Context, opt RunOption) error {
 	d.LogInfo("Running task")
 	ov := types.TaskOverride{}
 	if opt.TaskOverrideStr != "" {
-		if err := json.Unmarshal([]byte(opt.TaskOverrideStr), &ov); err != nil {
+		if err := unmarshalJSON([]byte(opt.TaskOverrideStr), &ov, "overrides"); err != nil {
 			return fmt.Errorf("invalid overrides: %w", err)
 		}
 	} else if ovFile := opt.TaskOverrideFile; ovFile != "" {

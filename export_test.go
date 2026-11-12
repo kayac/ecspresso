@@ -12,6 +12,7 @@ import (
 )
 
 var (
+	UnmarshalJSON          = unmarshalJSON
 	SortTaskDefinition     = sortTaskDefinition
 	ToNumberCPU            = toNumberCPU
 	ToNumberMemory         = toNumberMemory

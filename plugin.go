@@ -257,7 +257,7 @@ func setupPluginExternal(ctx context.Context, p ConfigPlugin, c *Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal plugin config: %w", err)
 	}
-	if err := json.Unmarshal(b, extCfg); err != nil {
+	if err := unmarshalJSON(b, extCfg, "config of external plugin"); err != nil {
 		return fmt.Errorf("failed to unmarshal external plugin config: %w", err)
 	}
 	ext, err := external.NewPlugin(ctx, extCfg)
