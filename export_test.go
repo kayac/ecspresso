@@ -46,7 +46,6 @@ var (
 	EvaluateDeploymentStatus             = evaluateDeploymentStatus
 	PausedHookIDs                        = pausedHookIDs
 	EarlySuccessCriteriaOf               = earlySuccessCriteriaOf
-	VerifyEarlySuccessCriteria           = verifyEarlySuccessCriteria
 	EarlySuccessCriteriaCompletedMessage = earlySuccessCriteriaCompletedMessage
 
 	VerifyGatewayConnectorsDefinition = verifyGatewayConnectorsDefinition

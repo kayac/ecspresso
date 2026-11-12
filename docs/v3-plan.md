@@ -221,6 +221,15 @@ v2 decodes definition files with `encoding/json`, which matches object keys to s
 - `encoding/json/v2` cannot be built with Go 1.26 unless `GOEXPERIMENT=jsonv2` is set, so the `go` directive is bumped to 1.27 (see [Require Go 1.27](#require-go-127)).
 - Encoding (`MarshalJSONForAPI` etc.) stays on `encoding/json`.
 
+### Remove the validation of `earlySuccessCriteria` from `verify`
+
+`verify` in v2 validates `earlySuccessCriteria` locally (#1080): the deployment controller and strategy, required fields, the range of `healthyPercent`, and `healthyPercent` against `minimumHealthyPercent` including the default that ECS applies. All of these are validation rules of the ECS API. `UpdateService` rejects an invalid value immediately with a message that states the cause, and ecspresso has to follow every change of the rules on the AWS side to keep the copy correct.
+
+- Remove `verifyEarlySuccessCriteria` and `defaultMinimumHealthyPercent`.
+- State the scope of `verify` in AGENTS.md and README: it checks what the AWS APIs do not report when `deploy` calls them (resources that do not exist or are not accessible), and does not copy the validation rules of the APIs.
+- Other existing checks of the same kind (e.g. `verifyGatewayConnectorsDefinition`) are left as they are for now. They are not a precedent for new checks.
+- Compatibility: `verify` passes with an invalid `earlySuccessCriteria`, and `deploy` fails with the error from ECS.
+
 ### Wait for all tasks started by `run`
 
 PR: https://github.com/kayac/ecspresso/pull/1113, https://github.com/kayac/ecspresso/pull/1117

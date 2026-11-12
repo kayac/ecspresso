@@ -512,7 +512,7 @@ The `ecspresso wait` command also accepts `--wait-until` (`stable`, `deployed`, 
   // ...
 ```
 
-`ecspresso deploy` returns as soon as the deployment completes (with the default `--wait-until=deployed`), and `ecspresso verify` validates `earlySuccessCriteria` before deploying.
+`ecspresso deploy` returns as soon as the deployment completes (with the default `--wait-until=deployed`).
 
 To turn it off on a service that already has it, set `"enable": false` explicitly. Omitting `earlySuccessCriteria` keeps the current setting of the service, and ECS rejects switching to another deployment strategy while it is enabled.
 
@@ -1324,6 +1324,8 @@ For example it checks if,
 - Container images exist at the URL defined in task definitions. (Checks only for ECR, ECR Public or DockerHub public images.)
 - Secrets in task definitions exist and are readable.
 - Log streams can be created and messages can be put into the specified CloudWatch log groups streams.
+
+ecspresso verify checks what the AWS APIs do not report when `deploy` calls them, such as a missing resource that makes tasks fail to start after the deployment has begun. It does not validate the definitions against the rules of the ECS API (allowed values, required fields, or combinations of settings). ECS reports them when you deploy.
 
 ecspresso verify tries to assume the task execution role defined in task definitions to verify these items. If it fails to assume the role, it continues to verify with the current session.
 
