@@ -298,7 +298,7 @@ func TestDiffServicesHookDetails(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			b := new(bytes.Buffer)
-			opt := &ecspresso.DiffOption{Unified: true, Jsonnet: c.jsonnet}
+			opt := &ecspresso.DiffOption{Jsonnet: c.jsonnet}
 			opt.SetWriter(b)
 			local := loadHookDetailsServiceDefinition(t, path)
 			remote := describeRemoteService(t, path, c.remote)
