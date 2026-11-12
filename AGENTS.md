@@ -8,8 +8,8 @@ ecspresso is a deployment tool for Amazon ECS written in Go. It manages ECS serv
 
 ## Git Workflow
 
-- Default branch: `v2`
-- Do not commit directly to `v2`. Always create a feature branch first.
+- This is the `v3` branch, where ecspresso v3 is developed. The v2 line is maintained on the `v2` branch.
+- Do not commit directly to `v3`. Always create a feature branch first.
 
 ## GitHub Actions
 

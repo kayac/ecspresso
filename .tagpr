@@ -44,6 +44,6 @@
 #
 [tagpr]
 	vPrefix = true
-	releaseBranch = v2
+	releaseBranch = v3
 	versionFile = version.go
 	release = draft

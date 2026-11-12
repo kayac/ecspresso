@@ -4,7 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
-    target-branch: v2
+    target-branch: v3
     groups:
       aws-sdk-go-v2:
         patterns:
@@ -13,4 +13,4 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
-    target-branch: v2
+    target-branch: v3
