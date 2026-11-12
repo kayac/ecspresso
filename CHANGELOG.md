@@ -1,5 +1,7 @@
 # Changelog
 
+## [v2.8.4](https://github.com/kayac/ecspresso/compare/v2.8.8...v2.8.4) - 2026-11-12
+
 ## [v2.8.4](https://github.com/kayac/ecspresso/compare/v2.8.3...v2.8.4) - 2026-05-16
 - fix: skip draft releases when resolving latest in install script by @fujiwara in https://github.com/kayac/ecspresso/pull/1007
 - Expose plugin runtime instances via App.PluginInstance by @fujiwara in https://github.com/kayac/ecspresso/pull/1015
