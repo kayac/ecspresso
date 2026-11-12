@@ -223,6 +223,8 @@ v2 decodes definition files with `encoding/json`, which matches object keys to s
 
 ### Remove the validation of `earlySuccessCriteria` from `verify`
 
+PR: https://github.com/kayac/ecspresso/pull/1131
+
 `verify` in v2 validates `earlySuccessCriteria` locally (#1080): the deployment controller and strategy, required fields, the range of `healthyPercent`, and `healthyPercent` against `minimumHealthyPercent` including the default that ECS applies. All of these are validation rules of the ECS API. `UpdateService` rejects an invalid value immediately with a message that states the cause, and ecspresso has to follow every change of the rules on the AWS side to keep the copy correct.
 
 - Remove `verifyEarlySuccessCriteria` and `defaultMinimumHealthyPercent`.
