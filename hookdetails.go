@@ -18,6 +18,7 @@ import (
 // extractHookDetails removes hookDetails of the lifecycle hooks from src,
 // and returns them by the index of the hook.
 // src is returned as it is when it has no hookDetails.
+// Keys are case-sensitive as the ECS API defines them, unlike the other fields decoded by encoding/json.
 func extractHookDetails(src []byte) ([]byte, map[int]any, error) {
 	var m map[string]any
 	if err := jsonv2.Unmarshal(src, &m); err != nil {
