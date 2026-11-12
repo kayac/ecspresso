@@ -1,5 +1,11 @@
 # Changelog
 
+## [v2.8.9](https://github.com/kayac/ecspresso/compare/v2.8.8...v2.8.9) - 2026-11-12
+- Support hookDetails of deployment lifecycle hooks by @fujiwara in https://github.com/kayac/ecspresso/pull/1123
+- Update the base image to distroless static-debian13 by @fujiwara in https://github.com/kayac/ecspresso/pull/1128
+- Fix diff of availabilityZoneRebalancing omitted in the definition by @fujiwara in https://github.com/kayac/ecspresso/pull/1129
+- Fix the major version of tagpr to 2 on the v2 branch by @fujiwara in https://github.com/kayac/ecspresso/pull/1134
+
 ## [v2.8.8](https://github.com/kayac/ecspresso/compare/v2.8.7...v2.8.8) - 2026-11-05
 - Document IAM permissions required by --wait-until=deployed by @nishimoto265 in https://github.com/kayac/ecspresso/pull/1102
 - Skip registry tests on pull rate limit errors by @fujiwara in https://github.com/kayac/ecspresso/pull/1109
