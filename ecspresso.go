@@ -734,14 +734,9 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load task definition %s: %w", path, err)
 	}
-	c := struct {
-		TaskDefinition jsontext.Value `json:"taskDefinition"`
-	}{}
-	if err := jsonv2.Unmarshal(src, &c); err != nil {
+	src, err = unwrapTaskDefinition(src)
+	if err != nil {
 		return nil, fmt.Errorf("failed to load task definition %s: %w", path, err)
-	}
-	if c.TaskDefinition != nil {
-		src = c.TaskDefinition
 	}
 	var td TaskDefinitionInput
 	if err := UnmarshalJSONForStruct(src, &td, path); err != nil {
@@ -763,6 +758,25 @@ func unmarshalYAML(src []byte, v any, path string) error {
 		return fmt.Errorf("failed to parse %s: %w", path, err)
 	}
 	return unmarshalJSON(b, v, path)
+}
+
+// unwrapTaskDefinition returns the value of "taskDefinition" in src if it
+// exists, as in the output of describe-task-definition. Otherwise returns src.
+func unwrapTaskDefinition(src []byte) ([]byte, error) {
+	var m map[string]jsontext.Value
+	if err := jsonv2.Unmarshal(src, &m); err != nil {
+		return nil, err
+	}
+	const key = "taskDefinition"
+	for k := range m {
+		if k != key && strings.EqualFold(k, key) {
+			return nil, fmt.Errorf("unknown field %q at /%s: keys are case-sensitive, use %q", k, k, key)
+		}
+	}
+	if td, ok := m[key]; ok && td.Kind() != 'n' {
+		return td, nil
+	}
+	return src, nil
 }
 
 func (d *App) LoadServiceDefinition(path string) (*Service, error) {

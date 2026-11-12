@@ -125,6 +125,18 @@ func TestUnmarshalJSONMiscasedKeys(t *testing.T) {
 			wants: []string{`use "cluster"`, `at /codedeploy/Application_Name: keys are case-sensitive, use "application_name"`},
 		},
 		{
+			name:  "trailing value",
+			src:   `{"cpu": "256"}{"memory": "512"}`,
+			v:     &types.TaskOverride{},
+			wants: []string{`unexpected value after the top-level value`},
+		},
+		{
+			name:  "trailing garbage",
+			src:   `{"cpu": "256"} x`,
+			v:     &types.TaskOverride{},
+			wants: []string{`invalid character`},
+		},
+		{
 			name:  "duplicate keys",
 			src:   `{"desiredCount": 1, "desiredCount": 2}`,
 			v:     &ecspresso.Service{},
@@ -143,5 +155,75 @@ func TestUnmarshalJSONMiscasedKeys(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestUnmarshalJSONForStructMiscasedKeysToBeRemoved(t *testing.T) {
+	// null values and empty arrays are removed, but their keys must be validated.
+	for _, src := range []string{
+		`{"family": "test", "ContainerDefinitions": []}`,
+		`{"family": "test", "Cpu": null}`,
+		`{"family": "test", "containerDefinitions": [{"name": "app", "Environment": []}]}`,
+	} {
+		t.Run(src, func(t *testing.T) {
+			var td ecspresso.TaskDefinitionInput
+			err := ecspresso.UnmarshalJSONForStruct([]byte(src), &td, "test")
+			if err == nil || !strings.Contains(err.Error(), "keys are case-sensitive") {
+				t.Errorf("expected an error of mis-cased key, got %v", err)
+			}
+		})
+	}
+	var td ecspresso.TaskDefinitionInput
+	src := `{"family": "test", "containerDefinitions": [{"name": "app", "environment": [], "cpu": null}], "volumes": []}`
+	if err := ecspresso.UnmarshalJSONForStruct([]byte(src), &td, "test"); err != nil {
+		t.Fatal(err)
+	}
+	if td.Volumes != nil || td.ContainerDefinitions[0].Environment != nil {
+		t.Errorf("empty arrays must be removed: %#v", td)
+	}
+}
+
+func TestUnwrapTaskDefinition(t *testing.T) {
+	cases := []struct {
+		name    string
+		src     string
+		want    string
+		wantErr string
+	}{
+		{name: "not wrapped", src: `{"family":"test"}`, want: `{"family":"test"}`},
+		{name: "wrapped", src: `{"taskDefinition":{"family":"test"},"tags":[]}`, want: `{"family":"test"}`},
+		{name: "mis-cased", src: `{"TaskDefinition":{"family":"test"}}`, wantErr: `use "taskDefinition"`},
+		{name: "both", src: `{"taskDefinition":{"family":"a"},"TaskDefinition":{"family":"b"}}`, wantErr: `use "taskDefinition"`},
+		{name: "duplicate", src: `{"taskDefinition":{"family":"a"},"taskDefinition":{"family":"b"}}`, wantErr: `duplicate`},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := ecspresso.UnwrapTaskDefinition([]byte(c.src))
+			if c.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), c.wantErr) {
+					t.Fatalf("expected error containing %q, got %v", c.wantErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(c.want, string(got)); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestServiceDefinitionDuplicateKeysWithHookDetails(t *testing.T) {
+	// extracting hookDetails must not hide duplicate keys from the decoder.
+	src := `{"desiredCount": 1, "desiredCount": 2, "deploymentConfiguration": {"lifecycleHooks": [{"hookDetails": {"a": 1}}]}}`
+	b, _, err := ecspresso.ExtractHookDetails([]byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sv ecspresso.Service
+	if err := ecspresso.UnmarshalJSON(b, &sv, "test"); err == nil || !strings.Contains(err.Error(), "duplicate") {
+		t.Errorf("expected an error of duplicate key, got %v", err)
 	}
 }

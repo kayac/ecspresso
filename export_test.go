@@ -13,6 +13,7 @@ import (
 
 var (
 	UnmarshalJSON          = unmarshalJSON
+	UnwrapTaskDefinition   = unwrapTaskDefinition
 	SortTaskDefinition     = sortTaskDefinition
 	ToNumberCPU            = toNumberCPU
 	ToNumberMemory         = toNumberMemory

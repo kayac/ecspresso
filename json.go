@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"io"
 	"strings"
@@ -59,16 +60,21 @@ func MarshalJSONForAPI(v any, queries ...string) ([]byte, error) {
 // UnmarshalJSONForStruct decodes src into v in the same way as the definition files,
 // after removing null values and empty arrays from src.
 func UnmarshalJSONForStruct(src []byte, v any, path string) error {
+	// validate the keys before removing values, not to miss the keys to be removed.
+	src, err := normalizeJSONKeys(src, v, path)
+	if err != nil {
+		return err
+	}
 	m := map[string]any{}
-	if err := json.Unmarshal(src, &m); err != nil {
+	if err := jsonv2.Unmarshal(src, &m); err != nil {
 		return err
 	}
 	walkMap(m, nil) // remove null values and empty arrays
-	if b, err := json.Marshal(m); err != nil {
+	b, err := json.Marshal(m)
+	if err != nil {
 		return err
-	} else {
-		return unmarshalJSON(b, v, path)
 	}
+	return jsonv2.Unmarshal(b, v, jsonv2.RejectUnknownMembers(true))
 }
 
 func jsonKeyForAPI(s string) string {

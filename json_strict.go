@@ -8,6 +8,7 @@ import (
 	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 )
@@ -21,19 +22,36 @@ import (
 // A key that matches a field only case-insensitively is an error.
 // Other unknown keys are ignored with a warning.
 func unmarshalJSON(src []byte, v any, path string) error {
+	b, err := normalizeJSONKeys(src, v, path)
+	if err != nil {
+		return err
+	}
+	return jsonv2.Unmarshal(b, v, jsonv2.RejectUnknownMembers(true))
+}
+
+// normalizeJSONKeys validates the keys in src to be decoded into v, and
+// returns the JSON whose keys are rewritten to the names that
+// encoding/json/v2 matches to the struct fields, without the unknown keys.
+func normalizeJSONKeys(src []byte, v any, path string) ([]byte, error) {
 	n := &keyNormalizer{dec: jsontext.NewDecoder(bytes.NewReader(src))}
 	var buf bytes.Buffer
 	n.enc = jsontext.NewEncoder(&buf)
 	if err := n.normalize(reflect.TypeOf(v)); err != nil {
-		return err
+		return nil, err
+	}
+	if _, err := n.dec.ReadToken(); err != io.EOF {
+		if err == nil {
+			err = errors.New("unexpected value after the top-level value")
+		}
+		return nil, err
 	}
 	if len(n.miscased) > 0 {
-		return errors.Join(n.miscased...)
+		return nil, errors.Join(n.miscased...)
 	}
 	for _, ptr := range n.unknown {
 		LogWarn("unknown field in definition", "field", ptr, "path", path)
 	}
-	return jsonv2.Unmarshal(buf.Bytes(), v, jsonv2.RejectUnknownMembers(true))
+	return buf.Bytes(), nil
 }
 
 // keyNormalizer copies a JSON value from dec to enc, rewriting the keys of

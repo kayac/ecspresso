@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
@@ -19,7 +20,7 @@ import (
 // src is returned as it is when it has no hookDetails.
 func extractHookDetails(src []byte) ([]byte, map[int]any, error) {
 	var m map[string]any
-	if err := json.Unmarshal(src, &m); err != nil {
+	if err := jsonv2.Unmarshal(src, &m); err != nil {
 		// leave it to the decoder of the service definition to report the error
 		return src, nil, nil
 	}
