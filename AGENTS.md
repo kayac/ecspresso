@@ -103,6 +103,16 @@ go test -race ./...
   ```
 - Use `t.Context()` instead of `context.Background()` in tests
 
+### Testing requests to and responses from AWS APIs
+
+Do not start a fake HTTP server (e.g. `httptest.Server`) to test what is sent to AWS APIs. Add a middleware to the SDK client with `APIOptions` (`ecs.Options.APIOptions` or `config.WithAPIOptions`) instead. No request is sent when the middleware returns without calling the next handler.
+
+- To return a typed output without inspecting the wire format, add a middleware to the head of the Finalize step (`stack.Finalize.Add(..., middleware.Before)`) and return the output as `middleware.FinalizeOutput.Result`. See `SDKTestingMiddleware` in `middleware_test.go`.
+- To check the request body the SDK sends, or to let the SDK deserialize a canned response body, add a middleware to the tail of the Deserialize step (`stack.Deserialize.Add(..., middleware.After)`). Read the serialized body from `in.Request.(*smithyhttp.Request).GetStream()`, and return the response as `middleware.DeserializeOutput.RawResponse` (a `*smithyhttp.Response`). See `newHookDetailsTestClient` in `hookdetails_test.go`.
+  - Use this when the serialization itself matters, e.g. for a field of `document.Interface` which `encoding/json` cannot handle.
+  - The operation is in the `X-Amz-Target` request header (e.g. `AmazonEC2ContainerServiceV20141113.UpdateService`).
+  - The client needs `Region` and `Credentials` (`aws.AnonymousCredentials{}` is enough), because the middlewares before it (endpoint resolution, signing) still run.
+
 ## Documentation
 
 - When adding or changing features, always check README.md for inconsistencies and update it if needed (e.g. command examples, flag lists, log output examples)

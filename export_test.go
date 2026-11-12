@@ -31,6 +31,7 @@ var (
 	Map2str                = map2str
 	DiffServices           = diffServices
 	DiffTaskDefs           = diffTaskDefs
+	ExtractHookDetails     = extractHookDetails
 	IsPermissionError      = isPermissionError
 	WrapPermissionError    = wrapPermissionError
 	ParseIAMPolicyDocument = parseIAMPolicyDocument
