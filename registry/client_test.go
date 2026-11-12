@@ -116,5 +116,9 @@ func isTemporary(err error) bool {
 	if strings.Contains(err.Error(), "503") {
 		return true
 	}
+	if errors.Is(err, registry.ErrPullRateLimitExceeded) {
+		// shared CI runner IPs often hit anonymous pull rate limits
+		return true
+	}
 	return false
 }

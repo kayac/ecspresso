@@ -109,7 +109,7 @@ var cliTests = []struct {
 		sub:  "deploy",
 		subOption: &ecspresso.DeployOption{
 			DryRun:               false,
-			DesiredCount:         ptr(int32(-1)),
+			DesiredCount:         new(int32(-1)),
 			SkipTaskDefinition:   false,
 			Revision:             0,
 			ForceNewDeployment:   false,
@@ -127,7 +127,7 @@ var cliTests = []struct {
 		sub: "deploy",
 		subOption: &ecspresso.DeployOption{
 			DryRun:               true,
-			DesiredCount:         ptr(int32(10)),
+			DesiredCount:         new(int32(10)),
 			SkipTaskDefinition:   true,
 			Revision:             42,
 			ForceNewDeployment:   true,
@@ -143,9 +143,9 @@ var cliTests = []struct {
 		sub:  "deploy",
 		subOption: &ecspresso.DeployOption{
 			SuspendAutoScaling:   nil,
-			ResumeAutoScaling:    ptr(true),
+			ResumeAutoScaling:    new(true),
 			DryRun:               false,
-			DesiredCount:         ptr(int32(-1)),
+			DesiredCount:         new(int32(-1)),
 			SkipTaskDefinition:   false,
 			Revision:             0,
 			ForceNewDeployment:   false,
@@ -160,10 +160,10 @@ var cliTests = []struct {
 		args: []string{"deploy", "--suspend-auto-scaling"},
 		sub:  "deploy",
 		subOption: &ecspresso.DeployOption{
-			SuspendAutoScaling:   ptr(true),
+			SuspendAutoScaling:   new(true),
 			ResumeAutoScaling:    nil,
 			DryRun:               false,
-			DesiredCount:         ptr(int32(-1)),
+			DesiredCount:         new(int32(-1)),
 			SkipTaskDefinition:   false,
 			Revision:             0,
 			ForceNewDeployment:   false,
@@ -178,12 +178,12 @@ var cliTests = []struct {
 		args: []string{"deploy", "--suspend-auto-scaling", "--auto-scaling-min=3", "--auto-scaling-max=10"},
 		sub:  "deploy",
 		subOption: &ecspresso.DeployOption{
-			SuspendAutoScaling:   ptr(true),
-			AutoScalingMin:       ptr(int32(3)),
-			AutoScalingMax:       ptr(int32(10)),
+			SuspendAutoScaling:   new(true),
+			AutoScalingMin:       new(int32(3)),
+			AutoScalingMax:       new(int32(10)),
 			ResumeAutoScaling:    nil,
 			DryRun:               false,
-			DesiredCount:         ptr(int32(-1)),
+			DesiredCount:         new(int32(-1)),
 			SkipTaskDefinition:   false,
 			ForceNewDeployment:   false,
 			Wait:                 true,
@@ -201,7 +201,7 @@ var cliTests = []struct {
 			SuspendAutoScaling:   nil,
 			ResumeAutoScaling:    nil,
 			DryRun:               false,
-			DesiredCount:         ptr(int32(-1)),
+			DesiredCount:         new(int32(-1)),
 			SkipTaskDefinition:   false,
 			Revision:             0,
 			ForceNewDeployment:   false,
@@ -219,7 +219,7 @@ var cliTests = []struct {
 			SuspendAutoScaling:   nil,
 			ResumeAutoScaling:    nil,
 			DryRun:               false,
-			DesiredCount:         ptr(int32(-1)),
+			DesiredCount:         new(int32(-1)),
 			SkipTaskDefinition:   false,
 			Revision:             0,
 			ForceNewDeployment:   false,
@@ -237,7 +237,7 @@ var cliTests = []struct {
 			SuspendAutoScaling:   nil,
 			ResumeAutoScaling:    nil,
 			DryRun:               false,
-			DesiredCount:         ptr(int32(-1)),
+			DesiredCount:         new(int32(-1)),
 			SkipTaskDefinition:   false,
 			Revision:             0,
 			ForceNewDeployment:   false,
@@ -253,14 +253,14 @@ var cliTests = []struct {
 		sub:  "scale",
 		subOption: &ecspresso.ScaleOption{
 			DryRun:       false,
-			DesiredCount: ptr(int32(5)),
+			DesiredCount: new(int32(5)),
 			Wait:         true,
 		},
 		fn: func(t *testing.T, o any) {
 			do := o.(*ecspresso.ScaleOption).DeployOption()
 			if diff := cmp.Diff(do, ecspresso.DeployOption{
 				DryRun:               false,
-				DesiredCount:         ptr(int32(5)),
+				DesiredCount:         new(int32(5)),
 				SkipTaskDefinition:   true,
 				ForceNewDeployment:   false,
 				Wait:                 true,
@@ -278,14 +278,14 @@ var cliTests = []struct {
 		sub:  "scale",
 		subOption: &ecspresso.ScaleOption{
 			DryRun:       false,
-			DesiredCount: ptr(int32(-1)),
+			DesiredCount: new(int32(-1)),
 			Wait:         false,
 		},
 		fn: func(t *testing.T, o any) {
 			do := o.(*ecspresso.ScaleOption).DeployOption()
 			if diff := cmp.Diff(do, ecspresso.DeployOption{
 				DryRun:               false,
-				DesiredCount:         ptr(int32(-1)),
+				DesiredCount:         new(int32(-1)),
 				SkipTaskDefinition:   true,
 				ForceNewDeployment:   false,
 				Wait:                 false,
@@ -303,15 +303,15 @@ var cliTests = []struct {
 		sub:  "scale",
 		subOption: &ecspresso.ScaleOption{
 			DryRun:             false,
-			DesiredCount:       ptr(int32(-1)),
+			DesiredCount:       new(int32(-1)),
 			Wait:               true,
-			SuspendAutoScaling: ptr(true),
+			SuspendAutoScaling: new(true),
 		},
 		fn: func(t *testing.T, o any) {
 			do := o.(*ecspresso.ScaleOption).DeployOption()
 			if diff := cmp.Diff(do, ecspresso.DeployOption{
 				DryRun:               false,
-				DesiredCount:         ptr(int32(-1)),
+				DesiredCount:         new(int32(-1)),
 				SkipTaskDefinition:   true,
 				ForceNewDeployment:   false,
 				Wait:                 true,
@@ -319,7 +319,7 @@ var cliTests = []struct {
 				RollbackEvents:       "",
 				UpdateService:        false,
 				LatestTaskDefinition: false,
-				SuspendAutoScaling:   ptr(true),
+				SuspendAutoScaling:   new(true),
 			}); diff != "" {
 				t.Errorf("unexpected DeployOption (-want +got):\n%s", diff)
 			}
@@ -330,15 +330,15 @@ var cliTests = []struct {
 		sub:  "scale",
 		subOption: &ecspresso.ScaleOption{
 			DryRun:            false,
-			DesiredCount:      ptr(int32(-1)),
+			DesiredCount:      new(int32(-1)),
 			Wait:              true,
-			ResumeAutoScaling: ptr(true),
+			ResumeAutoScaling: new(true),
 		},
 		fn: func(t *testing.T, o any) {
 			do := o.(*ecspresso.ScaleOption).DeployOption()
 			if diff := cmp.Diff(do, ecspresso.DeployOption{
 				DryRun:               false,
-				DesiredCount:         ptr(int32(-1)),
+				DesiredCount:         new(int32(-1)),
 				SkipTaskDefinition:   true,
 				ForceNewDeployment:   false,
 				Wait:                 true,
@@ -346,7 +346,7 @@ var cliTests = []struct {
 				RollbackEvents:       "",
 				UpdateService:        false,
 				LatestTaskDefinition: false,
-				ResumeAutoScaling:    ptr(true),
+				ResumeAutoScaling:    new(true),
 			}); diff != "" {
 				t.Errorf("unexpected DeployOption (-want +got):\n%s", diff)
 			}
@@ -357,17 +357,17 @@ var cliTests = []struct {
 		sub:  "scale",
 		subOption: &ecspresso.ScaleOption{
 			DryRun:            false,
-			DesiredCount:      ptr(int32(-1)),
+			DesiredCount:      new(int32(-1)),
 			Wait:              true,
-			ResumeAutoScaling: ptr(true),
-			AutoScalingMin:    ptr(int32(3)),
-			AutoScalingMax:    ptr(int32(10)),
+			ResumeAutoScaling: new(true),
+			AutoScalingMin:    new(int32(3)),
+			AutoScalingMax:    new(int32(10)),
 		},
 		fn: func(t *testing.T, o any) {
 			do := o.(*ecspresso.ScaleOption).DeployOption()
 			if diff := cmp.Diff(do, ecspresso.DeployOption{
 				DryRun:               false,
-				DesiredCount:         ptr(int32(-1)),
+				DesiredCount:         new(int32(-1)),
 				SkipTaskDefinition:   true,
 				ForceNewDeployment:   false,
 				Wait:                 true,
@@ -375,9 +375,9 @@ var cliTests = []struct {
 				RollbackEvents:       "",
 				UpdateService:        false,
 				LatestTaskDefinition: false,
-				ResumeAutoScaling:    ptr(true),
-				AutoScalingMin:       ptr(int32(3)),
-				AutoScalingMax:       ptr(int32(10)),
+				ResumeAutoScaling:    new(true),
+				AutoScalingMin:       new(int32(3)),
+				AutoScalingMax:       new(int32(10)),
 			}); diff != "" {
 				t.Errorf("unexpected DeployOption (-want +got):\n%s", diff)
 			}
@@ -517,9 +517,9 @@ var cliTests = []struct {
 			LatestTaskDefinition:   false,
 			Tags:                   "",
 			WaitUntil:              "stopped",
-			Revision:               ptr(int64(0)),
+			Revision:               new(int64(0)),
 			ClientToken:            nil,
-			EBSDeleteOnTermination: ptr(true),
+			EBSDeleteOnTermination: new(true),
 		},
 	},
 	{
@@ -538,9 +538,9 @@ var cliTests = []struct {
 			LatestTaskDefinition:   false,
 			Tags:                   "",
 			WaitUntil:              "stopped",
-			Revision:               ptr(int64(0)),
+			Revision:               new(int64(0)),
 			ClientToken:            nil,
-			EBSDeleteOnTermination: ptr(true),
+			EBSDeleteOnTermination: new(true),
 		},
 	},
 	{
@@ -566,9 +566,9 @@ var cliTests = []struct {
 			LatestTaskDefinition:   true,
 			Tags:                   "KeyFoo=ValueFoo,KeyBar=ValueBar",
 			WaitUntil:              "running",
-			Revision:               ptr(int64(1)),
-			ClientToken:            ptr("3abb3a41-c4dc-4c16-a3be-aaab729008a0"),
-			EBSDeleteOnTermination: ptr(true),
+			Revision:               new(int64(1)),
+			ClientToken:            new("3abb3a41-c4dc-4c16-a3be-aaab729008a0"),
+			EBSDeleteOnTermination: new(true),
 		},
 	},
 	{
@@ -587,9 +587,9 @@ var cliTests = []struct {
 			LatestTaskDefinition:   false,
 			Tags:                   "",
 			WaitUntil:              "stopped",
-			Revision:               ptr(int64(0)),
+			Revision:               new(int64(0)),
 			ClientToken:            nil,
-			EBSDeleteOnTermination: ptr(false),
+			EBSDeleteOnTermination: new(false),
 		},
 	},
 	{
@@ -626,7 +626,7 @@ var cliTests = []struct {
 		subOption: &ecspresso.DeregisterOption{
 			DryRun:   true,
 			Revision: "123",
-			Keeps:    ptr(23),
+			Keeps:    new(23),
 			Force:    true,
 			Delete:   false,
 		},
@@ -638,7 +638,7 @@ var cliTests = []struct {
 		subOption: &ecspresso.DeregisterOption{
 			DryRun:   true,
 			Revision: "latest",
-			Keeps:    ptr(23),
+			Keeps:    new(23),
 			Force:    true,
 			Delete:   false,
 		},
@@ -650,7 +650,7 @@ var cliTests = []struct {
 		subOption: &ecspresso.DeregisterOption{
 			DryRun:   true,
 			Revision: "latest",
-			Keeps:    ptr(23),
+			Keeps:    new(23),
 			Force:    true,
 			Delete:   true,
 		},
@@ -787,7 +787,7 @@ var cliTests = []struct {
 			TaskDefinitionPath:    "ecs-task-def.json",
 			ServiceDefinitionPath: "ecs-service-def.json",
 			ExpressDefinitionPath: "express.jsonnet",
-			Express:               ptr(false),
+			Express:               new(false),
 			Jsonnet:               true,
 		},
 	},
@@ -801,7 +801,7 @@ var cliTests = []struct {
 			TaskDefinitionPath:    "ecs-task-def.json",
 			ServiceDefinitionPath: "ecs-service-def.json",
 			ExpressDefinitionPath: "express.jsonnet",
-			Express:               ptr(true),
+			Express:               new(true),
 			Jsonnet:               true,
 		},
 	},
@@ -915,7 +915,7 @@ var cliTests = []struct {
 		args: []string{"render", "config", "taskdef", "servicedef"},
 		sub:  "render",
 		subOption: &ecspresso.RenderOption{
-			Targets: ptr([]string{"config", "taskdef", "servicedef"}),
+			Targets: new([]string{"config", "taskdef", "servicedef"}),
 			Jsonnet: false,
 		},
 	},

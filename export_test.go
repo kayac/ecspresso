@@ -7,10 +7,13 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	logsTypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
 var (
+	UnmarshalJSON          = unmarshalJSON
+	UnwrapTaskDefinition   = unwrapTaskDefinition
 	SortTaskDefinition     = sortTaskDefinition
 	ToNumberCPU            = toNumberCPU
 	ToNumberMemory         = toNumberMemory
@@ -30,6 +33,7 @@ var (
 	Map2str                = map2str
 	DiffServices           = diffServices
 	DiffTaskDefs           = diffTaskDefs
+	ExtractHookDetails     = extractHookDetails
 	IsPermissionError      = isPermissionError
 	WrapPermissionError    = wrapPermissionError
 	ParseIAMPolicyDocument = parseIAMPolicyDocument
@@ -42,7 +46,6 @@ var (
 	EvaluateDeploymentStatus             = evaluateDeploymentStatus
 	PausedHookIDs                        = pausedHookIDs
 	EarlySuccessCriteriaOf               = earlySuccessCriteriaOf
-	VerifyEarlySuccessCriteria           = verifyEarlySuccessCriteria
 	EarlySuccessCriteriaCompletedMessage = earlySuccessCriteriaCompletedMessage
 )
 
@@ -124,4 +127,26 @@ func (d *App) VerifyDeploymentConfiguration(ctx context.Context, dc *types.Deplo
 
 func ContextWithVerifyState(ctx context.Context, vs *verifyState) context.Context {
 	return context.WithValue(ctx, verifyStateKey, vs)
+}
+
+var (
+	DecodeAuthorizationToken   = decodeAuthorizationToken
+	WithECRPublicAnonymousHint = withECRPublicAnonymousHint
+)
+
+func (v *verifier) ECRPublicCredentials(ctx context.Context) (string, string, error) {
+	return v.ecrPublicCredentials(ctx)
+}
+
+// FormatLogEvent returns the text and JSON representations of a task log event.
+func FormatLogEvent(event logsTypes.OutputLogEvent, taskID string) (string, string) {
+	e := logEvent{event: event, taskID: taskID}
+	return e.String(), e.JSON()
+}
+
+// SetTaskPollInterval overrides the task polling interval until the test ends.
+func SetTaskPollInterval(t interface{ Cleanup(func()) }, d time.Duration) {
+	orig := taskPollInterval
+	taskPollInterval = d
+	t.Cleanup(func() { taskPollInterval = orig })
 }

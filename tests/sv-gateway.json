@@ -1,0 +1,24 @@
+{
+  "gatewayConnectors": [
+    {
+      "portName": "web",
+      "filters": {
+        "accessTypes": ["PRIVATE"]
+      },
+      "healthCheck": {
+        "healthCheckPath": "/health",
+        "healthCheckProtocol": "HTTP",
+        "matcher": {
+          "httpCode": "200-299"
+        }
+      }
+    }
+  ],
+  "launchType": "FARGATE",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": ["subnet-11111111"],
+      "securityGroups": ["sg-11111111"]
+    }
+  }
+}

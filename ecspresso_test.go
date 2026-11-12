@@ -7,10 +7,6 @@ import (
 	"github.com/kayac/ecspresso/v2"
 )
 
-func ptr[T any](v T) *T {
-	return &v
-}
-
 func str[T any](v T) string {
 	b, err := json.Marshal(v)
 	if err != nil {

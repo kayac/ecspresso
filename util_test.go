@@ -153,23 +153,23 @@ func TestCompareTags(t *testing.T) {
 		{
 			name: "Test 1",
 			oldTags: []types.Tag{
-				{Key: ptr("key1"), Value: ptr("value1")},
-				{Key: ptr("key2"), Value: ptr("value2")},
-				{Key: ptr("key3"), Value: ptr("value3")},
+				{Key: new("key1"), Value: new("value1")},
+				{Key: new("key2"), Value: new("value2")},
+				{Key: new("key3"), Value: new("value3")},
 			},
 			newTags: []types.Tag{
-				{Key: ptr("key1"), Value: ptr("value1_updated")},
-				{Key: ptr("key2"), Value: ptr("value2")},
-				{Key: ptr("key4"), Value: ptr("value4")},
+				{Key: new("key1"), Value: new("value1_updated")},
+				{Key: new("key2"), Value: new("value2")},
+				{Key: new("key4"), Value: new("value4")},
 			},
 			expectedAdded: []types.Tag{
-				{Key: ptr("key4"), Value: ptr("value4")},
+				{Key: new("key4"), Value: new("value4")},
 			},
 			expectedUpdated: []types.Tag{
-				{Key: ptr("key1"), Value: ptr("value1_updated")},
+				{Key: new("key1"), Value: new("value1_updated")},
 			},
 			expectedDeleted: []types.Tag{
-				{Key: ptr("key3"), Value: ptr("value3")},
+				{Key: new("key3"), Value: new("value3")},
 			},
 		},
 		// TODO Add more test cases

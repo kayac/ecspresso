@@ -16,7 +16,7 @@ var middlewareResults = map[string]func(string) any{
 		return &ecs.DescribeServicesOutput{
 			Services: []types.Service{
 				{
-					TaskDefinition: ptr(fmt.Sprintf("arn:aws:ecs:ap-northeast-1:123456789012:task-definition/%s:39", family)),
+					TaskDefinition: new(fmt.Sprintf("arn:aws:ecs:ap-northeast-1:123456789012:task-definition/%s:39", family)),
 				},
 			},
 		}

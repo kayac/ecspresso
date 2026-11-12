@@ -61,6 +61,7 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 		DesiredCount:                  count,
 		EnableECSManagedTags:          svd.EnableECSManagedTags,
 		EnableExecuteCommand:          svd.EnableExecuteCommand,
+		GatewayConnectors:             svd.GatewayConnectors,
 		HealthCheckGracePeriodSeconds: svd.HealthCheckGracePeriodSeconds,
 		LaunchType:                    svd.LaunchType,
 		LoadBalancers:                 svd.LoadBalancers,

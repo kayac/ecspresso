@@ -20,14 +20,12 @@ var (
 
 func isPermissionError(err error) bool {
 	// Check if it's wrapped in OperationError
-	var oe *smithy.OperationError
-	if errors.As(err, &oe) {
+	if oe, ok := errors.AsType[*smithy.OperationError](err); ok {
 		err = oe.Err
 	}
 
 	// Check the actual API error
-	var ae smithy.APIError
-	if errors.As(err, &ae) {
+	if ae, ok := errors.AsType[smithy.APIError](err); ok {
 		switch ae.ErrorCode() {
 		case "AccessDeniedException", "UnauthorizedException",
 			"Forbidden", "AccessDenied", "InvalidUserID.NotFound":

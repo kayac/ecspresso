@@ -1,9 +1,9 @@
 package ecspresso
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -73,6 +73,7 @@ type Service struct {
 	ServiceConnectConfiguration *types.ServiceConnectConfiguration
 	VolumeConfigurations        []types.ServiceVolumeConfiguration
 	VpcLatticeConfigurations    []types.VpcLatticeConfiguration
+	GatewayConnectors           []types.GatewayConnector
 	Monitoring                  *types.MonitoringConfiguration
 	DesiredCount                *int32
 }
@@ -156,7 +157,7 @@ func (d *App) newServiceFromTypes(ctx context.Context, in types.Service) (*Servi
 		sv.VpcLatticeConfigurations = dp.VpcLatticeConfigurations
 	}
 
-	// Monitoring is not available on Deployment or types.Service.
+	// Monitoring and GatewayConnectors are not available on Deployment or types.Service.
 	// It only exists on ServiceRevision, so we need to call DescribeServiceRevisions.
 	if len(in.CurrentServiceRevisions) > 0 {
 		revArn := aws.ToString(in.CurrentServiceRevisions[0].Arn)
@@ -164,11 +165,25 @@ func (d *App) newServiceFromTypes(ctx context.Context, in types.Service) (*Servi
 			revOut, err := d.ecs.DescribeServiceRevisions(ctx, &ecs.DescribeServiceRevisionsInput{
 				ServiceRevisionArns: []string{revArn},
 			})
+			// Fail instead of skipping, because a missing attribute would make
+			// diff and deploy treat it as removed.
 			if err != nil {
-				d.LogWarn("failed to describe service revision, skipping monitoring configuration", "error", err)
-			} else if len(revOut.ServiceRevisions) > 0 && revOut.ServiceRevisions[0].Monitoring != nil {
-				d.LogDebug("Monitoring: %#v", revOut.ServiceRevisions[0].Monitoring)
-				sv.Monitoring = revOut.ServiceRevisions[0].Monitoring
+				return nil, fmt.Errorf("failed to describe service revision %s: %w", revArn, err)
+			}
+			if len(revOut.ServiceRevisions) == 0 {
+				reasons := lo.Map(revOut.Failures, func(f types.Failure, _ int) string {
+					return aws.ToString(f.Reason)
+				})
+				return nil, fmt.Errorf("service revision %s is not found: %s", revArn, strings.Join(reasons, ", "))
+			}
+			rev := revOut.ServiceRevisions[0]
+			if m := rev.Monitoring; m != nil {
+				d.LogDebug("Monitoring: %#v", m)
+				sv.Monitoring = m
+			}
+			if gc := rev.GatewayConnectors; gc != nil {
+				d.LogDebug("GatewayConnectors: %#v", gc)
+				sv.GatewayConnectors = gc
 			}
 		}
 	}
@@ -396,10 +411,14 @@ func (d *App) DescribeServicesInput() *ecs.DescribeServicesInput {
 	}
 }
 
-func (d *App) DescribeTasksInput(task *types.Task) *ecs.DescribeTasksInput {
+func (d *App) DescribeTasksInput(tasks []types.Task) *ecs.DescribeTasksInput {
+	arns := make([]string, 0, len(tasks))
+	for _, task := range tasks {
+		arns = append(arns, aws.ToString(task.TaskArn))
+	}
 	return &ecs.DescribeTasksInput{
 		Cluster: aws.String(d.Cluster),
-		Tasks:   []string{*task.TaskArn},
+		Tasks:   arns,
 	}
 }
 
@@ -544,8 +563,7 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) ([]aasTypes.S
 		},
 	)
 	if err != nil {
-		var oe *smithy.OperationError
-		if errors.As(err, &oe) {
+		if oe, ok := errors.AsType[*smithy.OperationError](err); ok {
 			d.LogWarn("failed to describe scalable targets", "error", oe.Error())
 			return nil, nil, nil
 		}
@@ -564,8 +582,7 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) ([]aasTypes.S
 		},
 	)
 	if err != nil {
-		var oe *smithy.OperationError
-		if errors.As(err, &oe) {
+		if oe, ok := errors.AsType[*smithy.OperationError](err); ok {
 			d.LogWarn("failed to describe scaling policies", "error", oe.Error())
 			return tout.ScalableTargets, nil, nil
 		}
@@ -575,18 +592,26 @@ func (d *App) describeAutoScaling(ctx context.Context, s *Service) ([]aasTypes.S
 	return tout.ScalableTargets, pout.ScalingPolicies, nil
 }
 
-func (d *App) DescribeTaskStatus(ctx context.Context, task *types.Task, watchContainer *types.ContainerDefinition) error {
-	out, err := d.ecs.DescribeTasks(ctx, d.DescribeTasksInput(task))
+// DescribeTaskStatus describes the tasks in a single request and returns errors of all failed tasks.
+func (d *App) DescribeTaskStatus(ctx context.Context, tasks []types.Task, watchContainer *types.ContainerDefinition) error {
+	out, err := d.ecs.DescribeTasks(ctx, d.DescribeTasksInput(tasks))
 	if err != nil {
 		return fmt.Errorf("failed to describe tasks: %w", err)
 	}
-	if len(out.Failures) > 0 {
-		f := out.Failures[0]
-		d.LogInfo("task failure", "task_arn", *f.Arn)
-		return errors.New(*f.Reason)
+	var errs []error
+	for _, f := range out.Failures {
+		d.LogInfo("task failure", "task_arn", aws.ToString(f.Arn))
+		errs = append(errs, fmt.Errorf("task %s: %s", aws.ToString(f.Arn), aws.ToString(f.Reason)))
 	}
+	for _, ts := range out.Tasks {
+		if err := taskStatusError(ts, watchContainer); err != nil {
+			errs = append(errs, fmt.Errorf("task %s: %w", aws.ToString(ts.TaskArn), err))
+		}
+	}
+	return errors.Join(errs...)
+}
 
-	ts := out.Tasks[0]
+func taskStatusError(ts types.Task, watchContainer *types.ContainerDefinition) error {
 	if ts.StopCode == types.TaskStopCodeTaskFailedToStart {
 		return fmt.Errorf("task failed to start: %s", aws.ToString(ts.StoppedReason))
 	}
@@ -631,11 +656,14 @@ func (d *App) DescribeTaskDefinition(ctx context.Context, tdArn string) (*TaskDe
 }
 
 func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream string, startedAt time.Time, nextToken *string) (*string, error) {
+	return d.getLogEvents(ctx, logGroup, logStream, "", startedAt, nextToken)
+}
+
+func (d *App) getLogEvents(ctx context.Context, logGroup, logStream, taskID string, startedAt time.Time, nextToken *string) (*string, error) {
 	ms := startedAt.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 	out, err := d.cwl.GetLogEvents(ctx, d.GetLogEventsInput(logGroup, logStream, ms, nextToken))
 	if err != nil {
-		var notfound *cwlTypes.ResourceNotFoundException
-		if errors.As(err, &notfound) {
+		if _, ok := errors.AsType[*cwlTypes.ResourceNotFoundException](err); ok {
 			return nextToken, fmt.Errorf("%s: %w", err.Error(), ErrNotFound)
 		}
 		return nextToken, wrapPermissionError(err)
@@ -644,7 +672,7 @@ func (d *App) GetLogEvents(ctx context.Context, logGroup string, logStream strin
 		return nextToken, nil
 	}
 	for _, event := range out.Events {
-		WriteOutput(logEvent(event))
+		WriteOutput(logEvent{event: event, taskID: taskID})
 	}
 	return out.NextForwardToken, nil
 }
@@ -706,15 +734,9 @@ func (d *App) LoadTaskDefinition(path string) (*TaskDefinitionInput, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load task definition %s: %w", path, err)
 	}
-	c := struct {
-		TaskDefinition json.RawMessage `json:"taskDefinition"`
-	}{}
-	dec := json.NewDecoder(bytes.NewReader(src))
-	if err := dec.Decode(&c); err != nil {
+	src, err = unwrapTaskDefinition(src)
+	if err != nil {
 		return nil, fmt.Errorf("failed to load task definition %s: %w", path, err)
-	}
-	if c.TaskDefinition != nil {
-		src = c.TaskDefinition
 	}
 	var td TaskDefinitionInput
 	if err := UnmarshalJSONForStruct(src, &td, path); err != nil {
@@ -738,19 +760,23 @@ func unmarshalYAML(src []byte, v any, path string) error {
 	return unmarshalJSON(b, v, path)
 }
 
-func unmarshalJSON(src []byte, v any, path string) error {
-	strict := json.NewDecoder(bytes.NewReader(src))
-	strict.DisallowUnknownFields()
-	if err := strict.Decode(&v); err != nil {
-		if !strings.Contains(err.Error(), "unknown field") {
-			return err
-		}
-		LogWarn("unknown field in definition", "error", err.Error(), "path", path)
-		// unknown field -> try lax decoder
-		lax := json.NewDecoder(bytes.NewReader(src))
-		return lax.Decode(&v)
+// unwrapTaskDefinition returns the value of "taskDefinition" in src if it
+// exists, as in the output of describe-task-definition. Otherwise returns src.
+func unwrapTaskDefinition(src []byte) ([]byte, error) {
+	var m map[string]jsontext.Value
+	if err := jsonv2.Unmarshal(src, &m); err != nil {
+		return nil, err
 	}
-	return nil
+	const key = "taskDefinition"
+	for k := range m {
+		if k != key && strings.EqualFold(k, key) {
+			return nil, fmt.Errorf("unknown field %q at /%s: keys are case-sensitive, use %q", k, k, key)
+		}
+	}
+	if td, ok := m[key]; ok && td.Kind() != 'n' {
+		return td, nil
+	}
+	return src, nil
 }
 
 func (d *App) LoadServiceDefinition(path string) (*Service, error) {
@@ -763,9 +789,14 @@ func (d *App) LoadServiceDefinition(path string) (*Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load service definition %s: %w", path, err)
 	}
+	src, hookDetails, err := extractHookDetails(src)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load service definition %s: %w", path, err)
+	}
 	if err := unmarshalJSON(src, &sv, path); err != nil {
 		return nil, fmt.Errorf("failed to load service definition %s: %w", path, err)
 	}
+	setHookDetails(&sv, hookDetails)
 
 	sv.ServiceName = aws.String(d.config.Service)
 	if sv.DesiredCount == nil {

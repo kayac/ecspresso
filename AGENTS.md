@@ -10,7 +10,12 @@ ecspresso is a deployment tool for Amazon ECS written in Go. It manages ECS serv
 
 - Default branch: `v2`
 - Do not commit directly to `v2`. Always create a feature branch first.
-- When changing `action.yml`, force-push the same commit to the `v2-action-testing` branch as well. CI for the GitHub Action runs against that branch, so pushing there is how `action.yml` changes get exercised end-to-end.
+
+## GitHub Actions
+
+- The GitHub Action lives in [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action). `action.yml` in this repository is a deprecated forwarder to it. Keep its inputs in sync with kayac/ecspresso-action.
+- All workflows under `.github/workflows/` are onboarded to the [workflow dependency lockfile](https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles) (`.github/workflows/actions.lock`). Reference actions by version tag (e.g. `actions/checkout@v6.0.2`) and run `gh actions-lock` to update the lockfile. Do not pin them by SHA, and do not run `pinact` on them.
+- Workflows reference `action.yml` as `uses: $/`, so `gh actions-lock` also manages the action referenced in `action.yml` (`kayac/ecspresso-action@vX.Y.Z`). Releases of kayac/ecspresso-action are immutable, so the full version tag cannot be moved.
 
 ## Build Commands
 
@@ -97,6 +102,25 @@ go test -race ./...
   }
   ```
 - Use `t.Context()` instead of `context.Background()` in tests
+
+### Testing requests to and responses from AWS APIs
+
+Do not start a fake HTTP server (e.g. `httptest.Server`) to test what is sent to AWS APIs. Add a middleware to the SDK client with `APIOptions` (`ecs.Options.APIOptions` or `config.WithAPIOptions`) instead. No request is sent when the middleware returns without calling the next handler.
+
+- To return a typed output without inspecting the wire format, add a middleware to the head of the Finalize step (`stack.Finalize.Add(..., middleware.Before)`) and return the output as `middleware.FinalizeOutput.Result`. See `SDKTestingMiddleware` in `middleware_test.go`.
+- To check the request body the SDK sends, or to let the SDK deserialize a canned response body, add a middleware to the tail of the Deserialize step (`stack.Deserialize.Add(..., middleware.After)`). Read the serialized body from `in.Request.(*smithyhttp.Request).GetStream()`, and return the response as `middleware.DeserializeOutput.RawResponse` (a `*smithyhttp.Response`). See `newHookDetailsTestClient` in `hookdetails_test.go`.
+  - Use this when the serialization itself matters, e.g. for a field of `document.Interface` which `encoding/json` cannot handle.
+  - The operation is in the `X-Amz-Target` request header (e.g. `AmazonEC2ContainerServiceV20141113.UpdateService`).
+  - The client needs `Region` and `Credentials` (`aws.AnonymousCredentials{}` is enough), because the middlewares before it (endpoint resolution, signing) still run.
+
+## Scope of `verify`
+
+`verify` checks what the AWS APIs do not report when `deploy` calls them. `deploy` succeeds with such a problem, and it shows up later in a way that is hard to trace (e.g. tasks fail to start).
+
+- Add checks on the facts of the user's environment: a resource referenced by the definitions exists and is accessible (images, IAM roles, secrets, log groups, target groups, Lambda functions, etc.).
+- Do not add checks that copy the validation rules of the AWS APIs: allowed values, required fields, constraints on combinations of settings, and default values. The API rejects such a request immediately with a message that states the cause, so the check saves little. The rules belong to AWS and change without notice, so each copy has to be followed forever, and a stale one rejects a valid definition.
+- "It fails only after the task definition is registered" is not a reason to add a check of the latter kind.
+- Some long-standing checks on the definitions remain (e.g. `networkConfiguration.awsvpcConfiguration` is required for the `awsvpc` network mode, `name` and `valueFrom` are required for `secrets`). They call no API, and what they check is self-evident and unlikely to change on the AWS side. They are not a precedent for copying the rules of a new feature. `verifyEarlySuccessCriteria` and `verifyGatewayConnectorsDefinition` were removed in v3 for this reason.
 
 ## Documentation
 

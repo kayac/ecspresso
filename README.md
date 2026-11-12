@@ -38,6 +38,7 @@ ecspresso also supports ECS Express mode for simplified deployments and provides
   - [EBS Volume support](#ebs-volume-support)
   - [S3 Files volume support](#s3-files-volume-support)
   - [VPC Lattice support](#vpc-lattice-support)
+  - [ECS Gateway support](#ecs-gateway-support)
   - [High resolution CloudWatch metrics](#high-resolution-cloudwatch-metrics)
   - [Pause lifecycle hooks](#pause-lifecycle-hooks)
   - [ECS Express mode support](#ecs-express-mode-support)
@@ -114,7 +115,7 @@ Docker images are available on GitHub Container Registry.
 $ docker pull ghcr.io/kayac/ecspresso:v2.7.0
 ```
 
-The image is based on `gcr.io/distroless/static-debian12` and supports both `linux/amd64` and `linux/arm64` architectures.
+The image is based on `gcr.io/distroless/static-debian13` and supports both `linux/amd64` and `linux/arm64` architectures.
 
 ```console
 $ docker run --rm \
@@ -160,52 +161,23 @@ Orb `fujiwara/ecspresso@2.0.2` supports `version-file: path/to/file`, which inst
 
 ### GitHub Actions
 
-Action kayac/ecspresso@v2 installs an ecspresso binary for Linux(x86_64) into /usr/local/bin. This action installs ecspresso. When `args` input is provided, it runs `ecspresso` with the specified arguments after installation.
+The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action). See its README for inputs and details.
 
 ```yml
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: kayac/ecspresso@v2
+      - uses: actions/checkout@v6
+      - uses: kayac/ecspresso-action@v3
         with:
-          version: v2.3.0 # or latest
+          version: v3.0.0 # or latest
           # version-file: .ecspresso-version
       - run: |
           ecspresso deploy --config ecspresso.yml
 ```
 
-To use the latest version of ecspresso, pass the parameter "latest".
-
-```yaml
-      - uses: kayac/ecspresso@v2
-        with:
-          version: latest
-```
-
-`version: latest` installs different versions of ecspresso for each Action version.
-- kayac/ecspresso@v1
-  - The latest version of v1.x
-- kayac/ecspresso@v2
-  - The latest version of v2.x
-
-Note: `version: latest` is not recommended as it may cause unexpected behavior when a new version of ecspresso is released.
-
-Action `kayac/ecspresso@v2` supports `version-file: path/to/file`, which installs the ecspresso version specified in the file. This version number does not have a `v` prefix, For example `2.3.0`.
-
-### Run ecspresso after installation
-
-When the `args` input is provided, the action runs `ecspresso` with the specified arguments after installation.
-
-```yaml
-      - uses: kayac/ecspresso@v2
-        with:
-          version: latest
-          args: deploy
-        env:
-          ECSPRESSO_CONFIG: ecspresso.yml
-```
+`kayac/ecspresso@v3` is a deprecated wrapper that calls `kayac/ecspresso-action` and prints a deprecation warning. Replace `uses: kayac/ecspresso@v2` with `uses: kayac/ecspresso-action@v3`. `kayac/ecspresso@v2` keeps working as before.
 
 ## Usage
 
@@ -554,7 +526,7 @@ The `ecspresso wait` command also accepts `--wait-until` (`stable`, `deployed`, 
   // ...
 ```
 
-`ecspresso deploy` returns as soon as the deployment completes (with the default `--wait-until=deployed`), and `ecspresso verify` validates `earlySuccessCriteria` before deploying.
+`ecspresso deploy` returns as soon as the deployment completes (with the default `--wait-until=deployed`).
 
 To turn it off on a service that already has it, set `"enable": false` explicitly. Omitting `earlySuccessCriteria` keeps the current setting of the service, and ECS rejects switching to another deployment strategy while it is enabled.
 
@@ -607,7 +579,11 @@ For more advanced settings, you can define `deploymentConfiguration`, `loadBalan
           "PRODUCTION_TRAFFIC_SHIFT",
           "POST_PRODUCTION_TRAFFIC_SHIFT"
         ],
-        "roleArn": "arn:aws:iam::123456789012:role/ECSServiceRole"
+        "roleArn": "arn:aws:iam::123456789012:role/ECSServiceRole",
+        "hookDetails": {
+          "baseUrl": "https://example.com",
+          "paths": ["/health_check"]
+        }
       }
     ],
     "maximumPercent": 200,
@@ -628,6 +604,8 @@ For more advanced settings, you can define `deploymentConfiguration`, `loadBalan
   ],
   // ...
 ```
+
+`hookDetails` is passed to the hook target as it is. Numbers in `hookDetails` are handled as float64, so use a string for a value that float64 cannot represent exactly (e.g. an integer larger than 2^53).
 
 For more details, See [Amazon ECS blue/green deployments
 ](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-type-blue-green.html).
@@ -764,6 +742,8 @@ $ ecspresso rollback --with-previous-task-definition
 For services using the CodeDeploy deployment controller, if there's an active deployment, ecspresso stops it with rollback. Otherwise, it creates a new deployment with the previous task definition.
 
 ## Example of run task
+
+When `--count` is greater than one, `run` waits for every task and checks the watched container in each task. If any watched container exits with a nonzero code, the command fails. `--wait-until=running` waits for every task to reach RUNNING, while `--no-wait` returns after the tasks are started. Logs of the watched container in each task are shown with the task ID, like `[<task-id>] message` (or a `task_id` field with `--log-format=json`).
 
 ```console
 $ ecspresso run --config ecspresso.yml --task-def=db-migrate.json
@@ -1081,6 +1061,41 @@ ecspresso doesn't create or modify any VPC Lattice resources. You must create an
 
 See also [Use Amazon VPC Lattice to connect, observe, and secure your Amazon ECS services](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-vpc-lattice.html).
 
+### ECS Gateway support
+
+ecspresso supports connecting a service to [Amazon ECS Gateway](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/gateway-overview.html), a managed ingress that provisions shared Application Load Balancers for ECS services.
+
+1. Define `portMappings` with the `name` field in the task definition. The task definition must use the `awsvpc` network mode.
+
+2. Define `gatewayConnectors` in the service definition. A service supports at most one gateway connector, and the `portName` field is required.
+
+```json
+{
+  "gatewayConnectors": [
+    {
+      "portName": "web-80-tcp",
+      "filters": {
+        "accessTypes": ["PRIVATE"]
+      },
+      "healthCheck": {
+        "healthCheckPath": "/health"
+      }
+    }
+  ],
+```
+
+- The `portName` must match the `name` field of the `portMappings` in the task definition.
+- `filters.accessTypes` (optional) limits the gateways the service connects to (`PUBLIC`, `PRIVATE`, or both). A service that must not be reachable from the internet should set `PRIVATE`.
+- `healthCheck` (optional) configures the target group health check. A health check change replaces the target group, so it cannot be applied to a service using the `ROLLING` deployment strategy.
+
+When `gatewayConnectors` is not defined in the service definition, `ecspresso deploy` disconnects the service from all gateways, in the same way as `loadBalancers` and `vpcLatticeConfigurations`. A gateway connected again later gives the service a new hostname, so if the connector was added outside of ecspresso, run `ecspresso diff` to check before deploying.
+
+`gatewayConnectors` is read from the current service revision (`DescribeServiceRevisions`), like [`monitoring`](#high-resolution-cloudwatch-metrics).
+
+ecspresso doesn't create or modify gateways or their cluster associations. You must create a gateway and associate it with the cluster before connecting the service. `ecspresso verify` checks that an `ACTIVE` gateway is associated with the cluster (requires `ecs:ListGatewayClusterAssociations`).
+
+`gatewayConnectors` is not supported with the `CODE_DEPLOY` deployment controller or in Express mode.
+
 ### High resolution CloudWatch metrics
 
 ecspresso supports [high resolution CloudWatch metrics](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cloudwatch-metrics.html) for ECS services.
@@ -1104,6 +1119,8 @@ To configure, define `monitoring` in the service definition. The `metricConfigur
 - `resolutionSeconds`: The resolution in seconds. Valid values are `20` (high resolution) and `60` (default).
 
 When not specified, Amazon ECS uses the default resolution of 60 seconds. High resolution metrics enable faster auto scaling responses.
+
+`monitoring` is not returned by `DescribeServices`, so ecspresso reads it from the current service revision by `DescribeServiceRevisions`. The IAM principal that runs ecspresso needs `ecs:DescribeServiceRevisions` on the service revision ARN (`arn:aws:ecs:<region>:<account>:service-revision/<cluster>/<service>/*`). If the call fails, commands that describe the service (`deploy`, `diff`, `status`, etc.) fail instead of treating the attribute as unset.
 
 ### Pause lifecycle hooks
 
@@ -1318,11 +1335,15 @@ For example it checks if,
 - An ECS cluster exists.
 - The target groups in service definitions match the container name and port defined in the definitions.
 - A task role and a task execution role exist and can be assumed by ecs-tasks.amazonaws.com.
-- Container images exist at the URL defined in task definitions. (Checks only for ECR or DockerHub public images.)
+- Container images exist at the URL defined in task definitions. (Checks only for ECR, ECR Public or DockerHub public images.)
 - Secrets in task definitions exist and are readable.
 - Log streams can be created and messages can be put into the specified CloudWatch log groups streams.
 
+ecspresso verify checks what the AWS APIs do not report when `deploy` calls them, such as a missing resource that makes tasks fail to start after the deployment has begun. It does not validate the definitions against the rules of the ECS API (allowed values, required fields, or combinations of settings). ECS reports them when you deploy.
+
 ecspresso verify tries to assume the task execution role defined in task definitions to verify these items. If it fails to assume the role, it continues to verify with the current session.
+
+For images on Amazon ECR Public (`public.ecr.aws`), ecspresso verify gets an authorization token with the current session to avoid the low rate limit of anonymous pulls. This requires the `ecr-public:GetAuthorizationToken` and `sts:GetServiceBearerToken` permissions. If it fails to get the token, it continues to verify anonymously.
 
 ```console
 $ ecspresso verify

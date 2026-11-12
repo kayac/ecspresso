@@ -2,100 +2,42 @@ name: test action
 on:
   push:
     branches:
-      - v2
-      - v2-action-testing
+      - v3
+    paths:
+      - action.yml
+      - .github/workflows/action.yml
+  pull_request:
+    paths:
+      - action.yml
+      - .github/workflows/action.yml
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  install_legacy:
+  forwarder:
     strategy:
-      matrix:
-        runner:
-          - ubuntu-22.04
-    name: test action
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-      - uses: kayac/ecspresso@v0
-        with:
-          version: v1.5.0
-      - run: |
-          ecspresso version 2>&1 | fgrep v1.5.0
-      - uses: kayac/ecspresso@v1
-        with:
-          version: v1.6.0
-      - run: |
-          ecspresso version 2>&1 | fgrep v1.6.0
-      - uses: kayac/ecspresso@v1
-        with:
-          version: latest
-      - run: |
-          ecspresso version 2>&1 | fgrep v1.7.
-      - uses: kayac/ecspresso@v2
-        with:
-          version: latest
-      - run: |
-          ecspresso version 2>&1 | fgrep v2.
-      - uses: kayac/ecspresso@v2
-        with:
-          version: v1.7.14
-      - run: |
-          ecspresso version 2>&1 | fgrep v1.7.14
-      - uses: kayac/ecspresso@v2
-        with:
-          version-file: tests/.ecspresso-version
-      - run: |
-          ecspresso version 2>&1 | fgrep v2.0.0
-
-      - run: |
-          rm -f /usr/local/bin/ecspresso
-
-      - uses: kayac/ecspresso@v2-action-testing
-        with:
-          version: latest
-      - run: |
-          ecspresso version 2>&1 | fgrep v2.
-      - uses: kayac/ecspresso@v2-action-testing
-        with:
-          version: v2.0.4
-      - run: |
-          ecspresso version 2>&1 | fgrep v2.0.4
-
-  install_v2:
-    strategy:
+      fail-fast: false
       matrix:
         runner:
           - ubuntu-24.04
           - ubuntu-24.04-arm
-    name: test action
+    name: forwarder (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-      - uses: kayac/ecspresso@v2-action-testing
+      - uses: actions/checkout@v6.0.2
         with:
-          version: latest
-      - run: |
-          ecspresso version 2>&1 | fgrep v2.
-      - uses: kayac/ecspresso@v2-action-testing
+          persist-credentials: false
+      - uses: $/
         with:
           version: v2.0.4
-      - run: |
-          ecspresso version 2>&1 | fgrep v2.0.4
-      - uses: kayac/ecspresso@v2-action-testing
+      - run: ecspresso version 2>&1 | grep -F v2.0.4
+      - uses: $/
         with:
           version-file: tests/.ecspresso-version
-      - run: |
-          ecspresso version 2>&1 | fgrep v2.0.0
-      - uses: kayac/ecspresso@v2
+      - run: ecspresso version 2>&1 | grep -F v2.0.0
+      - uses: $/
         with:
-          version: v2.3.3
-      - run: |
-          ecspresso version 2>&1 | fgrep v2.3.3
-      - uses: kayac/ecspresso@v2-action-testing
-        with:
-          version: latest
-          args: "render config --jsonnet"
-        env:
-          AWS_REGION: ap-northeast-1
-          ECSPRESSO_LOG_FORMAT: json
-          ECSPRESSO_CONFIG: tests/ecspresso.yml
+          version: v2.0.4
+          args: version

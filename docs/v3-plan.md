@@ -4,12 +4,7 @@ Tracking list of breaking changes and cleanups planned for ecspresso v3. Work la
 
 ## Status
 
-All planned work except the module-path bump has landed on `pre-v3`. Cutting the `v3` branch / tag is gated on the GitHub Action moving to its dedicated repository — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The constraint:
-
-- The forwarder `action.yml` is what keeps `uses: kayac/ecspresso@v3` resolvable for existing workflows. Without it, Dependabot's `@v2` → `@v3` PRs would break user workflows after merge with `unable to resolve action 'kayac/ecspresso@v3'`.
-- The forwarder needs a real target repo to point at, so the new repo and its `@v3` release have to exist first.
-
-Until then `pre-v3` accumulates the work and ships nothing.
+All planned work except the module-path bump has landed on `pre-v3`. The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (v3.0.0 released), and `action.yml` in this repo is a forwarder to it — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The `v3` branch / tag can be cut once the module-path bump lands.
 
 ## Breaking changes
 
@@ -100,14 +95,16 @@ The GitHub Action (`action.yml`) currently lives in this repository, alongside t
 
 #### Plan
 
-- Repository name: **TBD**.
-- Migration for users: `uses: kayac/ecspresso@v2` → `uses: <new-org-or-owner>/<new-repo>@v3`.
+- Repository name: [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (https://github.com/kayac/ecspresso-action/pull/1, released as v3.0.0).
+- Migration for users: `uses: kayac/ecspresso@v2` → `uses: kayac/ecspresso-action@v3`.
+- Cutover in this repo: PR: https://github.com/kayac/ecspresso/pull/1120
 - Items to move out:
   - `action.yml` at the repo root.
   - The `v2-action-testing` branch workflow (currently the CI gate for `action.yml` changes — see [AGENTS.md](../AGENTS.md)). The new repo will run its own CI directly on PRs, so the `v2-action-testing` force-push convention goes away.
 - Items to update in this repo on cutover:
   - README "GitHub Actions" section (currently around L142) — point users to the new repo.
   - AGENTS.md — drop the `v2-action-testing` push instruction.
+  - `.github/workflows/actions.lock` — onboard every remaining workflow (see [Workflow dependency lockfiles](#workflow-dependency-lockfiles)).
 
 #### Keep `action.yml` as a forwarder, do not delete it
 
@@ -131,7 +128,7 @@ runs:
   steps:
     - run: echo "::warning::kayac/ecspresso action is deprecated; use <new-org-or-owner>/<new-repo>@v3 instead"
       shell: bash
-    - uses: <new-org-or-owner>/<new-repo>@v3
+    - uses: <new-org-or-owner>/<new-repo>@<full-commit-sha> # v3.x.y
       with:
         version: ${{ inputs.version }}
         version-file: ${{ inputs.version-file }}
@@ -144,6 +141,17 @@ With this in place:
 - The forwarder can be removed in a future major (or simply left in place indefinitely; it is cheap).
 
 The new repo is the source of truth — keep the forwarder's `inputs` in sync with whatever inputs the new action accepts.
+
+#### Workflow dependency lockfiles
+
+`v2` adopted [workflow dependency lockfiles](https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles) (`.github/workflows/actions.lock`) in #1114, except for `.github/workflows/action.yml`, which must test the latest action code on `v2` and `v2-action-testing`. The action split removes the reason for that exception.
+
+- **This repo:** on cutover, regenerate `actions.lock` with `gh actions-lock` so every remaining workflow is onboarded. Dependabot keeps the lockfile in sync for onboarded workflows.
+- **Forwarder `action.yml`:** pin the new action by full commit SHA with a version comment, as in the sketch above. Lockfiles cover workflows only, not action files, so users without a lockfile would otherwise resolve a mutable `@v3` ref. Forwarder updates then ship with CLI releases, which is fine for a deprecated shim.
+  - Outcome: the forwarder references a full version tag (`kayac/ecspresso-action@v3.0.0`) instead of a SHA. The forwarder test workflow uses it as `uses: $/` so that `gh actions-lock` can lock the action it calls (a `./` reference cannot be locked, and fails once the lockfile is enforced), and `gh actions-lock` rewrites SHA references in `$/` action files to version tags. A full version tag of kayac/ecspresso-action cannot move because its releases are immutable, so it is as fixed as a SHA for users without a lockfile.
+- **New action repo:** onboard all workflows to a lockfile from the start, with Dependabot `github-actions` updates enabled. Pin any action used inside its `action.yml` by full commit SHA.
+- **Never move full version tags** (e.g. `v3.1.0`) in the new repo. For users who lock it, a moved full version tag is an error, while a moved major tag (`v3`) only produces a `ref-moved` warning. Enable immutable releases to enforce this.
+- **Pinning rules:** update AGENTS.md so that onboarded workflows are managed with `gh actions-lock`, and only action files and reusable workflows are pinned with `pinact`. pinact leaves lockfile-managed actions alone starting with the release after v5.0.2 (suzuki-shunsuke/pinact#1826); older versions rewrite them back to SHAs and break the lockfile.
 
 ### Unify Duration handling and reinterpret plain numbers as seconds
 
@@ -183,6 +191,61 @@ duration value is unusually large for a timeout; interpreted as seconds (v2 inte
 - Users who wrote `timeout: 600` meaning "ten minutes" but got 600 ns in v2 are silently fixed.
 - Users who deliberately wrote nanoseconds as a plain number now get a behaviour change, but they also get a clear warning at load time.
 
+### Fail when `DescribeServiceRevisions` fails
+
+PR: https://github.com/kayac/ecspresso/pull/1107
+
+Some service attributes exist only on the service revision, not on `DescribeServices` output (currently `monitoring`, and `gatewayConnectors` once ECS Gateway is supported). v2 logs a warning and continues when `DescribeServiceRevisions` fails, so those attributes look unset on the remote side: `diff` hides them and `deploy` sends them as removed. For ECS Gateway this disconnects the service, and its generated hostname cannot be recovered.
+
+- `newServiceFromTypes` returns an error when the call fails or returns no revision.
+- Compatibility: an IAM principal without `ecs:DescribeServiceRevisions` now fails on commands that describe the service (`deploy`, `diff`, `status`, etc.).
+
+### Require Go 1.27
+
+PR: https://github.com/kayac/ecspresso/pull/1111 (Go 1.26)
+
+- Bump the `go` directive to 1.27 and test against Go 1.27. #1111 required Go 1.26; `encoding/json/v2` raises it to 1.27 (see [Match JSON keys case-sensitively](#match-json-keys-case-sensitively-with-encodingjsonv2)).
+- Build release and nightly binaries with Go 1.27.
+- Compatibility: building ecspresso or importing it as a library requires Go 1.27 or later, without `GOEXPERIMENT=nojsonv2`.
+
+### Match JSON keys case-sensitively with `encoding/json/v2`
+
+v2 decodes definition files with `encoding/json`, which matches object keys to struct fields case-insensitively. A mistyped key such as `desiredcount` or `DesiredCount` loads as `desiredCount`, although the ECS API and aws-cli accept only `desiredCount`. v3 decodes with `encoding/json/v2`, which is case-sensitive, so that definitions are written as the API defines them. PR: https://github.com/kayac/ecspresso/pull/1126
+
+- Applies to every file decoded into a struct: service / task / express definitions, `run --overrides` and `--overrides-file`, the configuration file (YAML, JSON, and Jsonnet all go through JSON), and the config of the `external` plugin.
+- The AWS SDK types have no json tags, so `unmarshalJSON` rewrites the keys by the type being decoded before handing them to `encoding/json/v2`: an untagged field `DesiredCount` is matched only by `desiredCount`. This replaces the type-blind `walkMap` rewriting for task definitions, and makes service definitions (which relied on case-insensitive matching alone) go through the same path.
+- A key that matches a field only case-insensitively is an error, reported with its JSON pointer and the expected key. All such keys in a file are reported at once. Silently dropping a key that worked in v2 would change what `deploy` sends.
+- Other unknown keys are still ignored with a warning (e.g. attributes in `describe-task-definition` output, or API fields newer than the SDK). Every unknown key is now reported, with its JSON pointer. v2 reported only the first one.
+- Keys of maps (`dockerLabels`, `options`, `driverOpts`, `labels`) are kept as they are. v2 upper-cased the first letter of the keys in `driverOpts` and `labels` of `dockerVolumeConfiguration` in task definitions, because only `dockerLabels` and `options` were excluded from the rewriting by name.
+- `encoding/json/v2` also rejects duplicate keys in an object and invalid UTF-8.
+- `encoding/json/v2` cannot be built with Go 1.26 unless `GOEXPERIMENT=jsonv2` is set, so the `go` directive is bumped to 1.27 (see [Require Go 1.27](#require-go-127)).
+- Encoding (`MarshalJSONForAPI` etc.) stays on `encoding/json`.
+
+### Do not copy the validation rules of the AWS APIs in `verify`
+
+PR: https://github.com/kayac/ecspresso/pull/1131
+
+`verify` in v2 validates `earlySuccessCriteria` locally (#1080): the deployment controller and strategy, required fields, the range of `healthyPercent`, and `healthyPercent` against `minimumHealthyPercent` including the default that ECS applies. `pre-v3` added a similar check for `gatewayConnectors` (#1108): at most one connector, no `CODE_DEPLOY` deployment controller, the `awsvpc` network mode, and `portName`. All of these are validation rules of the ECS API. `CreateService` / `UpdateService` rejects an invalid value immediately with a message that states the cause, and ecspresso has to follow every change of the rules on the AWS side to keep the copies correct.
+
+- Remove `verifyEarlySuccessCriteria` and `defaultMinimumHealthyPercent`.
+- Remove `verifyGatewayConnectorsDefinition`. `verify` still checks that an `ACTIVE` gateway is associated with the cluster, which is a fact of the environment.
+- State the scope of `verify` in AGENTS.md and README: it checks what the AWS APIs do not report when `deploy` calls them (resources that do not exist or are not accessible), and does not copy the validation rules of the APIs.
+- The other checks on the definitions are kept: `awsvpcConfiguration` required for the `awsvpc` network mode, `hostPort` equal to `containerPort` for `awsvpc`, `name` / `valueFrom` of `secrets`, `hookTargetArn` of Lambda lifecycle hooks, and `portName` of `vpcLatticeConfigurations`. They have been there for a long time, call no API, and what they check is self-evident and unlikely to change on the AWS side. They are not a precedent for new checks.
+- Compatibility: `verify` passes with an invalid `earlySuccessCriteria`, and `deploy` fails with the error from ECS.
+
+### Wait for all tasks started by `run`
+
+PR: https://github.com/kayac/ecspresso/pull/1113, https://github.com/kayac/ecspresso/pull/1117
+
+`run --count N` (N > 1) waited only for the first task, so failures in the other tasks went unnoticed. v3 waits for every task and checks the watch container in each.
+
+- Each poll describes all tasks in a single `DescribeTasks` request. The SDK waiters are replaced with a polling loop that keeps each task's progress across polls, so tasks may reach the target status at different times. A task not found yet (`MISSING`, as `DescribeTasks` is eventually consistent just after `RunTask`) is retried instead of being ignored.
+- With `--wait-until=running`, a task that has already stopped counts as done, and its exit status is checked afterwards. v2 (SDK `TasksRunning` waiter) failed as soon as any task was `STOPPED`.
+- Container logs of every task are followed. With multiple tasks, each log line is tagged with the task ID (`[<task-id>]` in text, `task_id` in JSON), including every line of a multiline event.
+- Errors of all failed tasks are reported together, each with its task ARN.
+- Library: `App.RunTask` returns all started tasks (`[]types.Task`), and `App.WaitRunTask`, `App.DescribeTaskStatus`, and `App.DescribeTasksInput` take `[]types.Task`.
+- Compatibility: `run --count N` fails if any task fails, not only the first one.
+
 ## Features
 
 ### Add jsonrpc mode to the external plugin
@@ -195,6 +258,33 @@ The `external` plugin execs its command once per template function call, which i
 - In `jsonrpc` mode the process starts on first use and is reused across calls.
 - `timeout` applies per call. On timeout, IO error, or response-id mismatch the process is reset and restarted on the next call.
 - The process is registered as a plugin instance and terminated via `App.Close` (stdin closed, then SIGTERM/SIGKILL) when ecspresso exits.
+
+### Publish a signed packslip manifest with each release
+
+PR: https://github.com/kayac/ecspresso/pull/1105 (proposed in #1104)
+
+Attach a [packslip](https://packslip.dev/) manifest (`packslip.sigstore.json`) to every release starting with v3.0.0, so installers such as mise can verify the publisher and the archive digests.
+
+- GoReleaser runs with `--draft`; a read-only job signs the manifest and a final job uploads it and publishes the release, because immutable releases cannot gain assets after publishing.
+- If signing fails, the release stays a draft (re-run the failed jobs) instead of being published without a manifest.
+
+### Support Amazon ECS Gateway
+
+PR: https://github.com/kayac/ecspresso/pull/1108
+
+Support `gatewayConnectors` in the service definition. ecspresso manages only the service side; gateways and their cluster associations are out of scope.
+
+- Phase 1 (#1108): read `gatewayConnectors` from the service revision, pass it to `CreateService` / `UpdateService` (an empty slice disconnects, like `loadBalancers`), and `verify` the cluster association (the check of the connector definition was removed in #1131).
+- Phase 2 (planned): show gateway connections (`serviceUrl`, `accessType`, `status`) in `status`, wait for connections to become `ACTIVE` on `deploy` / `wait`, and verify that a gateway covers the service's VPC and Availability Zones.
+
+### Authenticate to ECR Public in verify
+
+PR: https://github.com/kayac/ecspresso/pull/1112
+
+Anonymous pulls from `public.ecr.aws` are limited to 1 per second, which `verify` can hit on shared IPs such as CI runners.
+
+- `verify` gets an ECR Public authorization token with the current session and falls back to anonymous access on failure.
+- The registry client follows the `WWW-Authenticate` challenge (Basic or Bearer) instead of sending ECR Basic credentials up front.
 
 ## Cleanups
 
