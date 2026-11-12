@@ -39,11 +39,17 @@
 #   tagpr.minorLabels (Optional)
 #       Label of minor update targets. Default is [minor]
 #
+#   tagpr.fixedMajorVersion (Optional)
+#       Fix the major version for releases. When set, tagpr only considers tags
+#       with this major version. Useful for maintaining multiple major versions
+#       on different branches (e.g., v1 branch for v1.x.x, main for v2.x.x).
+#
 #   tagpr.commitPrefix (Optional)
 #       Prefix of commit message. Default is "[tagpr]"
 #
 [tagpr]
 	vPrefix = true
 	releaseBranch = v2
+	fixedMajorVersion = 2
 	versionFile = version.go
 	release = draft
