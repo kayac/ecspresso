@@ -105,10 +105,8 @@ func TestExtractHookDetails(t *testing.T) {
 			},
 		},
 		{
-			name:    "keys are case-insensitive",
-			src:     `{"DeploymentConfiguration":{"LifecycleHooks":[{"HookDetails":{"a":1}}]}}`,
-			want:    `{"DeploymentConfiguration":{"LifecycleHooks":[{}]}}`,
-			details: map[int]any{0: map[string]any{"a": float64(1)}},
+			name: "keys are case-sensitive",
+			src:  `{"deploymentConfiguration":{"lifecycleHooks":[{"HookDetails":{"a":1}}]},"DeploymentConfiguration":{"LifecycleHooks":[{"hookDetails":{"a":1}}]}}`,
 		},
 	}
 	for _, c := range cases {

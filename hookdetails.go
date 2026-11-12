@@ -3,7 +3,6 @@ package ecspresso
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/document"
@@ -15,35 +14,24 @@ import (
 // out of the service definition before decoding it, and filled in after
 // encoding it.
 
-// lookupFold finds a key in m case-insensitively, as encoding/json does for struct fields.
-func lookupFold(m map[string]any, name string) (string, any) {
-	for k, v := range m {
-		if strings.EqualFold(k, name) {
-			return k, v
-		}
-	}
-	return "", nil
-}
-
 // extractHookDetails removes hookDetails of the lifecycle hooks from src,
 // and returns them by the index of the hook.
 // src is returned as it is when it has no hookDetails.
+// Keys are case-sensitive as the ECS API defines them, unlike the other fields decoded by encoding/json.
 func extractHookDetails(src []byte) ([]byte, map[int]any, error) {
 	var m map[string]any
 	if err := json.Unmarshal(src, &m); err != nil {
 		// leave it to the decoder of the service definition to report the error
 		return src, nil, nil
 	}
-	_, dc := lookupFold(m, "deploymentConfiguration")
-	dcm, _ := dc.(map[string]any)
-	_, hs := lookupFold(dcm, "lifecycleHooks")
-	hooks, _ := hs.([]any)
+	dc, _ := m["deploymentConfiguration"].(map[string]any)
+	hooks, _ := dc["lifecycleHooks"].([]any)
 	details := map[int]any{}
 	for i, h := range hooks {
 		hook, _ := h.(map[string]any)
-		if k, v := lookupFold(hook, "hookDetails"); v != nil {
+		if v := hook["hookDetails"]; v != nil {
 			details[i] = v
-			delete(hook, k)
+			delete(hook, "hookDetails")
 		}
 	}
 	if len(details) == 0 {
