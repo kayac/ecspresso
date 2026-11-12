@@ -1,7 +1,7 @@
 name: tagpr and release
 on:
   push:
-    branches: ["v2"]
+    branches: ["v3"]
   workflow_dispatch:
     inputs:
       tag:
@@ -26,11 +26,11 @@ jobs:
       - uses: actions/checkout@v6.0.2
         with:
           ref: ${{ inputs.tag || github.ref }}
-          # workflow_dispatch needs the v2 branch and tags (tagpr is skipped)
+          # workflow_dispatch needs the v3 branch and tags (tagpr is skipped)
           fetch-depth: 0
       - name: Get current branch
         run: |
-          git checkout v2
+          git checkout v3
           git symbolic-ref --short HEAD
       - uses: Songmu/tagpr@v1.19.0
         id: tagpr

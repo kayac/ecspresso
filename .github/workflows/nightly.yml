@@ -6,7 +6,7 @@ on:
     inputs:
       ref:
         description: "Git ref to build from"
-        default: "v2"
+        default: "v3"
         required: false
 
 jobs:

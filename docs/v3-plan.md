@@ -1,10 +1,10 @@
 # ecspresso v3 plan
 
-Tracking list of breaking changes and cleanups planned for ecspresso v3. Work lands on the `pre-v3` branch until v3 is released.
+Tracking list of breaking changes and cleanups planned for ecspresso v3. Work landed on the `pre-v3` branch, which was renamed to `v3` after all planned work had landed.
 
 ## Status
 
-All planned work has landed on `pre-v3`. The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (v3.0.0 released), and `action.yml` in this repo is a forwarder to it — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The `v3` branch / tag can be cut.
+All planned work has landed on the `v3` branch (formerly `pre-v3`). The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (v3.0.0 released), and `action.yml` in this repo is a forwarder to it — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The `v3` branch has been cut, and the release settings (tagpr, release and nightly workflows, Dependabot) point to it. v3.0.0 has not been released yet.
 
 ## Breaking changes
 
