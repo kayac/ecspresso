@@ -221,15 +221,16 @@ v2 decodes definition files with `encoding/json`, which matches object keys to s
 - `encoding/json/v2` cannot be built with Go 1.26 unless `GOEXPERIMENT=jsonv2` is set, so the `go` directive is bumped to 1.27 (see [Require Go 1.27](#require-go-127)).
 - Encoding (`MarshalJSONForAPI` etc.) stays on `encoding/json`.
 
-### Remove the validation of `earlySuccessCriteria` from `verify`
+### Do not copy the validation rules of the AWS APIs in `verify`
 
 PR: https://github.com/kayac/ecspresso/pull/1131
 
-`verify` in v2 validates `earlySuccessCriteria` locally (#1080): the deployment controller and strategy, required fields, the range of `healthyPercent`, and `healthyPercent` against `minimumHealthyPercent` including the default that ECS applies. All of these are validation rules of the ECS API. `UpdateService` rejects an invalid value immediately with a message that states the cause, and ecspresso has to follow every change of the rules on the AWS side to keep the copy correct.
+`verify` in v2 validates `earlySuccessCriteria` locally (#1080): the deployment controller and strategy, required fields, the range of `healthyPercent`, and `healthyPercent` against `minimumHealthyPercent` including the default that ECS applies. `pre-v3` added a similar check for `gatewayConnectors` (#1108): at most one connector, no `CODE_DEPLOY` deployment controller, the `awsvpc` network mode, and `portName`. All of these are validation rules of the ECS API. `CreateService` / `UpdateService` rejects an invalid value immediately with a message that states the cause, and ecspresso has to follow every change of the rules on the AWS side to keep the copies correct.
 
 - Remove `verifyEarlySuccessCriteria` and `defaultMinimumHealthyPercent`.
+- Remove `verifyGatewayConnectorsDefinition`. `verify` still checks that an `ACTIVE` gateway is associated with the cluster, which is a fact of the environment.
 - State the scope of `verify` in AGENTS.md and README: it checks what the AWS APIs do not report when `deploy` calls them (resources that do not exist or are not accessible), and does not copy the validation rules of the APIs.
-- Other existing checks of the same kind (e.g. `verifyGatewayConnectorsDefinition`) are left as they are for now. They are not a precedent for new checks.
+- The other checks on the definitions are kept: `awsvpcConfiguration` required for the `awsvpc` network mode, `hostPort` equal to `containerPort` for `awsvpc`, `name` / `valueFrom` of `secrets`, `hookTargetArn` of Lambda lifecycle hooks, and `portName` of `vpcLatticeConfigurations`. They have been there for a long time, call no API, and what they check is self-evident and unlikely to change on the AWS side. They are not a precedent for new checks.
 - Compatibility: `verify` passes with an invalid `earlySuccessCriteria`, and `deploy` fails with the error from ECS.
 
 ### Wait for all tasks started by `run`
@@ -273,7 +274,7 @@ PR: https://github.com/kayac/ecspresso/pull/1108
 
 Support `gatewayConnectors` in the service definition. ecspresso manages only the service side; gateways and their cluster associations are out of scope.
 
-- Phase 1 (#1108): read `gatewayConnectors` from the service revision, pass it to `CreateService` / `UpdateService` (an empty slice disconnects, like `loadBalancers`), and `verify` the connector and the cluster association.
+- Phase 1 (#1108): read `gatewayConnectors` from the service revision, pass it to `CreateService` / `UpdateService` (an empty slice disconnects, like `loadBalancers`), and `verify` the cluster association (the check of the connector definition was removed in #1131).
 - Phase 2 (planned): show gateway connections (`serviceUrl`, `accessType`, `status`) in `status`, wait for connections to become `ACTIVE` on `deploy` / `wait`, and verify that a gateway covers the service's VPC and Availability Zones.
 
 ### Authenticate to ECR Public in verify

@@ -1078,7 +1078,7 @@ When `gatewayConnectors` is not defined in the service definition, `ecspresso de
 
 `gatewayConnectors` is read from the current service revision (`DescribeServiceRevisions`), like [`monitoring`](#high-resolution-cloudwatch-metrics).
 
-ecspresso doesn't create or modify gateways or their cluster associations. You must create a gateway and associate it with the cluster before connecting the service. `ecspresso verify` checks the connector definition and that an `ACTIVE` gateway is associated with the cluster (requires `ecs:ListGatewayClusterAssociations`).
+ecspresso doesn't create or modify gateways or their cluster associations. You must create a gateway and associate it with the cluster before connecting the service. `ecspresso verify` checks that an `ACTIVE` gateway is associated with the cluster (requires `ecs:ListGatewayClusterAssociations`).
 
 `gatewayConnectors` is not supported with the `CODE_DEPLOY` deployment controller or in Express mode.
 

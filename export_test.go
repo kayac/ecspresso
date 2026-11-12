@@ -47,8 +47,6 @@ var (
 	PausedHookIDs                        = pausedHookIDs
 	EarlySuccessCriteriaOf               = earlySuccessCriteriaOf
 	EarlySuccessCriteriaCompletedMessage = earlySuccessCriteriaCompletedMessage
-
-	VerifyGatewayConnectorsDefinition = verifyGatewayConnectorsDefinition
 )
 
 func (d *App) WarnEarlySuccessCriteriaWait(sv *Service, until waitUntil) bool {

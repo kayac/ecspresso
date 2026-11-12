@@ -120,7 +120,7 @@ Do not start a fake HTTP server (e.g. `httptest.Server`) to test what is sent to
 - Add checks on the facts of the user's environment: a resource referenced by the definitions exists and is accessible (images, IAM roles, secrets, log groups, target groups, Lambda functions, etc.).
 - Do not add checks that copy the validation rules of the AWS APIs: allowed values, required fields, constraints on combinations of settings, and default values. The API rejects such a request immediately with a message that states the cause, so the check saves little. The rules belong to AWS and change without notice, so each copy has to be followed forever, and a stale one rejects a valid definition.
 - "It fails only after the task definition is registered" is not a reason to add a check of the latter kind.
-- Some existing checks are of the latter kind. They are not a precedent. `verifyEarlySuccessCriteria` was removed in v3 for this reason.
+- Some long-standing checks on the definitions remain (e.g. `networkConfiguration.awsvpcConfiguration` is required for the `awsvpc` network mode, `name` and `valueFrom` are required for `secrets`). They call no API, and what they check is self-evident and unlikely to change on the AWS side. They are not a precedent for copying the rules of a new feature. `verifyEarlySuccessCriteria` and `verifyGatewayConnectorsDefinition` were removed in v3 for this reason.
 
 ## Documentation
 
