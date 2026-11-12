@@ -4,7 +4,7 @@ Tracking list of breaking changes and cleanups planned for ecspresso v3. Work la
 
 ## Status
 
-All planned work except [strict JSON keys](#match-json-keys-case-sensitively-with-encodingjsonv2) and the module-path bump has landed on `pre-v3`. The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (v3.0.0 released), and `action.yml` in this repo is a forwarder to it — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The `v3` branch / tag can be cut once the module-path bump lands.
+All planned work except the module-path bump has landed on `pre-v3`. The GitHub Action has moved to [kayac/ecspresso-action](https://github.com/kayac/ecspresso-action) (v3.0.0 released), and `action.yml` in this repo is a forwarder to it — see [Move the GitHub Action to a dedicated repository](#move-the-github-action-to-a-dedicated-repository). The `v3` branch / tag can be cut once the module-path bump lands.
 
 ## Breaking changes
 
