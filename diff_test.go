@@ -855,3 +855,71 @@ func TestDiffServicesDeploymentConfigurationDefaults(t *testing.T) {
 		}
 	})
 }
+
+func TestDiffServicesAvailabilityZoneRebalancing(t *testing.T) {
+	ctx := t.Context()
+	color.NoColor = true
+	const (
+		enabled  = types.AvailabilityZoneRebalancingEnabled
+		disabled = types.AvailabilityZoneRebalancingDisabled
+	)
+	cases := []struct {
+		name   string
+		local  types.AvailabilityZoneRebalancing
+		remote types.AvailabilityZoneRebalancing
+		want   []string // lines in the diff. no diff when empty
+	}{
+		// UpdateService keeps the current value when it is omitted
+		{name: "omitted in local, enabled in remote", local: "", remote: enabled},
+		{name: "omitted in local, disabled in remote", local: "", remote: disabled},
+		{name: "omitted in local, never set in remote", local: "", remote: ""},
+		// a service that has never had the value is treated as DISABLED
+		{name: "disabled in local, never set in remote", local: disabled, remote: ""},
+		{name: "enabled in local, never set in remote", local: enabled, remote: "", want: []string{
+			`-  "availabilityZoneRebalancing": "DISABLED",`,
+			`+  "availabilityZoneRebalancing": "ENABLED",`,
+		}},
+		{name: "disabled in local, enabled in remote", local: disabled, remote: enabled, want: []string{
+			`-  "availabilityZoneRebalancing": "ENABLED",`,
+			`+  "availabilityZoneRebalancing": "DISABLED",`,
+		}},
+		{name: "same", local: enabled, remote: enabled},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			b := new(bytes.Buffer)
+			opt := &ecspresso.DiffOption{}
+			opt.SetWriter(b)
+			local := &ecspresso.Service{AvailabilityZoneRebalancing: c.local}
+			remote := &ecspresso.Service{AvailabilityZoneRebalancing: c.remote}
+			differ, err := ecspresso.DiffServices(ctx, local, remote, "file", opt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if differ != (len(c.want) > 0) {
+				t.Errorf("unexpected differ: %t\n%s", differ, b.String())
+			}
+			for _, line := range c.want {
+				if !strings.Contains(b.String(), line) {
+					t.Errorf("diff does not contain %q:\n%s", line, b.String())
+				}
+			}
+			if local.AvailabilityZoneRebalancing != c.local {
+				t.Errorf("local must not be modified: %q", local.AvailabilityZoneRebalancing)
+			}
+		})
+	}
+
+	t.Run("omitted in local, no remote", func(t *testing.T) {
+		b := new(bytes.Buffer)
+		opt := &ecspresso.DiffOption{}
+		opt.SetWriter(b)
+		if _, err := ecspresso.DiffServices(ctx, &ecspresso.Service{}, nil, "file", opt); err != nil {
+			t.Fatal(err)
+		}
+		// the value is left to ECS. the diff must not show a value that is not sent.
+		if want := `+  "availabilityZoneRebalancing": "",`; !strings.Contains(b.String(), want) {
+			t.Errorf("diff does not contain %q:\n%s", want, b.String())
+		}
+	})
+}
