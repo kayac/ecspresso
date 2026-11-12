@@ -535,7 +535,11 @@ For more advanced settings, you can define `deploymentConfiguration`, `loadBalan
           "PRODUCTION_TRAFFIC_SHIFT",
           "POST_PRODUCTION_TRAFFIC_SHIFT"
         ],
-        "roleArn": "arn:aws:iam::123456789012:role/ECSServiceRole"
+        "roleArn": "arn:aws:iam::123456789012:role/ECSServiceRole",
+        "hookDetails": {
+          "baseUrl": "https://example.com",
+          "paths": ["/health_check"]
+        }
       }
     ],
     "maximumPercent": 200,
@@ -556,6 +560,8 @@ For more advanced settings, you can define `deploymentConfiguration`, `loadBalan
   ],
   // ...
 ```
+
+`hookDetails` is passed to the hook target as it is. Numbers in `hookDetails` are handled as float64, so use a string for a value that float64 cannot represent exactly (e.g. an integer larger than 2^53).
 
 For more details, See [Amazon ECS blue/green deployments
 ](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-type-blue-green.html).
