@@ -760,10 +760,10 @@ Other options for RunTask API are set by service attributes (CapacityProviderStr
 `required_version` in the configuration file is for fixing the version of ecspresso.
 
 ```yaml
-required_version: ">= 2.0.0, < 3"
+required_version: ">= 3.0.0, < 4"
 ```
 
-This allows ecspresso to execute if the version is greater than or equal to 2.0.0 and less than 3. If the version does not fall within this range, execution will fail.
+This allows ecspresso to execute if the version is greater than or equal to 3.0.0 and less than 4. If the version does not fall within this range, execution will fail.
 
 This feature is implemented by [go-version](github.com/hashicorp/go-version).
 
