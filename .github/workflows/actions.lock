@@ -6,6 +6,9 @@ workflows:
     '.github/workflows/action.yml':
         - 'actions/checkout@v6.0.2'
         - 'kayac/ecspresso-action@v3.0.0'
+    '.github/workflows/e2e.yml':
+        - 'actions/checkout@v6.0.2'
+        - 'actions/setup-go@v6.4.0'
     '.github/workflows/nightly.yml':
         - 'actions/checkout@v6.0.2'
         - 'actions/setup-go@v6.4.0'
