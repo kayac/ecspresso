@@ -2,6 +2,7 @@ package ecspresso
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"time"
@@ -199,6 +200,9 @@ func dispatchApp(ctx context.Context, sub string, usage func(), opts *CLIOptions
 	}
 }
 
+// exitCodeDiffFound is the exit status of `diff --exit-code` when there are differences.
+const exitCodeDiffFound = 2
+
 func CLI(ctx context.Context, parse func([]string) (string, *CLIOptions, func(), error)) (int, error) {
 	sub, opts, usage, err := parse(os.Args[1:])
 	if err != nil {
@@ -213,6 +217,9 @@ func CLI(ctx context.Context, parse func([]string) (string, *CLIOptions, func(),
 	}
 
 	if err := dispatchCLI(ctx, sub, usage, opts); err != nil {
+		if errors.Is(err, ErrDiffFound) {
+			return exitCodeDiffFound, nil
+		}
 		return 1, err
 	}
 	return 0, nil
