@@ -37,3 +37,4 @@ tags
 .vscode
 
 **/.claude/settings.local.json
+tests/e2e/e2e.env
