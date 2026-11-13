@@ -105,7 +105,7 @@ go test -race ./...
 
 ### End-to-end test
 
-`tests/e2e.yml` is a [runn](https://github.com/k1LoW/runn) runbook of a service lifecycle scenario (deploy, diff, status, tasks, revisions, rollback, scale, refresh, wait, run, init, delete) against an [AWS Emulator](https://github.com/aws/aws-emulator) endpoint. Its fixtures are in `tests/e2e/`. CI runs it in the `e2e` job of `.github/workflows/test.yml`.
+`tests/e2e.yml` is a [runn](https://github.com/k1LoW/runn) runbook of a service lifecycle scenario (deploy, diff, rollback, run, init, delete) against an [AWS Emulator](https://github.com/aws/aws-emulator) endpoint. Its fixtures are in `tests/e2e/`. CI runs it by `.github/workflows/e2e.yml` when the Go sources or the fixtures change.
 
 To run it locally, start the emulator (`aws-emulator --telemetry off --auth off`), set `AWS_CA_BUNDLE` to its `ca.pem`, and run:
 
@@ -115,6 +115,7 @@ make && runn run tests/e2e.yml --scopes run:exec
 
 - Every command in the runbook sets `AWS_ENDPOINT_URL` and dummy credentials, so that it never runs against real AWS. Keep it so when adding a step.
 - The AWS CLI is used only to prepare the resources (`tests/e2e/setup.sh`). Assert the behavior with ecspresso commands.
+- Each command that waits for a deployment takes 10 seconds or more. Add a step only for what needs the real API behavior (requests the service accepts, definitions read back, state transitions). Test argument handling and output formatting in unit tests.
 - The emulator and runn versions are pinned in the workflow and are not updated automatically.
 
 ### Testing requests to and responses from AWS APIs

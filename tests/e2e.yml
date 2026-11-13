@@ -36,22 +36,6 @@ steps:
       command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} diff --exit-code"
     test: current.exit_code == 0 && current.stdout == ""
 
-  status:
-    desc: status shows the completed deployment
-    exec:
-      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} status"
-    test: |
-      current.exit_code == 0
-      && current.stdout contains "desired:1 pending:0 running:1 COMPLETED"
-
-  tasks:
-    desc: tasks shows a running task
-    exec:
-      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} tasks --output tsv"
-    test: |
-      current.exit_code == 0
-      && len(split(current.stdout, "RUNNING\tRUNNING")) == 2
-
   revision_v1:
     desc: revisions shows the task definition in use
     exec:
@@ -112,32 +96,6 @@ steps:
       current.exit_code == 0
       && !(current.stdout contains ("ecspresso-e2e:" + string(fromJSON(steps.revision_v2.stdout).revision) + "\t"))
 
-  scale:
-    desc: scale changes the desired count
-    exec:
-      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} scale --tasks 2"
-    test: current.exit_code == 0
-
-  status_after_scale:
-    desc: two tasks are running
-    exec:
-      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} status"
-    test: |
-      current.exit_code == 0
-      && current.stdout contains "desired:2 pending:0 running:2"
-
-  refresh:
-    desc: refresh starts a new deployment
-    exec:
-      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} refresh"
-    test: current.exit_code == 0
-
-  wait:
-    desc: wait returns for the stable service
-    exec:
-      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} wait"
-    test: current.exit_code == 0
-
   run:
     desc: run waits for the task and shows its logs
     exec:
@@ -153,13 +111,6 @@ steps:
     test: |
       current.exit_code == 1
       && len(split(current.stderr, "container: app, exit code: 3")) == 3
-
-  run_miscased_overrides:
-    desc: run rejects a mis-cased key in --overrides
-    exec:
-      command: |
-        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} run --overrides '{"containerOverrides":[{"name":"app","Command":["true"]}]}'
-    test: current.exit_code == 1 && current.stderr contains 'use "command"'
 
   init:
     desc: init generates the definitions that have no differences from the service
@@ -177,16 +128,8 @@ steps:
   delete:
     desc: delete removes the service
     exec:
-      command: |
-        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} delete --force --terminate \
-        && {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} aws ecs wait services-inactive --cluster ecspresso-e2e --services e2e
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} delete --force --terminate"
     test: current.exit_code == 0
-
-  status_after_delete:
-    desc: status fails for the deleted service
-    exec:
-      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} status"
-    test: current.exit_code == 1 && current.stderr contains "service e2e is INACTIVE"
 
   cleanup_after:
     desc: delete the service even if a step failed

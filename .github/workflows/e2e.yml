@@ -1,0 +1,82 @@
+name: E2E
+on:
+  push:
+    branches:
+      - v3
+    paths:
+      - "**.go"
+      - go.mod
+      - go.sum
+      - Makefile
+      - tests/e2e.yml
+      - tests/e2e/**
+      - .github/workflows/e2e.yml
+  pull_request:
+    paths:
+      - "**.go"
+      - go.mod
+      - go.sum
+      - Makefile
+      - tests/e2e.yml
+      - tests/e2e/**
+      - .github/workflows/e2e.yml
+jobs:
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    env:
+      # https://downloads.aws.com/aws-emulator/packages/aws-emulator/LTS/versions.json
+      AWS_EMULATOR_VERSION: "1.0.343"
+      AWS_EMULATOR_KEY_FINGERPRINT: 98BCF336A3BE53B734E967C52E5BF49BD940F624
+      # https://github.com/k1LoW/runn/releases
+      RUNN_VERSION: v1.11.1
+      RUNN_SHA256: 3bdb4a48368ba45831c69719f0c72228c7c8405338ff27f7369095ccf07ea248
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@v6.4.0
+        with:
+          go-version: "1.27"
+
+      - name: Build
+        run: make
+
+      - name: Start AWS Emulator
+        run: |
+          base=https://downloads.aws.com/aws-emulator/packages/aws-emulator/LTS
+          deb="aws-emulator_${AWS_EMULATOR_VERSION}-1_amd64.deb"
+          cd "$RUNNER_TEMP"
+          curl -fsSLO "$base/$deb"
+          curl -fsSLO "$base/$deb.sig"
+          curl -fsSLo aws-emulator-key.asc https://downloads.aws.com/keys/gpg/current.asc
+          export GNUPGHOME="$(mktemp -d)"
+          gpg --batch --quiet --import aws-emulator-key.asc
+          gpg --batch --status-fd 1 --verify "$deb.sig" "$deb" \
+            | grep -q "^\[GNUPG:\] VALIDSIG .* ${AWS_EMULATOR_KEY_FINGERPRINT}\$"
+          sudo apt-get install -y "./$deb"
+          aws-emulator -v
+          nohup aws-emulator --telemetry off --auth off > aws-emulator.log 2>&1 &
+          ca="$HOME/.aws/emulator/9297/ca.pem"
+          for _ in $(seq 1 30); do
+            if curl -fs --cacert "$ca" https://127.0.0.1:9297/__admin/health; then
+              echo "AWS_CA_BUNDLE=$ca" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat aws-emulator.log
+          exit 1
+
+      - name: Install runn
+        run: |
+          cd "$RUNNER_TEMP"
+          tarball="runn_${RUNN_VERSION}_linux_amd64.tar.gz"
+          curl -fsSLO "https://github.com/k1LoW/runn/releases/download/${RUNN_VERSION}/${tarball}"
+          echo "${RUNN_SHA256}  ${tarball}" | sha256sum -c -
+          mkdir runn && tar -xzf "$tarball" -C runn
+          echo "$RUNNER_TEMP/runn" >> "$GITHUB_PATH"
+
+      - name: e2e test
+        run: runn run tests/e2e.yml --scopes run:exec --verbose < /dev/null
