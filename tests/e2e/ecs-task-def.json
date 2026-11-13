@@ -1,0 +1,36 @@
+{
+  "containerDefinitions": [
+    {
+      "command": [
+        "sh",
+        "-c",
+        "sleep 3600"
+      ],
+      "environment": [
+        {
+          "name": "MESSAGE",
+          "value": "{{ env `E2E_MESSAGE` `v1` }}"
+        }
+      ],
+      "essential": true,
+      "image": "public.ecr.aws/docker/library/busybox:stable",
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ecspresso-e2e",
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-stream-prefix": "e2e"
+        }
+      },
+      "name": "app"
+    }
+  ],
+  "cpu": "256",
+  "executionRoleArn": "arn:aws:iam::{{ must_env `E2E_ACCOUNT_ID` }}:role/ecspresso-e2e",
+  "family": "ecspresso-e2e",
+  "memory": "512",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ]
+}

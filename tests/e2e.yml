@@ -1,0 +1,195 @@
+# End-to-end test of ecspresso against an AWS emulator.
+#
+#   make && runn run tests/e2e.yml --scopes run:exec
+#
+# Every command runs with AWS_ENDPOINT_URL and dummy credentials, so this never
+# runs against real AWS. Use `--var endpoint:URL` for another endpoint. For an
+# HTTPS endpoint with a self-signed certificate, set AWS_CA_BUNDLE.
+desc: ecspresso service lifecycle
+vars:
+  endpoint: https://127.0.0.1:9297
+  awsenv: env -u AWS_PROFILE AWS_REGION=ap-northeast-1 AWS_ACCESS_KEY_ID=dummy AWS_SECRET_ACCESS_KEY=dummy
+  ecspresso: cmd/ecspresso/ecspresso --config tests/e2e/ecspresso.yml --envfile tests/e2e/e2e.env --no-color
+steps:
+  setup:
+    desc: create the cluster, the IAM role, the log group and the route to the internet
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} tests/e2e/setup.sh tests/e2e/e2e.env"
+    test: current.exit_code == 0
+
+  cleanup_before:
+    desc: delete a service left by a previous run, and wait for it to be inactive
+    exec:
+      command: |
+        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} delete --force --terminate
+        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} aws ecs wait services-inactive --cluster ecspresso-e2e --services e2e || true
+
+  deploy_create:
+    desc: deploy creates the service
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} deploy"
+    test: current.exit_code == 0
+
+  diff_after_create:
+    desc: diff shows no differences after deploy
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} diff --exit-code"
+    test: current.exit_code == 0 && current.stdout == ""
+
+  status:
+    desc: status shows the completed deployment
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} status"
+    test: |
+      current.exit_code == 0
+      && current.stdout contains "desired:1 pending:0 running:1 COMPLETED"
+
+  tasks:
+    desc: tasks shows a running task
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} tasks --output tsv"
+    test: |
+      current.exit_code == 0
+      && len(split(current.stdout, "RUNNING\tRUNNING")) == 2
+
+  revision_v1:
+    desc: revisions shows the task definition in use
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} revisions --revision current --output json"
+    test: current.exit_code == 0 && fromJSON(current.stdout).family == "ecspresso-e2e"
+
+  diff_changed:
+    desc: diff detects a changed task definition
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} E2E_MESSAGE=v2 {{ vars.ecspresso }} diff --exit-code"
+    test: current.exit_code == 2 && current.stdout contains "v2"
+
+  deploy_update:
+    desc: deploy updates the service
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} E2E_MESSAGE=v2 {{ vars.ecspresso }} deploy"
+    test: current.exit_code == 0
+
+  diff_after_update:
+    desc: diff shows no differences after the update
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} E2E_MESSAGE=v2 {{ vars.ecspresso }} diff --exit-code"
+    test: current.exit_code == 0
+
+  revision_v2:
+    desc: a new revision of the task definition is in use
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} revisions --revision current --output json"
+    test: |
+      current.exit_code == 0
+      && fromJSON(current.stdout).revision > fromJSON(steps.revision_v1.stdout).revision
+
+  rollback_without_deployment:
+    desc: rollback fails when no deployment is in progress
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} rollback"
+    test: current.exit_code == 1 && current.stderr contains "no active deployment found"
+
+  rollback:
+    desc: rollback --with-previous-task-definition deploys the previous revision
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} rollback --with-previous-task-definition"
+    test: current.exit_code == 0
+
+  revision_after_rollback:
+    desc: the previous revision is in use again
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} revisions --revision current --output json"
+    test: |
+      current.exit_code == 0
+      && fromJSON(current.stdout).revision == fromJSON(steps.revision_v1.stdout).revision
+
+  revision_rolled_back:
+    desc: the rolled back revision is deregistered
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} revisions --output tsv"
+    test: |
+      current.exit_code == 0
+      && !(current.stdout contains ("ecspresso-e2e:" + string(fromJSON(steps.revision_v2.stdout).revision) + "\t"))
+
+  scale:
+    desc: scale changes the desired count
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} scale --tasks 2"
+    test: current.exit_code == 0
+
+  status_after_scale:
+    desc: two tasks are running
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} status"
+    test: |
+      current.exit_code == 0
+      && current.stdout contains "desired:2 pending:0 running:2"
+
+  refresh:
+    desc: refresh starts a new deployment
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} refresh"
+    test: current.exit_code == 0
+
+  wait:
+    desc: wait returns for the stable service
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} wait"
+    test: current.exit_code == 0
+
+  run:
+    desc: run waits for the task and shows its logs
+    exec:
+      command: |
+        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} run --overrides '{"containerOverrides":[{"name":"app","command":["sh","-c","echo hello $MESSAGE"]}]}'
+    test: current.exit_code == 0 && current.stdout contains "hello v1"
+
+  run_failed:
+    desc: run fails when a container of any task exits with non-zero
+    exec:
+      command: |
+        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} run --count 2 --overrides '{"containerOverrides":[{"name":"app","command":["sh","-c","exit 3"]}]}'
+    test: |
+      current.exit_code == 1
+      && len(split(current.stderr, "container: app, exit code: 3")) == 3
+
+  run_miscased_overrides:
+    desc: run rejects a mis-cased key in --overrides
+    exec:
+      command: |
+        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} run --overrides '{"containerOverrides":[{"name":"app","Command":["true"]}]}'
+    test: current.exit_code == 1 && current.stderr contains 'use "command"'
+
+  init:
+    desc: init generates the definitions that have no differences from the service
+    exec:
+      command: |
+        set -e
+        ecspresso="$PWD/cmd/ecspresso/ecspresso"
+        dir=$(mktemp -d)
+        trap 'rm -rf "$dir"' EXIT
+        cd "$dir"
+        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} "$ecspresso" --no-color init --region ap-northeast-1 --cluster ecspresso-e2e --service e2e >&2
+        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} "$ecspresso" --no-color diff --exit-code
+    test: current.exit_code == 0 && current.stdout == ""
+
+  delete:
+    desc: delete removes the service
+    exec:
+      command: |
+        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} delete --force --terminate \
+        && {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} aws ecs wait services-inactive --cluster ecspresso-e2e --services e2e
+    test: current.exit_code == 0
+
+  status_after_delete:
+    desc: status fails for the deleted service
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} status"
+    test: current.exit_code == 1 && current.stderr contains "service e2e is INACTIVE"
+
+  cleanup_after:
+    desc: delete the service even if a step failed
+    defer: true
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} delete --force --terminate || true"

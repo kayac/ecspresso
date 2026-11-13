@@ -1,0 +1,33 @@
+{
+  "deploymentConfiguration": {
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    },
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 100
+  },
+  "desiredCount": 1,
+  "healthCheckGracePeriodSeconds": 0,
+  "launchType": "FARGATE",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "assignPublicIp": "ENABLED",
+      "securityGroups": [
+        "{{ must_env `E2E_SECURITY_GROUP` }}"
+      ],
+      "subnets": [
+        "{{ must_env `E2E_SUBNET` }}"
+      ]
+    }
+  },
+  "platformVersion": "LATEST",
+  "propagateTags": "NONE",
+  "schedulingStrategy": "REPLICA",
+  "tags": [
+    {
+      "key": "env",
+      "value": "e2e"
+    }
+  ]
+}
