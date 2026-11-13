@@ -150,3 +150,11 @@ func SetTaskPollInterval(t interface{ Cleanup(func()) }, d time.Duration) {
 	taskPollInterval = d
 	t.Cleanup(func() { taskPollInterval = orig })
 }
+
+func (d *App) RollbackTargetOfServiceDeployment(ctx context.Context, dp *types.ServiceDeployment) (string, error) {
+	return d.rollbackTargetOfServiceDeployment(ctx, dp)
+}
+
+func (d *App) DeregisterRolledBack(ctx context.Context, rolledBack, target string, opt RollbackOption) error {
+	return d.deregisterRolledBack(ctx, &rollbackResult{taskDefinitionArn: rolledBack, targetTaskDefinitionArn: target}, opt)
+}

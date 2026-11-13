@@ -96,6 +96,32 @@ steps:
       current.exit_code == 0
       && !(current.stdout contains ("ecspresso-e2e:" + string(fromJSON(steps.revision_v2.stdout).revision) + "\t"))
 
+  register_unused:
+    desc: register a task definition that is never deployed
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} E2E_MESSAGE=unused {{ vars.ecspresso }} register"
+    test: current.exit_code == 0
+
+  deploy_no_wait:
+    desc: deploy --no-wait leaves a deployment in progress
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} E2E_MESSAGE=v3 {{ vars.ecspresso }} deploy --no-wait"
+    test: current.exit_code == 0
+
+  rollback_in_progress:
+    desc: rollback stops the deployment in progress
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} rollback"
+    test: current.exit_code == 0 && current.stderr contains "stopping deployment with rollback"
+
+  revision_after_rollback_in_progress:
+    desc: the revision before the deployment is in use, not the one that is never deployed
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} revisions --revision current --output json"
+    test: |
+      current.exit_code == 0
+      && fromJSON(current.stdout).revision == fromJSON(steps.revision_v1.stdout).revision
+
   run:
     desc: run waits for the task and shows its logs
     exec:
