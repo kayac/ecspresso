@@ -1326,6 +1326,12 @@ $ ecspresso diff --jsonnet
 $ ecspresso diff --without-service
 ```
 
+`ecspresso diff --exit-code` exits with status 2 when there are differences, and 0 when there are none. Status 1 is an error, as with the other commands.
+
+```console
+$ ecspresso diff --exit-code || echo "exit status: $?"
+```
+
 
 #### verify
 

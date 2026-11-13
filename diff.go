@@ -29,6 +29,7 @@ type DiffOption struct {
 	Jsonnet     bool   `help:"render as jsonnet format" default:"false"`
 	External    string `help:"external command to format diff" env:"ECSPRESSO_DIFF_COMMAND"`
 	WithService bool   `help:"with service definition" default:"true" negatable:"without-service"`
+	ExitCode    bool   `help:"exit with status 2 when there are differences" default:"false"`
 
 	w io.Writer `kong:"-"`
 }
@@ -37,9 +38,17 @@ type DiffOption struct {
 // service / task definition to opt.w (or stdout when nil). It is the
 // CLI dispatch entry and keeps the (ctx, opt) error signature shared
 // with the other dispatched commands.
+//
+// With opt.ExitCode, it returns ErrDiffFound when there are differences.
 func (d *App) Diff(ctx context.Context, opt DiffOption) error {
-	_, err := d.diff(ctx, opt)
-	return err
+	has, err := d.diff(ctx, opt)
+	if err != nil {
+		return err
+	}
+	if has && opt.ExitCode {
+		return ErrDiffFound
+	}
+	return nil
 }
 
 // HasDiff reports whether there is any difference between local
@@ -135,8 +144,14 @@ func (d *App) diff(ctx context.Context, opt DiffOption) (bool, error) {
 
 // DiffExpress is the dispatch entry for the express-mode diff.
 func (d *App) DiffExpress(ctx context.Context, opt DiffOption) error {
-	_, err := d.diffExpress(ctx, opt)
-	return err
+	has, err := d.diffExpress(ctx, opt)
+	if err != nil {
+		return err
+	}
+	if has && opt.ExitCode {
+		return ErrDiffFound
+	}
+	return nil
 }
 
 func (d *App) diffExpress(ctx context.Context, opt DiffOption) (bool, error) {

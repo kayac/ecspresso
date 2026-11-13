@@ -869,6 +869,14 @@ var cliTests = []struct {
 		},
 	},
 	{
+		args: []string{"diff", "--exit-code"},
+		sub:  "diff",
+		subOption: &ecspresso.DiffOption{
+			WithService: true,
+			ExitCode:    true,
+		},
+	},
+	{
 		args: []string{"appspec"},
 		sub:  "appspec",
 		subOption: &ecspresso.AppSpecOption{

@@ -16,6 +16,8 @@ var (
 	ErrNotFound         = errors.New("not found")
 	ErrConflictOptions  = errors.New("conflicting options")
 	ErrPermissionDenied = errors.New("permission denied")
+	// ErrDiffFound is returned by Diff with DiffOption.ExitCode when there are differences.
+	ErrDiffFound = errors.New("differences found")
 )
 
 func isPermissionError(err error) bool {
