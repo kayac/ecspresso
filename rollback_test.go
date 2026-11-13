@@ -74,6 +74,16 @@ func TestRollbackTargetOfServiceDeployment(t *testing.T) {
 			wantCalls: []string{"DescribeServiceRevisions"},
 		},
 		{
+			// ECS reports the revision after the rollback started.
+			name: "rollback started",
+			dp: &types.ServiceDeployment{
+				Rollback: &types.Rollback{ServiceRevisionArn: aws.String(testSourceRevisionArn)},
+			},
+			want:      testTaskDefinitionArnPrefix + "2",
+			wantCalls: []string{"DescribeServiceRevisions"},
+		},
+		{
+			// AWS may not report the source revisions of a deployment that just started.
 			name:      "no source revision",
 			dp:        &types.ServiceDeployment{},
 			wantCalls: []string{},

@@ -109,10 +109,13 @@ steps:
     test: current.exit_code == 0
 
   rollback_in_progress:
-    desc: rollback stops the deployment in progress
+    desc: rollback stops the deployment in progress, and deregisters its task definition
     exec:
       command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} rollback"
-    test: current.exit_code == 0 && current.stderr contains "stopping deployment with rollback"
+    test: |
+      current.exit_code == 0
+      && current.stderr contains "stopping deployment with rollback"
+      && current.stderr contains "task definition deregistered successfully"
 
   revision_after_rollback_in_progress:
     desc: the revision before the deployment is in use, not the one that is never deployed
