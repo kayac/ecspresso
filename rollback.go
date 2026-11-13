@@ -74,9 +74,14 @@ func (d *App) Rollback(ctx context.Context, opt RollbackOption) error {
 		return nil
 	}
 
-	var confirm confirmFunc
-	if result.targetTaskDefinitionArn != "" {
-		confirm = d.confirmPrimaryTD(result.targetTaskDefinitionArn)
+	confirm := func(ctx context.Context) error {
+		if err := d.resolveRollbackTarget(ctx, result); err != nil {
+			return err
+		}
+		if result.targetTaskDefinitionArn == "" {
+			return nil
+		}
+		return d.confirmPrimaryTD(result.targetTaskDefinitionArn)(ctx)
 	}
 	doWait, err := d.WaitFunc(sv, confirm, waitUntil(opt.WaitUntil), result.deploymentArn)
 	if err != nil {
@@ -105,8 +110,15 @@ func (d *App) deregisterRolledBack(ctx context.Context, result *rollbackResult, 
 	if !opt.DeregisterTaskDefinition {
 		return nil
 	}
+	if err := d.resolveRollbackTarget(ctx, result); err != nil {
+		return err
+	}
 	switch result.targetTaskDefinitionArn {
 	case "":
+		if opt.DryRun {
+			// ECS decides it when the deployment is rolled back.
+			break
+		}
 		d.LogWarn("the task definition that the service is rolled back to is unknown, skip deregistering", "task_definition", arnToName(result.taskDefinitionArn))
 		return nil
 	case result.taskDefinitionArn:
@@ -114,6 +126,23 @@ func (d *App) deregisterRolledBack(ctx context.Context, result *rollbackResult, 
 		return nil
 	}
 	return d.rollbackTaskDefinition(ctx, result.taskDefinitionArn, opt)
+}
+
+// resolveRollbackTarget sets result.targetTaskDefinitionArn if it is not
+// determined yet.
+func (d *App) resolveRollbackTarget(ctx context.Context, result *rollbackResult) error {
+	if result.targetTaskDefinitionArn != "" || result.resolveTarget == nil {
+		return nil
+	}
+	target, err := result.resolveTarget(ctx)
+	if err != nil {
+		return err
+	}
+	if target != "" {
+		d.LogInfo("rollback target", "task_definition", arnToName(target))
+	}
+	result.targetTaskDefinitionArn = target
+	return nil
 }
 
 func (d *App) rollbackByPreviousTaskDef(ctx context.Context, sv *Service, opt RollbackOption) error {
@@ -343,7 +372,10 @@ type rollbackResult struct {
 	// targetTaskDefinitionArn is the task definition that the service is
 	// rolled back to. It is empty when it is not determined.
 	targetTaskDefinitionArn string
-	deploymentArn           string
+	// resolveTarget finds targetTaskDefinitionArn out when the rollback
+	// function cannot determine it in advance.
+	resolveTarget func(ctx context.Context) (string, error)
+	deploymentArn string
 }
 
 type rollbackFunc func(ctx context.Context, sv *Service, opt RollbackOption) (*rollbackResult, error)
@@ -489,19 +521,20 @@ func (d *App) findECSDeploymentArn(ctx context.Context, timeout time.Duration, a
 func (d *App) rollbackActiveECSDeployment(ctx context.Context, sv *Service, deploymentArn string, opt RollbackOption) (*rollbackResult, error) {
 	currentTaskDefinition := aws.ToString(sv.TaskDefinition)
 	res := &rollbackResult{taskDefinitionArn: currentTaskDefinition, deploymentArn: deploymentArn}
+	// ECS decides the service revision to roll back to, so find it out from
+	// the service deployment instead of guessing it from the revisions of
+	// the task definition.
+	res.resolveTarget = func(ctx context.Context) (string, error) {
+		dp, err := d.describeServiceDeployment(ctx, deploymentArn)
+		if err != nil {
+			return "", err
+		}
+		return d.rollbackTargetOfServiceDeployment(ctx, dp)
+	}
 
 	dp, err := d.describeServiceDeployment(ctx, deploymentArn)
 	if err != nil {
 		return nil, err
-	}
-	// ECS decides the service revision to roll back to, so find it out
-	// instead of guessing it from the revisions of the task definition.
-	res.targetTaskDefinitionArn, err = d.rollbackTargetOfServiceDeployment(ctx, dp)
-	if err != nil {
-		return nil, err
-	}
-	if res.targetTaskDefinitionArn != "" {
-		d.LogInfo("rolling back", withDryRun(opt.DryRun, "target", arnToName(res.targetTaskDefinitionArn))...)
 	}
 
 	// Check if the deployment is paused at a lifecycle hook
@@ -576,17 +609,25 @@ func pausedLifecycleHookID(dp *types.ServiceDeployment) string {
 }
 
 // rollbackTargetOfServiceDeployment returns the task definition that the
-// service returns to when the service deployment is rolled back, which is the
-// one of its source service revision.
+// service returns to when the service deployment is rolled back.
 //
-// It returns "" when the deployment does not have exactly one source service
-// revision (e.g. the first deployment of the service), because the revision
-// that ECS rolls back to is not determined by the deployment.
+// It is the one of the service revision that ECS reports in the rollback of
+// the deployment, which is available after the rollback started. Otherwise it
+// is the one of the source service revision, if the deployment has exactly
+// one. It returns "" when neither determines it (e.g. the rollback has not
+// started and the source service revisions are not reported yet).
 func (d *App) rollbackTargetOfServiceDeployment(ctx context.Context, dp *types.ServiceDeployment) (string, error) {
-	if dp == nil || len(dp.SourceServiceRevisions) != 1 {
+	var revArn string
+	switch {
+	case dp == nil:
+		return "", nil
+	case dp.Rollback != nil && aws.ToString(dp.Rollback.ServiceRevisionArn) != "":
+		revArn = aws.ToString(dp.Rollback.ServiceRevisionArn)
+	case len(dp.SourceServiceRevisions) == 1:
+		revArn = aws.ToString(dp.SourceServiceRevisions[0].Arn)
+	default:
 		return "", nil
 	}
-	revArn := aws.ToString(dp.SourceServiceRevisions[0].Arn)
 	out, err := d.ecs.DescribeServiceRevisions(ctx, &ecs.DescribeServiceRevisionsInput{
 		ServiceRevisionArns: []string{revArn},
 	})
