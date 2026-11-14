@@ -510,7 +510,7 @@ In all cases, `ecspresso deploy` exits with a non-zero status when the deploymen
 
 `deployed` is the default of every command that waits for a service deployment: `deploy`, `refresh`, `rollback` (`stable` or `deployed`), `continue` and `wait` (`stable`, `deployed`, or `paused`). `scale` waits until the service becomes stable, because changing the desired count starts no service deployment.
 
-The `ecspresso wait` command waits for a deployment in progress without deploying, e.g. one started by `ecspresso deploy --no-wait`. When no deployment is in progress, `--wait-until=deployed` waits until the service becomes stable. `ecspresso wait` exits with status 0 even if the deployment is rolled back, because it does not know which result is expected.
+The `ecspresso wait` command waits for a deployment in progress without deploying, e.g. one started by `ecspresso deploy --no-wait`, or one being rolled back. When no deployment is in progress, `--wait-until=deployed` waits until the service becomes stable. `ecspresso wait` exits with status 0 even if the deployment is rolled back, because it does not know which result is expected.
 
 ### Early success criteria (for rolling deployment)
 

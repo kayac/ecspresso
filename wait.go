@@ -243,11 +243,9 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 	d.LogJSON(sv.DeploymentController)
 	d.warnEarlySuccessCriteriaWait(sv, until)
 
-	// The deployment to wait for has been started by another command, so find
-	// it regardless of when it started.
 	var deploymentArn string
 	if !sv.isCodeDeploy() && until != waitUntilStable {
-		deploymentArn, err = d.findActiveECSDeploymentArn(ctx, findServiceDeploymentTimeout, false)
+		deploymentArn, err = d.findOngoingServiceDeployment(ctx, sv)
 		if err != nil {
 			if !errors.Is(err, ErrNotFound) {
 				return err
@@ -378,7 +376,7 @@ func (d *App) findServiceDeploymentToWait(ctx context.Context) (string, error) {
 	// Search in any status, because the deployment may already be finished
 	// (e.g. a rolling deployment without tasks completes in a few seconds).
 	d.LogDebug("finding ECS service deployment started by this command...")
-	deploymentArn, err = d.findECSDeploymentArn(ctx, findStartedServiceDeploymentTimeout, true, nil)
+	deploymentArn, err = d.findECSDeploymentArn(ctx, findStartedServiceDeploymentTimeout, d.startedAt, nil)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			// Do not wrap ErrNotFound. The callers treat it as success.
@@ -387,6 +385,55 @@ func (d *App) findServiceDeploymentToWait(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return deploymentArn, nil
+}
+
+// ongoingServiceDeploymentStatuses are the statuses of a service deployment
+// that has not reached a terminal status yet.
+var ongoingServiceDeploymentStatuses = []types.ServiceDeploymentStatus{
+	types.ServiceDeploymentStatusPending,
+	types.ServiceDeploymentStatusInProgress,
+	types.ServiceDeploymentStatusStopRequested,
+	types.ServiceDeploymentStatusRollbackRequested,
+	types.ServiceDeploymentStatusRollbackInProgress,
+}
+
+// findOngoingServiceDeployment finds the service deployment to wait for by the
+// wait command. The deployment has been started by another command, so it is
+// found regardless of when it started, and also while it is rolling back.
+//
+// ECS creates the service deployment asynchronously, so it may not be created
+// yet when wait runs right after "deploy --no-wait". When the primary
+// deployment of the service is in progress, it keeps searching for the service
+// deployment created after the primary deployment.
+func (d *App) findOngoingServiceDeployment(ctx context.Context, sv *Service) (string, error) {
+	d.LogDebug("finding ongoing ECS service deployment...")
+	deploymentArn, err := d.findECSDeploymentArn(ctx, findServiceDeploymentTimeout, time.Time{}, ongoingServiceDeploymentStatuses)
+	if err == nil || !errors.Is(err, ErrNotFound) {
+		return deploymentArn, err
+	}
+	notFound := err
+	primary, ok := sv.PrimaryDeployment()
+	if !ok || primary.CreatedAt == nil || primary.RolloutState != types.DeploymentRolloutStateInProgress {
+		return "", notFound
+	}
+	timeout := time.Until(primary.CreatedAt.Add(findStartedServiceDeploymentTimeout))
+	if timeout <= 0 {
+		return "", notFound
+	}
+	d.LogInfo("a deployment is in progress but its service deployment is not created yet, waiting...")
+	sd, err := d.findECSDeployment(ctx, timeout, *primary.CreatedAt, nil)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			// Do not wrap ErrNotFound. The caller treats it as nothing to wait for.
+			return "", fmt.Errorf("a deployment is in progress but its service deployment is not found in %s", findStartedServiceDeploymentTimeout)
+		}
+		return "", err
+	}
+	if !slices.Contains(ongoingServiceDeploymentStatuses, sd.Status) {
+		// already finished
+		return "", notFound
+	}
+	return aws.ToString(sd.ServiceDeploymentArn), nil
 }
 
 // waitServiceDeployed waits for the service deployment to finish. When the
