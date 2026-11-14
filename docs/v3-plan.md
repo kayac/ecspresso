@@ -246,6 +246,19 @@ PR: https://github.com/kayac/ecspresso/pull/1113, https://github.com/kayac/ecspr
 - Library: `App.RunTask` returns all started tasks (`[]types.Task`), and `App.WaitRunTask`, `App.DescribeTaskStatus`, and `App.DescribeTasksInput` take `[]types.Task`.
 - Compatibility: `run --count N` fails if any task fails, not only the first one.
 
+### Unify the default of `--wait-until`
+
+Issue: https://github.com/kayac/ecspresso/issues/1146
+
+The default of `--wait-until` differed by command (`deploy`, `continue`: `deployed`; `rollback`, `wait`: `stable`), and `deploy` ignored the flag when it created a new service, so it returned while the first service deployment was still in progress.
+
+- `deployed` is the default of every command that waits for a service deployment: `deploy` (including the creation of a service), `refresh`, `rollback`, `continue` and `wait`.
+- `deployed` means "wait for the service deployment started by the command to finish". When the command has started no service deployment (only the desired count or the auto scaling settings are changed), it waits for the service to be stable. v2 returned without waiting.
+- `scale` keeps waiting for the service to be stable. It never starts a service deployment, so `deployed` would only add the time to search for one.
+- `wait` looks for a deployment in progress regardless of when it started. It looked only for the deployments started after the command, which a standalone `wait` never finds.
+- The choices of each command are unchanged (`ecs:*` and `codedeploy:*` only for `deploy`, no `paused` for `rollback`).
+- Compatibility: `rollback` and `wait` wait for the service deployment instead of the service to be stable. `--wait-until=stable` restores the v2 behavior.
+
 ## Features
 
 ### Add jsonrpc mode to the external plugin

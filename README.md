@@ -256,7 +256,7 @@ Commands:
     verify resources in configurations
 
   wait
-    wait until service stable
+    wait for the service deployment to complete
 
   version
     show version
@@ -343,7 +343,7 @@ ignore:
   - Replace ```{{ must_env `FOO` }}``` syntax in the JSON file wth environment variable "FOO".
     - If "FOO" is not defined, abort immediately.
 - Update service tasks by the `service_definition` file (JSON or Jsonnet).
-- Wait for the service to be stable.
+- Wait for the service deployment to complete.
 
 Configuration files and task/service definition files are read by [go-config](https://github.com/kayac/go-config) which provides template functions `env`, `must_env` and `json_escape`.
 
@@ -459,9 +459,11 @@ Events:
 2024-01-01T00:00:00.000+09:00 [INFO] [myService/default] registering a new task definition
 2024-01-01T00:00:00.000+09:00 [INFO] [myService/default] task definition is registered [task_definition:myService:4]
 2024-01-01T00:00:00.000+09:00 [INFO] [myService/default] updating service
-2024-01-01T00:00:00.000+09:00 [INFO] [myService/default] Waiting for service stable...(it will take a few minutes)
+2024-01-01T00:00:00.000+09:00 [INFO] [myService/default] Waiting for service deployed...(it will take a few minutes)
+2024-01-01T00:00:03.000+09:00 [INFO] [myService/default] waiting for service deployment [deployment:AbCdEfGhIjKlMnOpQrStU]
 2024-01-01T00:03:10.000+09:00 [INFO] [myService/default]  PRIMARY myService:4 desired:1 pending:0 running:1
-2024-01-01T00:03:16.000+09:00 [INFO] [myService/default] Service is stable now. Completed!
+2024-01-01T00:03:16.000+09:00 [INFO] [myService/default] service deployment status [status:SUCCESSFUL]
+2024-01-01T00:03:16.000+09:00 [INFO] [myService/default] service deployment completed
 ```
 
 `deploy` commands has many options to customize the deployment behavior. See `ecspresso deploy --help` for more details.
@@ -472,7 +474,7 @@ Events:
   --skip-task-definition                 skip register a new task definition
   --revision=0                           revision of the task definition to run when --skip-task-definition
   --force-new-deployment                 force a new deployment of the service
-  --[no-]wait                            wait for service stable
+  --[no-]wait                            wait for the deployment to complete (see --wait-until)
   --wait-until="deployed"                Choose whether to wait for service stable, the deployment finishes, or a
                                          lifecycle hook pauses. For ECS deployment controller:
                                          "(stable|deployed|paused)", or "ecs:*", this accepts a deployment
@@ -492,10 +494,10 @@ Events:
 
 ### Waiting for the deployment
 
-`ecspresso deploy` waits until the deployment completes by default. Use `--no-wait` to return immediately after starting the deployment, or `--wait-until` to choose what to wait for.
+`ecspresso deploy` waits until the deployment completes by default. Use `--no-wait` to return immediately after starting the deployment, or `--wait-until` to choose what to wait for. This also applies when `deploy` creates a new service.
 
 For the ECS deployment controller (also used when `deploymentController` is not set in the service definition):
-- `deployed` (default): Waits until the service deployment completes. When [early success criteria](#early-success-criteria-for-rolling-deployment) is enabled, the deployment completes once the configured healthy percent of tasks is running, and `ecspresso deploy` returns while the remaining tasks are launched in the background (and, with `sourceServiceRevisionCleanup: "DEFERRED"`, the previous tasks are also removed in the background).
+- `deployed` (default): Waits until the service deployment completes. When [early success criteria](#early-success-criteria-for-rolling-deployment) is enabled, the deployment completes once the configured healthy percent of tasks is running, and `ecspresso deploy` returns while the remaining tasks are launched in the background (and, with `sourceServiceRevisionCleanup: "DEFERRED"`, the previous tasks are also removed in the background). When the command starts no service deployment (e.g. `deploy --skip-task-definition --tasks N` changes only the desired count), it waits until the service becomes stable instead.
 - `stable`: Waits until the service becomes stable (same as `aws ecs wait services-stable`). Note that this waits until all tasks are running and the previous tasks are removed even if early success criteria is enabled, so ecspresso warns about this combination.
 - `paused`: Waits until the deployment pauses at a lifecycle hook. See [Pause lifecycle hooks](#pause-lifecycle-hooks).
 - `ecs:<lifecycle stage>` (e.g., `ecs:BAKE_TIME`): Waits until the deployment reaches the specified [deployment lifecycle stage](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/blue-green-deployment-how-it-works.html#blue-green-deployment-stages). This is useful to finish a CI job without waiting for a long bake time. Requires a traffic shifting deployment strategy (e.g., `BLUE_GREEN`). Note that if a pause lifecycle hook is configured at an earlier stage, the wait continues until the deployment is resumed by `ecspresso continue` (or times out).
@@ -506,7 +508,9 @@ For the CodeDeploy deployment controller:
 
 In all cases, `ecspresso deploy` exits with a non-zero status when the deployment fails or is rolled back before the wait condition is met.
 
-The `ecspresso wait` command also accepts `--wait-until` (`stable`, `deployed`, or `paused`) to wait for an ongoing deployment without deploying.
+`deployed` is the default of every command that waits for a service deployment: `deploy`, `refresh`, `rollback` (`stable` or `deployed`), `continue` and `wait` (`stable`, `deployed`, or `paused`). `scale` waits until the service becomes stable, because changing the desired count starts no service deployment.
+
+The `ecspresso wait` command waits for a deployment in progress without deploying, e.g. one started by `ecspresso deploy --no-wait`. When no deployment is in progress, `--wait-until=deployed` waits until the service becomes stable. `ecspresso wait` exits with status 0 even if the deployment is rolled back, because it does not know which result is expected.
 
 ### Early success criteria (for rolling deployment)
 

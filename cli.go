@@ -41,7 +41,7 @@ type CLIOptions struct {
 	Status     *StatusOption       `cmd:"" help:"show status of service"`
 	Tasks      *TasksOption        `cmd:"" help:"list tasks that are in a service or having the same family"`
 	Verify     *VerifyOption       `cmd:"" help:"verify resources in configurations"`
-	Wait       *WaitOption         `cmd:"" help:"wait until service stable"`
+	Wait       *WaitOption         `cmd:"" help:"wait for the service deployment to complete"`
 	Skills     *skillscmd.Commands `cmd:"" help:"manage agent skills"`
 	Version    struct{}            `cmd:"" help:"show version"`
 }

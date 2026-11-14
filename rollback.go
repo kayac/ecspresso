@@ -20,8 +20,8 @@ import (
 type RollbackOption struct {
 	DryRun                     bool   `help:"dry run" default:"false"`
 	DeregisterTaskDefinition   bool   `help:"deregister the rolled-back task definition. not works with --no-wait" default:"true" negatable:""`
-	Wait                       bool   `help:"wait for the service stable" default:"true" negatable:""`
-	WaitUntil                  string `help:"Choose whether to wait for service stable or the deployment finishes. (stable|deployed)" default:"stable" enum:"stable,deployed"`
+	Wait                       bool   `help:"wait for the rollback to complete (see --wait-until)" default:"true" negatable:""`
+	WaitUntil                  string `help:"Choose whether to wait for service stable or the deployment finishes. (stable|deployed)" default:"deployed" enum:"stable,deployed"`
 	RollbackEvents             string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
 	WithPreviousTaskDefinition bool   `help:"find the previous task definition revision and deploy it, regardless of active deployments" default:"false"`
 }

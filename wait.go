@@ -173,8 +173,7 @@ func (d *App) WaitFunc(sv *Service, confirm confirmFunc, until waitUntil, deploy
 		switch until {
 		case waitUntilDeployed:
 			return confirm.wrap(func(ctx context.Context, sv *Service) error {
-				d.LogInfo("Waiting for service deployed...(it will take a few minutes)")
-				return d.waitServiceDeployment(ctx, knownArn, nil)
+				return d.waitServiceDeployed(ctx, knownArn)
 			}), nil
 		case waitUntilPaused:
 			return func(ctx context.Context, sv *Service) error {
@@ -227,7 +226,7 @@ func (d *App) confirmPrimaryTD(tdArn string) confirmFunc {
 }
 
 type WaitOption struct {
-	WaitUntil string `aliases:"until" help:"Choose whether to wait for service stable, the deployment finishes, or a lifecycle hook pauses. (stable|deployed|paused)" default:"stable" enum:"stable,deployed,paused"`
+	WaitUntil string `aliases:"until" help:"Choose whether to wait for service stable, the deployment finishes, or a lifecycle hook pauses. (stable|deployed|paused)" default:"deployed" enum:"stable,deployed,paused"`
 }
 
 func (d *App) Wait(ctx context.Context, opt WaitOption) error {
@@ -242,11 +241,29 @@ func (d *App) Wait(ctx context.Context, opt WaitOption) error {
 		return err
 	}
 	d.LogJSON(sv.DeploymentController)
-	doWait, err := d.WaitFunc(sv, nil, until)
+	d.warnEarlySuccessCriteriaWait(sv, until)
+
+	// The deployment to wait for has been started by another command, so find
+	// it regardless of when it started.
+	var deploymentArn string
+	if !sv.isCodeDeploy() && until != waitUntilStable {
+		deploymentArn, err = d.findActiveECSDeploymentArn(ctx, findServiceDeploymentTimeout, false)
+		if err != nil {
+			if !errors.Is(err, ErrNotFound) {
+				return err
+			}
+			d.LogInfo("No active deployment found")
+			if until == waitUntilPaused {
+				return nil
+			}
+			until = waitUntilStable
+		}
+	}
+
+	doWait, err := d.WaitFunc(sv, nil, until, deploymentArn)
 	if err != nil {
 		return err
 	}
-	d.warnEarlySuccessCriteriaWait(sv, until)
 	if err := doWait(ctx, sv); err != nil {
 		if errors.Is(err, ErrNotFound) && sv.isCodeDeploy() {
 			d.LogInfo(err.Error())
@@ -370,6 +387,27 @@ func (d *App) findServiceDeploymentToWait(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return deploymentArn, nil
+}
+
+// waitServiceDeployed waits for the service deployment to finish. When the
+// command has started no service deployment (e.g. it changed only the desired
+// count), it waits for the service to be stable instead, so that the command
+// does not return before the tasks are running.
+func (d *App) waitServiceDeployed(ctx context.Context, knownDeploymentArn string) error {
+	d.LogInfo("Waiting for service deployed...(it will take a few minutes)")
+	deploymentArn := knownDeploymentArn
+	if deploymentArn == "" {
+		var err error
+		deploymentArn, err = d.findServiceDeploymentToWait(ctx)
+		if err != nil {
+			if !errors.Is(err, ErrNotFound) {
+				return err
+			}
+			d.LogInfo("No active deployment found")
+			return d.WaitServiceStable(ctx, nil)
+		}
+	}
+	return d.waitServiceDeployment(ctx, deploymentArn, nil)
 }
 
 // waitServiceDeployment polls the active service deployment until done reports

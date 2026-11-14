@@ -25,10 +25,10 @@ steps:
         {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} aws ecs wait services-inactive --cluster ecspresso-e2e --services e2e || true
 
   deploy_create:
-    desc: deploy creates the service
+    desc: deploy creates the service, and waits for its first service deployment
     exec:
       command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} deploy"
-    test: current.exit_code == 0
+    test: current.exit_code == 0 && current.stderr contains "waiting for service deployment"
 
   diff_after_create:
     desc: diff shows no differences after deploy
@@ -124,6 +124,23 @@ steps:
     test: |
       current.exit_code == 0
       && fromJSON(current.stdout).revision == fromJSON(steps.revision_v1.stdout).revision
+
+  wait_in_progress:
+    desc: wait finds the deployment in progress that another command has started
+    exec:
+      command: |
+        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} deploy --no-wait
+        {{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} wait
+    test: current.exit_code == 0 && current.stderr contains "waiting for service deployment"
+
+  deploy_desired_count:
+    desc: deploy waits for the service to be stable when it starts no service deployment
+    exec:
+      command: "{{ vars.awsenv }} AWS_ENDPOINT_URL={{ vars.endpoint }} {{ vars.ecspresso }} deploy --skip-task-definition --tasks 2"
+    test: |
+      current.exit_code == 0
+      && current.stderr contains "No active deployment found"
+      && current.stderr contains "Waiting for service stable"
 
   run:
     desc: run waits for the task and shows its logs
