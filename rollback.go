@@ -20,8 +20,8 @@ import (
 type RollbackOption struct {
 	DryRun                     bool   `help:"dry run" default:"false"`
 	DeregisterTaskDefinition   bool   `help:"deregister the rolled-back task definition. not works with --no-wait" default:"true" negatable:""`
-	Wait                       bool   `help:"wait for the service stable" default:"true" negatable:""`
-	WaitUntil                  string `help:"Choose whether to wait for service stable or the deployment finishes. (stable|deployed)" default:"stable" enum:"stable,deployed"`
+	Wait                       bool   `help:"wait for the rollback to complete (see --wait-until)" default:"true" negatable:""`
+	WaitUntil                  string `help:"Choose whether to wait for service stable or the deployment finishes. (stable|deployed)" default:"deployed" enum:"stable,deployed"`
 	RollbackEvents             string `help:"roll back when specified events happened (DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM,DEPLOYMENT_STOP_ON_REQUEST,...) CodeDeploy only." default:""`
 	WithPreviousTaskDefinition bool   `help:"find the previous task definition revision and deploy it, regardless of active deployments" default:"false"`
 }
@@ -446,18 +446,37 @@ func (d *App) waitForCodeDeployRollback(ctx context.Context, id string) error {
 	})
 }
 
-func (d *App) findActiveECSDeploymentArn(ctx context.Context, timeout time.Duration, afterStartedAt bool) (string, error) {
-	d.LogDebug("finding active ECS service deployment...")
-	return d.findECSDeploymentArn(ctx, timeout, afterStartedAt, []types.ServiceDeploymentStatus{
-		types.ServiceDeploymentStatusPending,
-		types.ServiceDeploymentStatusInProgress,
-	})
+// activeServiceDeploymentStatuses are the statuses of a service deployment
+// that is progressing forward.
+var activeServiceDeploymentStatuses = []types.ServiceDeploymentStatus{
+	types.ServiceDeploymentStatusPending,
+	types.ServiceDeploymentStatusInProgress,
 }
 
-// findECSDeploymentArn finds the most recent service deployment in the statuses.
-// If afterStartedAt is true, only the service deployments started after the
-// application started are considered. Empty statuses means any status.
-func (d *App) findECSDeploymentArn(ctx context.Context, timeout time.Duration, afterStartedAt bool, statuses []types.ServiceDeploymentStatus) (string, error) {
+func (d *App) findActiveECSDeploymentArn(ctx context.Context, timeout time.Duration, afterStartedAt bool) (string, error) {
+	d.LogDebug("finding active ECS service deployment...")
+	var after time.Time
+	if afterStartedAt {
+		after = d.startedAt
+	}
+	return d.findECSDeploymentArn(ctx, timeout, after, activeServiceDeploymentStatuses)
+}
+
+// findECSDeploymentArn returns the ARN of the service deployment found by
+// findECSDeployment.
+func (d *App) findECSDeploymentArn(ctx context.Context, timeout time.Duration, after time.Time, statuses []types.ServiceDeploymentStatus) (string, error) {
+	sd, err := d.findECSDeployment(ctx, timeout, after, statuses)
+	if err != nil {
+		return "", err
+	}
+	return aws.ToString(sd.ServiceDeploymentArn), nil
+}
+
+// findECSDeployment finds the most recent service deployment in the statuses.
+// If after is not zero, only the service deployments created after it are
+// considered. Empty statuses means any status.
+func (d *App) findECSDeployment(ctx context.Context, timeout time.Duration, after time.Time, statuses []types.ServiceDeploymentStatus) (types.ServiceDeploymentBrief, error) {
+	var none types.ServiceDeploymentBrief
 	tm := time.NewTimer(timeout)
 	defer tm.Stop()
 	activeDeployments := make([]types.ServiceDeploymentBrief, 0)
@@ -467,12 +486,12 @@ func (d *App) findECSDeploymentArn(ctx context.Context, timeout time.Duration, a
 			Service: &d.Service,
 			Status:  statuses,
 		}
-		if afterStartedAt {
-			input.CreatedAt = &types.CreatedAt{After: aws.Time(d.startedAt)}
+		if !after.IsZero() {
+			input.CreatedAt = &types.CreatedAt{After: aws.Time(after)}
 		}
 		resp, err := d.ecs.ListServiceDeployments(ctx, input)
 		if err != nil {
-			return "", fmt.Errorf("failed to list service deployments: %w", err)
+			return none, fmt.Errorf("failed to list service deployments: %w", err)
 		}
 		d.LogDebug("found %d service deployments", len(resp.ServiceDeployments))
 		for _, sd := range resp.ServiceDeployments {
@@ -482,10 +501,10 @@ func (d *App) findECSDeploymentArn(ctx context.Context, timeout time.Duration, a
 				"status", sd.Status,
 			)
 		}
-		if afterStartedAt {
+		if !after.IsZero() {
 			activeDeployments = append(activeDeployments,
 				lo.Filter(resp.ServiceDeployments, func(item types.ServiceDeploymentBrief, _ int) bool {
-					return item.CreatedAt.After(d.startedAt)
+					return item.CreatedAt.After(after)
 				})...,
 			)
 		} else {
@@ -497,9 +516,9 @@ func (d *App) findECSDeploymentArn(ctx context.Context, timeout time.Duration, a
 		}
 		select {
 		case <-ctx.Done():
-			return "", ctx.Err()
+			return none, ctx.Err()
 		case <-tm.C: // Timeout reached
-			return "", fmt.Errorf("no active service deployments found: %w", ErrNotFound)
+			return none, fmt.Errorf("no active service deployments found: %w", ErrNotFound)
 		default:
 			d.LogInfo("no service deployments found, waiting...")
 			sleepContext(ctx, delayForServiceChanged)
@@ -515,7 +534,7 @@ func (d *App) findECSDeploymentArn(ctx context.Context, timeout time.Duration, a
 		"created_at", deployment.CreatedAt,
 		"status", deployment.Status,
 	)
-	return aws.ToString(deployment.ServiceDeploymentArn), nil
+	return deployment, nil
 }
 
 func (d *App) rollbackActiveECSDeployment(ctx context.Context, sv *Service, deploymentArn string, opt RollbackOption) (*rollbackResult, error) {

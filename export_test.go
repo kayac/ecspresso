@@ -158,3 +158,7 @@ func (d *App) RollbackTargetOfServiceDeployment(ctx context.Context, dp *types.S
 func (d *App) DeregisterRolledBack(ctx context.Context, rolledBack, target string, opt RollbackOption) error {
 	return d.deregisterRolledBack(ctx, &rollbackResult{taskDefinitionArn: rolledBack, targetTaskDefinitionArn: target}, opt)
 }
+
+func (d *App) FindOngoingServiceDeployment(ctx context.Context, sv *Service) (string, error) {
+	return d.findOngoingServiceDeployment(ctx, sv)
+}

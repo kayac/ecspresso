@@ -27,6 +27,22 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 		count = aws.Int32(0) // Must provide desired count for replica scheduling strategy
 	}
 
+	// fail fast before creating the service
+	until := waitUntil(opt.WaitUntil)
+	doWait, err := d.WaitFunc(svd, nil, until)
+	if err != nil {
+		return err
+	}
+	if until.forECSLifecycleStage() {
+		stage := types.ServiceDeploymentLifecycleStage(until.ecsLifecycleStage())
+		if err := validateLifecycleStageSupported(svd, stage); err != nil {
+			return err
+		}
+	}
+	if opt.Wait {
+		d.warnEarlySuccessCriteriaWait(svd, until)
+	}
+
 	if opt.DryRun {
 		d.LogInfo("task definition:")
 		OutputJSONForAPI(os.Stdout, td)
@@ -96,11 +112,6 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 		return err
 	}
 
-	doWait, err := d.WaitFunc(sv, nil, "")
-	if err != nil {
-		return err
-	}
-
 	if err := doWait(ctx, sv); err != nil {
 		if errors.Is(err, ErrNotFound) && sv.isCodeDeploy() {
 			d.LogInfo(err.Error())
@@ -109,6 +120,8 @@ func (d *App) createService(ctx context.Context, opt DeployOption) error {
 		return err
 	}
 
-	d.LogInfo("Service is stable now. Completed!")
+	if msg := until.doneMessage(); msg != "" {
+		d.LogInfo(msg)
+	}
 	return nil
 }

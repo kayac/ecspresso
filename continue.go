@@ -10,7 +10,7 @@ import (
 )
 
 type ContinueOption struct {
-	Wait      bool   `help:"wait for service stable after continue" default:"true" negatable:""`
+	Wait      bool   `help:"wait for the deployment to complete after continue (see --wait-until)" default:"true" negatable:""`
 	WaitUntil string `help:"Choose whether to wait for service stable, the deployment finishes, or a lifecycle hook pauses. (stable|deployed|paused)" default:"deployed" enum:"stable,deployed,paused"`
 }
 
