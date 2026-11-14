@@ -1,5 +1,55 @@
 # Changelog
 
+## [v3.0.0](https://github.com/kayac/ecspresso/compare/v2.8.4...v3.0.0) - 2026-11-14
+- Add `optional: true` to tfstate plugin by @fujiwara in https://github.com/kayac/ecspresso/pull/1017
+- Add App.HasDiff for library callers by @fujiwara in https://github.com/kayac/ecspresso/pull/1019
+- Embed Version in source via tagpr versionFile by @fujiwara in https://github.com/kayac/ecspresso/pull/1022
+- Bump github.com/fujiwara/tfstate-lookup from 1.12.0 to 1.12.1 by @dependabot[bot] in https://github.com/kayac/ecspresso/pull/1021
+- Allow tfstate / cfn / ssm in top-level config fields across all formats by @fujiwara in https://github.com/kayac/ecspresso/pull/1023
+- Remove deprecated filter_command config field by @fujiwara in https://github.com/kayac/ecspresso/pull/1024
+- Remove deprecated exec and tasks flags by @fujiwara in https://github.com/kayac/ecspresso/pull/1025
+- Remove dead create dispatch case by @fujiwara in https://github.com/kayac/ecspresso/pull/1026
+- Drop --no-unified diff path and kylelemons/godebug direct dep by @fujiwara in https://github.com/kayac/ecspresso/pull/1027
+- Unify Duration handling and reinterpret plain numbers as seconds by @fujiwara in https://github.com/kayac/ecspresso/pull/1028
+- v3 cleanups: sentinel errors, unexport internals, const tuning vars by @fujiwara in https://github.com/kayac/ecspresso/pull/1029
+- Add WithPluginInstance AppOption to inject plugin backings by @fujiwara in https://github.com/kayac/ecspresso/pull/1031
+- Support pause lifecycle hooks by @fujiwara in https://github.com/kayac/ecspresso/pull/1047
+- Add jsonrpc mode to external plugin by @fujiwara in https://github.com/kayac/ecspresso/pull/1041
+- Add v2 to v3 migration guide by @fujiwara in https://github.com/kayac/ecspresso/pull/1048
+- Add migration guides to docs command by @fujiwara in https://github.com/kayac/ecspresso/pull/1061
+- Support --wait-until ecs:<lifecycle stage> for deploy by @fujiwara in https://github.com/kayac/ecspresso/pull/1065
+- Add documentation for --wait-until to README by @fujiwara in https://github.com/kayac/ecspresso/pull/1067
+- Warn when a pause hook blocks the ecs:* lifecycle stage wait by @fujiwara in https://github.com/kayac/ecspresso/pull/1070
+- Support early success criteria for rolling deployments (port from v2) by @fujiwara in https://github.com/kayac/ecspresso/pull/1083
+- Port skills subcommand fix and AGENTS.md rename from v2 by @fujiwara in https://github.com/kayac/ecspresso/pull/1094
+- Wait for the service deployment created late after UpdateService (port from v2) by @fujiwara in https://github.com/kayac/ecspresso/pull/1093
+- Bump Go modules and GitHub Actions to match v2 (port from v2) by @fujiwara in https://github.com/kayac/ecspresso/pull/1095
+- Fail when DescribeServiceRevisions fails by @fujiwara in https://github.com/kayac/ecspresso/pull/1107
+- Port: skip registry tests on pull rate limit errors by @fujiwara in https://github.com/kayac/ecspresso/pull/1110
+- Support gatewayConnectors for Amazon ECS Gateway by @fujiwara in https://github.com/kayac/ecspresso/pull/1108
+- Require Go 1.26 and build releases with Go 1.27 by @fujiwara in https://github.com/kayac/ecspresso/pull/1111
+- Authenticate to ECR Public in verify by @fujiwara in https://github.com/kayac/ecspresso/pull/1112
+- Plan workflow lockfile adoption alongside the action repo split by @fujiwara in https://github.com/kayac/ecspresso/pull/1116
+- Wait for run tasks with a single DescribeTasks request by @fujiwara in https://github.com/kayac/ecspresso/pull/1117
+- Forward the GitHub Action to kayac/ecspresso-action by @fujiwara in https://github.com/kayac/ecspresso/pull/1120
+- Support hookDetails of deployment lifecycle hooks (pre-v3) by @fujiwara in https://github.com/kayac/ecspresso/pull/1125
+- Match JSON keys case-sensitively with encoding/json/v2 by @fujiwara in https://github.com/kayac/ecspresso/pull/1126
+- Update the base image to distroless static-debian13 by @fujiwara in https://github.com/kayac/ecspresso/pull/1127
+- Fix diff of availabilityZoneRebalancing omitted in the definition by @fujiwara in https://github.com/kayac/ecspresso/pull/1130
+- Do not copy the validation rules of the AWS APIs in verify by @fujiwara in https://github.com/kayac/ecspresso/pull/1131
+- Bump the Go module path to /v3 by @fujiwara in https://github.com/kayac/ecspresso/pull/1132
+- Publish a signed packslip manifest with each release by @fujiwara in https://github.com/kayac/ecspresso/pull/1105
+- Point the release settings to the v3 branch by @fujiwara in https://github.com/kayac/ecspresso/pull/1133
+- Fix the major version of tagpr to 3 on the v3 branch by @fujiwara in https://github.com/kayac/ecspresso/pull/1136
+- Document required_version in the v3 migration notes by @fujiwara in https://github.com/kayac/ecspresso/pull/1139
+- Add diff --exit-code by @fujiwara in https://github.com/kayac/ecspresso/pull/1140
+- Add an end-to-end test against AWS Emulator by @fujiwara in https://github.com/kayac/ecspresso/pull/1141
+- Slim down the end-to-end test by @fujiwara in https://github.com/kayac/ecspresso/pull/1142
+- Fix rollback of a deployment in progress to wait for the right task definition by @fujiwara in https://github.com/kayac/ecspresso/pull/1143
+- Find the rollback target from the rollback of the service deployment by @fujiwara in https://github.com/kayac/ecspresso/pull/1144
+- Run the Test workflow on push only for the v3 branch by @fujiwara in https://github.com/kayac/ecspresso/pull/1145
+- Unify the default of --wait-until by @fujiwara in https://github.com/kayac/ecspresso/pull/1149
+
 ## [v2.8.4](https://github.com/kayac/ecspresso/compare/v2.8.3...v2.8.4) - 2026-05-16
 - fix: skip draft releases when resolving latest in install script by @fujiwara in https://github.com/kayac/ecspresso/pull/1007
 - Expose plugin runtime instances via App.PluginInstance by @fujiwara in https://github.com/kayac/ecspresso/pull/1015
