@@ -25,6 +25,7 @@ builds:
 release:
   prerelease: auto
   use_existing_draft: true
+  make_latest: false # the latest release is on the v3 line
 archives:
 checksum:
   name_template: "checksums.txt"
