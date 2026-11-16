@@ -31,7 +31,7 @@ orb/publish:
 	circleci orb publish orb.yml $(ORB_NAMESPACE)/ecspresso@dev:latest
 
 orb/promote:
-	circleci orb publish promote $(ORB_NAMESPACE)/ecspresso@dev:latest patch
+	circleci orb publish promote $(ORB_NAMESPACE)/ecspresso@dev:latest --bump patch
 
 image-push: dist/
 	docker buildx build --platform linux/amd64,linux/arm64 \
