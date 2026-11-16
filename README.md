@@ -77,8 +77,8 @@ $ asdf plugin add ecspresso
 # or
 $ asdf plugin add ecspresso https://github.com/kayac/asdf-ecspresso.git
 
-$ asdf install ecspresso 2.3.0
-$ asdf set -u ecspresso 2.3.0
+$ asdf install ecspresso 3.0.0
+$ asdf set -u ecspresso 3.0.0
 ```
 
 ### aqua (macOS and Linux)
@@ -97,7 +97,7 @@ $ aqua g -i kayac/ecspresso
 $ mise use packslip:github.com/kayac/ecspresso
 ```
 
-The packslip backend can install only releases that ship a `packslip.sigstore.json` manifest (v3.0.0 and later). v2 releases are available via aqua (`mise use aqua:kayac/ecspresso@2.8.7`).
+The packslip backend can install only releases that ship a `packslip.sigstore.json` manifest (v3.0.0 and later). v2 releases are available via aqua (`mise use aqua:kayac/ecspresso@2.8.9`).
 
 The [agent skill](skills/ecspresso/SKILL.md) for the installed version can be linked into a project with `mise skills sync`.
 
@@ -112,7 +112,7 @@ Releases since v3.0.0 include `packslip.sigstore.json`, a [packslip](https://pac
 Docker images are available on GitHub Container Registry.
 
 ```console
-$ docker pull ghcr.io/kayac/ecspresso:v2.7.0
+$ docker pull ghcr.io/kayac/ecspresso:v3.0.0
 ```
 
 The image is based on `gcr.io/distroless/static-debian13` and supports both `linux/amd64` and `linux/arm64` architectures.
@@ -122,7 +122,7 @@ $ docker run --rm \
     -v ~/.aws:/root/.aws:ro \
     -v $(pwd):/work \
     -w /work \
-    ghcr.io/kayac/ecspresso:v2.7.0 deploy --config ecspresso.yml
+    ghcr.io/kayac/ecspresso:v3.0.0 deploy --config ecspresso.yml
 ```
 
 ### CircleCI Orbs
@@ -132,13 +132,13 @@ https://circleci.com/orbs/registry/orb/fujiwara/ecspresso
 ```yaml
 version: 2.1
 orbs:
-  ecspresso: fujiwara/ecspresso@2.0.4
+  ecspresso: fujiwara/ecspresso@2.0.5
 jobs:
   install:
     steps:
       - checkout
       - ecspresso/install:
-          version: v2.3.0 # or latest
+          version: v3.0.0 # or latest
           # version-file: .ecspresso-version
           os: linux # or windows or darwin
           arch: amd64 # or arm64
@@ -153,7 +153,9 @@ jobs:
 - fujiwara/ecspresso@1.0.0
   - The latest version of v1.x
 - fujiwara/ecspresso@2.0.3
-  - The latest version of v2.x
+  - The most recently published release (v2 and later)
+- fujiwara/ecspresso@2.0.6
+  - The release marked as [Latest](https://github.com/kayac/ecspresso/releases/latest) on GitHub (e.g. it stays on v3.x after a newer v2.x release is published)
 
 Note: `version: latest` is not recommended as it may cause unexpected behavior when a new version of ecspresso is released.
 
