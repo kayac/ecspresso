@@ -132,7 +132,7 @@ https://circleci.com/orbs/registry/orb/fujiwara/ecspresso
 ```yaml
 version: 2.1
 orbs:
-  ecspresso: fujiwara/ecspresso@2.0.4
+  ecspresso: fujiwara/ecspresso@2.0.5
 jobs:
   install:
     steps:
@@ -154,7 +154,7 @@ jobs:
   - The latest version of v1.x
 - fujiwara/ecspresso@2.0.3
   - The most recently published release (v2 and later)
-- fujiwara/ecspresso@2.0.5
+- fujiwara/ecspresso@2.0.6
   - The release marked as [Latest](https://github.com/kayac/ecspresso/releases/latest) on GitHub (e.g. it stays on v3.x after a newer v2.x release is published)
 
 Note: `version: latest` is not recommended as it may cause unexpected behavior when a new version of ecspresso is released.
