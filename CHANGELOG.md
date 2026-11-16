@@ -1,5 +1,8 @@
 # Changelog
 
+## [v2.8.10](https://github.com/kayac/ecspresso/compare/v2.8.9...v2.8.10) - 2026-11-16
+- Do not mark v2 releases as the latest by @fujiwara in https://github.com/kayac/ecspresso/pull/1154
+
 ## [v2.8.9](https://github.com/kayac/ecspresso/compare/v2.8.8...v2.8.9) - 2026-11-12
 - Support hookDetails of deployment lifecycle hooks by @fujiwara in https://github.com/kayac/ecspresso/pull/1123
 - Update the base image to distroless static-debian13 by @fujiwara in https://github.com/kayac/ecspresso/pull/1128
