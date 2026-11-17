@@ -1,5 +1,10 @@
 # Changelog
 
+## [v3.0.1](https://github.com/kayac/ecspresso/compare/v3.0.0...v3.0.1) - 2026-11-17
+- Update the versions in README and fix latest of the orb by @fujiwara in https://github.com/kayac/ecspresso/pull/1153
+- Fix the orb/promote target and use the orb 2.0.6 in README by @fujiwara in https://github.com/kayac/ecspresso/pull/1157
+- Bump github.com/go-jose/go-jose/v4 from 4.1.4 to 4.1.6 by @dependabot[bot] in https://github.com/kayac/ecspresso/pull/1158
+
 ## [v3.0.0](https://github.com/kayac/ecspresso/compare/v2.8.4...v3.0.0) - 2026-11-14
 - Add `optional: true` to tfstate plugin by @fujiwara in https://github.com/kayac/ecspresso/pull/1017
 - Add App.HasDiff for library callers by @fujiwara in https://github.com/kayac/ecspresso/pull/1019
