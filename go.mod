@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/Songmu/prompter v0.5.1
 	github.com/Songmu/skillsmith v0.1.0
-	github.com/alecthomas/kong v1.15.0
+	github.com/alecthomas/kong v1.17.0
 	github.com/aws/aws-sdk-go-v2 v1.47.4
 	github.com/aws/aws-sdk-go-v2/config v1.32.36
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.35
